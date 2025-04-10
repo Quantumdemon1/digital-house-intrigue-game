@@ -31,6 +31,12 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
     return 'bg-red-600';
   };
 
+  // Get text flash for urgent time
+  const getFlashClass = () => {
+    if (timeRemaining <= 10) return 'animate-pulse';
+    return '';
+  };
+
   // Handle timer expiration
   useEffect(() => {
     if (timeRemaining <= 0 && onTimeExpired) {
@@ -39,26 +45,26 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
   }, [timeRemaining, onTimeExpired]);
   
   return (
-    <div className="mb-6 bg-gray-50 p-4 rounded-lg border">
+    <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
-          <Clock className="w-5 h-5 mr-2" />
-          <h4 className="font-medium">Time Remaining</h4>
+          <Clock className="w-6 h-6 mr-2" />
+          <h4 className="font-medium text-lg">Nomination Timer</h4>
         </div>
-        <div className={`font-bold ${getColorClass()}`}>
-          {timeRemaining <= 10 && <AlertCircle className="inline-block mr-1 w-4 h-4" />}
+        <div className={`font-bold text-xl ${getColorClass()} ${getFlashClass()}`}>
+          {timeRemaining <= 10 && <AlertCircle className="inline-block mr-1 w-5 h-5" />}
           {timeRemaining}s
         </div>
       </div>
       
       <CustomProgress 
         value={percentRemaining} 
-        className="h-2"
+        className="h-3"
         indicatorClassName={getProgressColor()}
       />
       
-      <p className="text-xs text-muted-foreground mt-1">
-        If time expires, nominees will be randomly selected
+      <p className="text-sm text-muted-foreground mt-2">
+        <strong className="font-semibold">Important:</strong> If time expires, nominees will be randomly selected
       </p>
     </div>
   );

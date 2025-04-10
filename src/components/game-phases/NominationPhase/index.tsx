@@ -126,7 +126,7 @@ const NominationPhase: React.FC = () => {
           )}
         </div>
         
-        {/* Timer Display */}
+        {/* Timer Display - Added to top for visibility */}
         <TimerDisplay 
           timeRemaining={timeRemaining} 
           onTimeExpired={handleTimeExpired}

@@ -5,7 +5,7 @@ import GamePhaseHeader from './GamePhaseHeader';
 import HouseguestCard from './HouseguestCard';
 import GameEventLog from './GameEventLog';
 import HOHCompetition from './game-phases/HOHCompetition';
-import NominationPhase from './game-phases/NominationPhase';
+import NominationPhase from './game-phases/NominationPhase/index';
 import POVCompetition from './game-phases/POVCompetition';
 import POVMeeting from './game-phases/POVMeeting';
 import EvictionPhase from './game-phases/EvictionPhase';
