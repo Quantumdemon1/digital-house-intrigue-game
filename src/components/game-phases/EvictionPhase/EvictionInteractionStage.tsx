@@ -30,9 +30,6 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
   // Get game state
   const { gameState, showToast } = useGame();
   
-  // Get player
-  const player = gameState.houseguests.find(hg => hg.isPlayer);
-  
   // Handler for HG selection
   const handleHouseguestSelect = (houseguest: Houseguest) => {
     setSelectedHouseguest(houseguest);

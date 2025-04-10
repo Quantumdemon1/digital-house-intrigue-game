@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { MessageSquare } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Houseguest } from '@/models/houseguest';
+import HouseguestCard from '../../HouseguestCard';
 
 interface PlayerCampaignSectionProps {
   nonNominees: Houseguest[];
@@ -16,38 +16,34 @@ const PlayerCampaignSection: React.FC<PlayerCampaignSectionProps> = ({
   onHouseguestSelect
 }) => {
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-4">
-        <h3 className="text-xl font-bold">Campaign for Votes</h3>
-        <p className="text-muted-foreground mb-2">
-          You're on the block! Interact with houseguests to build relationships and save yourself.
+    <Card className="bg-white/50 backdrop-blur-sm border-border">
+      <CardHeader className="pb-2">
+        <CardTitle>Campaign for Votes</CardTitle>
+        <CardDescription>
+          You've been nominated for eviction. Talk to houseguests to gain their support.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="mb-4 text-sm">
+          Choose up to <strong>{remainingInteractions}</strong> houseguests to interact with:
         </p>
-        <p className="font-semibold text-bb-red">
-          Interactions remaining: {remainingInteractions}
-        </p>
-      </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {nonNominees.map(houseguest => (
-          <Button
-            key={houseguest.id}
-            variant="outline"
-            className="h-auto py-4 flex flex-col items-center border-2 hover:border-bb-red transition-colors"
-            disabled={remainingInteractions <= 0}
-            onClick={() => onHouseguestSelect(houseguest)}
-          >
-            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-lg mb-2">
-              {houseguest.name.charAt(0)}
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {nonNominees.map(houseguest => (
+            <div 
+              key={houseguest.id} 
+              className="cursor-pointer transform transition duration-200 hover:scale-105"
+              onClick={() => onHouseguestSelect(houseguest)}
+            >
+              <HouseguestCard 
+                houseguest={houseguest} 
+                isDisabled={remainingInteractions <= 0}
+              />
             </div>
-            <div className="font-semibold">{houseguest.name}</div>
-            <div className="flex items-center mt-2">
-              <MessageSquare className="h-4 w-4 mr-1" />
-              <span>Interact</span>
-            </div>
-          </Button>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

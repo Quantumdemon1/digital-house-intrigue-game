@@ -1,12 +1,13 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Houseguest } from '@/models/houseguest';
+import HouseguestCard from '../../HouseguestCard';
 import NomineeDisplay from './NomineeDisplay';
 
 interface NonPlayerSectionProps {
   nominees: Houseguest[];
-  nonNominees: Houseguest[];
+  nonNominees: Houseguest[]; // Non-nominees excluding the player
   remainingInteractions: number;
   onHouseguestSelect: (houseguest: Houseguest) => void;
 }
@@ -18,37 +19,52 @@ const NonPlayerSection: React.FC<NonPlayerSectionProps> = ({
   onHouseguestSelect
 }) => {
   return (
-    <div className="space-y-4">
-      <div className="text-center">
-        <h3 className="text-xl font-bold">Nominees Are Campaigning</h3>
-        <p className="text-muted-foreground">
-          The nominated houseguests are campaigning to stay in the house.
-        </p>
-      </div>
+    <>
+      <Card className="bg-white/50 backdrop-blur-sm border-border">
+        <CardHeader className="pb-2">
+          <CardTitle>Nominees</CardTitle>
+          <CardDescription>
+            These houseguests have been nominated for eviction
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {nominees.map(nominee => (
+              <NomineeDisplay key={nominee.id} nominee={nominee} />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
       
-      <NomineeDisplay nominees={nominees} />
-      
-      <div className="mt-6">
-        <h4 className="font-semibold mb-2">Talk to houseguests:</h4>
-        <p className="text-sm text-muted-foreground mb-4">
-          Interactions remaining: {remainingInteractions}
-        </p>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {nonNominees.map(houseguest => (
-            <Button
-              key={houseguest.id}
-              variant="outline"
-              className="h-auto py-3 flex flex-col items-center"
-              disabled={remainingInteractions <= 0}
-              onClick={() => onHouseguestSelect(houseguest)}
-            >
-              <span>{houseguest.name}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
-    </div>
+      <Card className="bg-white/50 backdrop-blur-sm border-border">
+        <CardHeader className="pb-2">
+          <CardTitle>Influence Voting</CardTitle>
+          <CardDescription>
+            Talk to other houseguests to influence their votes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm">
+            Choose up to <strong>{remainingInteractions}</strong> houseguests to interact with:
+          </p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {nonNominees.map(houseguest => (
+              <div 
+                key={houseguest.id} 
+                className="cursor-pointer transform transition duration-200 hover:scale-105"
+                onClick={() => onHouseguestSelect(houseguest)}
+              >
+                <HouseguestCard 
+                  houseguest={houseguest}
+                  isDisabled={remainingInteractions <= 0}
+                />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 };
 
