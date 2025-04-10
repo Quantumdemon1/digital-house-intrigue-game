@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +45,14 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
           style={{ width: `${percentRemaining}%` }}
         />
       </div>
+      
+      {timeRemaining <= 5 && (
+        <Alert variant="destructive" className="mt-2 py-2">
+          <AlertDescription>
+            Time is running out! Make your decision quickly.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };

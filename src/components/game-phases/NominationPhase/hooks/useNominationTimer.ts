@@ -29,33 +29,28 @@ export const useNominationTimer = ({
   useEffect(() => {
     if (!isPlayer || isComplete) return;
     
-    let timerId: number;
+    const timerId = window.setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerId);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
     
-    if (timeRemaining > 0) {
-      timerId = window.setInterval(() => {
-        setTimeRemaining(prev => {
-          const newValue = prev - 1;
-          if (newValue <= 0) {
-            clearInterval(timerId);
-            return 0;
-          }
-          return newValue;
-        });
-      }, 1000);
-    } else if (timeRemaining === 0) {
-      // Call onTimeExpired in the next render cycle to avoid state updates during rendering
-      window.setTimeout(onTimeExpired, 0);
-    }
-    
+    // Cleanup function to clear interval when component unmounts or dependencies change
     return () => {
-      if (timerId) clearInterval(timerId);
+      clearInterval(timerId);
     };
-  }, [timeRemaining, onTimeExpired, isPlayer, isComplete]);
+  }, [isPlayer, isComplete]); // Only rerun when isPlayer or isComplete changes
   
-  // Trigger the time expired callback when time reaches zero
+  // Separate effect to handle time expiry
   useEffect(() => {
     if (timeRemaining === 0 && isPlayer && !isComplete) {
-      onTimeExpired();
+      // Call onTimeExpired in the next render cycle to avoid state updates during rendering
+      const timeoutId = setTimeout(onTimeExpired, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [timeRemaining, isPlayer, isComplete, onTimeExpired]);
   

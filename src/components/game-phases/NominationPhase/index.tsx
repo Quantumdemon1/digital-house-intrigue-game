@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { useNominationCeremony } from './hooks/useNominationCeremony';
@@ -7,6 +8,7 @@ import NominationHeader from './components/NominationHeader';
 import NominationContent from './components/NominationContent';
 import NominationFooter from './components/NominationFooter';
 import NominationCeremonyResult from './NominationCeremonyResult';
+import { config } from '@/config';
 
 const NOMINATION_TIME = 30; // seconds
 
