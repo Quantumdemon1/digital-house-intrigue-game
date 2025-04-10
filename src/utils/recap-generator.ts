@@ -161,7 +161,7 @@ export class GameRecapGenerator {
   private findVetoWinner(events: GameEvent[]): string | null {
     const vetoEvent = events.find(e => 
       e.type === 'COMP_WIN' && 
-      e.description.toLowerCase().includes('veto') || e.description.toLowerCase().includes('pov')
+      (e.description.toLowerCase().includes('veto') || e.description.toLowerCase().includes('pov'))
     );
     
     if (vetoEvent?.data?.winnerName) {

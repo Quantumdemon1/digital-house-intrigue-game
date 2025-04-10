@@ -15,7 +15,7 @@ export abstract class GameStateBase {
 
   constructor(controller: IGameControllerFacade) {
     this.controller = controller;
-    this.game = controller.gameController.game;
+    this.game = controller.game;
   }
 
   // Life cycle methods

@@ -1,6 +1,6 @@
 
-import { Houseguest, HouseguestStatus, createHouseguest } from './houseguest';
-import { Alliance, createAlliance } from './alliance';
+import { Houseguest, HouseguestStatus } from './houseguest';
+import { Alliance } from './alliance';
 import { RelationshipSystem } from '../systems/relationship-system';
 import { CompetitionSystem } from '../systems/competition-system';
 import { AIIntegrationSystem } from '../systems/ai-integration';
@@ -24,6 +24,7 @@ export interface GameEvent {
   description: string;
   involvedHouseguests: string[]; // Houseguest IDs
   timestamp: number;
+  data?: any; // Additional event data
 }
 
 export class BigBrotherGame {
@@ -31,14 +32,16 @@ export class BigBrotherGame {
   public alliances: Alliance[] = [];
   public week: number = 1;
   public phase: string = 'Setup';
-  public hohWinner: Houseguest | null = null;
-  public povWinner: Houseguest | null = null;
-  public nominees: Houseguest[] = [];
-  public juryMembers: Houseguest[] = [];
-  public winner: Houseguest | null = null;
-  public runnerUp: Houseguest | null = null;
-  public gameLog: GameEvent[] = [];
+  public hohWinner: string | null = null;
+  public povWinner: string | null = null;
+  public nominees: string[] = [];
+  public juryMembers: string[] = [];
+  public winner: string | null = null;
+  public runnerUp: string | null = null;
+  public finalTwo: string[] | null = null;
+  public eventLog: GameEvent[] = [];
   public currentState: GameStateBase | null = null;
+  public currentWeek: number = 1;
 
   // Systems
   public relationshipSystem: RelationshipSystem;
@@ -62,6 +65,7 @@ export class BigBrotherGame {
     this.houseguests = [];
     this.alliances = [];
     this.week = 1;
+    this.currentWeek = 1;
     this.phase = 'Setup';
     this.hohWinner = null;
     this.povWinner = null;
@@ -69,14 +73,15 @@ export class BigBrotherGame {
     this.juryMembers = [];
     this.winner = null;
     this.runnerUp = null;
-    this.gameLog = [];
+    this.finalTwo = null;
+    this.eventLog = [];
   }
 
   async start(gameController: any): Promise<void> {
     this.logger.info('Starting new Big Brother game');
     
     // Initialize the game with the first state
-    this.currentState = new InitializationState(this, gameController);
+    this.currentState = new InitializationState(gameController);
     await this.currentState.enter();
     
     return Promise.resolve();
@@ -90,14 +95,15 @@ export class BigBrotherGame {
       description: event.description || '',
       involvedHouseguests: event.involvedHouseguests || [],
       timestamp: Date.now(),
+      data: event.data || {}
     };
     
-    this.gameLog.push(fullEvent);
+    this.eventLog.push(fullEvent);
     this.logger.info(`Game Event: ${fullEvent.description}`);
   }
 
   getActiveHouseguests(): Houseguest[] {
-    return this.houseguests.filter(h => h.status === 'Active');
+    return this.houseguests.filter(h => h.status === 'active');
   }
 
   getHouseguestById(id: string): Houseguest | undefined {
@@ -106,16 +112,10 @@ export class BigBrotherGame {
 
   advanceWeek(): void {
     this.week++;
+    this.currentWeek++;
     this.phase = 'HoH'; // Reset to HoH phase
     
     // Reset HoH and PoV statuses
-    this.houseguests = this.houseguests.map(guest => ({
-      ...guest,
-      isHoH: false,
-      isPovHolder: false,
-      isNominated: false
-    }));
-    
     this.hohWinner = null;
     this.povWinner = null;
     this.nominees = [];
@@ -133,14 +133,16 @@ export class BigBrotherGame {
       houseguests: this.houseguests,
       alliances: this.alliances,
       week: this.week,
+      currentWeek: this.currentWeek,
       phase: this.phase,
-      hohWinnerId: this.hohWinner?.id || null,
-      povWinnerId: this.povWinner?.id || null,
-      nomineeIds: this.nominees.map(n => n.id),
-      juryMemberIds: this.juryMembers.map(j => j.id),
-      winnerId: this.winner?.id || null,
-      runnerUpId: this.runnerUp?.id || null,
-      gameLog: this.gameLog,
+      hohWinner: this.hohWinner,
+      povWinner: this.povWinner,
+      nominees: this.nominees,
+      juryMembers: this.juryMembers,
+      winner: this.winner,
+      runnerUp: this.runnerUp,
+      finalTwo: this.finalTwo,
+      gameLog: this.eventLog,
       // State is handled in restoreState after loading
       currentStateName: this.currentState?.constructor.name || 'InitializationState'
     };
@@ -153,16 +155,18 @@ export class BigBrotherGame {
     this.houseguests = gameData.houseguests;
     this.alliances = gameData.alliances;
     this.week = gameData.week;
+    this.currentWeek = gameData.currentWeek || gameData.week;
     this.phase = gameData.phase;
-    this.gameLog = gameData.gameLog;
+    this.gameLog = gameData.eventLog;
     
     // Restore references to objects
-    this.hohWinner = gameData.hohWinnerId ? this.getHouseguestById(gameData.hohWinnerId) || null : null;
-    this.povWinner = gameData.povWinnerId ? this.getHouseguestById(gameData.povWinnerId) || null : null;
-    this.nominees = gameData.nomineeIds.map((id: string) => this.getHouseguestById(id)).filter(Boolean) as Houseguest[];
-    this.juryMembers = gameData.juryMemberIds.map((id: string) => this.getHouseguestById(id)).filter(Boolean) as Houseguest[];
-    this.winner = gameData.winnerId ? this.getHouseguestById(gameData.winnerId) || null : null;
-    this.runnerUp = gameData.runnerUpId ? this.getHouseguestById(gameData.runnerUpId) || null : null;
+    this.hohWinner = gameData.hohWinner;
+    this.povWinner = gameData.povWinner;
+    this.nominees = gameData.nominees || [];
+    this.juryMembers = gameData.juryMembers || [];
+    this.winner = gameData.winner;
+    this.runnerUp = gameData.runnerUp;
+    this.finalTwo = gameData.finalTwo;
     
     // State will be restored separately with restoreState
   }
@@ -174,7 +178,7 @@ export class BigBrotherGame {
     try {
       // Note: This is a simplified implementation 
       // In a full implementation, you'd need to dynamically import the correct state class
-      this.currentState = new InitializationState(this, gameController);
+      this.currentState = new InitializationState(gameController);
       await this.currentState.enter();
       return Promise.resolve();
     } catch (error) {
