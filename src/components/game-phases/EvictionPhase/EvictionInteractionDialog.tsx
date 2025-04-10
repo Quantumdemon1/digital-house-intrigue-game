@@ -35,31 +35,20 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
     setSelectedOption(option);
     setStep('result');
     
-    // Calculate actual relationship change based on player's social stat
+    // Calculate actual relationship change based on multiple factors
     let actualRelationshipChange = option.relationshipChange;
     
-    // If there's a required social stat and the player doesn't meet it,
-    // reduce the relationship gain or worsen the relationship loss
-    if (option.requiredSocialStat && player.stats.social < option.requiredSocialStat) {
-      // The deficit in social skills
-      const socialDeficit = option.requiredSocialStat - player.stats.social;
-      
-      // If it was a positive change, reduce it based on deficit
-      if (actualRelationshipChange > 0) {
-        actualRelationshipChange = Math.max(0, actualRelationshipChange - (socialDeficit * 3));
-      } 
-      // If it was negative, make it more negative
-      else {
-        actualRelationshipChange -= (socialDeficit * 2);
-      }
-    } 
-    // If player exceeds required social stat, give a bonus
-    else if (option.requiredSocialStat && player.stats.social > option.requiredSocialStat + 2) {
-      const socialBonus = player.stats.social - option.requiredSocialStat;
-      if (actualRelationshipChange > 0) {
-        actualRelationshipChange += Math.min(10, socialBonus * 2);
-      }
-    }
+    // Factor 1: Check if player's social stat meets the requirement
+    const socialStatFactor = calculateSocialStatFactor(player, option);
+    
+    // Factor 2: Check trait compatibility
+    const traitCompatibilityFactor = calculateTraitCompatibilityFactor(houseguest, option);
+    
+    // Apply both factors to the base relationship change
+    actualRelationshipChange = Math.round(actualRelationshipChange * socialStatFactor * traitCompatibilityFactor);
+    
+    // Ensure relationship change is within reasonable bounds
+    actualRelationshipChange = Math.max(-25, Math.min(25, actualRelationshipChange));
     
     // Update relationship based on the selected option
     dispatch({
@@ -68,7 +57,7 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
         guestId1: player.id,
         guestId2: houseguest.id,
         change: actualRelationshipChange,
-        note: `Interaction during eviction phase: ${player.name} chose "${option.text.substring(0, 30)}..."`
+        note: `Interaction during eviction phase: ${player.name} chose "${option.text.substring(0, 30)}..." (${actualRelationshipChange > 0 ? '+' : ''}${actualRelationshipChange})`
       }
     });
     
@@ -83,6 +72,58 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
         involvedHouseguests: [player.id, houseguest.id]
       }
     });
+  };
+  
+  // Calculate how player's social stat affects the interaction outcome
+  const calculateSocialStatFactor = (player: Houseguest, option: InteractionOption): number => {
+    if (!option.requiredSocialStat) return 1;
+    
+    // If player's social stat is much lower than required, reduce effectiveness
+    if (player.stats.social < option.requiredSocialStat - 2) {
+      const deficit = option.requiredSocialStat - player.stats.social;
+      return Math.max(0.1, 1 - (deficit * 0.15)); // Up to 90% reduction for large deficits
+    }
+    
+    // If player's social stat is slightly lower, minor reduction
+    if (player.stats.social < option.requiredSocialStat) {
+      return 0.75; // 25% reduction
+    }
+    
+    // If player meets requirement, normal effectiveness
+    if (player.stats.social === option.requiredSocialStat) {
+      return 1;
+    }
+    
+    // If player exceeds requirement, bonus effectiveness
+    const excess = player.stats.social - option.requiredSocialStat;
+    return Math.min(1.5, 1 + (excess * 0.1)); // Up to 50% bonus
+  };
+  
+  // Calculate how houseguest's traits affect their reaction to the interaction
+  const calculateTraitCompatibilityFactor = (houseguest: Houseguest, option: InteractionOption): number => {
+    if (!option.compatibleTraits && !option.incompatibleTraits) return 1;
+    
+    let factor = 1;
+    
+    // Check for compatible traits (positive reaction)
+    if (option.compatibleTraits) {
+      const compatibleTraitsCount = houseguest.traits.filter(trait => 
+        option.compatibleTraits?.includes(trait)
+      ).length;
+      
+      factor += compatibleTraitsCount * 0.25; // +25% per compatible trait
+    }
+    
+    // Check for incompatible traits (negative reaction)
+    if (option.incompatibleTraits) {
+      const incompatibleTraitsCount = houseguest.traits.filter(trait => 
+        option.incompatibleTraits?.includes(trait)
+      ).length;
+      
+      factor -= incompatibleTraitsCount * 0.5; // -50% per incompatible trait
+    }
+    
+    return Math.max(0.1, factor); // Ensure minimum effectiveness of 10%
   };
   
   const handleComplete = () => {
