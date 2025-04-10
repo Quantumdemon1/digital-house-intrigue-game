@@ -17,6 +17,7 @@ const VotingTimer: React.FC<VotingTimerProps> = ({
   // Run onTimeExpired when timer reaches zero
   useEffect(() => {
     if (timeRemaining === 0 && onTimeExpired) {
+      console.log("Voting timer expired, calling onTimeExpired");
       onTimeExpired();
     }
   }, [timeRemaining, onTimeExpired]);

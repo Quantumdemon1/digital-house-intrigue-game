@@ -6,7 +6,7 @@ import { Houseguest } from '@/models/houseguest';
 
 type EvictionStage = 'interaction' | 'voting' | 'results';
 
-const VOTING_TIME_LIMIT = 60; // 60 seconds for all voting
+const VOTING_TIME_LIMIT = 30; // 30 seconds for voting (changed from 60)
 
 export function useEvictionPhase() {
   const { gameState, dispatch } = useGame();
@@ -33,12 +33,15 @@ export function useEvictionPhase() {
       setVotingStarted(true);
       setTimeRemaining(VOTING_TIME_LIMIT);
       setTimerExpired(false);
+      console.log("Voting stage started, timer reset to", VOTING_TIME_LIMIT);
     }
   }, [stage]);
 
   // Countdown timer for voting phase
   useEffect(() => {
     if (stage !== 'voting' || !votingStarted || timeRemaining <= 0) return;
+    
+    console.log("Eviction voting timer: ", timeRemaining);
     
     const timer = setTimeout(() => {
       setTimeRemaining(prev => prev - 1);
@@ -49,8 +52,9 @@ export function useEvictionPhase() {
 
   // Handle time expiration
   useEffect(() => {
-    if (timeRemaining <= 0 && stage === 'voting' && !timerExpired) {
+    if (timeRemaining === 0 && stage === 'voting' && !timerExpired) {
       setTimerExpired(true); // Prevent multiple executions
+      console.log("Eviction voting timer expired");
       handleTimeExpired();
     }
   }, [timeRemaining, stage]);
@@ -58,6 +62,8 @@ export function useEvictionPhase() {
   // Time expiration handler
   const handleTimeExpired = useCallback(() => {
     if (stage !== 'voting' || timerExpired) return;
+    
+    console.log("Handling time expired for eviction voting");
     
     const missingVoters = nonNominees.filter(voter => !votes[voter.id]);
     

@@ -16,41 +16,30 @@ export const useNominationTimer = ({
 }: UseNominationTimerProps) => {
   const [timeRemaining, setTimeRemaining] = useState(initialTime);
   
-  // Reset timer when component parameters change
+  // Reset timer when initialTime or isComplete changes
   useEffect(() => {
-    if (isComplete) {
-      return; // Don't reset if complete
-    }
     setTimeRemaining(initialTime);
   }, [initialTime, isComplete]);
 
-  // Only run the timer if the player is making a decision
-  // and the ceremony is not complete
+  // Timer countdown effect
   useEffect(() => {
-    if (!isPlayer || isComplete) return;
+    // Only start timer if player is active and ceremony isn't complete
+    if (!isPlayer || isComplete || timeRemaining <= 0) return;
     
-    const timerId = window.setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerId);
-          return 0;
-        }
-        return prev - 1;
-      });
+    console.log("Starting nomination timer countdown from", timeRemaining);
+    
+    const timer = setTimeout(() => {
+      setTimeRemaining(prevTime => prevTime - 1);
     }, 1000);
     
-    // Cleanup function to clear interval when component unmounts or dependencies change
-    return () => {
-      clearInterval(timerId);
-    };
-  }, [isPlayer, isComplete]); // Only rerun when isPlayer or isComplete changes
+    return () => clearTimeout(timer);
+  }, [timeRemaining, isPlayer, isComplete]);
   
-  // Separate effect to handle time expiry
+  // Handle timer expiration
   useEffect(() => {
     if (timeRemaining === 0 && isPlayer && !isComplete) {
-      // Call onTimeExpired in the next render cycle to avoid state updates during rendering
-      const timeoutId = setTimeout(onTimeExpired, 0);
-      return () => clearTimeout(timeoutId);
+      console.log("Nomination timer expired, calling onTimeExpired");
+      onTimeExpired();
     }
   }, [timeRemaining, isPlayer, isComplete, onTimeExpired]);
   

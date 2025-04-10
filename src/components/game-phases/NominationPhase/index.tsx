@@ -8,9 +8,9 @@ import NominationHeader from './components/NominationHeader';
 import NominationContent from './components/NominationContent';
 import NominationFooter from './components/NominationFooter';
 import NominationCeremonyResult from './NominationCeremonyResult';
-import { config } from '@/config';
 
-const NOMINATION_TIME = 30; // seconds
+// Set nomination time to 30 seconds
+const NOMINATION_TIME = 30;
 
 const NominationPhase: React.FC = () => {
   const {
@@ -33,6 +33,11 @@ const NominationPhase: React.FC = () => {
     onTimeExpired: handleTimeExpired,
     isComplete: ceremonyComplete
   });
+
+  // Log the time remaining to help with debugging
+  React.useEffect(() => {
+    console.log("Nomination time remaining:", timeRemaining);
+  }, [timeRemaining]);
 
   useAINomination({
     hoh,
