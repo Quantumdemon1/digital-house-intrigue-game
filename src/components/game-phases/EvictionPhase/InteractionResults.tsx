@@ -10,7 +10,7 @@ interface InteractionResultsProps {
   onComplete: () => void;
 }
 
-export const InteractionResults: React.FC<InteractionResultsProps> = ({
+const InteractionResults: React.FC<InteractionResultsProps> = ({
   selectedOption,
   houseguest,
   onComplete
@@ -30,3 +30,5 @@ export const InteractionResults: React.FC<InteractionResultsProps> = ({
     </div>
   );
 };
+
+export default InteractionResults;

@@ -132,3 +132,84 @@
     @apply bg-red-500;
   }
 }
+
+/* Big Brother theme colors */
+@layer utilities {
+  .text-bb-blue {
+    @apply text-[#1c6dc1];
+  }
+  
+  .text-bb-red {
+    @apply text-[#e74c3c];
+  }
+  
+  .text-bb-gold {
+    @apply text-[#f1c40f];
+  }
+  
+  .text-bb-green {
+    @apply text-[#27ae60];
+  }
+  
+  .text-bb-dark {
+    @apply text-[#2c3e50];
+  }
+  
+  .bg-bb-blue {
+    @apply bg-[#1c6dc1];
+  }
+  
+  .bg-bb-red {
+    @apply bg-[#e74c3c];
+  }
+  
+  .bg-bb-gold {
+    @apply bg-[#f1c40f];
+  }
+  
+  .bg-bb-green {
+    @apply bg-[#27ae60];
+  }
+  
+  .bg-bb-dark {
+    @apply bg-[#2c3e50];
+  }
+  
+  .border-bb-blue {
+    @apply border-[#1c6dc1];
+  }
+  
+  .border-bb-red {
+    @apply border-[#e74c3c];
+  }
+  
+  .border-bb-gold {
+    @apply border-[#f1c40f];
+  }
+  
+  .border-bb-green {
+    @apply border-[#27ae60];
+  }
+  
+  .border-bb-dark {
+    @apply border-[#2c3e50];
+  }
+}
+
+/* Animation for camera scan effect */
+@keyframes camera-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(300%);
+  }
+}
+
+.animate-camera-scan {
+  animation: camera-scan 4s linear infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

@@ -10,7 +10,7 @@ import { ThemeProvider } from "next-themes";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App: React.FC = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
     <QueryClientProvider client={queryClient}>
       <Toaster />

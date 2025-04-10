@@ -48,7 +48,6 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
   };
   
   const handleInteractionComplete = () => {
-    setSelectedHouseguest(null);
     setDialogOpen(false);
     setRemainingInteractions(prev => prev - 1);
     
@@ -132,9 +131,9 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
         />
       )}
       
-      {selectedHouseguest && player && (
+      {player && (
         <EvictionInteractionDialog
-          houseguest={selectedHouseguest}
+          houseguest={selectedHouseguest || nonNominees[0]}
           player={player}
           gameState={gameState}
           onInteractionComplete={handleInteractionComplete}

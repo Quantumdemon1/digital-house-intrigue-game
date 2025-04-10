@@ -1,14 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useGame } from '@/contexts/GameContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
-import { InteractionResults } from './InteractionResults';
+import InteractionResults from './InteractionResults';
 import { GameState } from '@/models/game-state';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
@@ -77,7 +77,7 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
   const { dispatch } = useGame();
   
   if (!houseguest || !player) {
-    return <div>Error: Houseguest or Player data missing.</div>;
+    return null;
   }
   
   const handleInteractionComplete = () => {
