@@ -5,9 +5,15 @@ import { Target } from 'lucide-react';
 
 interface NominationCeremonyProgressProps {
   hohName?: string;
+  isNominating?: boolean;
+  ceremonyComplete?: boolean;
 }
 
-const NominationCeremonyProgress: React.FC<NominationCeremonyProgressProps> = ({ hohName }) => {
+const NominationCeremonyProgress: React.FC<NominationCeremonyProgressProps> = ({ 
+  hohName,
+  isNominating,
+  ceremonyComplete 
+}) => {
   return (
     <Card className="shadow-lg border-bb-red">
       <CardHeader className="bg-bb-red text-white">

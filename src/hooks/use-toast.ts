@@ -1,3 +1,6 @@
 
 // Re-export toast components for consistency
-export { useToast, toast } from "@/components/ui/use-toast";
+import { useToast as useToastOriginal, toast as toastOriginal } from "@/components/ui/use-toast";
+
+export const useToast = useToastOriginal;
+export const toast = toastOriginal;

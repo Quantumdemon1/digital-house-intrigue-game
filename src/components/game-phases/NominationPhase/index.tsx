@@ -53,7 +53,7 @@ const NominationPhase: React.FC = () => {
       />
       
       {ceremonyComplete ? (
-        <NominationCeremonyResult nominees={nominees} hoh={hoh} />
+        <NominationCeremonyResult nominees={nominees} hohName={hoh?.name} />
       ) : (
         <NominationContent 
           hoh={hoh}
