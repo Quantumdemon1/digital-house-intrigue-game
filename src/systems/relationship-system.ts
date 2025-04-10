@@ -134,4 +134,58 @@ export class RelationshipSystem {
     const sum = filteredRelations.reduce((total, [_, rel]) => total + rel.score, 0);
     return sum / filteredRelations.length;
   }
+  
+  // New methods for Phase 1 integration
+  initialize(houseguests: Houseguest[]): void {
+    this.initializeRelationships(houseguests);
+  }
+
+  handleEviction(evictedId: string): void {
+    // Implementation for relationship adjustments after eviction
+    this.logger.debug(`Processing relationship changes after eviction of houseguest ${evictedId}`);
+    // Logic would go here in Phase 2
+  }
+
+  serialize(): any {
+    // Serialize relationships for saving
+    const serialized: Record<string, Record<string, Relationship>> = {};
+    
+    this.relationships.forEach((guestMap, guestId1) => {
+      serialized[guestId1] = {};
+      guestMap.forEach((relationship, guestId2) => {
+        serialized[guestId1][guestId2] = { ...relationship };
+      });
+    });
+    
+    return serialized;
+  }
+
+  deserialize(data: any): void {
+    // Deserialize relationships from saved data
+    if (!data) return;
+    
+    this.relationships = new Map();
+    
+    Object.entries(data).forEach(([guestId1, relations]: [string, any]) => {
+      const guestMap = new Map<string, Relationship>();
+      this.relationships.set(guestId1, guestMap);
+      
+      Object.entries(relations).forEach(([guestId2, rel]: [string, any]) => {
+        guestMap.set(guestId2, {
+          score: rel.score || 0,
+          alliance: rel.alliance || null,
+          notes: Array.isArray(rel.notes) ? [...rel.notes] : []
+        });
+      });
+    });
+  }
+  
+  // Alliance management methods - stub implementation for Phase 1
+  serializeAlliances(): any {
+    return {}; // In Phase 2, we'll implement actual alliance serialization
+  }
+  
+  deserializeAlliances(data: any): void {
+    // In Phase 2, we'll implement actual alliance deserialization
+  }
 }

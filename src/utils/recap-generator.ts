@@ -25,14 +25,22 @@ export class GameRecapGenerator {
       
       // Winner information
       if (this.game.winner) {
-        recap += `## Winner: ${this.game.winner.name}\n\n`;
-        recap += `![Winner](${this.game.winner.imageUrl})\n\n`;
-        recap += `${this.game.winner.name} from ${this.game.winner.hometown} has won Big Brother!\n\n`;
+        recap += `## Winner: ${this.game.winner}\n\n`;
+        const winnerObj = this.game.getHouseguestById(this.game.winner);
+        if (winnerObj) {
+          recap += `${winnerObj.name} has won Big Brother!\n\n`;
+        }
       }
       
       // Runner-up information
-      if (this.game.runnerUp) {
-        recap += `## Runner-up: ${this.game.runnerUp.name}\n\n`;
+      if (this.game.finalTwo && this.game.finalTwo.length > 1) {
+        const runnerUpId = this.game.finalTwo.find(id => id !== this.game.winner) || null;
+        if (runnerUpId) {
+          const runnerUp = this.game.getHouseguestById(runnerUpId);
+          if (runnerUp) {
+            recap += `## Runner-up: ${runnerUp.name}\n\n`;
+          }
+        }
       }
       
       // Week-by-week breakdown
@@ -40,7 +48,7 @@ export class GameRecapGenerator {
       
       // Group events by week
       const eventsByWeek: Record<number, GameEvent[]> = {};
-      this.game.gameLog.forEach(event => {
+      this.game.eventLog.forEach(event => {
         if (!eventsByWeek[event.week]) {
           eventsByWeek[event.week] = [];
         }
@@ -57,8 +65,7 @@ export class GameRecapGenerator {
         // Head of Household
         const hohEvents = events.filter(e => e.type === 'HOH_WIN');
         if (hohEvents.length > 0) {
-          const hohEvent = hohEvents[0];
-          const hohId = hohEvent.involvedHouseguests[0];
+          const hohId = this.extractHohId(hohEvents[0]);
           const hoh = hohId ? this.game?.getHouseguestById(hohId) : null;
           
           if (hoh) {
@@ -69,15 +76,13 @@ export class GameRecapGenerator {
         // Nominations
         const nominationEvents = events.filter(e => e.type === 'NOMINATION');
         if (nominationEvents.length > 0) {
-          const nomEvent = nominationEvents[0];
-          recap += `- **Nominees**: ${nomEvent.description.replace('have been nominated for eviction', '')}\n`;
+          recap += `- **Nominees**: ${this.extractNominees(nominationEvents[0])}\n`;
         }
         
         // Power of Veto
         const povEvents = events.filter(e => e.type === 'POV_WIN');
         if (povEvents.length > 0) {
-          const povEvent = povEvents[0];
-          const povId = povEvent.involvedHouseguests[0];
+          const povId = this.extractPovId(povEvents[0]);
           const pov = povId ? this.game?.getHouseguestById(povId) : null;
           
           if (pov) {
@@ -94,7 +99,7 @@ export class GameRecapGenerator {
         // Eviction
         const evictionEvents = events.filter(e => e.type === 'EVICTION');
         if (evictionEvents.length > 0) {
-          recap += `- **Evicted**: ${evictionEvents[0].description}\n`;
+          recap += `- **Evicted**: ${this.extractEvicted(evictionEvents[0])}\n`;
         }
         
         recap += '\n';
@@ -148,5 +153,40 @@ export class GameRecapGenerator {
       this.logger.error('Error generating recap:', error);
       return 'An error occurred while generating the recap.';
     }
+  }
+
+  private extractHohId(event: GameEvent): string | null {
+    // Implementation depends on actual event structure
+    if (event.data && event.data.hohId) {
+      return event.data.hohId as string;
+    }
+    return null;
+  }
+
+  private extractPovId(event: GameEvent): string | null {
+    // Implementation depends on actual event structure
+    if (event.data && event.data.povId) {
+      return event.data.povId as string;
+    }
+    return null;
+  }
+
+  private extractNominees(event: GameEvent): string {
+    // Implementation depends on actual event structure
+    if (event.description) {
+      return event.description.replace('have been nominated for eviction', '').trim();
+    }
+    return "Unknown nominees";
+  }
+
+  private extractEvicted(event: GameEvent): string {
+    // Implementation depends on actual event structure
+    if (event.data && event.data.evicted) {
+      return event.data.evicted as string;
+    }
+    if (event.description) {
+      return event.description;
+    }
+    return "Unknown evicted houseguest";
   }
 }

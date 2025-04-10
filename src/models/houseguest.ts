@@ -1,3 +1,4 @@
+
 export type PersonalityTrait = 
   | 'Strategic' | 'Social' | 'Competitive' | 'Loyal'
   | 'Sneaky' | 'Confrontational' | 'Emotional' | 'Analytical';

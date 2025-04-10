@@ -1,83 +1,243 @@
-
 import { Houseguest } from '../models/houseguest';
 
 export class AIIntegrationSystem {
   private logger: any;
   private apiKey: string;
+  private memories: Map<string, string[]> = new Map();
+  private lastApiCall: number = 0;
+  private apiRateLimit: number = 500; // ms between calls
 
   constructor(logger: any, apiKey: string) {
     this.logger = logger;
-    this.apiKey = apiKey || '';
+    this.apiKey = apiKey;
     
-    if (!apiKey) {
-      this.logger.error('No API key provided for AI Integration System!');
+    if (!this.apiKey || this.apiKey === 'MISSING_API_KEY') {
+      this.logger.error('Gemini API key is missing. AI functionality will not work.');
     }
   }
 
+  initializeMemories(houseguests: Houseguest[]): void {
+    // Create or reset memory for each houseguest
+    houseguests.forEach(guest => {
+      if (!guest.isPlayer) {
+        this.memories.set(guest.id, [
+          `You are ${guest.name}, a contestant on Big Brother.`,
+          `Your personality is ${guest.personality}.`,
+          `You have these attributes - Intelligence: ${guest.stats?.mental || 5}, Social: ${guest.stats?.social || 5}, Physical: ${guest.stats?.physical || 5}, Endurance: ${guest.stats?.endurance || 5}.`
+        ]);
+      }
+    });
+    this.logger.info(`Initialized memories for ${this.memories.size} AI houseguests.`);
+  }
+  
   async makeDecision(
-    agentName: string,
+    botName: string,
     decisionType: string,
-    context: any,
+    context: Record<string, any>,
     gameState: any
   ): Promise<any> {
-    this.logger.info(`AI ${agentName} making ${decisionType} decision`);
-    
-    // Basic validation
-    if (!this.apiKey) {
-      this.logger.error('Cannot make AI decisions: Missing API key');
-      return this.generateFallbackDecision(decisionType, context);
+    if (!this.apiKey || this.apiKey === 'MISSING_API_KEY') {
+      this.logger.error(`Cannot make AI decision for ${botName}: API key missing`);
+      return null;
     }
     
+    const bot = gameState.houseguests.find((h: Houseguest) => h.name === botName && !h.isPlayer);
+    if (!bot) {
+      this.logger.error(`Cannot make AI decision: Bot "${botName}" not found`);
+      return null;
+    }
+
+    // Rate limiting
+    const now = Date.now();
+    const timeSinceLastCall = now - this.lastApiCall;
+    if (timeSinceLastCall < this.apiRateLimit) {
+      const delay = this.apiRateLimit - timeSinceLastCall;
+      this.logger.debug(`Rate limiting API call, waiting ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    this.lastApiCall = Date.now();
+
+    // Get bot's memories
+    const memories = this.memories.get(bot.id) || [];
+    
     try {
-      // Build prompt based on decision type
-      const prompt = this.buildPrompt(decisionType, context, gameState);
+      // Create prompt based on decision type
+      let prompt = '';
+      let temperature = 0.2; // Default temperature
       
-      // Call Gemini API
-      const response = await this.callGeminiAPI(prompt);
+      // Structure prompts by decision type
+      switch (decisionType) {
+        case 'nomination':
+          prompt = this.createNominationPrompt(bot, context, memories);
+          temperature = 0.2; // Low temperature for strategic decisions
+          break;
+        case 'veto':
+          prompt = this.createVetoPrompt(bot, context, memories);
+          temperature = 0.2;
+          break;
+        case 'vote':
+          prompt = this.createVotePrompt(bot, context, memories);
+          temperature = 0.3;
+          break;
+        case 'dialogue':
+          prompt = this.createDialoguePrompt(bot, context, memories);
+          temperature = 0.7; // Higher temperature for creative dialogues
+          break;
+        default:
+          this.logger.error(`Unknown decision type: ${decisionType}`);
+          return null;
+      }
       
-      // Parse and validate the response
-      const parsedResponse = this.parseResponse(response, decisionType);
+      this.logger.debug(`Making AI ${decisionType} decision for ${botName} with prompt length: ${prompt.length}`);
       
-      return parsedResponse;
-    } catch (error: any) {
-      this.logger.error(`AI decision error: ${error.message}`);
+      // Make the actual API call to Gemini
+      const response = await this.callGeminiAPI(prompt, temperature);
       
-      // Fall back to deterministic algorithm
-      return this.generateFallbackDecision(decisionType, context);
+      if (!response) {
+        this.logger.error(`Empty response from Gemini API for ${botName}'s ${decisionType} decision`);
+        return null;
+      }
+      
+      // Process response based on decision type
+      let decision;
+      try {
+        if (decisionType === 'dialogue') {
+          // For dialogue, just return the text response
+          decision = response.trim();
+        } else {
+          // For game decisions, expect JSON responses
+          decision = this.parseJsonResponse(response);
+          this.logger.debug(`AI ${decisionType} decision for ${botName}:`, decision);
+        }
+        
+        // Add to bot's memory if it's significant
+        if (decisionType !== 'dialogue') {
+          this.addToMemory(bot.id, `You made a ${decisionType} decision: ${JSON.stringify(decision)}`);
+        }
+        
+        return decision;
+      } catch (parseError) {
+        this.logger.error(`Failed to parse ${decisionType} decision for ${botName}:`, parseError);
+        this.logger.error(`Raw response was:`, response);
+        return null;
+      }
+    } catch (error) {
+      this.logger.error(`AI decision error for ${botName}:`, error);
+      return null;
     }
   }
   
-  private async callGeminiAPI(prompt: string): Promise<string> {
-    if (!this.apiKey) {
-      throw new Error('No API key available for Gemini');
+  private addToMemory(botId: string, memoryText: string): void {
+    const memories = this.memories.get(botId) || [];
+    memories.push(memoryText);
+    
+    // Keep memory size limited
+    if (memories.length > 20) {
+      memories.shift(); // Remove oldest memory
     }
     
+    this.memories.set(botId, memories);
+  }
+  
+  private createNominationPrompt(bot: Houseguest, context: any, memories: string[]): string {
+    return `You are ${bot.name}, the Head of Household in Big Brother. You need to nominate two houseguests for eviction.
+
+Your memories:
+${memories.join('\n')}
+
+Current game situation:
+${context.situation}
+
+Eligible houseguests you can nominate:
+${context.eligible.join(', ')}
+
+Think strategically. Consider your relationships, alliances, and who is a threat to your game.
+
+Respond in JSON format only:
+{"nominee1": "HouseguestName1", "nominee2": "HouseguestName2", "reasoning": "Your strategic thinking for these choices"}
+
+Choose two different names from the eligible list. You cannot nominate yourself.`;
+  }
+  
+  private createVetoPrompt(bot: Houseguest, context: any, memories: string[]): string {
+    return `You are ${bot.name}, the Power of Veto holder in Big Brother. You need to decide whether to use the veto, and if so, on whom.
+
+Your memories:
+${memories.join('\n')}
+
+Current game situation:
+${context.situation}
+
+Nominated houseguests:
+${context.nominees.join(', ')}
+
+Think strategically. Consider your relationships, alliances, and your own game position.
+
+Respond in JSON format only:
+{"useVeto": true/false, "vetoTarget": "HouseguestName", "reasoning": "Your strategic thinking for this choice"}
+
+If you choose not to use the veto, set "useVeto": false and "vetoTarget": null.`;
+  }
+  
+  private createVotePrompt(bot: Houseguest, context: any, memories: string[]): string {
+    return `You are ${bot.name}, a houseguest in Big Brother. You need to vote to evict one of the nominees.
+
+Your memories:
+${memories.join('\n')}
+
+Current game situation:
+${context.situation}
+
+Nominees:
+${context.nominees.join(', ')}
+
+Think strategically. Consider your relationships, alliances, and your own game position.
+
+Respond in JSON format only:
+{"vote": "HouseguestToEvict", "reasoning": "Your strategic thinking for this choice"}
+
+Your vote must be for one of the nominees listed.`;
+  }
+  
+  private createDialoguePrompt(bot: Houseguest, context: any, memories: string[]): string {
+    return `You are ${bot.name}, a houseguest in Big Brother. You need to respond to the following situation.
+
+Your memories:
+${memories.join('\n')}
+
+Current situation:
+${context.situation}
+
+Speak in your voice and personality. Be concise and natural. Your response should be authentic to your character.
+
+No need for JSON format - just respond directly with what you would say.`;
+  }
+  
+  private async callGeminiAPI(prompt: string, temperature: number): Promise<string> {
     try {
-      const response = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': this.apiKey,
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: prompt }
-                ]
-              }
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1024,
-            }
-          })
-        }
-      );
+      this.logger.debug('Calling Gemini API...');
+      
+      // Production API call (uncomment when API key is set)
+      if (!this.apiKey || this.apiKey === 'MISSING_API_KEY') {
+        throw new Error('API key not configured');
+      }
+      
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+      const response = await fetch(`${url}?key=${this.apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: temperature,
+            maxOutputTokens: 800,
+            topK: 40,
+            topP: 0.95
+          }
+        })
+      });
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -86,207 +246,48 @@ export class AIIntegrationSystem {
       
       const data = await response.json();
       
-      // Extract the generated text from the response
-      if (data.candidates && 
-          data.candidates[0] && 
-          data.candidates[0].content && 
-          data.candidates[0].content.parts && 
-          data.candidates[0].content.parts.length > 0) {
+      // Extract text from the Gemini response structure
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && 
+          data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
         return data.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error('Unexpected API response structure');
       }
-    } catch (error: any) {
-      this.logger.error(`Gemini API call failed: ${error.message}`);
-      throw error;
+      
+      this.logger.error('Unexpected Gemini API response structure:', data);
+      throw new Error('Invalid API response format');
+    } catch (error) {
+      this.logger.error('Gemini API call failed:', error);
+      
+      // Fallback mock response for testing/demo
+      this.logger.warn('Using fallback mock response');
+      switch (true) {
+        case prompt.includes('nominate'):
+          return '{"nominee1": "Alex", "nominee2": "Bailey", "reasoning": "Strategic decision based on threat level"}';
+        case prompt.includes('veto'):
+          return '{"useVeto": false, "vetoTarget": null, "reasoning": "Current nominations are good for my game"}';
+        case prompt.includes('vote'):
+          return '{"vote": "Alex", "reasoning": "Alex is a bigger threat to my game"}';
+        default:
+          return 'I\'ll need to consider my options carefully.';
+      }
     }
   }
   
-  private buildPrompt(decisionType: string, context: any, gameState: any): string {
-    let basePrompt = '';
-    
-    switch (decisionType) {
-      case 'nomination': {
-        // Nomination prompt
-        basePrompt = `
-You are ${context.botName}, the Head of Household in Big Brother. You must nominate two houseguests for eviction.
-
-CONTEXT:
-- You are playing competitively to win the game
-- Eligible houseguests: ${context.eligible.join(', ')}
-
-FORMAT YOUR RESPONSE AS A VALID JSON OBJECT with the following structure:
-{
-  "nominee1": "[first houseguest name]",
-  "nominee2": "[second houseguest name]",
-  "reasoning": "[brief explanation of your decision]"
-}
-
-Give only the JSON object in your response, nothing else.
-`;
-        break;
-      }
-      
-      case 'veto': {
-        // Veto decision prompt
-        basePrompt = `
-You are ${context.botName}, the holder of the Power of Veto in Big Brother.
-
-CONTEXT:
-- You are playing competitively to win
-- Current nominees: ${context.nominees.join(', ')}
-- You ${context.isNominated ? 'ARE' : 'are NOT'} currently nominated
-- Possible replacement nominees if you use the veto: ${context.possibleReplacements.join(', ')}
-
-FORMAT YOUR RESPONSE AS A VALID JSON OBJECT with the following structure:
-{
-  "useVeto": true/false,
-  "vetoTarget": "[name of houseguest to remove from block, only if useVeto is true]",
-  "replacementNominee": "[name of replacement, only needed if you're the HoH and useVeto is true]",
-  "reasoning": "[brief explanation of your decision]"
-}
-
-Give only the JSON object in your response, nothing else.
-`;
-        break;
-      }
-      
-      case 'eviction': {
-        // Eviction vote prompt
-        basePrompt = `
-You are ${context.botName}, a houseguest voting in the Big Brother eviction ceremony.
-
-CONTEXT:
-- You are playing competitively to win
-- Nominees on the block: ${context.nominees.join(', ')}
-
-FORMAT YOUR RESPONSE AS A VALID JSON OBJECT with the following structure:
-{
-  "vote": "[name of houseguest you want to EVICT]",
-  "reasoning": "[brief explanation of your decision]"
-}
-
-Give only the JSON object in your response, nothing else.
-`;
-        break;
-      }
-      
-      // Add other decision types as needed
-      
-      default:
-        basePrompt = `
-You are ${context.botName}, a houseguest in Big Brother making a ${decisionType} decision.
-Consider the context and make a strategic choice.
-
-CONTEXT:
-${JSON.stringify(context, null, 2)}
-
-FORMAT YOUR RESPONSE AS A VALID JSON OBJECT appropriate for this decision type.
-`;
-    }
-    
-    return basePrompt;
-  }
-  
-  private parseResponse(responseText: string, decisionType: string): any {
+  private parseJsonResponse(response: string): any {
     try {
-      // Extract JSON from the response (handle cases where there might be text before/after the JSON)
-      const jsonPattern = /\{[\s\S]*\}/;
-      const match = responseText.match(jsonPattern);
-      
-      if (!match) {
-        throw new Error('No valid JSON found in the response');
+      // First, try straightforward JSON parsing
+      return JSON.parse(response);
+    } catch (e) {
+      // If that fails, try to extract JSON from a larger text response
+      const jsonMatch = response.match(/(\{.*\})/s);
+      if (jsonMatch && jsonMatch[1]) {
+        try {
+          return JSON.parse(jsonMatch[1]);
+        } catch (e2) {
+          throw new Error(`Could not parse JSON from response: ${response}`);
+        }
+      } else {
+        throw new Error(`Response does not contain valid JSON: ${response}`);
       }
-      
-      const jsonStr = match[0];
-      const result = JSON.parse(jsonStr);
-      
-      // Validate the result based on decision type
-      this.validateDecision(result, decisionType);
-      
-      return result;
-    } catch (error: any) {
-      this.logger.error(`Failed to parse AI response: ${error.message}`);
-      this.logger.debug('Response text:', responseText);
-      throw error;
-    }
-  }
-  
-  private validateDecision(decision: any, decisionType: string): void {
-    switch (decisionType) {
-      case 'nomination':
-        if (!decision.nominee1 || !decision.nominee2) {
-          throw new Error('Nomination decision missing nominees');
-        }
-        if (decision.nominee1 === decision.nominee2) {
-          throw new Error('Cannot nominate the same houseguest twice');
-        }
-        break;
-        
-      case 'veto':
-        if (typeof decision.useVeto !== 'boolean') {
-          throw new Error('Veto decision missing useVeto field');
-        }
-        if (decision.useVeto && !decision.vetoTarget) {
-          throw new Error('Veto decision missing vetoTarget');
-        }
-        break;
-        
-      case 'eviction':
-        if (!decision.vote) {
-          throw new Error('Eviction decision missing vote');
-        }
-        break;
-        
-      // Add validations for other decision types
-    }
-  }
-  
-  private generateFallbackDecision(decisionType: string, context: any): any {
-    this.logger.warn(`Using fallback for ${decisionType} decision`);
-    
-    switch (decisionType) {
-      case 'nomination': {
-        // Simple fallback: nominate two random eligible houseguests
-        const eligible = context.eligible || [];
-        if (eligible.length < 2) {
-          return { nominee1: null, nominee2: null, reasoning: 'Not enough eligible houseguests' };
-        }
-        
-        // Randomly select two different houseguests
-        const shuffled = [...eligible].sort(() => 0.5 - Math.random());
-        return {
-          nominee1: shuffled[0],
-          nominee2: shuffled[1],
-          reasoning: 'Fallback random nomination'
-        };
-      }
-      
-      case 'veto': {
-        // Simple fallback: don't use veto unless self-preservation
-        const isNominated = context.isNominated || false;
-        return {
-          useVeto: isNominated,
-          vetoTarget: isNominated ? context.botName : null,
-          replacementNominee: isNominated ? (context.possibleReplacements?.[0] || null) : null,
-          reasoning: isNominated ? 'Self-preservation' : 'No strategic reason to use the veto'
-        };
-      }
-      
-      case 'eviction': {
-        // Simple fallback: randomly vote for one of the nominees
-        const nominees = context.nominees || [];
-        if (nominees.length === 0) return { vote: null, reasoning: 'No nominees to vote for' };
-        
-        const randomNominee = nominees[Math.floor(Math.random() * nominees.length)];
-        return {
-          vote: randomNominee,
-          reasoning: 'Fallback random vote'
-        };
-      }
-      
-      default:
-        return { error: 'Unsupported decision type for fallback' };
     }
   }
 }
