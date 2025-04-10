@@ -3,8 +3,27 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserX, DoorOpen } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
-import { Progress } from '@/components/ui/progress';
 import confetti from 'canvas-confetti';
+
+// Create a simple custom progress component since we can't modify the original
+const Progress = ({ 
+  value, 
+  className 
+}: { 
+  value: number; 
+  className?: string 
+}) => {
+  return (
+    <div 
+      className={`relative h-2 w-full overflow-hidden rounded-full bg-gray-200 ${className || ''}`}
+    >
+      <div 
+        className="h-full bg-primary transition-all"
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  );
+};
 
 interface EvictionResultsProps {
   nominees: Houseguest[];
@@ -105,7 +124,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
                   {Math.min(voteCounts[nominees[0].id] || 0, revealedCount)} votes
                 </span>
               </div>
-              <Progress value={nominee1Progress} className="h-2 bg-gray-200" />
+              <Progress value={nominee1Progress} className="bg-gray-200" />
             </div>
             
             <div className="space-y-2">
@@ -115,7 +134,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
                   {Math.min(voteCounts[nominees[1].id] || 0, revealedCount)} votes
                 </span>
               </div>
-              <Progress value={nominee2Progress} className="h-2 bg-gray-200" />
+              <Progress value={nominee2Progress} className="bg-gray-200" />
             </div>
           </div>
         </div>
