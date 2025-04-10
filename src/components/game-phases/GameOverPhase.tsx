@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Trophy, Medal, ChartBar, FileText, ArrowLeft, ArrowRight, RefreshCw, Save } from 'lucide-react';
@@ -54,7 +53,7 @@ const GameOverPhase: React.FC = () => {
     toast({
       title: "Game Saved",
       description: `Saved ${gameState.winner?.name}'s victory for future reference.`,
-      variant: "success",
+      variant: "default",
     });
   };
   
