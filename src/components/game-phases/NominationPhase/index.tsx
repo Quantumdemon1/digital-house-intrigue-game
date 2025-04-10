@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target } from 'lucide-react';
+import { Target, Clock } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 
 import { useNominationCeremony } from './hooks/useNominationCeremony';
@@ -11,6 +11,7 @@ import NominationCeremonyResult from './NominationCeremonyResult';
 import NominationCeremonyProgress from './NominationCeremonyProgress';
 import NomineeSelector from './NomineeSelector';
 import AIDecisionIndicator from './AIDecisionIndicator';
+import TimerDisplay from './TimerDisplay';
 
 const NominationPhase: React.FC = () => {
   const { getRelationship } = useGame();
@@ -24,6 +25,7 @@ const NominationPhase: React.FC = () => {
     confirmNominations,
     gameState,
     hoh,
+    timeRemaining,
   } = useNominationCeremony();
   
   // Use AI nomination logic
@@ -71,6 +73,9 @@ const NominationPhase: React.FC = () => {
             </p>
           )}
         </div>
+        
+        {/* Timer Display */}
+        <TimerDisplay timeRemaining={timeRemaining} />
         
         {hoh?.isPlayer ? (
           <NomineeSelector 

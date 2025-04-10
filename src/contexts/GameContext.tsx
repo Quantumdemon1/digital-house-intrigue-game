@@ -13,7 +13,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [gameState, dispatch] = useReducer(gameReducer, createInitialGameState());
   
   // Get helper functions
-  const { getHouseguestById, getRelationship, getActiveHouseguests } = useGameHelpers(gameState);
+  const { getHouseguestById, getRelationship, getActiveHouseguests, getRandomNominees } = useGameHelpers(gameState);
   
   return (
     <GameContext.Provider value={{ 
@@ -22,6 +22,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getHouseguestById, 
       getRelationship,
       getActiveHouseguests,
+      getRandomNominees,
     }}>
       {children}
     </GameContext.Provider>

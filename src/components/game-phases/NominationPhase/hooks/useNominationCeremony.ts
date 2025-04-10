@@ -1,15 +1,17 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
 
 export const useNominationCeremony = () => {
-  const { gameState, dispatch } = useGame();
+  const { gameState, dispatch, getRandomNominees } = useGame();
   const { toast } = useToast();
   const [nominees, setNominees] = useState<Houseguest[]>([]);
   const [isNominating, setIsNominating] = useState(false);
   const [ceremonyComplete, setCeremonyComplete] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(60); // 60 seconds = 1 minute
+  const [timerActive, setTimerActive] = useState(true);
 
   const { getActiveHouseguests } = useGame();
   const activeHouseguests = getActiveHouseguests();
@@ -31,6 +33,8 @@ export const useNominationCeremony = () => {
   const confirmNominations = () => {
     if (nominees.length !== 2) return;
     
+    // Stop the timer once nominations are confirmed
+    setTimerActive(false);
     setIsNominating(true);
     
     setTimeout(() => {
@@ -80,6 +84,48 @@ export const useNominationCeremony = () => {
     }, 1500);
   };
 
+  // Function to handle automatic nominations when time runs out
+  const handleTimeExpired = () => {
+    // Only run if ceremony isn't already complete and not already nominating
+    if (!ceremonyComplete && !isNominating) {
+      // Get two random nominees excluding HOH
+      const randomNominees = getRandomNominees(2, [hoh?.id || '']);
+      
+      // Set the nominees
+      setNominees(randomNominees);
+      
+      toast({
+        title: "Time Expired",
+        description: "Time has run out. Random nominees have been selected.",
+        variant: "destructive",
+      });
+      
+      // Then confirm these random nominations
+      setTimeout(() => {
+        confirmNominations();
+      }, 1000);
+    }
+  };
+  
+  // Timer countdown effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (timerActive && timeRemaining > 0 && !ceremonyComplete && !isNominating) {
+      interval = setInterval(() => {
+        setTimeRemaining((prevTime) => prevTime - 1);
+      }, 1000);
+    } else if (timerActive && timeRemaining === 0) {
+      // When timer reaches zero
+      setTimerActive(false);
+      handleTimeExpired();
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerActive, timeRemaining, ceremonyComplete, isNominating]);
+
   return {
     nominees,
     setNominees,
@@ -90,5 +136,7 @@ export const useNominationCeremony = () => {
     confirmNominations,
     gameState,
     hoh,
+    timeRemaining,
+    timerActive,
   };
 };

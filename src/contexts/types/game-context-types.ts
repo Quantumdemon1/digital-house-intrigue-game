@@ -22,4 +22,5 @@ export type GameContextType = {
   getHouseguestById: (id: string) => Houseguest | undefined;
   getRelationship: (guest1Id: string, guest2Id: string) => number;
   getActiveHouseguests: () => Houseguest[];
+  getRandomNominees: (count?: number, excludeIds?: string[]) => Houseguest[];
 };
