@@ -145,9 +145,13 @@ const GameSetup: React.FC = () => {
   };
   
   const startGame = () => {
-    dispatch({ type: 'START_GAME', payload: finalHouseguests });
+    // Convert to PLAYER_ACTION with the appropriate parameters for the new game action system
+    dispatch({ 
+      type: 'START_GAME', 
+      payload: finalHouseguests
+    });
     
-    // Log the start game event
+    // Create initial game event log entry
     dispatch({ 
       type: 'LOG_EVENT', 
       payload: {

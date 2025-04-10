@@ -64,15 +64,16 @@ export function useEvictionPhase() {
           const randomNominee = nominees[Math.floor(Math.random() * nominees.length)];
           newVotes[voter.id] = randomNominee.id;
           
-          // Update in game state
+          // Update in game state using PLAYER_ACTION
           dispatch({
-            type: 'LOG_EVENT',
+            type: 'PLAYER_ACTION',
             payload: {
-              week: gameState.week,
-              phase: gameState.phase,
-              type: 'vote',
-              description: `${voter.name} ran out of time and a random vote was cast.`,
-              involvedHouseguests: [voter.id, randomNominee.id]
+              actionId: 'cast_vote',
+              params: {
+                voterId: voter.id,
+                nomineeId: randomNominee.id,
+                isRandomVote: true
+              }
             }
           });
         });
@@ -105,15 +106,15 @@ export function useEvictionPhase() {
       [voterId]: nomineeId
     }));
     
-    // Update in game state
+    // Update in game state using PLAYER_ACTION
     dispatch({
-      type: 'LOG_EVENT',
+      type: 'PLAYER_ACTION',
       payload: {
-        week: gameState.week,
-        phase: gameState.phase,
-        type: 'vote',
-        description: `A houseguest voted to evict someone.`,
-        involvedHouseguests: [voterId, nomineeId]
+        actionId: 'cast_vote',
+        params: {
+          voterId,
+          nomineeId
+        }
       }
     });
 
@@ -129,30 +130,27 @@ export function useEvictionPhase() {
   
   // Handle eviction completion
   const handleEvictionComplete = (evictedHouseguest: Houseguest) => {
-    // Process the eviction
+    // Process the eviction using PLAYER_ACTION
     dispatch({
-      type: 'EVICT_HOUSEGUEST',
+      type: 'PLAYER_ACTION',
       payload: {
-        evicted: evictedHouseguest,
-        toJury: gameState.week >= 5 // For example, after week 5 evicted HGs go to jury
-      }
-    });
-    
-    // Log the eviction
-    dispatch({
-      type: 'LOG_EVENT',
-      payload: {
-        week: gameState.week,
-        phase: gameState.phase,
-        type: 'eviction',
-        description: `${evictedHouseguest.name} has been evicted from the house.`,
-        involvedHouseguests: [evictedHouseguest.id]
+        actionId: 'evict_houseguest',
+        params: {
+          evictedId: evictedHouseguest.id,
+          toJury: gameState.week >= 5
+        }
       }
     });
     
     // Advance to the next week
     setTimeout(() => {
-      dispatch({ type: 'ADVANCE_WEEK' });
+      dispatch({ 
+        type: 'PLAYER_ACTION',
+        payload: {
+          actionId: 'advance_week',
+          params: {}
+        }
+      });
       
       toast({
         title: "New Week Begins",

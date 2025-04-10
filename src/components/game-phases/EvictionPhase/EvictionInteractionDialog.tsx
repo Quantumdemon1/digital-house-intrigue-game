@@ -50,26 +50,32 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
     // Ensure relationship change is within reasonable bounds
     actualRelationshipChange = Math.max(-25, Math.min(25, actualRelationshipChange));
     
-    // Update relationship based on the selected option
+    // Update relationship using PLAYER_ACTION
     dispatch({
-      type: 'UPDATE_RELATIONSHIPS',
+      type: 'PLAYER_ACTION',
       payload: {
-        guestId1: player.id,
-        guestId2: houseguest.id,
-        change: actualRelationshipChange,
-        note: `Interaction during eviction phase: ${player.name} chose "${option.text.substring(0, 30)}..." (${actualRelationshipChange > 0 ? '+' : ''}${actualRelationshipChange})`
+        actionId: 'update_relationship',
+        params: {
+          guestId1: player.id,
+          guestId2: houseguest.id,
+          change: actualRelationshipChange,
+          note: `Interaction during eviction phase: ${player.name} chose "${option.text.substring(0, 30)}..." (${actualRelationshipChange > 0 ? '+' : ''}${actualRelationshipChange})`
+        }
       }
     });
     
     // Log the interaction
     dispatch({
-      type: 'LOG_EVENT',
+      type: 'PLAYER_ACTION',
       payload: {
-        week: 0, // This will be replaced with the actual week from the state
-        phase: 'Eviction',
-        type: 'interaction',
-        description: `${player.name} had a conversation with ${houseguest.name}.`,
-        involvedHouseguests: [player.id, houseguest.id]
+        actionId: 'log_event',
+        params: {
+          week: 0, // Will be filled in by the backend
+          phase: 'Eviction',
+          type: 'interaction',
+          description: `${player.name} had a conversation with ${houseguest.name}.`,
+          involvedHouseguests: [player.id, houseguest.id]
+        }
       }
     });
   };
@@ -127,44 +133,36 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
   };
   
   const handleComplete = () => {
+    onClose();
     onComplete(true);
   };
-
+  
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            Conversation with {houseguest.name}
+          <DialogTitle>
+            Interaction with {houseguest.name}
           </DialogTitle>
           <DialogDescription>
-            Choose how to approach {houseguest.name}
-            {houseguest.traits.length > 0 && (
-              <div className="mt-2">
-                <span className="text-sm font-medium">Traits: </span>
-                <span className="text-sm">{houseguest.traits.join(', ')}</span>
-              </div>
-            )}
+            Your social stats and {houseguest.name}'s traits will affect the outcome of your interaction.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="my-4">
-          {step === 'options' && (
-            <InteractionOptions 
-              houseguest={houseguest} 
-              onSelectOption={handleSelectOption} 
-            />
-          )}
-          
-          {step === 'result' && selectedOption && player && (
-            <InteractionResults
-              selectedOption={selectedOption}
-              player={player}
-              targetHouseguest={houseguest} // Pass the houseguest directly instead of using localStorage
-              onComplete={handleComplete}
-            />
-          )}
-        </div>
+        {step === 'options' && (
+          <InteractionOptions 
+            houseguest={houseguest}
+            onSelectOption={handleSelectOption}
+          />
+        )}
+        
+        {step === 'result' && selectedOption && (
+          <InteractionResults 
+            houseguest={houseguest}
+            selectedOption={selectedOption}
+            onComplete={handleComplete}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

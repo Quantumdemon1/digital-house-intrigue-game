@@ -2,18 +2,17 @@
 import { useState, useMemo } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
-import { NominationState } from '@/game-states';
 
 export const useNominationCeremony = () => {
-    const { game, dispatch, logger } = useGame();
+    const { gameState, dispatch, logger } = useGame();
 
     // Local state for UI selection only
     const [selectedNomineesUI, setSelectedNomineesUI] = useState<Houseguest[]>([]);
 
     // Derive state from the central game instance
     const hoh = useMemo(() => {
-        return game?.hohWinner ? game.getHouseguestById(game.hohWinner) : null;
-    }, [game]);
+        return gameState.hohWinner;
+    }, [gameState.hohWinner]);
     
     const { getActiveHouseguests } = useGame();
     const activeHouseguests = getActiveHouseguests();
@@ -27,14 +26,15 @@ export const useNominationCeremony = () => {
 
     // Determine if the ceremony is complete based on game state
     const ceremonyComplete = useMemo(() => {
-        if (!game) return false;
+        if (!gameState) return false;
         // Check if nominees have been selected in the game state
-        return game.nominees.length === 2;
-    }, [game]);
+        return gameState.nominees.length === 2;
+    }, [gameState]);
 
     const isNominating = useMemo(() => {
-        return game?.currentState instanceof NominationState && !ceremonyComplete;
-    }, [game, ceremonyComplete]);
+        // Logic to determine if we are in nomination phase and nominations are not yet complete
+        return gameState.phase === 'Nomination' && !ceremonyComplete;
+    }, [gameState.phase, ceremonyComplete]);
 
     // Handle UI selection toggle
     const toggleNominee = (houseguest: Houseguest) => {
@@ -59,7 +59,7 @@ export const useNominationCeremony = () => {
             payload: {
                 actionId: 'make_nominations',
                 params: {
-                    nominees: selectedNomineesUI.map(nominee => nominee.id)
+                    nomineeIds: selectedNomineesUI.map(nominee => nominee.id)
                 }
             }
         });
@@ -67,7 +67,7 @@ export const useNominationCeremony = () => {
 
     // Handle time expiry with random nominees
     const handleTimeExpired = () => {
-        if (ceremonyComplete || isNominating) return;
+        if (ceremonyComplete || !isNominating) return;
         
         const { getRandomNominees } = useGame();
         const randomNominees = getRandomNominees(2, [hoh?.id || '']);
@@ -80,7 +80,7 @@ export const useNominationCeremony = () => {
                 payload: {
                     actionId: 'make_nominations',
                     params: {
-                        nominees: randomNominees.map(nominee => nominee.id)
+                        nomineeIds: randomNominees.map(nominee => nominee.id)
                     }
                 }
             });
@@ -95,7 +95,7 @@ export const useNominationCeremony = () => {
         potentialNominees,
         toggleNominee,
         confirmNominations,
-        gameState: game,
+        gameState,
         hoh,
         handleTimeExpired,
         getRelationship: useGame().getRelationship

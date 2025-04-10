@@ -27,7 +27,7 @@ export const useAINomination = ({
 }: UseAINominationProps) => {
   const [aiProcessed, setAiProcessed] = useState(false);
   const { toast } = useToast();
-  const { gameState } = useGame();
+  const { game } = useGame();
   
   // Create a logger instance for AI operation logs
   const aiLogger = new Logger({

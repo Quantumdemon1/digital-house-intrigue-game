@@ -11,7 +11,7 @@ import type { Logger } from '../../utils/logger';
 
 // --- Action Definitions ---
 
-// Actions primarily handled by the main controller/provider
+// System actions
 type SystemAction =
   | { type: 'INITIALIZE_GAME'; payload: { playerName: string } } 
   | { type: 'START_NEW_GAME_INSTANCE'; payload: { gameInstance: BigBrotherGame } }
@@ -21,25 +21,65 @@ type SystemAction =
   | { type: 'TOGGLE_PAUSE' }
   | { type: 'FORCE_REFRESH' };
 
-// Actions routed to the current game state via gameInstance.handleAction
+// Player actions
 type PlayerAction = {
   type: 'PLAYER_ACTION';
   payload: {
-    actionId: string; // e.g., 'make_nominations', 'cast_eviction_vote'
-    params: any;      // Data specific to the action
+    actionId: string;
+    params: any;
   };
 };
 
-// Actions possibly dispatched internally by states/systems to update UI *indirectly*
+// UI update actions
 type UIUpdateAction =
   | { type: 'SHOW_NARRATOR_MESSAGE'; payload: string }
   | { type: 'SHOW_DIALOGUE'; payload: { speakerName: string; text: string; mood?: string } };
 
-export type GameAction = SystemAction | PlayerAction | UIUpdateAction;
+// Game state actions - these were previously in the application but not defined in types
+type GameStateAction =
+  | { type: 'START_GAME'; payload: Houseguest[] }
+  | { type: 'SET_HOH'; payload: Houseguest }
+  | { type: 'SET_POV_WINNER'; payload: Houseguest }
+  | { type: 'SET_NOMINEES'; payload: Houseguest[] }
+  | { type: 'UPDATE_RELATIONSHIPS'; payload: { guestId1: string; guestId2: string; change: number; note?: string } }
+  | { type: 'SET_EVICTION_VOTE'; payload: { voterId: string; nomineeId: string } }
+  | { type: 'EVICT_HOUSEGUEST'; payload: { evicted: Houseguest; toJury: boolean } }
+  | { type: 'SET_PHASE'; payload: GamePhase }
+  | { type: 'ADVANCE_WEEK' }
+  | { type: 'END_GAME'; payload: { winner: Houseguest; runnerUp: Houseguest } }
+  | { type: 'LOG_EVENT'; payload: { week: number; phase: string; type: string; description: string; involvedHouseguests: string[] } };
+
+// Combined action type
+export type GameAction = SystemAction | PlayerAction | UIUpdateAction | GameStateAction;
+
+// --- Game State Definition ---
+// This represents the game state maintained by the reducer
+export interface GameState {
+  houseguests: Houseguest[];
+  hohWinner: Houseguest | null;
+  povWinner: Houseguest | null;
+  nominees: Houseguest[];
+  juryMembers: Houseguest[];
+  winner: Houseguest | null;
+  runnerUp: Houseguest | null;
+  week: number;
+  phase: GamePhase;
+  relationships: Map<string, Map<string, { score: number; notes: string[] }>>;
+  evictionVotes: Record<string, string>;
+  gameLog: Array<{
+    week: number;
+    phase: string;
+    type: string;
+    description: string;
+    involvedHouseguests: string[];
+    timestamp: number;
+  }>;
+}
 
 // --- Context Type Definition ---
 export type GameContextType = {
     game: BigBrotherGame | null;
+    gameState: GameState;  // Add gameState property to fix the errors
     relationshipSystem: RelationshipSystem | null;
     competitionSystem: CompetitionSystem | null;
     aiSystem: AIIntegrationSystem | null;
