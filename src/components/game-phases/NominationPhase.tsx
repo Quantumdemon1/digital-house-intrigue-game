@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ const NominationPhase: React.FC = () => {
   const [nominees, setNominees] = useState<Houseguest[]>([]);
   const [isNominating, setIsNominating] = useState(false);
   const [ceremonyComplete, setCeremonyComplete] = useState(false);
+  const [aiProcessed, setAiProcessed] = useState(false); // Flag to prevent infinite loop
 
   const activeHouseguests = getActiveHouseguests();
   const hoh = gameState.hohWinner;
@@ -80,13 +81,17 @@ const NominationPhase: React.FC = () => {
       // Continue to PoV phase after a delay
       setTimeout(() => {
         dispatch({ type: 'SET_PHASE', payload: 'PoV' });
-      }, 5000);
-    }, 3000);
+      }, 3000);
+    }, 1500);
   };
   
   // If the HoH is AI, have them automatically nominate
-  React.useEffect(() => {
-    if (hoh && !hoh.isPlayer && !isNominating && !ceremonyComplete) {
+  useEffect(() => {
+    // Only process if HoH exists, HoH is AI, and we haven't already processed or started nominating
+    if (hoh && !hoh.isPlayer && !isNominating && !ceremonyComplete && !aiProcessed) {
+      // Set the flag to prevent multiple executions
+      setAiProcessed(true);
+      
       // AI logic for nominations based on relationships
       const aiNominees = potentialNominees
         .map(houseguest => ({
@@ -97,14 +102,19 @@ const NominationPhase: React.FC = () => {
         .slice(0, 2) // Take the two worst relationships
         .map(item => item.houseguest);
       
+      // Set nominees first
       setNominees(aiNominees);
       
-      // Delay to simulate decision making
-      setTimeout(() => {
-        confirmNominations();
+      // Delay to simulate decision making then confirm nominations
+      const timer = setTimeout(() => {
+        if (aiNominees.length === 2) {
+          confirmNominations();
+        }
       }, 2000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [hoh, isNominating, ceremonyComplete]);
+  }, [hoh, isNominating, ceremonyComplete, aiProcessed, potentialNominees]);
 
   if (ceremonyComplete) {
     return (
