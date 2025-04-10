@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { useNominationCeremony } from './hooks/useNominationCeremony';
@@ -9,7 +8,7 @@ import NominationContent from './components/NominationContent';
 import NominationFooter from './components/NominationFooter';
 import NominationCeremonyResult from './NominationCeremonyResult';
 
-const NOMINATION_TIME = 60; // seconds
+const NOMINATION_TIME = 30; // seconds
 
 const NominationPhase: React.FC = () => {
   const {
@@ -33,7 +32,6 @@ const NominationPhase: React.FC = () => {
     isComplete: ceremonyComplete
   });
 
-  // AI nomination logic
   useAINomination({
     hoh,
     potentialNominees,
@@ -55,7 +53,7 @@ const NominationPhase: React.FC = () => {
       {ceremonyComplete ? (
         <NominationCeremonyResult 
           nominees={nominees} 
-          hoh={hoh} // Pass the hoh object directly
+          hoh={hoh}
         />
       ) : (
         <NominationContent 
