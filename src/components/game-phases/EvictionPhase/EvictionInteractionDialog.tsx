@@ -8,14 +8,17 @@ import { useGame } from '@/contexts/GameContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
-import InteractionResults from './InteractionResults';
+import { InteractionResults } from './InteractionResults';
 import { GameState } from '@/models/game-state';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface EvictionInteractionDialogProps {
   houseguest: Houseguest;
   player: Houseguest;
   gameState: GameState;
   onInteractionComplete: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const interactionOptions: InteractionOption[] = [
@@ -61,7 +64,14 @@ const interactionOptions: InteractionOption[] = [
   },
 ];
 
-const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({ houseguest, player, gameState, onInteractionComplete }) => {
+const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({ 
+  houseguest, 
+  player, 
+  gameState, 
+  onInteractionComplete,
+  open,
+  onOpenChange 
+}) => {
   const [selectedOption, setSelectedOption] = useState<InteractionOption | null>(null);
   const [showResults, setShowResults] = useState(false);
   const { dispatch } = useGame();
@@ -113,45 +123,53 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({ h
     }, 500);
   };
 
+  if (!open) {
+    return null;
+  }
+
   return (
-    <Card className="shadow-lg border-bb-yellow">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-2xl font-bold">Interaction</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-4">
-          <Avatar>
-            <AvatarImage src={houseguest.imageUrl} alt={houseguest.name} />
-            <AvatarFallback>{houseguest.name.substring(0, 2)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="text-lg font-semibold">{houseguest.name}</h3>
-            <Badge variant="secondary">{houseguest.occupation}</Badge>
-          </div>
-        </div>
-        
-        {!showResults && (
-          <div className="mt-4">
-            <CardDescription>Choose an interaction:</CardDescription>
-            <div className="grid gap-2 mt-2">
-              {interactionOptions.map((option) => (
-                <Button key={option.id} onClick={() => handleOptionSelected(option)}>
-                  {option.text}
-                </Button>
-              ))}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 max-w-md">
+        <Card className="shadow-lg border-bb-yellow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-2xl font-bold">Interaction</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-4">
+              <Avatar>
+                <AvatarImage src={houseguest.imageUrl} alt={houseguest.name} />
+                <AvatarFallback>{houseguest.name.substring(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="text-lg font-semibold">{houseguest.name}</h3>
+                <Badge variant="secondary">{houseguest.occupation}</Badge>
+              </div>
             </div>
-          </div>
-        )}
-        
-        {showResults && selectedOption && (
-          <InteractionResults 
-            selectedOption={selectedOption}
-            houseguest={houseguest}
-            onComplete={handleInteractionComplete}
-          />
-        )}
-      </CardContent>
-    </Card>
+            
+            {!showResults && (
+              <div className="mt-4">
+                <CardDescription>Choose an interaction:</CardDescription>
+                <div className="grid gap-2 mt-2">
+                  {interactionOptions.map((option) => (
+                    <Button key={option.id} onClick={() => handleOptionSelected(option)}>
+                      {option.text}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {showResults && selectedOption && (
+              <InteractionResults 
+                selectedOption={selectedOption}
+                houseguest={houseguest}
+                onComplete={handleInteractionComplete}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   );
 };
 

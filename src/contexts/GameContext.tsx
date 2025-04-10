@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 
 // Import Core Classes & Types
@@ -34,11 +35,11 @@ const initialGameState: GameState = {
 // --- Provider Component ---
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // --- Instantiate Systems (runs once) ---
-    const loggerRef = useRef(new Logger({ logLevel: LogLevel.INFO }));
+    const logger = new Logger({ logLevel: LogLevel.INFO });
     const systemsRef = useRef({
-        relationshipSystem: new RelationshipSystem(loggerRef.current),
-        competitionSystem: new CompetitionSystem(loggerRef.current),
-        aiSystem: new AIIntegrationSystem(loggerRef.current),
+        relationshipSystem: new RelationshipSystem(logger),
+        competitionSystem: new CompetitionSystem(logger),
+        aiSystem: new AIIntegrationSystem(logger),
         recapGenerator: new GameRecapGenerator(),
     });
 
@@ -93,7 +94,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         competitionSystem: systemsRef.current.competitionSystem,
         aiSystem: systemsRef.current.aiSystem,
         recapGenerator: systemsRef.current.recapGenerator,
-        logger: loggerRef.current,
+        logger,
         dispatch,
         getHouseguestById,
         getRelationship,
@@ -107,7 +108,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getRelationship, 
       getActiveHouseguests, 
       getRandomNominees,
-      getGameStatus
+      getGameStatus,
+      logger
     ]);
 
     return (

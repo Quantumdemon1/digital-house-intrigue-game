@@ -30,7 +30,7 @@ const GamePhaseHeader: React.FC = () => {
   const { gameState, getActiveHouseguests } = useGame();
   const { week, phase } = gameState;
   const activeHouseguests = getActiveHouseguests();
-  const hoh = gameState.hohWinner ? gameState.houseguests.find(h => h.id === gameState.hohWinner) : null;
+  const hoh = gameState.hohWinner ? gameState.houseguests.find(h => h.id === gameState.hohWinner?.id) : null;
   
   return (
     <div className="bg-gradient-to-r from-bb-blue to-bb-dark border-b-2 border-bb-blue/30 text-white rounded-lg p-4 mb-6 shadow-lg">

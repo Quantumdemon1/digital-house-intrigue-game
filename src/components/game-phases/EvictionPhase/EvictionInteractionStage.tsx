@@ -28,6 +28,7 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
   const [selectedHouseguest, setSelectedHouseguest] = useState<Houseguest | null>(null);
   const [remainingInteractions, setRemainingInteractions] = useState(3);
   const [isInteractionStageComplete, setIsInteractionStageComplete] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   
   // Find player houseguest
   const player = gameState.houseguests.find(guest => guest.isPlayer);
@@ -43,10 +44,12 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
     }
     
     setSelectedHouseguest(houseguest);
+    setDialogOpen(true);
   };
   
   const handleInteractionComplete = () => {
     setSelectedHouseguest(null);
+    setDialogOpen(false);
     setRemainingInteractions(prev => prev - 1);
     
     if (remainingInteractions - 1 <= 0) {
@@ -135,10 +138,8 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
           player={player}
           gameState={gameState}
           onInteractionComplete={handleInteractionComplete}
-          open={!!selectedHouseguest}
-          onOpenChange={(open) => {
-            if (!open) setSelectedHouseguest(null);
-          }}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
         />
       )}
     </div>
