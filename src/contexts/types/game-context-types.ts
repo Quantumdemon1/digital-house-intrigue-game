@@ -1,7 +1,8 @@
 
-import type { GamePhase } from '../../models/game-state'; 
+import type { GamePhase } from '../../models/game-state';
 import type { BigBrotherGame } from '../../models/BigBrotherGame'; 
 import type { Houseguest } from '../../models/houseguest';
+import type { Alliance } from '../../models/alliance';
 import type { IGameControllerFacade, IUIManagerFacade } from '../../types/interfaces';
 import type { RelationshipSystem } from '../../systems/relationship-system';
 import type { CompetitionSystem } from '../../systems/competition-system';
@@ -47,7 +48,7 @@ type GameStateAction =
   | { type: 'SET_PHASE'; payload: GamePhase }
   | { type: 'ADVANCE_WEEK' }
   | { type: 'END_GAME'; payload: { winner: Houseguest; runnerUp: Houseguest } }
-  | { type: 'LOG_EVENT'; payload: { week: number; phase: string; type: string; description: string; involvedHouseguests: string[] } };
+  | { type: 'LOG_EVENT'; payload: { week: number; phase: GamePhase; type: string; description: string; involvedHouseguests: string[] } };
 
 // Combined action type
 export type GameAction = SystemAction | PlayerAction | UIUpdateAction | GameStateAction;
@@ -56,6 +57,7 @@ export type GameAction = SystemAction | PlayerAction | UIUpdateAction | GameStat
 // This represents the game state maintained by the reducer
 export interface GameState {
   houseguests: Houseguest[];
+  alliances: Alliance[]; // Add this to match the model's GameState
   hohWinner: Houseguest | null;
   povWinner: Houseguest | null;
   nominees: Houseguest[];
@@ -64,11 +66,11 @@ export interface GameState {
   runnerUp: Houseguest | null;
   week: number;
   phase: GamePhase;
-  relationships: Map<string, Map<string, { score: number; notes: string[] }>>;
+  relationships: Map<string, Map<string, { score: number; alliance: string | null; notes: string[] }>>;
   evictionVotes: Record<string, string>;
   gameLog: Array<{
     week: number;
-    phase: string;
+    phase: GamePhase;
     type: string;
     description: string;
     involvedHouseguests: string[];
@@ -79,7 +81,7 @@ export interface GameState {
 // --- Context Type Definition ---
 export type GameContextType = {
     game: BigBrotherGame | null;
-    gameState: GameState;  // Add gameState property to fix the errors
+    gameState: GameState;  // Keep the gameState property to maintain compatibility
     relationshipSystem: RelationshipSystem | null;
     competitionSystem: CompetitionSystem | null;
     aiSystem: AIIntegrationSystem | null;

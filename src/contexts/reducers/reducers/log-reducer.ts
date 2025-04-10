@@ -4,8 +4,14 @@ import { GameAction } from '../../types/game-context-types';
 
 export function logReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'LOG_EVENT') {
+    const { week, phase, type, description, involvedHouseguests } = action.payload;
+    
     const newEvent = {
-      ...action.payload,
+      week,
+      phase, // GamePhase type is ensured in the GameAction type definition
+      type,
+      description,
+      involvedHouseguests,
       timestamp: Date.now(),
     };
     
