@@ -1,14 +1,10 @@
 
 /**
- * @file models/index.ts
- * @description Exports all model classes and types
+ * @file src/models/index.ts
+ * @description Exports all model components
  */
 
-// Export Houseguest model and types
 export * from './houseguest';
-
-// Export Alliance model and types
 export * from './alliance';
-
-// Export BigBrotherGame model and types
 export * from './BigBrotherGame';
+export * from './game-state';

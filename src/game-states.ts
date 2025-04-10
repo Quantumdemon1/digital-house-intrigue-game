@@ -1,4 +1,3 @@
-
 /**
  * @file game-states.ts
  * @description Contains the state machine for the Big Brother game

@@ -1,4 +1,3 @@
-
 import type * as GameStates from '../game-states'; 
 import type { GameEvent } from '../models/BigBrotherGame'; 
 import type { Houseguest } from '../models/houseguest'; 
@@ -6,7 +5,7 @@ import type { Houseguest } from '../models/houseguest';
 import type { RelationshipSystem } from '../systems/relationship-system';
 import type { CompetitionSystem } from '../systems/competition-system';
 import type { AIIntegrationSystem } from '../systems/ai-integration';
-import type { GameRecapGenerator } from '../utils/recap-generator';
+import type { GameRecapGenerator } from '../utils/recap';
 import type { Logger } from '../utils/logger';
 
 // Defines the interface for methods the Game States need from the Controller
