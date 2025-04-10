@@ -29,10 +29,10 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
   return (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-medium">Time Remaining</span>
+        <span className="text-sm font-medium text-gray-800">Time Remaining</span>
         <span className={cn(
           "text-sm font-medium",
-          percentRemaining < 25 && "text-red-500"
+          percentRemaining < 25 ? "text-red-600" : "text-gray-800"
         )}>
           {formatTime(timeRemaining)}
         </span>
@@ -47,7 +47,7 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
       
       {timeRemaining <= 5 && (
         <Alert variant="destructive" className="mt-2 py-2">
-          <AlertDescription>
+          <AlertDescription className="text-white">
             Time is running out! Make your decision quickly.
           </AlertDescription>
         </Alert>

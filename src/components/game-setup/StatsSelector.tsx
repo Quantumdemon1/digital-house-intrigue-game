@@ -29,24 +29,24 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
   return (
     <div className="space-y-5">
       {/* Points remaining indicator */}
-      <div className="flex justify-end mb-2">
-        <div className="bg-blue-100 text-blue-800 rounded-md px-3 py-1 text-sm flex items-center">
+      <div className="flex justify-end">
+        <div className="bg-blue-100 text-blue-800 rounded-md px-3 py-1 text-sm flex items-center shadow-sm border border-blue-200">
           <Info className="h-4 w-4 mr-2" />
-          <span>Points remaining: {remainingPoints}</span>
+          <span className="font-medium">Points remaining: {remainingPoints}</span>
         </div>
       </div>
       
       {(Object.keys(stats) as Array<keyof HouseguestStats>).map(stat => (
         <div key={stat} className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="font-medium capitalize">{stat}</span>
-            <span className="font-medium">{stats[stat]}/10</span>
+            <span className="font-medium capitalize text-gray-800">{stat}</span>
+            <span className="font-medium text-gray-800">{stats[stat]}/10</span>
           </div>
           <div className="flex items-center space-x-2">
             <Button 
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-7 w-7 shrink-0"
+              className="h-7 w-7 shrink-0 border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:text-gray-900 shadow-sm"
               onClick={() => handleDecreaseStat(stat)}
               disabled={stats[stat] <= 1}
             >
@@ -61,9 +61,9 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
             </div>
             
             <Button 
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-7 w-7 shrink-0"
+              className="h-7 w-7 shrink-0 border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:text-gray-900 shadow-sm"
               onClick={() => handleIncreaseStat(stat)}
               disabled={stats[stat] >= 10 || remainingPoints <= 0}
             >
