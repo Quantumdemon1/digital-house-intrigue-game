@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import CustomProgress from './game-phases/NominationPhase/CustomProgress';
 import { Houseguest } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
+import { cn } from '@/lib/utils';
 import { Crown, Award, Target, Heart, HeartOff, Info } from 'lucide-react';
 
 interface HouseguestCardProps {

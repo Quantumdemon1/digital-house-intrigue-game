@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { toast } from "sonner"; // Import sonner toast
 
 // Import Core Classes & Types
 import { BigBrotherGame } from '../models/BigBrotherGame';
@@ -35,7 +36,7 @@ const initialGameState: GameState = {
 // --- Provider Component ---
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // --- Instantiate Systems (runs once) ---
-    const logger = new Logger({ logLevel: LogLevel.INFO });
+    const logger = useRef(new Logger({ logLevel: LogLevel.INFO })).current;
     const systemsRef = useRef({
         relationshipSystem: new RelationshipSystem(logger),
         competitionSystem: new CompetitionSystem(logger),
@@ -86,6 +87,30 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }, [gameState]);
 
+    // Toast function to display notifications
+    const showToast = useCallback((
+        title: string, 
+        options?: { 
+          description?: string; 
+          variant?: 'success' | 'error' | 'info' | 'warning'; 
+          duration?: number 
+        }
+    ) => {
+        logger.info(`[Toast] ${options?.variant || 'info'}: ${title} - ${options?.description || ''}`);
+        const toastOptions = {
+            description: options?.description,
+            duration: options?.duration || 5000,
+        };
+        
+        switch(options?.variant) {
+            case 'success': toast.success(title, toastOptions); break;
+            case 'error': toast.error(title, toastOptions); break;
+            case 'warning': toast.warning(title, toastOptions); break;
+            case 'info': // Fallthrough to default
+            default: toast.info(title, toastOptions); break;
+        }
+    }, [logger]);
+
     // --- Context Value ---
     const contextValue = useMemo<GameContextType>(() => ({
         game: gameInstance,
@@ -101,6 +126,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getActiveHouseguests,
         getRandomNominees,
         getGameStatus,
+        showToast, // Add the toast function to the context
     }), [
       gameInstance, 
       gameState, 
@@ -109,7 +135,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getActiveHouseguests, 
       getRandomNominees,
       getGameStatus,
-      logger
+      logger,
+      showToast
     ]);
 
     return (

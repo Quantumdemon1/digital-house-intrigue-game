@@ -93,4 +93,5 @@ export type GameContextType = {
     getActiveHouseguests: () => Houseguest[];
     getRandomNominees: (count?: number, excludeIds?: string[]) => Houseguest[];
     getGameStatus: () => { week: number; phase: string; hoh: string | null; nominees: string; povHolder: string | null; };
+    showToast: (title: string, options?: { description?: string; variant?: 'success' | 'error' | 'info' | 'warning'; duration?: number }) => void;
 };

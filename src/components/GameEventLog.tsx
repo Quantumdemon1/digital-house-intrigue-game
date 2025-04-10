@@ -2,15 +2,16 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGame } from '@/contexts/GameContext';
-import { Clock, Info, AlertCircle, Award, UserCheck, UserX, Trophy, Key, Shield } from 'lucide-react';
+import { Clock, Info, AlertCircle, Award, UserCheck, UserX, Trophy, Key, Shield, Target } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const GameEventLog: React.FC = () => {
   const { gameState } = useGame();
   const { gameLog } = gameState;
   
-  // Get only the last 10 events, in reverse chronological order (newest first)
-  const recentEvents = [...gameLog].reverse().slice(0, 10);
+  // Get only the last 15 events, in reverse chronological order (newest first)
+  const recentEvents = [...gameLog].reverse().slice(0, 15);
   
   const getEventIcon = (type: string) => {
     switch(type) {
@@ -51,6 +52,8 @@ const GameEventLog: React.FC = () => {
         return 'bg-yellow-500/10 border-l-yellow-500';
       case 'GAME_START':
         return 'bg-blue-500/10 border-l-blue-500';
+      case 'SOCIAL_INTERACTION':
+        return 'bg-purple-500/10 border-l-purple-500';
       default:
         return 'bg-gray-100 border-l-gray-400';
     }
@@ -65,22 +68,26 @@ const GameEventLog: React.FC = () => {
   }
   
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="bg-muted px-3 py-2 border-b">
-        <h3 className="font-medium flex items-center">
-          <Clock className="h-4 w-4 mr-2" />
-          Recent Events
-        </h3>
-      </div>
-      
-      <ScrollArea className="h-[300px]">
-        <div className="p-0">
-          {recentEvents.map((event, index) => (
+    <ScrollArea className="h-[350px] border rounded-lg overflow-hidden">
+      <div className="p-0">
+        {recentEvents.map((event, index) => {
+          const timestamp = new Date(event.timestamp);
+          const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          return (
             <div 
               key={index} 
-              className={`flex items-start p-3 border-b last:border-0 border-l-2 ${getEventBackground(event.type)}`}
+              className={cn(
+                "flex items-start p-3 border-b last:border-0 border-l-2",
+                getEventBackground(event.type)
+              )}
             >
-              <div className="mt-0.5 mr-3">
+              <div className={cn(
+                "mt-0.5 mr-3 p-1 rounded-full bg-white/50 dark:bg-black/20",
+                event.type.includes("EVICT") || event.type === "NOMINATION" ? "text-bb-red" :
+                event.type.includes("COMPETITION") ? "text-bb-green" :
+                event.type === "ALLIANCE" ? "text-bb-blue" : "text-muted-foreground"
+              )}>
                 {getEventIcon(event.type)}
               </div>
               
@@ -97,14 +104,14 @@ const GameEventLog: React.FC = () => {
                   {event.description}
                 </p>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {timeString}
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+          );
+        })}
+      </div>
+    </ScrollArea>
   );
 };
 

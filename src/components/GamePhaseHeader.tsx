@@ -1,97 +1,99 @@
 
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Camera, Users, Calendar, ArrowRight, Key, Target, ShieldCheck, Vote, Trophy, Home } from 'lucide-react';
-import { GamePhase } from '@/models/game-state';
-
-const phaseLabels: Record<GamePhase, string> = {
-  'Setup': 'Game Setup',
-  'HoH': 'Head of Household Competition',
-  'Nomination': 'Nomination Ceremony',
-  'PoV': 'Power of Veto Competition',
-  'PoVMeeting': 'Veto Meeting',
-  'Eviction': 'Eviction Night',
-  'Finale': 'Season Finale',
-  'GameOver': 'Game Over'
-};
-
-const phaseIcons: Record<GamePhase, React.ReactNode> = {
-  'Setup': <Home className="w-5 h-5 mr-2" />,
-  'HoH': <Key className="w-5 h-5 mr-2 text-bb-gold" />,
-  'Nomination': <Target className="w-5 h-5 mr-2 text-bb-red" />,
-  'PoV': <ShieldCheck className="w-5 h-5 mr-2 text-bb-green" />,
-  'PoVMeeting': <ShieldCheck className="w-5 h-5 mr-2 text-bb-green opacity-70" />,
-  'Eviction': <Vote className="w-5 h-5 mr-2 text-bb-red" />,
-  'Finale': <Trophy className="w-5 h-5 mr-2 text-yellow-400" />,
-  'GameOver': <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
-};
+import { Crown, Target, Shield, Vote, Users, Trophy, Clock, Key } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const GamePhaseHeader: React.FC = () => {
-  const { gameState, getActiveHouseguests } = useGame();
-  const { week, phase } = gameState;
-  const activeHouseguests = getActiveHouseguests();
-  const hoh = gameState.hohWinner ? gameState.houseguests.find(h => h.id === gameState.hohWinner?.id) : null;
+  const { gameState } = useGame();
+  const { phase, week } = gameState;
+  
+  const hohWinner = gameState.hohWinner;
+  const povWinner = gameState.povWinner;
+  const nominees = gameState.nominees;
+  const activeHouseguestCount = gameState.houseguests.filter(hg => hg.status === 'Active').length;
+  
+  // Helper functions
+  const getPhaseIcon = () => {
+    switch (phase) {
+      case 'Setup': return <Users className="h-5 w-5 mr-2" />;
+      case 'HOH': return <Crown className="h-5 w-5 mr-2 text-bb-gold" />;
+      case 'Nomination': return <Target className="h-5 w-5 mr-2 text-bb-red" />;
+      case 'POV': return <Shield className="h-5 w-5 mr-2 text-bb-green" />;
+      case 'POVMeeting': return <Shield className="h-5 w-5 mr-2 text-bb-green" />;
+      case 'Eviction': return <Vote className="h-5 w-5 mr-2 text-bb-red" />;
+      case 'Finale': 
+      case 'GameOver': return <Trophy className="h-5 w-5 mr-2 text-yellow-500" />;
+      default: return <Clock className="h-5 w-5 mr-2" />;
+    }
+  };
+  
+  const formatPhaseTitle = (phaseStr: string) => {
+    // Convert camelCase to Title Case with spaces
+    return phaseStr
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+  };
   
   return (
-    <div className="bg-gradient-to-r from-bb-blue to-bb-dark border-b-2 border-bb-blue/30 text-white rounded-lg p-4 mb-6 shadow-lg">
-      <div className="flex justify-between items-center">
+    <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-4 mb-6 border border-border">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center">
-          <div className="relative">
-            <Camera className="w-7 h-7 mr-2 text-white animate-pulse-slow" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-          </div>
-          <h2 className="text-xl font-bold tracking-wider">
-            Big Brother: The Digital House
-          </h2>
+          <span className="text-2xl font-bold themed-header text-bb-dark dark:text-white">
+            Big Brother
+          </span>
+          <Badge variant="outline" className="ml-3 flex-shrink-0">
+            Week {week}
+          </Badge>
+          <Badge variant="secondary" className="ml-2 flex-shrink-0">
+            {activeHouseguestCount} houseguests
+          </Badge>
         </div>
         
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center text-sm bg-black/20 px-3 py-1 rounded-full">
-            <Calendar className="w-4 h-4 mr-1" />
-            <span>Week {week}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          {hohWinner && (
+            <div className="flex items-center">
+              <Badge className="bg-bb-gold text-bb-dark border-none font-medium flex items-center gap-1">
+                <Crown className="h-3 w-3" />
+                HoH: {gameState.houseguests.find(h => h.id === hohWinner)?.name}
+              </Badge>
+            </div>
+          )}
           
-          <div className="flex items-center text-sm bg-black/20 px-3 py-1 rounded-full">
-            <Users className="w-4 h-4 mr-1" />
-            <span>{activeHouseguests.length} Houseguests</span>
-          </div>
+          {povWinner && (
+            <div className="flex items-center">
+              <Badge variant="outline" className="bg-bb-green text-white border-none font-medium flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                PoV: {gameState.houseguests.find(h => h.id === povWinner)?.name}
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
       
-      <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
+      <div className="mt-4 pt-3 border-t border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div className="flex items-center">
-          {phaseIcons[phase]}
-          <h3 className="text-xl font-bold">{phaseLabels[phase]}</h3>
+          {getPhaseIcon()}
+          <h2 className="text-lg font-bold">{formatPhaseTitle(phase)}</h2>
         </div>
         
-        {hoh && phase !== 'Setup' && (
-          <div className="text-sm flex items-center bg-bb-gold/90 text-bb-dark px-2 py-1 rounded">
-            <Key size={14} className="mr-1" /> 
-            <span>HoH: {hoh.name}</span>
+        {nominees.length > 0 && (
+          <div className="flex items-center">
+            <Badge variant="destructive" className="flex items-center gap-1 bg-bb-red">
+              <Target className="h-3 w-3" />
+              Nominees: 
+              {nominees.map((nomineeId, idx) => {
+                const nominee = gameState.houseguests.find(h => h.id === nomineeId);
+                return (
+                  <span key={nomineeId}>
+                    {idx > 0 && ', '}
+                    {nominee?.name}
+                  </span>
+                );
+              })}
+            </Badge>
           </div>
         )}
-      </div>
-      
-      <div className="hidden md:flex items-center text-xs mt-3 pt-2 border-t border-white/10">
-        <div className={`px-2 py-1 rounded ${phase === 'HoH' ? 'bg-white text-bb-blue' : 'bg-white/20'}`}>
-          HoH Comp
-        </div>
-        <ArrowRight className="w-3 h-3 mx-1" />
-        <div className={`px-2 py-1 rounded ${phase === 'Nomination' ? 'bg-white text-bb-blue' : 'bg-white/20'}`}>
-          Nominations
-        </div>
-        <ArrowRight className="w-3 h-3 mx-1" />
-        <div className={`px-2 py-1 rounded ${phase === 'PoV' ? 'bg-white text-bb-blue' : 'bg-white/20'}`}>
-          Veto Comp
-        </div>
-        <ArrowRight className="w-3 h-3 mx-1" />
-        <div className={`px-2 py-1 rounded ${phase === 'PoVMeeting' ? 'bg-white text-bb-blue' : 'bg-white/20'}`}>
-          Veto Meeting
-        </div>
-        <ArrowRight className="w-3 h-3 mx-1" />
-        <div className={`px-2 py-1 rounded ${phase === 'Eviction' ? 'bg-white text-bb-blue' : 'bg-white/20'}`}>
-          Eviction
-        </div>
       </div>
     </div>
   );

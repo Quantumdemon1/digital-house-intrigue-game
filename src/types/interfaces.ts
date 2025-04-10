@@ -42,4 +42,5 @@ export interface IUIManagerFacade {
   updateGameLog(eventLog: GameEvent[]): void;
   showRecapScreen(recapText: string): void;
   showLocationChoices(availableActions: any[]): Promise<string | null>; // Define action structure later
+  showToast(title: string, options?: { description?: string; variant?: 'success' | 'error' | 'info' | 'warning'; duration?: number }): void;
 }

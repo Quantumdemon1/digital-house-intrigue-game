@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
 import InteractionResults from './InteractionResults';
 import { GameState } from '@/models/game-state';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface EvictionInteractionDialogProps {
   houseguest: Houseguest;
@@ -82,6 +82,9 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
   
   const handleInteractionComplete = () => {
     onInteractionComplete();
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
   };
   
   const handleOptionSelected = (option: InteractionOption) => {
@@ -120,38 +123,39 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
     // Show results after a short delay
     setTimeout(() => {
       setShowResults(true);
-    }, 500);
+    }, 300);
   };
-
-  if (!open) {
-    return null;
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 max-w-md">
         <Card className="shadow-lg border-bb-yellow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-2xl font-bold">Interaction</CardTitle>
+            <div className="flex items-center gap-2">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback>{houseguest.name.substring(0, 1)}</AvatarFallback>
+              </Avatar>
+              <CardTitle className="text-xl">Conversation with {houseguest.name}</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src={houseguest.imageUrl} alt={houseguest.name} />
-                <AvatarFallback>{houseguest.name.substring(0, 2)}</AvatarFallback>
-              </Avatar>
+            <div className="flex items-center space-x-4 mb-4">
               <div>
-                <h3 className="text-lg font-semibold">{houseguest.name}</h3>
-                <Badge variant="secondary">{houseguest.occupation}</Badge>
+                <CardDescription>
+                  Choose your approach. ({houseguest.traits.join(', ')})
+                </CardDescription>
               </div>
             </div>
             
             {!showResults && (
               <div className="mt-4">
-                <CardDescription>Choose an interaction:</CardDescription>
                 <div className="grid gap-2 mt-2">
                   {interactionOptions.map((option) => (
-                    <Button key={option.id} onClick={() => handleOptionSelected(option)}>
+                    <Button 
+                      key={option.id} 
+                      onClick={() => handleOptionSelected(option)}
+                      className="justify-start text-left"
+                    >
                       {option.text}
                     </Button>
                   ))}

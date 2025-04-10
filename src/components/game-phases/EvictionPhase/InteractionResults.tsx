@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
 import { Houseguest } from '@/models/houseguest';
+import { Heart, HeartOff } from 'lucide-react';
 
 interface InteractionResultsProps {
   selectedOption: InteractionOption;
@@ -16,17 +17,30 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({
   onComplete
 }) => {
   return (
-    <div className="mt-4 space-y-4">
-      <div className="p-4 bg-gray-100 rounded-md">
-        <p className="text-sm">{selectedOption.responseText}</p>
-        <p className="text-sm mt-2">
-          Relationship change: <span className={selectedOption.relationshipChange > 0 ? 'text-green-600' : 'text-red-600'}>
-            {selectedOption.relationshipChange > 0 ? '+' : ''}{selectedOption.relationshipChange}
-          </span>
-        </p>
+    <div className="mt-4 space-y-4 animate-in fade-in duration-300">
+      <div className="p-4 bg-gray-100 dark:bg-slate-800 rounded-md border border-border">
+        <p className="text-sm font-medium mb-1">Their Response:</p>
+        <p className="text-sm italic text-muted-foreground">"{selectedOption.responseText}"</p>
       </div>
       
-      <Button variant="default" onClick={onComplete}>Continue</Button>
+      <div className="flex justify-between items-center pt-3 border-t">
+        <div className="flex items-center">
+          <span className="mr-2 text-sm">Relationship change:</span>
+          {selectedOption.relationshipChange > 0 ? (
+            <span className="flex items-center text-green-600 font-medium">
+              <Heart className="h-4 w-4 mr-1 fill-current" />
+              +{selectedOption.relationshipChange}
+            </span>
+          ) : (
+            <span className="flex items-center text-red-600 font-medium">
+              <HeartOff className="h-4 w-4 mr-1" />
+              {selectedOption.relationshipChange}
+            </span>
+          )}
+        </div>
+        
+        <Button variant="default" onClick={onComplete}>Continue</Button>
+      </div>
     </div>
   );
 };
