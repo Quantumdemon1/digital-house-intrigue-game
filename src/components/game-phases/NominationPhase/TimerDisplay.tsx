@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 interface TimerDisplayProps {
   timeRemaining: number;
@@ -23,16 +24,27 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
   
+  // Create our own progress bar since we can't use the Progress component
   return (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium">Time Remaining</span>
-        <span className="text-sm font-medium">{formatTime(timeRemaining)}</span>
+        <span className={cn(
+          "text-sm font-medium",
+          percentRemaining < 25 && "text-red-500"
+        )}>
+          {formatTime(timeRemaining)}
+        </span>
       </div>
-      <Progress 
-        value={percentRemaining} 
-        className={`h-2 ${percentRemaining < 25 ? 'bg-red-200' : 'bg-gray-200'}`}
-      />
+      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+        <div 
+          className={cn(
+            "h-full transition-all duration-300",
+            percentRemaining < 25 ? "bg-red-500" : "bg-bb-red"
+          )}
+          style={{ width: `${percentRemaining}%` }}
+        />
+      </div>
     </div>
   );
 };
