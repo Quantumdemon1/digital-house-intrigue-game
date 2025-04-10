@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React from 'react';
 import { VoteIcon, User, Clock } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
-import { useToast } from '@/components/ui/use-toast';
-import VotingTimer from './VotingTimer';
+import VoterDisplay from './VoterDisplay';
+import HohTiebreaker from './HohTiebreaker';
+import VotingStatus from './VotingStatus';
+import { useVotingLogic } from './useVotingLogic';
 
 interface EvictionVotingProps {
   nominees: Houseguest[];
@@ -15,127 +16,35 @@ interface EvictionVotingProps {
   onVoteSubmit: (voterId: string, nomineeId: string) => void;
 }
 
-const VOTING_TIME_LIMIT = 30; // 30 seconds for each vote
-
 const EvictionVoting: React.FC<EvictionVotingProps> = ({
   nominees,
   voters,
   hoh,
-  votes,
+  votes: externalVotes,
   onVoteSubmit,
 }) => {
   const { getRelationship } = useGame();
-  const { toast } = useToast();
-  const [currentVoterIndex, setCurrentVoterIndex] = useState(0);
-  const [isVoting, setIsVoting] = useState(false);
-  const [showVote, setShowVote] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(VOTING_TIME_LIMIT);
-  const [timerActive, setTimerActive] = useState(true);
   
-  // Check if the current voter is the player
-  const currentVoter = voters[currentVoterIndex];
-  const isPlayerVoting = currentVoter?.isPlayer;
-  
-  // Process AI votes or handle timer expiration
-  useEffect(() => {
-    if (!currentVoter || isVoting || Object.keys(votes).includes(currentVoter.id)) {
-      return;
-    }
-    
-    // If it's the player's turn, let the timer run
-    if (isPlayerVoting) {
-      return;
-    }
-    
-    // For AI players, start voting process
-    setIsVoting(true);
-    setTimerActive(false); // Pause the timer during AI thinking
-    
-    // Simulate AI thinking time
-    const timer = setTimeout(() => {
-      // AI voting logic based on relationships
-      let nominee1Relationship = getRelationship(currentVoter.id, nominees[0].id);
-      let nominee2Relationship = getRelationship(currentVoter.id, nominees[1].id);
-      
-      // AI votes to evict the houseguest they like less
-      const voteForId = nominee1Relationship < nominee2Relationship ? nominees[0].id : nominees[1].id;
-      
-      onVoteSubmit(currentVoter.id, voteForId);
-      setShowVote(true);
-      
-      // Show the vote for a moment, then move to next voter
-      setTimeout(() => {
-        setShowVote(false);
-        setIsVoting(false);
-        nextVoter();
-      }, 2000);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, [currentVoter, isPlayerVoting, isVoting, nominees, votes]);
-  
-  // Timer countdown for player votes
-  useEffect(() => {
-    if (!timerActive || !isPlayerVoting || isVoting || timeRemaining <= 0) {
-      return;
-    }
-    
-    const timer = setTimeout(() => {
-      setTimeRemaining(prev => prev - 1);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [timeRemaining, timerActive, isPlayerVoting, isVoting]);
-  
-  // Reset timer when moving to a new voter
-  useEffect(() => {
-    if (currentVoter) {
-      setTimeRemaining(VOTING_TIME_LIMIT);
-      setTimerActive(!isVoting && isPlayerVoting);
-    }
-  }, [currentVoterIndex, currentVoter, isPlayerVoting, isVoting]);
-  
-  const handlePlayerVote = (nomineeId: string) => {
-    if (!currentVoter) return;
-    
-    setIsVoting(true);
-    setTimerActive(false); // Stop timer when vote is cast
-    onVoteSubmit(currentVoter.id, nomineeId);
-    setShowVote(true);
-    
-    // Show the vote for a moment, then move to next voter
-    setTimeout(() => {
-      setShowVote(false);
-      setIsVoting(false);
-      nextVoter();
-    }, 2000);
-  };
-  
-  const nextVoter = () => {
-    setCurrentVoterIndex(prev => prev + 1);
-    setTimerActive(true);
-  };
-  
-  // Handle timer expiration - cast random vote
-  const handleTimeExpired = () => {
-    if (!currentVoter || isVoting || !isPlayerVoting) return;
-    
-    toast({
-      title: "Time Expired!",
-      description: "Your voting time has expired, a random vote has been cast.",
-      variant: "destructive",
-    });
-    
-    // Randomly select one of the nominees
-    const randomIndex = Math.floor(Math.random() * nominees.length);
-    const randomNomineeId = nominees[randomIndex].id;
-    
-    // Submit the random vote and continue
-    handlePlayerVote(randomNomineeId);
-  };
+  const {
+    votes,
+    currentVoter,
+    isPlayerVoting,
+    isVoting,
+    showVote,
+    timeRemaining,
+    handlePlayerVote,
+    handleTimeExpired,
+    VOTING_TIME_LIMIT
+  } = useVotingLogic({
+    nominees,
+    voters,
+    getRelationship,
+    onVoteSubmit
+  });
   
   // Check if all votes are in
-  const allVotesIn = Object.keys(votes).length >= voters.length;
+  const allVotesIn = Object.keys(votes).length >= voters.length || 
+                     Object.keys(externalVotes).length >= voters.length;
   
   // If HOH needs to break tie, check if we have the same number of votes for each nominee
   let hohNeedsTieBreaker = false;
@@ -166,96 +75,28 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
       </div>
       
       {!allVotesIn && currentVoter && (
-        <div className="bg-gray-100 p-4 rounded-md text-center">
-          <p className="font-medium mb-2">
-            <span className="text-bb-red">Current Voter:</span> {currentVoter.name}
-            {currentVoter.isPlayer ? " (You)" : ""}
-          </p>
-          
-          {isPlayerVoting && !isVoting && (
-            <VotingTimer 
-              timeRemaining={timeRemaining}
-              onTimeExpired={handleTimeExpired}
-              totalTime={VOTING_TIME_LIMIT}
-            />
-          )}
-          
-          {isVoting && (
-            <div className="flex items-center justify-center">
-              <Clock className="animate-pulse mr-2" />
-              <span>{showVote ? "Vote cast!" : "Thinking..."}</span>
-            </div>
-          )}
-          
-          {isPlayerVoting && !isVoting && (
-            <div className="mt-4 space-y-2">
-              <p>Vote to evict:</p>
-              <div className="flex justify-center gap-4">
-                {nominees.map(nominee => (
-                  <Button
-                    key={nominee.id}
-                    variant="destructive"
-                    className="flex items-center"
-                    onClick={() => handlePlayerVote(nominee.id)}
-                  >
-                    <User className="mr-1 h-4 w-4" />
-                    {nominee.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <VoterDisplay
+          currentVoter={currentVoter}
+          nominees={nominees}
+          isPlayerVoting={isPlayerVoting}
+          isVoting={isVoting}
+          showVote={showVote}
+          timeRemaining={timeRemaining}
+          onTimeExpired={handleTimeExpired}
+          onVote={handlePlayerVote}
+          totalTime={VOTING_TIME_LIMIT}
+        />
       )}
       
       {hohNeedsTieBreaker && hoh && (
-        <div className="bg-yellow-50 p-4 rounded-md text-center border border-yellow-200">
-          <p className="font-medium mb-2">
-            There's a tie! Head of Household {hoh.name} must break the tie.
-          </p>
-          
-          {hoh.isPlayer && (
-            <div className="mt-4 space-y-2">
-              <p>As HoH, vote to evict:</p>
-              <div className="flex justify-center gap-4">
-                {nominees.map(nominee => (
-                  <Button
-                    key={nominee.id}
-                    variant="destructive"
-                    className="flex items-center"
-                    onClick={() => onVoteSubmit(hoh.id, nominee.id)}
-                  >
-                    <User className="mr-1 h-4 w-4" />
-                    {nominee.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <HohTiebreaker 
+          hoh={hoh} 
+          nominees={nominees} 
+          onVote={onVoteSubmit} 
+        />
       )}
       
-      <div className="mt-4">
-        <h4 className="font-medium mb-2">Voting Status:</h4>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {voters.map(voter => (
-            <div 
-              key={voter.id} 
-              className={`text-center p-2 rounded-md ${
-                votes[voter.id] ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
-              }`}
-            >
-              <div className="w-8 h-8 mx-auto bg-gray-200 rounded-full flex items-center justify-center text-sm mb-1">
-                {voter.name.charAt(0)}
-              </div>
-              <p className="text-xs font-medium">{voter.name}</p>
-              {votes[voter.id] && (
-                <VoteIcon className="h-3 w-3 mx-auto mt-1 text-green-600" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <VotingStatus voters={voters} votes={votes || externalVotes} />
     </div>
   );
 };
