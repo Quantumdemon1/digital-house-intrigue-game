@@ -1,4 +1,3 @@
-
 export type PersonalityTrait = 
   | 'Strategic' | 'Social' | 'Competitive' | 'Loyal'
   | 'Sneaky' | 'Confrontational' | 'Emotional' | 'Analytical';
@@ -28,6 +27,18 @@ export const TRAIT_STAT_BOOSTS: Record<PersonalityTrait, {primary: keyof Housegu
 export const TRAIT_BOOST_VALUES = {
   primary: 2,
   secondary: 1
+};
+
+// Trait descriptions for tooltips and UI
+export const TRAIT_DESCRIPTIONS: Record<PersonalityTrait, string> = {
+  'Strategic': 'Focuses on game moves and long-term planning',
+  'Social': 'Builds strong relationships and alliances',
+  'Competitive': 'Highly motivated to win competitions',
+  'Loyal': 'Values trust and keeps commitments',
+  'Sneaky': 'Plays deceptively and gathers information',
+  'Confrontational': 'Direct and doesn\'t shy away from conflict',
+  'Emotional': 'Makes decisions based on feelings and connections',
+  'Analytical': 'Carefully evaluates all options and scenarios'
 };
 
 export type HouseguestStatus = 
