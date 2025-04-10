@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { VoteIcon, User, Clock } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
+import { useToast } from '@/components/ui/use-toast';
+import VotingTimer from './VotingTimer';
 
 interface EvictionVotingProps {
   nominees: Houseguest[];
@@ -13,6 +15,8 @@ interface EvictionVotingProps {
   onVoteSubmit: (voterId: string, nomineeId: string) => void;
 }
 
+const VOTING_TIME_LIMIT = 30; // 30 seconds for each vote
+
 const EvictionVoting: React.FC<EvictionVotingProps> = ({
   nominees,
   voters,
@@ -21,21 +25,31 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
   onVoteSubmit,
 }) => {
   const { getRelationship } = useGame();
+  const { toast } = useToast();
   const [currentVoterIndex, setCurrentVoterIndex] = useState(0);
   const [isVoting, setIsVoting] = useState(false);
   const [showVote, setShowVote] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(VOTING_TIME_LIMIT);
+  const [timerActive, setTimerActive] = useState(true);
   
   // Check if the current voter is the player
   const currentVoter = voters[currentVoterIndex];
   const isPlayerVoting = currentVoter?.isPlayer;
   
-  // Process AI votes
+  // Process AI votes or handle timer expiration
   useEffect(() => {
-    if (!currentVoter || isPlayerVoting || isVoting || Object.keys(votes).includes(currentVoter.id)) {
+    if (!currentVoter || isVoting || Object.keys(votes).includes(currentVoter.id)) {
       return;
     }
     
+    // If it's the player's turn, let the timer run
+    if (isPlayerVoting) {
+      return;
+    }
+    
+    // For AI players, start voting process
     setIsVoting(true);
+    setTimerActive(false); // Pause the timer during AI thinking
     
     // Simulate AI thinking time
     const timer = setTimeout(() => {
@@ -53,17 +67,39 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
       setTimeout(() => {
         setShowVote(false);
         setIsVoting(false);
-        setCurrentVoterIndex(prev => prev + 1);
+        nextVoter();
       }, 2000);
     }, 1500);
     
     return () => clearTimeout(timer);
   }, [currentVoter, isPlayerVoting, isVoting, nominees, votes]);
   
+  // Timer countdown for player votes
+  useEffect(() => {
+    if (!timerActive || !isPlayerVoting || isVoting || timeRemaining <= 0) {
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      setTimeRemaining(prev => prev - 1);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [timeRemaining, timerActive, isPlayerVoting, isVoting]);
+  
+  // Reset timer when moving to a new voter
+  useEffect(() => {
+    if (currentVoter) {
+      setTimeRemaining(VOTING_TIME_LIMIT);
+      setTimerActive(!isVoting && isPlayerVoting);
+    }
+  }, [currentVoterIndex, currentVoter, isPlayerVoting, isVoting]);
+  
   const handlePlayerVote = (nomineeId: string) => {
     if (!currentVoter) return;
     
     setIsVoting(true);
+    setTimerActive(false); // Stop timer when vote is cast
     onVoteSubmit(currentVoter.id, nomineeId);
     setShowVote(true);
     
@@ -71,8 +107,31 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
     setTimeout(() => {
       setShowVote(false);
       setIsVoting(false);
-      setCurrentVoterIndex(prev => prev + 1);
+      nextVoter();
     }, 2000);
+  };
+  
+  const nextVoter = () => {
+    setCurrentVoterIndex(prev => prev + 1);
+    setTimerActive(true);
+  };
+  
+  // Handle timer expiration - cast random vote
+  const handleTimeExpired = () => {
+    if (!currentVoter || isVoting || !isPlayerVoting) return;
+    
+    toast({
+      title: "Time Expired!",
+      description: "Your voting time has expired, a random vote has been cast.",
+      variant: "destructive",
+    });
+    
+    // Randomly select one of the nominees
+    const randomIndex = Math.floor(Math.random() * nominees.length);
+    const randomNomineeId = nominees[randomIndex].id;
+    
+    // Submit the random vote and continue
+    handlePlayerVote(randomNomineeId);
   };
   
   // Check if all votes are in
@@ -112,6 +171,14 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
             <span className="text-bb-red">Current Voter:</span> {currentVoter.name}
             {currentVoter.isPlayer ? " (You)" : ""}
           </p>
+          
+          {isPlayerVoting && !isVoting && (
+            <VotingTimer 
+              timeRemaining={timeRemaining}
+              onTimeExpired={handleTimeExpired}
+              totalTime={VOTING_TIME_LIMIT}
+            />
+          )}
           
           {isVoting && (
             <div className="flex items-center justify-center">
