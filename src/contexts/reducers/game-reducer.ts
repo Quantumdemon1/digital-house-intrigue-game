@@ -1,221 +1,48 @@
-import { GameState, GameEvent, getOrCreateRelationship } from '../../models/game-state';
-import { HouseguestStatus } from '../../models/houseguest';
-import { GameAction } from '../types/game-context-types';
 
-// Game reducer function
+import { GameState } from '../../models/game-state';
+import { GameAction } from '../types/game-context-types';
+import { setupReducer } from './reducers/setup-reducer';
+import { competitionReducer } from './reducers/competition-reducer';
+import { nominationReducer } from './reducers/nomination-reducer';
+import { relationshipReducer } from './reducers/relationship-reducer';
+import { evictionReducer } from './reducers/eviction-reducer';
+import { gameProgressReducer } from './reducers/game-progress-reducer';
+import { logReducer } from './reducers/log-reducer';
+
+// Game reducer function that delegates to specific reducers based on action type
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
+    // Game setup actions
     case 'START_GAME':
-      // Initialize relationship map for all houseguests
-      const relationships = new Map();
+      return setupReducer(state, action);
       
-      action.payload.forEach(guest1 => {
-        action.payload.forEach(guest2 => {
-          if (guest1.id !== guest2.id) {
-            getOrCreateRelationship(relationships, guest1.id, guest2.id);
-          }
-        });
-      });
-      
-      return {
-        ...state,
-        houseguests: action.payload,
-        phase: 'HoH',
-        relationships,
-      };
-      
-    case 'SET_PHASE':
-      return {
-        ...state,
-        phase: action.payload,
-      };
-      
+    // Competition actions
     case 'SET_HOH':
-      // Reset previous HoH
-      const updatedHouseguests = state.houseguests.map(guest => ({
-        ...guest,
-        isHoH: guest.id === action.payload.id
-      }));
-      
-      // Update the HoH's competition stats
-      const newHohWinner = { 
-        ...action.payload,
-        isHoH: true,
-        competitionsWon: {
-          ...action.payload.competitionsWon,
-          hoh: action.payload.competitionsWon.hoh + 1
-        }
-      };
-      
-      return {
-        ...state,
-        hohWinner: newHohWinner,
-        houseguests: updatedHouseguests.map(h => 
-          h.id === newHohWinner.id ? newHohWinner : h
-        ),
-      };
-      
-    case 'SET_NOMINEES':
-      // Update the nominated status of all houseguests
-      const houseguestsWithNominations = state.houseguests.map(guest => ({
-        ...guest,
-        isNominated: action.payload.some(nominee => nominee.id === guest.id),
-        nominations: action.payload.some(nominee => nominee.id === guest.id) 
-          ? guest.nominations + 1 
-          : guest.nominations
-      }));
-      
-      return {
-        ...state,
-        nominees: action.payload,
-        houseguests: houseguestsWithNominations,
-      };
-      
     case 'SET_POV_WINNER':
-      // Reset previous PoV holder
-      const updatedHouseguestsForPov = state.houseguests.map(guest => ({
-        ...guest,
-        isPovHolder: guest.id === action.payload.id
-      }));
+      return competitionReducer(state, action);
       
-      // Update the PoV winner's competition stats
-      const newPovWinner = { 
-        ...action.payload, 
-        isPovHolder: true,
-        competitionsWon: {
-          ...action.payload.competitionsWon,
-          pov: action.payload.competitionsWon.pov + 1
-        }
-      };
+    // Nomination actions
+    case 'SET_NOMINEES':
+      return nominationReducer(state, action);
       
-      return {
-        ...state,
-        povWinner: newPovWinner,
-        houseguests: updatedHouseguestsForPov.map(h => 
-          h.id === newPovWinner.id ? newPovWinner : h
-        ),
-      };
-      
+    // Relationship actions
     case 'UPDATE_RELATIONSHIPS':
-      const { guestId1, guestId2, change, note } = action.payload;
-      const newRelationships = new Map(state.relationships);
+      return relationshipReducer(state, action);
       
-      // Update relationship from guest1 to guest2
-      const rel1 = getOrCreateRelationship(newRelationships, guestId1, guestId2);
-      rel1.score = Math.max(-100, Math.min(100, rel1.score + change));
-      if (note) {
-        rel1.notes.push(note);
-      }
-      
-      // Update relationship from guest2 to guest1 (with a slight variation)
-      const rel2 = getOrCreateRelationship(newRelationships, guestId2, guestId1);
-      // The reciprocal relationship changes slightly differently
-      const reciprocalChange = change * (0.8 + Math.random() * 0.4); // 80-120% of original change
-      rel2.score = Math.max(-100, Math.min(100, rel2.score + reciprocalChange));
-      if (note) {
-        rel2.notes.push(note);
-      }
-      
-      return {
-        ...state,
-        relationships: newRelationships,
-      };
-      
+    // Eviction actions
     case 'SET_EVICTION_VOTE':
-      // Add or update a vote in the eviction votes record
-      return {
-        ...state,
-        evictionVotes: {
-          ...state.evictionVotes,
-          [action.payload.voterId]: action.payload.nomineeId
-        }
-      };
-      
     case 'EVICT_HOUSEGUEST':
-      const { evicted, toJury } = action.payload;
+      return evictionReducer(state, action);
       
-      // Update the houseguest's status
-      const updatedHouseguestsAfterEviction = state.houseguests.map(guest => {
-        if (guest.id === evicted.id) {
-          return {
-            ...guest,
-            status: toJury ? 'Jury' as HouseguestStatus : 'Evicted' as HouseguestStatus,
-            isNominated: false,
-            isPovHolder: false, // Clear POV status when evicted
-          };
-        }
-        // Clear nomination status for everyone else too
-        if (guest.isNominated) {
-          return { ...guest, isNominated: false };
-        }
-        return guest;
-      });
-      
-      // Update jury if needed
-      const updatedJury = toJury 
-        ? [...state.juryMembers, { ...evicted, status: 'Jury' as HouseguestStatus }]
-        : state.juryMembers;
-      
-      return {
-        ...state,
-        houseguests: updatedHouseguestsAfterEviction,
-        nominees: [],
-        juryMembers: updatedJury,
-        evictionVotes: {},
-      };
-      
+    // Game progression actions
+    case 'SET_PHASE':
     case 'ADVANCE_WEEK':
-      // Reset HoH and PoV statuses
-      const resetHouseguests = state.houseguests.map(guest => ({
-        ...guest,
-        isHoH: false,
-        isPovHolder: false,
-        isNominated: false,
-      }));
-      
-      return {
-        ...state,
-        week: state.week + 1,
-        phase: 'HoH',
-        hohWinner: null,
-        povWinner: null,
-        nominees: [],
-        houseguests: resetHouseguests,
-        evictionVotes: {},
-      };
-      
-    case 'LOG_EVENT':
-      const newEvent: GameEvent = {
-        ...action.payload,
-        timestamp: Date.now(),
-      };
-      
-      return {
-        ...state,
-        gameLog: [...state.gameLog, newEvent],
-      };
-      
     case 'END_GAME':
-      const { winner, runnerUp } = action.payload;
+      return gameProgressReducer(state, action);
       
-      // Update statuses
-      const finalHouseguests = state.houseguests.map(guest => {
-        if (guest.id === winner.id) {
-          return { ...guest, status: 'Winner' as HouseguestStatus };
-        }
-        if (guest.id === runnerUp.id) {
-          return { ...guest, status: 'Runner-Up' as HouseguestStatus };
-        }
-        return guest;
-      });
-      
-      return {
-        ...state,
-        phase: 'GameOver',
-        houseguests: finalHouseguests,
-        winner: { ...winner, status: 'Winner' as HouseguestStatus },
-        runnerUp: { ...runnerUp, status: 'Runner-Up' as HouseguestStatus },
-      };
+    // Log actions
+    case 'LOG_EVENT':
+      return logReducer(state, action);
       
     default:
       return state;
