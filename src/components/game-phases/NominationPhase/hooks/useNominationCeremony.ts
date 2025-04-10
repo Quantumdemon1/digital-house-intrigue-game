@@ -5,13 +5,11 @@ import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
 
 export const useNominationCeremony = () => {
-  const { gameState, dispatch, getRandomNominees } = useGame();
+  const { gameState, dispatch, getRandomNominees, getRelationship } = useGame();
   const { toast } = useToast();
   const [nominees, setNominees] = useState<Houseguest[]>([]);
   const [isNominating, setIsNominating] = useState(false);
   const [ceremonyComplete, setCeremonyComplete] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(60); // 60 seconds = 1 minute
-  const [timerActive, setTimerActive] = useState(true);
 
   const { getActiveHouseguests } = useGame();
   const activeHouseguests = getActiveHouseguests();
@@ -33,8 +31,6 @@ export const useNominationCeremony = () => {
   const confirmNominations = () => {
     if (nominees.length !== 2) return;
     
-    // Stop the timer once nominations are confirmed
-    setTimerActive(false);
     setIsNominating(true);
     
     setTimeout(() => {
@@ -106,25 +102,6 @@ export const useNominationCeremony = () => {
       }, 1000);
     }
   };
-  
-  // Timer countdown effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (timerActive && timeRemaining > 0 && !ceremonyComplete && !isNominating) {
-      interval = setInterval(() => {
-        setTimeRemaining((prevTime) => prevTime - 1);
-      }, 1000);
-    } else if (timerActive && timeRemaining === 0) {
-      // When timer reaches zero
-      setTimerActive(false);
-      handleTimeExpired();
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timerActive, timeRemaining, ceremonyComplete, isNominating]);
 
   return {
     nominees,
@@ -136,7 +113,7 @@ export const useNominationCeremony = () => {
     confirmNominations,
     gameState,
     hoh,
-    timeRemaining,
-    timerActive,
+    handleTimeExpired,
+    getRelationship
   };
 };

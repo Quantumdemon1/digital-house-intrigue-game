@@ -1,3 +1,4 @@
+
 /**
  * @file game-states.ts
  * @description Contains the state machine for the Big Brother game
@@ -14,7 +15,7 @@ export abstract class GameStateBase {
 
   constructor(controller: IGameControllerFacade) {
     this.controller = controller;
-    this.game = controller.game;
+    this.game = controller.game as BigBrotherGame;
   }
 
   // Life cycle methods

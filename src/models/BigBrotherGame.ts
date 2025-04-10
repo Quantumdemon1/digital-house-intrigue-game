@@ -103,7 +103,7 @@ export class BigBrotherGame {
   }
 
   getActiveHouseguests(): Houseguest[] {
-    return this.houseguests.filter(h => h.status === 'active');
+    return this.houseguests.filter(h => h.status === HouseguestStatus.Active);
   }
 
   getHouseguestById(id: string): Houseguest | undefined {
@@ -142,7 +142,7 @@ export class BigBrotherGame {
       winner: this.winner,
       runnerUp: this.runnerUp,
       finalTwo: this.finalTwo,
-      gameLog: this.eventLog,
+      eventLog: this.eventLog,
       // State is handled in restoreState after loading
       currentStateName: this.currentState?.constructor.name || 'InitializationState'
     };
@@ -157,7 +157,7 @@ export class BigBrotherGame {
     this.week = gameData.week;
     this.currentWeek = gameData.currentWeek || gameData.week;
     this.phase = gameData.phase;
-    this.gameLog = gameData.eventLog;
+    this.eventLog = gameData.eventLog || [];
     
     // Restore references to objects
     this.hohWinner = gameData.hohWinner;
