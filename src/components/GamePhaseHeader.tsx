@@ -17,10 +17,10 @@ const GamePhaseHeader: React.FC = () => {
   const getPhaseIcon = () => {
     switch (phase) {
       case 'Setup': return <Users className="h-5 w-5 mr-2" />;
-      case 'HOH': return <Crown className="h-5 w-5 mr-2 text-bb-gold" />;
+      case 'HoH': return <Crown className="h-5 w-5 mr-2 text-bb-gold" />;
       case 'Nomination': return <Target className="h-5 w-5 mr-2 text-bb-red" />;
-      case 'POV': return <Shield className="h-5 w-5 mr-2 text-bb-green" />;
-      case 'POVMeeting': return <Shield className="h-5 w-5 mr-2 text-bb-green" />;
+      case 'PoV': return <Shield className="h-5 w-5 mr-2 text-bb-green" />;
+      case 'PoVMeeting': return <Shield className="h-5 w-5 mr-2 text-bb-green" />;
       case 'Eviction': return <Vote className="h-5 w-5 mr-2 text-bb-red" />;
       case 'Finale': 
       case 'GameOver': return <Trophy className="h-5 w-5 mr-2 text-yellow-500" />;
@@ -55,7 +55,7 @@ const GamePhaseHeader: React.FC = () => {
             <div className="flex items-center">
               <Badge className="bg-bb-gold text-bb-dark border-none font-medium flex items-center gap-1">
                 <Crown className="h-3 w-3" />
-                HoH: {gameState.houseguests.find(h => h.id === hohWinner)?.name}
+                HoH: {gameState.houseguests.find(h => h.id === hohWinner.id)?.name}
               </Badge>
             </div>
           )}
@@ -64,7 +64,7 @@ const GamePhaseHeader: React.FC = () => {
             <div className="flex items-center">
               <Badge variant="outline" className="bg-bb-green text-white border-none font-medium flex items-center gap-1">
                 <Shield className="h-3 w-3" />
-                PoV: {gameState.houseguests.find(h => h.id === povWinner)?.name}
+                PoV: {gameState.houseguests.find(h => h.id === povWinner.id)?.name}
               </Badge>
             </div>
           )}
@@ -83,9 +83,9 @@ const GamePhaseHeader: React.FC = () => {
               <Target className="h-3 w-3" />
               Nominees: 
               {nominees.map((nomineeId, idx) => {
-                const nominee = gameState.houseguests.find(h => h.id === nomineeId);
+                const nominee = gameState.houseguests.find(h => h.id === nomineeId.id);
                 return (
-                  <span key={nomineeId}>
+                  <span key={nomineeId.id}>
                     {idx > 0 && ', '}
                     {nominee?.name}
                   </span>

@@ -104,14 +104,12 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
         </CardContent>
       </Card>
       
-      {player && (
+      {player && selectedHouseguest && (
         <EvictionInteractionDialog
-          houseguest={selectedHouseguest || nonNominees[0]}
-          player={player}
-          gameState={gameState}
-          onInteractionComplete={handleInteractionComplete}
+          houseguest={selectedHouseguest}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
+          onInteractionComplete={handleInteractionComplete}
         />
       )}
     </div>

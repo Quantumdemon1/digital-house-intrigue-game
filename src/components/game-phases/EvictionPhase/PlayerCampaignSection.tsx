@@ -7,17 +7,13 @@ import { Houseguest } from '@/models/houseguest';
 interface PlayerCampaignSectionProps {
   nonNominees: Houseguest[];
   remainingInteractions: number;
-  isInteractionStageComplete: boolean;
-  onInteractWithHouseguest: (houseguest: Houseguest) => void;
-  onInteractionStageComplete: () => void;
+  onHouseguestSelect: (houseguest: Houseguest) => void;
 }
 
 const PlayerCampaignSection: React.FC<PlayerCampaignSectionProps> = ({
   nonNominees,
   remainingInteractions,
-  isInteractionStageComplete,
-  onInteractWithHouseguest,
-  onInteractionStageComplete
+  onHouseguestSelect
 }) => {
   return (
     <div className="space-y-6">
@@ -38,7 +34,7 @@ const PlayerCampaignSection: React.FC<PlayerCampaignSectionProps> = ({
             variant="outline"
             className="h-auto py-4 flex flex-col items-center border-2 hover:border-bb-red transition-colors"
             disabled={remainingInteractions <= 0}
-            onClick={() => onInteractWithHouseguest(houseguest)}
+            onClick={() => onHouseguestSelect(houseguest)}
           >
             <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-lg mb-2">
               {houseguest.name.charAt(0)}
@@ -51,18 +47,6 @@ const PlayerCampaignSection: React.FC<PlayerCampaignSectionProps> = ({
           </Button>
         ))}
       </div>
-      
-      {isInteractionStageComplete && (
-        <div className="flex justify-center mt-6">
-          <Button 
-            variant="default"
-            className="bg-bb-red hover:bg-red-700"
-            onClick={onInteractionStageComplete}
-          >
-            Proceed to Voting
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

@@ -2,18 +2,16 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
-import { Houseguest } from '@/models/houseguest';
-import { Heart, HeartOff } from 'lucide-react';
+import { Heart, HeartOff, Minus } from 'lucide-react';
 
 interface InteractionResultsProps {
   selectedOption: InteractionOption;
-  houseguest: Houseguest;
+  houseguest?: any; // Made optional since we're not using it directly
   onComplete: () => void;
 }
 
 const InteractionResults: React.FC<InteractionResultsProps> = ({
   selectedOption,
-  houseguest,
   onComplete
 }) => {
   return (
@@ -31,10 +29,15 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({
               <Heart className="h-4 w-4 mr-1 fill-current" />
               +{selectedOption.relationshipChange}
             </span>
-          ) : (
+          ) : selectedOption.relationshipChange < 0 ? (
             <span className="flex items-center text-red-600 font-medium">
               <HeartOff className="h-4 w-4 mr-1" />
               {selectedOption.relationshipChange}
+            </span>
+          ) : (
+            <span className="flex items-center text-muted-foreground font-medium">
+              <Minus className="h-4 w-4 mr-1" />
+              0
             </span>
           )}
         </div>
