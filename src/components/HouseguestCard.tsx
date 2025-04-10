@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
+import CustomProgress from './game-phases/NominationPhase/CustomProgress';
 import { Houseguest } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 import { Crown, Award, Target, Heart, HeartOff } from 'lucide-react';
@@ -111,16 +111,10 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({ houseguest, showRelatio
                   {relationshipScore}
                 </span>
               </div>
-              <Progress 
+              <CustomProgress 
                 value={50 + relationshipScore/2} 
-                className="h-1" 
-                // Fixed: Removed indicatorClassName prop
-                // Instead, use a className that applies gradient conditionally
-                style={{
-                  background: relationshipScore > 0 
-                    ? 'linear-gradient(to right, #86efac, #22c55e)'
-                    : 'linear-gradient(to right, #fca5a5, #ef4444)'
-                }}
+                className="h-1"
+                indicatorClassName={relationshipScore > 0 ? 'bg-gradient-to-r from-green-300 to-green-600' : 'bg-gradient-to-r from-red-300 to-red-600'}
               />
             </div>
           )}
