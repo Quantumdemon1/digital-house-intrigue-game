@@ -5,6 +5,7 @@ import { Houseguest } from '@/models/houseguest';
 import EvictionInteractionDialog from './EvictionInteractionDialog';
 import PlayerCampaignSection from './PlayerCampaignSection';
 import NonPlayerSection from './NonPlayerSection';
+import { useGame } from '@/contexts/GameContext';
 
 interface EvictionInteractionStageProps {
   nominees: Houseguest[];
@@ -20,10 +21,13 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
   onInteractionStageComplete,
 }) => {
   const { toast } = useToast();
+  const { gameState } = useGame();
   const [selectedHouseguest, setSelectedHouseguest] = useState<Houseguest | null>(null);
-  const [isInteractionDialogOpen, setIsInteractionDialogOpen] = useState(false);
   const [remainingInteractions, setRemainingInteractions] = useState(3);
   const [isInteractionStageComplete, setIsInteractionStageComplete] = useState(false);
+  
+  // Find player houseguest
+  const player = gameState.houseguests.find(guest => guest.isPlayer);
   
   const handleInteractWithHouseguest = (houseguest: Houseguest) => {
     if (remainingInteractions <= 0) {
@@ -36,23 +40,19 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
     }
     
     setSelectedHouseguest(houseguest);
-    setIsInteractionDialogOpen(true);
   };
   
-  const handleInteractionComplete = (success: boolean) => {
-    setIsInteractionDialogOpen(false);
+  const handleInteractionComplete = () => {
+    setSelectedHouseguest(null);
+    setRemainingInteractions(prev => prev - 1);
     
-    if (success) {
-      setRemainingInteractions(prev => prev - 1);
-      
-      toast({
-        title: "Interaction Complete",
-        description: `You have ${remainingInteractions - 1} interactions left.`,
-      });
-      
-      if (remainingInteractions - 1 <= 0) {
-        setIsInteractionStageComplete(true);
-      }
+    toast({
+      title: "Interaction Complete",
+      description: `You have ${remainingInteractions - 1} interactions left.`,
+    });
+    
+    if (remainingInteractions - 1 <= 0) {
+      setIsInteractionStageComplete(true);
     }
   };
 
@@ -73,12 +73,12 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
         />
       )}
       
-      {selectedHouseguest && (
+      {selectedHouseguest && player && (
         <EvictionInteractionDialog
-          open={isInteractionDialogOpen}
           houseguest={selectedHouseguest}
-          onClose={() => setIsInteractionDialogOpen(false)}
-          onComplete={handleInteractionComplete}
+          player={player}
+          gameState={gameState}
+          onInteractionComplete={handleInteractionComplete}
         />
       )}
     </>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import { useGame } from '@/contexts/GameContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
-import { InteractionResults } from './InteractionResults';
+import InteractionResults from './InteractionResults';
 import { GameState } from '@/models/game-state';
 
 interface EvictionInteractionDialogProps {
@@ -21,37 +22,42 @@ const interactionOptions: InteractionOption[] = [
   {
     id: 'befriend',
     text: 'Try to befriend',
-    successText: 'befriended',
+    responseText: 'You had a friendly conversation and connected well.',
     relationshipChange: 5,
     successChance: 0.7,
+    icon: null,
   },
   {
     id: 'intimidate',
     text: 'Intimidate',
-    successText: 'intimidated',
+    responseText: 'You put some pressure on them and made your position clear.',
     relationshipChange: -10,
     successChance: 0.5,
+    icon: null,
   },
   {
     id: 'strategize',
     text: 'Strategize with',
-    successText: 'strategized with',
+    responseText: 'You had a productive strategy conversation.',
     relationshipChange: 2,
     successChance: 0.8,
+    icon: null,
   },
   {
     id: 'gossip',
     text: 'Gossip about others with',
-    successText: 'gossiped with',
+    responseText: 'You shared some juicy information about the other houseguests.',
     relationshipChange: 3,
     successChance: 0.6,
+    icon: null,
   },
   {
     id: 'confront',
     text: 'Confront',
-    successText: 'confronted',
+    responseText: 'You confronted them about their game moves.',
     relationshipChange: -5,
     successChance: 0.4,
+    icon: null,
   },
 ];
 
@@ -74,24 +80,30 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({ h
     // Calculate relationship change based on interaction and houseguest personality
     // Apply relationship change
     dispatch({
-      type: 'UPDATE_RELATIONSHIPS',
+      type: 'PLAYER_ACTION',
       payload: {
-        guestId1: player.id,
-        guestId2: houseguest.id,
-        change: option.relationshipChange,
-        note: `${player.name} ${option.successText}`
+        actionId: 'update_relationship',
+        params: {
+          guestId1: player.id,
+          guestId2: houseguest.id,
+          change: option.relationshipChange,
+          note: `${player.name} interacted with ${houseguest.name}`
+        }
       }
     });
     
     // Log the interaction in game log
     dispatch({
-      type: 'LOG_EVENT',
+      type: 'PLAYER_ACTION',
       payload: {
-        week: gameState.week,
-        phase: gameState.phase,
-        type: 'SOCIAL_INTERACTION',
-        description: `${player.name} ${option.successText} with ${houseguest.name}.`,
-        involvedHouseguests: [player.id, houseguest.id],
+        actionId: 'log_event',
+        params: {
+          week: gameState.week,
+          phase: gameState.phase,
+          type: 'SOCIAL_INTERACTION',
+          description: `${player.name} interacted with ${houseguest.name}.`,
+          involvedHouseguests: [player.id, houseguest.id],
+        }
       }
     });
     
@@ -131,9 +143,10 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({ h
           </div>
         )}
         
-        {showResults && (
+        {showResults && selectedOption && (
           <InteractionResults 
-            selectedOption={selectedOption} 
+            selectedOption={selectedOption}
+            houseguest={houseguest}
             onComplete={handleInteractionComplete}
           />
         )}
