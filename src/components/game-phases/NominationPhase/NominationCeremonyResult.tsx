@@ -1,44 +1,59 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Target, Clock } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
-import HouseguestCard from '../../HouseguestCard';
+import { Button } from '@/components/ui/button';
 
 interface NominationCeremonyResultProps {
   nominees: Houseguest[];
-  hohName?: string;
+  hoh?: Houseguest | null;
+  onContinue?: () => void;
 }
 
-const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({ nominees, hohName }) => {
+const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
+  nominees,
+  hoh,
+  onContinue
+}) => {
   return (
     <Card className="shadow-lg border-bb-red">
       <CardHeader className="bg-bb-red text-white">
-        <CardTitle className="flex items-center">
-          <Target className="mr-2" /> Nomination Results
-        </CardTitle>
+        <CardTitle>Nomination Ceremony</CardTitle>
         <CardDescription className="text-white/80">
-          Two houseguests have been nominated for eviction
+          Complete
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="text-center mb-6">
-          <h3 className="text-xl font-bold">
-            {hohName} has nominated:
-          </h3>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-          {nominees.map(nominee => (
-            <HouseguestCard key={nominee.id} houseguest={nominee} />
-          ))}
-        </div>
-        
-        <div className="mt-6 text-center text-muted-foreground">
-          Continuing to Power of Veto Competition...
-          <div className="mt-2 animate-pulse">
-            <Clock className="inline-block" />
+        <div className="flex flex-col items-center">
+          <div className="bg-green-100 rounded-full p-2 mb-4">
+            <Check className="w-8 h-8 text-green-600" />
           </div>
+          <h3 className="text-xl font-bold">Nomination Ceremony Complete</h3>
+          <p className="text-sm text-muted-foreground mt-2 mb-4 text-center">
+            {hoh?.name} has nominated:
+          </p>
+          
+          <div className="grid gap-2 text-center">
+            {nominees.map((nominee, index) => (
+              <div key={nominee.id} className="font-semibold text-lg">
+                {nominee.name}
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-sm text-muted-foreground mt-4 text-center">
+            These houseguests will compete in the Power of Veto competition for a chance to save themselves.
+          </div>
+          
+          {onContinue && (
+            <Button 
+              onClick={onContinue} 
+              className="mt-6 bg-bb-red hover:bg-bb-red/90"
+            >
+              Continue to Power of Veto
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

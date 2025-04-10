@@ -1,5 +1,7 @@
 
-import { useToast as useToastInternal, toast as toastInternal } from "../../hooks/use-toast";
+// Re-export the toast components from the original source
+import { useToast as useToastOriginal, toast as toastOriginal } from "@/hooks/use-toast";
 
-export const useToast = useToastInternal;
-export const toast = toastInternal;
+// Export with the same names for consistency
+export const useToast = useToastOriginal;
+export const toast = toastOriginal;

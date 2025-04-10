@@ -4,7 +4,7 @@ import { Houseguest } from '@/models/houseguest';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
 import { AIIntegrationSystem } from '@/systems/ai-integration';
-import { Logger } from '@/utils/logger';
+import { Logger, LogLevel } from '@/utils/logger';
 
 interface UseAINominationProps {
   hoh: Houseguest | null;
