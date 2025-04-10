@@ -36,7 +36,7 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({
             <span className="font-medium">{stats[stat]}/10</span>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleDecreaseStat(stat)} disabled={stats[stat] <= 1}>
+            <Button variant="ghost" size="icon" onClick={() => handleDecreaseStat(stat)} disabled={stats[stat] <= 1} className="h-7 w-7 shrink-0 text-zinc-950">
               <MinusCircle className="h-4 w-4" />
             </Button>
             
@@ -44,7 +44,7 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({
               <CustomProgress value={stats[stat] * 10} indicatorClassName={getProgressColor(stats[stat])} />
             </div>
             
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleIncreaseStat(stat)} disabled={stats[stat] >= 10 || remainingPoints <= 0}>
+            <Button variant="ghost" size="icon" onClick={() => handleIncreaseStat(stat)} disabled={stats[stat] >= 10 || remainingPoints <= 0} className="h-7 w-7 shrink-0 text-emerald-600">
               <PlusCircle className="h-4 w-4" />
             </Button>
           </div>
