@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { HouseguestStats } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { MinusCircle, PlusCircle } from 'lucide-react';
+import CustomProgress from '../game-phases/NominationPhase/CustomProgress';
 
 interface StatsSelectorProps {
   stats: HouseguestStats;
@@ -25,7 +25,7 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
     }
   };
 
-  const getSliderColor = (value: number) => {
+  const getProgressColor = (value: number) => {
     if (value <= 3) return 'bg-red-500';
     if (value <= 6) return 'bg-yellow-500';
     return 'bg-green-500';
@@ -36,14 +36,14 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
       {(Object.keys(stats) as Array<keyof HouseguestStats>).map(stat => (
         <div key={stat} className="space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="capitalize">{stat}</span>
+            <span className="font-medium capitalize">{stat}</span>
             <span className="font-medium">{stats[stat]}/10</span>
           </div>
           <div className="flex items-center space-x-2">
             <Button 
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-7 w-7 shrink-0"
               onClick={() => handleDecreaseStat(stat)}
               disabled={stats[stat] <= 1}
             >
@@ -51,18 +51,16 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
             </Button>
             
             <div className="flex-1">
-              <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${getSliderColor(stats[stat])}`} 
-                  style={{ width: `${stats[stat] * 10}%` }}
-                />
-              </div>
+              <CustomProgress 
+                value={stats[stat] * 10} 
+                indicatorClassName={getProgressColor(stats[stat])}
+              />
             </div>
             
             <Button 
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-7 w-7 shrink-0"
               onClick={() => handleIncreaseStat(stat)}
               disabled={stats[stat] >= 10 || remainingPoints <= 0}
             >

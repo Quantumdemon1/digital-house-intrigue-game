@@ -16,14 +16,14 @@ const CustomProgress: React.FC<CustomProgressProps> = ({
   return (
     <div 
       className={cn(
-        "relative h-4 w-full overflow-hidden rounded-full bg-gray-200",
+        "relative h-3 w-full overflow-hidden rounded-full bg-gray-200",
         className
       )}
     >
       <div
         className={cn(
-          "h-full flex-1 bg-primary transition-all",
-          indicatorClassName
+          "h-full flex-1 transition-all",
+          indicatorClassName || "bg-primary"
         )}
         style={{ width: `${value}%` }}
       />
