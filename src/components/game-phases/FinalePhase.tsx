@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Crown, UserX } from 'lucide-react';
@@ -6,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Houseguest } from '@/models/houseguest';
 import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
+import JuryVoting from './FinalePhase/JuryVoting';
 
 type FinaleStage = 'HoHCompetition' | 'FinalDecision' | 'JuryVote' | 'Results';
 
 const FinalePhase: React.FC = () => {
-  const { gameState, dispatch } = useGame();
+  const { gameState, dispatch, getRelationship } = useGame();
   const { toast } = useToast();
   const [stage, setStage] = useState<FinaleStage>('HoHCompetition');
   const [finalHoH, setFinalHoH] = useState<Houseguest | null>(null);
@@ -65,7 +67,6 @@ const FinalePhase: React.FC = () => {
     } else {
       setTimeout(() => {
         const otherFinalists = activeHouseguests.filter(hg => hg.id !== winner.id);
-        const { getRelationship } = useGame();
         
         let chosenFinalist: Houseguest;
         let evictedFinalist: Houseguest;
@@ -106,7 +107,6 @@ const FinalePhase: React.FC = () => {
           
           setTimeout(() => {
             setStage('JuryVote');
-            determineWinner(winner, chosenFinalist);
           }, 3000);
         }
       }, 3000);
@@ -147,34 +147,10 @@ const FinalePhase: React.FC = () => {
     
     setTimeout(() => {
       setStage('JuryVote');
-      determineWinner(finalHoH!, selectedHouseguest);
     }, 3000);
   };
   
-  const determineWinner = (finalist1: Houseguest, finalist2: Houseguest) => {
-    const { getRelationship } = useGame();
-    const jury = gameState.juryMembers;
-    
-    let votes1 = 0;
-    let votes2 = 0;
-    
-    jury.forEach(juror => {
-      const rel1 = getRelationship(juror.id, finalist1.id);
-      const rel2 = getRelationship(juror.id, finalist2.id);
-      
-      const adjustedRel1 = rel1 + (Math.random() * 20 - 10);
-      const adjustedRel2 = rel2 + (Math.random() * 20 - 10);
-      
-      if (adjustedRel1 > adjustedRel2) {
-        votes1++;
-      } else {
-        votes2++;
-      }
-    });
-    
-    const gameWinner = votes1 > votes2 ? finalist1 : finalist2;
-    const runnerUp = votes1 > votes2 ? finalist2 : finalist1;
-    
+  const handleJuryVoteComplete = (gameWinner: Houseguest, runnerUp: Houseguest) => {
     setWinner(gameWinner);
     
     dispatch({
@@ -279,37 +255,35 @@ const FinalePhase: React.FC = () => {
           </div>
         )}
         
-        {stage === 'JuryVote' && (
+        {stage === 'JuryVote' && finalHoH && finalist && (
           <div className="text-center space-y-6">
             <h3 className="text-xl font-bold mb-4">Jury Vote</h3>
-            <p className="text-muted-foreground">
-              The jury is voting for the winner...
-            </p>
             
             <div className="flex justify-center items-center gap-16 my-8">
-              {finalHoH && (
-                <div className="text-center">
-                  <div className="w-20 h-20 mx-auto bg-gray-200 rounded-full flex items-center justify-center text-2xl mb-2">
-                    {finalHoH.name.charAt(0)}
-                  </div>
-                  <p className="font-semibold">{finalHoH.name}</p>
-                  <p className="text-sm text-muted-foreground">Final HOH</p>
+              <div className="text-center">
+                <div className="w-20 h-20 mx-auto bg-gray-200 rounded-full flex items-center justify-center text-2xl mb-2">
+                  {finalHoH.name.charAt(0)}
                 </div>
-              )}
-              {finalist && (
-                <div className="text-center">
-                  <div className="w-20 h-20 mx-auto bg-gray-200 rounded-full flex items-center justify-center text-2xl mb-2">
-                    {finalist.name.charAt(0)}
-                  </div>
-                  <p className="font-semibold">{finalist.name}</p>
-                  <p className="text-sm text-muted-foreground">Finalist</p>
+                <p className="font-semibold">{finalHoH.name}</p>
+                <p className="text-sm text-muted-foreground">Final HOH</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-20 h-20 mx-auto bg-gray-200 rounded-full flex items-center justify-center text-2xl mb-2">
+                  {finalist.name.charAt(0)}
                 </div>
-              )}
+                <p className="font-semibold">{finalist.name}</p>
+                <p className="text-sm text-muted-foreground">Finalist</p>
+              </div>
             </div>
             
-            <div className="animate-pulse">
-              <Trophy className="mx-auto h-10 w-10 text-yellow-500" />
-            </div>
+            <JuryVoting 
+              finalist1={finalHoH}
+              finalist2={finalist}
+              jury={gameState.juryMembers}
+              onVotingComplete={handleJuryVoteComplete}
+              getRelationship={getRelationship}
+            />
           </div>
         )}
         
