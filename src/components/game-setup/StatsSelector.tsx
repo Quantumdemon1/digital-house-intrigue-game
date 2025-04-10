@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { HouseguestStats } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { MinusCircle, PlusCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import CustomProgress from '../game-phases/NominationPhase/CustomProgress';
 
 interface StatsSelectorProps {
@@ -25,16 +26,18 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
     }
   };
 
-  const getProgressColor = (value: number) => {
-    if (value <= 3) return 'bg-red-500';
-    if (value <= 6) return 'bg-yellow-500';
-    return 'bg-green-500';
-  };
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Points remaining indicator */}
+      <div className="flex justify-end mb-2">
+        <div className="bg-blue-100 text-blue-800 rounded-md px-3 py-1 text-sm flex items-center">
+          <Info className="h-4 w-4 mr-2" />
+          <span>Points remaining: {remainingPoints}</span>
+        </div>
+      </div>
+      
       {(Object.keys(stats) as Array<keyof HouseguestStats>).map(stat => (
-        <div key={stat} className="space-y-1">
+        <div key={stat} className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="font-medium capitalize">{stat}</span>
             <span className="font-medium">{stats[stat]}/10</span>
@@ -53,7 +56,7 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
             <div className="flex-1">
               <CustomProgress 
                 value={stats[stat] * 10} 
-                indicatorClassName={getProgressColor(stats[stat])}
+                indicatorClassName="bg-bb-gold"
               />
             </div>
             
