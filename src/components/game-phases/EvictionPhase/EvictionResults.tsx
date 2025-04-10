@@ -51,7 +51,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
   
   // Determine who's evicted
   useEffect(() => {
-    if (nominees.length !== 2) return;
+    if (!nominees || nominees.length !== 2) return;
     
     const nominee1Votes = voteCounts[nominees[0].id] || 0;
     const nominee2Votes = voteCounts[nominees[1].id] || 0;
@@ -99,7 +99,14 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
     }
   };
   
-  if (!evictedHouseguest || !savedHouseguest) return null;
+  // Add early return to handle case when nominees array is invalid or empty
+  if (!nominees || nominees.length !== 2 || !evictedHouseguest || !savedHouseguest) {
+    return (
+      <div className="p-4 text-center">
+        <p>Calculating results...</p>
+      </div>
+    );
+  }
   
   const nominee1Progress = (voteCounts[nominees[0].id] || 0) / totalVotes * 100;
   const nominee2Progress = (voteCounts[nominees[1].id] || 0) / totalVotes * 100;
