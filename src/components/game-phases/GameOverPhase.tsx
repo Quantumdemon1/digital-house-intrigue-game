@@ -1,17 +1,18 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Medal, ChartBar, FileText, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Trophy, Medal, ChartBar, FileText, ArrowLeft, ArrowRight, RefreshCw, Save } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/hooks/use-toast';
 import SeasonRecap from './GameOverPhase/SeasonRecap';
 import PlayerStats from './GameOverPhase/PlayerStats';
 import GameSummary from './GameOverPhase/GameSummary';
 import WinnerDisplay from './GameOverPhase/WinnerDisplay';
 
 const GameOverPhase: React.FC = () => {
-  const { gameState } = useGame();
+  const { gameState, dispatch } = useGame();
   const [activeTab, setActiveTab] = useState('winner');
   
   if (!gameState.winner) {
@@ -25,6 +26,37 @@ const GameOverPhase: React.FC = () => {
       </Card>
     );
   }
+
+  const handleNewGame = () => {
+    // Reset game state to setup phase
+    dispatch({ type: 'SET_PHASE', payload: 'Setup' });
+    toast({
+      title: "New Game",
+      description: "Starting a new game setup...",
+    });
+  };
+
+  const handleSaveResults = () => {
+    // For now, just simulate saving by showing a toast
+    // This could be expanded later to actually save to localStorage or a database
+    const savedData = {
+      winner: gameState.winner?.name,
+      runnerUp: gameState.runnerUp?.name,
+      weekCount: gameState.week,
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Save to localStorage
+    const savedGames = JSON.parse(localStorage.getItem('savedBigBrotherGames') || '[]');
+    savedGames.push(savedData);
+    localStorage.setItem('savedBigBrotherGames', JSON.stringify(savedGames));
+    
+    toast({
+      title: "Game Saved",
+      description: `Saved ${gameState.winner?.name}'s victory for future reference.`,
+      variant: "success",
+    });
+  };
   
   return (
     <Card className="shadow-lg border-bb-green">
@@ -100,6 +132,22 @@ const GameOverPhase: React.FC = () => {
           </Button>
         </div>
       </CardContent>
+      <CardFooter className="flex justify-center gap-4 pt-2 pb-6">
+        <Button 
+          onClick={handleNewGame} 
+          variant="default" 
+          className="flex items-center gap-2"
+        >
+          <RefreshCw size={16} /> New Game
+        </Button>
+        <Button 
+          onClick={handleSaveResults} 
+          variant="secondary" 
+          className="flex items-center gap-2"
+        >
+          <Save size={16} /> Save Results
+        </Button>
+      </CardFooter>
     </Card>
   );
 };
