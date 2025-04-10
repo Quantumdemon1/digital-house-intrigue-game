@@ -1,29 +1,42 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Clock, AlertCircle } from 'lucide-react';
 import CustomProgress from './CustomProgress';
 
 interface TimerDisplayProps {
   timeRemaining: number;
+  onTimeExpired?: () => void;
+  totalTime?: number;
 }
 
-const TimerDisplay: React.FC<TimerDisplayProps> = ({ timeRemaining }) => {
-  // Calculate percentage of time remaining (60 seconds total)
-  const percentRemaining = (timeRemaining / 60) * 100;
+const TimerDisplay: React.FC<TimerDisplayProps> = ({ 
+  timeRemaining, 
+  onTimeExpired,
+  totalTime = 60 
+}) => {
+  // Calculate percentage of time remaining
+  const percentRemaining = (timeRemaining / totalTime) * 100;
   
   // Determine color based on time remaining
   const getColorClass = () => {
-    if (timeRemaining > 30) return 'text-green-600';
-    if (timeRemaining > 10) return 'text-amber-500';
+    if (timeRemaining > totalTime / 2) return 'text-green-600';
+    if (timeRemaining > totalTime / 6) return 'text-amber-500';
     return 'text-red-600';
   };
   
   // Get progress color
   const getProgressColor = () => {
-    if (timeRemaining > 30) return 'bg-green-600';
-    if (timeRemaining > 10) return 'bg-amber-500';
+    if (timeRemaining > totalTime / 2) return 'bg-green-600';
+    if (timeRemaining > totalTime / 6) return 'bg-amber-500';
     return 'bg-red-600';
   };
+
+  // Handle timer expiration
+  useEffect(() => {
+    if (timeRemaining <= 0 && onTimeExpired) {
+      onTimeExpired();
+    }
+  }, [timeRemaining, onTimeExpired]);
   
   return (
     <div className="mb-6 bg-gray-50 p-4 rounded-lg border">
@@ -33,7 +46,7 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({ timeRemaining }) => {
           <h4 className="font-medium">Time Remaining</h4>
         </div>
         <div className={`font-bold ${getColorClass()}`}>
-          {timeRemaining < 10 && <AlertCircle className="inline-block mr-1 w-4 h-4" />}
+          {timeRemaining <= 10 && <AlertCircle className="inline-block mr-1 w-4 h-4" />}
           {timeRemaining}s
         </div>
       </div>

@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Target, Clock } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
+import { useToast } from '@/components/ui/use-toast';
 
 import { useNominationCeremony } from './hooks/useNominationCeremony';
 import { useAINomination } from './hooks/useAINomination';
@@ -13,8 +14,14 @@ import NomineeSelector from './NomineeSelector';
 import AIDecisionIndicator from './AIDecisionIndicator';
 import TimerDisplay from './TimerDisplay';
 
+const NOMINATION_TIME_LIMIT = 60; // 60 seconds time limit
+
 const NominationPhase: React.FC = () => {
-  const { getRelationship } = useGame();
+  const { getRandomNominees, getRelationship } = useGame();
+  const { toast } = useToast();
+  const [timeRemaining, setTimeRemaining] = useState(NOMINATION_TIME_LIMIT);
+  const [timerActive, setTimerActive] = useState(true);
+  
   const {
     nominees,
     setNominees,
@@ -25,7 +32,6 @@ const NominationPhase: React.FC = () => {
     confirmNominations,
     gameState,
     hoh,
-    timeRemaining,
   } = useNominationCeremony();
   
   // Use AI nomination logic
@@ -38,6 +44,52 @@ const NominationPhase: React.FC = () => {
     confirmNominations,
     setNominees
   });
+  
+  // Countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (timerActive && !isNominating && !ceremonyComplete && timeRemaining > 0) {
+      timer = setTimeout(() => {
+        setTimeRemaining(prevTime => prevTime - 1);
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [timeRemaining, timerActive, isNominating, ceremonyComplete]);
+  
+  // Handle timer expiration
+  const handleTimeExpired = () => {
+    if (!isNominating && !ceremonyComplete) {
+      setTimerActive(false);
+      
+      // Randomly select nominees
+      const randomNominees = getRandomNominees(2, hoh ? [hoh.id] : []);
+      
+      // Set nominees and show toast
+      setNominees(randomNominees);
+      
+      toast({
+        title: "Time Expired!",
+        description: "Nominees have been randomly selected.",
+        variant: "destructive",
+      });
+      
+      // Proceed with nomination ceremony
+      setTimeout(() => {
+        confirmNominations();
+      }, 1500);
+    }
+  };
+  
+  // Stop timer when nominations are confirmed
+  useEffect(() => {
+    if (isNominating || ceremonyComplete) {
+      setTimerActive(false);
+    }
+  }, [isNominating, ceremonyComplete]);
 
   if (ceremonyComplete) {
     return <NominationCeremonyResult nominees={nominees} hohName={hoh?.name} />;
@@ -75,7 +127,11 @@ const NominationPhase: React.FC = () => {
         </div>
         
         {/* Timer Display */}
-        <TimerDisplay timeRemaining={timeRemaining} />
+        <TimerDisplay 
+          timeRemaining={timeRemaining} 
+          onTimeExpired={handleTimeExpired}
+          totalTime={NOMINATION_TIME_LIMIT}
+        />
         
         {hoh?.isPlayer ? (
           <NomineeSelector 
