@@ -1,5 +1,5 @@
 
-import { GameState } from '../../../models/game-state';
+import { GameState, GamePhase } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 
 export function logReducer(state: GameState, action: GameAction): GameState {

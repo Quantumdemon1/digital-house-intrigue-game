@@ -57,7 +57,7 @@ export type GameAction = SystemAction | PlayerAction | UIUpdateAction | GameStat
 // This represents the game state maintained by the reducer
 export interface GameState {
   houseguests: Houseguest[];
-  alliances: Alliance[]; // Add this to match the model's GameState
+  alliances: Alliance[]; // Required property
   hohWinner: Houseguest | null;
   povWinner: Houseguest | null;
   nominees: Houseguest[];

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 
 // Import Core Classes & Types
@@ -18,6 +17,7 @@ const GameContext = createContext<GameContextType | null>(null);
 // Initial state for the game
 const initialGameState: GameState = {
   houseguests: [],
+  alliances: [],
   hohWinner: null,
   povWinner: null,
   nominees: [],

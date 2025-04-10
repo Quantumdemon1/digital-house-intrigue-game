@@ -1,5 +1,6 @@
-import { GameState } from '../models/game-state';
-import { GameAction } from '../contexts/types/game-context-types';
+
+import { GameState } from '../../models/game-state';
+import { GameAction } from '../types/game-context-types';
 import { setupReducer } from './reducers/setup-reducer';
 import { competitionReducer } from './reducers/competition-reducer';
 import { nominationReducer } from './reducers/nomination-reducer';

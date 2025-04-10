@@ -1,170 +1,144 @@
-
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { useGame } from '@/contexts/GameContext';
+import React, { useState, useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { useGame } from '@/contexts/GameContext';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
-import InteractionOptions from './InteractionOptions';
-import InteractionResults from './InteractionResults';
+import { InteractionResults } from './InteractionResults';
+import { GameState } from '@/models/game-state';
 
 interface EvictionInteractionDialogProps {
-  open: boolean;
   houseguest: Houseguest;
-  onClose: () => void;
-  onComplete: (success: boolean) => void;
+  player: Houseguest;
+  gameState: GameState;
+  onInteractionComplete: () => void;
 }
 
-const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
-  open,
-  houseguest,
-  onClose,
-  onComplete,
-}) => {
-  const { dispatch, getHouseguestById } = useGame();
-  const [step, setStep] = useState<'options' | 'result'>('options');
+const interactionOptions: InteractionOption[] = [
+  {
+    id: 'befriend',
+    text: 'Try to befriend',
+    successText: 'befriended',
+    relationshipChange: 5,
+    successChance: 0.7,
+  },
+  {
+    id: 'intimidate',
+    text: 'Intimidate',
+    successText: 'intimidated',
+    relationshipChange: -10,
+    successChance: 0.5,
+  },
+  {
+    id: 'strategize',
+    text: 'Strategize with',
+    successText: 'strategized with',
+    relationshipChange: 2,
+    successChance: 0.8,
+  },
+  {
+    id: 'gossip',
+    text: 'Gossip about others with',
+    successText: 'gossiped with',
+    relationshipChange: 3,
+    successChance: 0.6,
+  },
+  {
+    id: 'confront',
+    text: 'Confront',
+    successText: 'confronted',
+    relationshipChange: -5,
+    successChance: 0.4,
+  },
+];
+
+const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({ houseguest, player, gameState, onInteractionComplete }) => {
   const [selectedOption, setSelectedOption] = useState<InteractionOption | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const { dispatch } = useGame();
   
-  // Retrieve player information
-  const player = getHouseguestById(
-    localStorage.getItem('playerId') || ''
-  );
+  if (!houseguest || !player) {
+    return <div>Error: Houseguest or Player data missing.</div>;
+  }
   
-  if (!player) return null;
+  const handleInteractionComplete = () => {
+    onInteractionComplete();
+  };
   
-  const handleSelectOption = (option: InteractionOption) => {
+  const handleOptionSelected = (option: InteractionOption) => {
     setSelectedOption(option);
-    setStep('result');
     
-    // Calculate actual relationship change based on multiple factors
-    let actualRelationshipChange = option.relationshipChange;
-    
-    // Factor 1: Check if player's social stat meets the requirement
-    const socialStatFactor = calculateSocialStatFactor(player, option);
-    
-    // Factor 2: Check trait compatibility
-    const traitCompatibilityFactor = calculateTraitCompatibilityFactor(houseguest, option);
-    
-    // Apply both factors to the base relationship change
-    actualRelationshipChange = Math.round(actualRelationshipChange * socialStatFactor * traitCompatibilityFactor);
-    
-    // Ensure relationship change is within reasonable bounds
-    actualRelationshipChange = Math.max(-25, Math.min(25, actualRelationshipChange));
-    
-    // Update relationship using PLAYER_ACTION
+    // Calculate relationship change based on interaction and houseguest personality
+    // Apply relationship change
     dispatch({
-      type: 'PLAYER_ACTION',
+      type: 'UPDATE_RELATIONSHIPS',
       payload: {
-        actionId: 'update_relationship',
-        params: {
-          guestId1: player.id,
-          guestId2: houseguest.id,
-          change: actualRelationshipChange,
-          note: `Interaction during eviction phase: ${player.name} chose "${option.text.substring(0, 30)}..." (${actualRelationshipChange > 0 ? '+' : ''}${actualRelationshipChange})`
-        }
+        guestId1: player.id,
+        guestId2: houseguest.id,
+        change: option.relationshipChange,
+        note: `${player.name} ${option.successText}`
       }
     });
     
-    // Log the interaction
+    // Log the interaction in game log
     dispatch({
-      type: 'PLAYER_ACTION',
+      type: 'LOG_EVENT',
       payload: {
-        actionId: 'log_event',
-        params: {
-          week: 0, // Will be filled in by the backend
-          phase: 'Eviction',
-          type: 'interaction',
-          description: `${player.name} had a conversation with ${houseguest.name}.`,
-          involvedHouseguests: [player.id, houseguest.id]
-        }
+        week: gameState.week,
+        phase: gameState.phase,
+        type: 'SOCIAL_INTERACTION',
+        description: `${player.name} ${option.successText} with ${houseguest.name}.`,
+        involvedHouseguests: [player.id, houseguest.id],
       }
     });
+    
+    // Show results after a short delay
+    setTimeout(() => {
+      setShowResults(true);
+    }, 500);
   };
-  
-  // Calculate how player's social stat affects the interaction outcome
-  const calculateSocialStatFactor = (player: Houseguest, option: InteractionOption): number => {
-    if (!option.requiredSocialStat) return 1;
-    
-    // If player's social stat is much lower than required, reduce effectiveness
-    if (player.stats.social < option.requiredSocialStat - 2) {
-      const deficit = option.requiredSocialStat - player.stats.social;
-      return Math.max(0.1, 1 - (deficit * 0.15)); // Up to 90% reduction for large deficits
-    }
-    
-    // If player's social stat is slightly lower, minor reduction
-    if (player.stats.social < option.requiredSocialStat) {
-      return 0.75; // 25% reduction
-    }
-    
-    // If player meets requirement, normal effectiveness
-    if (player.stats.social === option.requiredSocialStat) {
-      return 1;
-    }
-    
-    // If player exceeds requirement, bonus effectiveness
-    const excess = player.stats.social - option.requiredSocialStat;
-    return Math.min(1.5, 1 + (excess * 0.1)); // Up to 50% bonus
-  };
-  
-  // Calculate how houseguest's traits affect their reaction to the interaction
-  const calculateTraitCompatibilityFactor = (houseguest: Houseguest, option: InteractionOption): number => {
-    if (!option.compatibleTraits && !option.incompatibleTraits) return 1;
-    
-    let factor = 1;
-    
-    // Check for compatible traits (positive reaction)
-    if (option.compatibleTraits) {
-      const compatibleTraitsCount = houseguest.traits.filter(trait => 
-        option.compatibleTraits?.includes(trait)
-      ).length;
-      
-      factor += compatibleTraitsCount * 0.25; // +25% per compatible trait
-    }
-    
-    // Check for incompatible traits (negative reaction)
-    if (option.incompatibleTraits) {
-      const incompatibleTraitsCount = houseguest.traits.filter(trait => 
-        option.incompatibleTraits?.includes(trait)
-      ).length;
-      
-      factor -= incompatibleTraitsCount * 0.5; // -50% per incompatible trait
-    }
-    
-    return Math.max(0.1, factor); // Ensure minimum effectiveness of 10%
-  };
-  
-  const handleComplete = () => {
-    onClose();
-    onComplete(true);
-  };
-  
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            Interaction with {houseguest.name}
-          </DialogTitle>
-          <DialogDescription>
-            Your social stats and {houseguest.name}'s traits will affect the outcome of your interaction.
-          </DialogDescription>
-        </DialogHeader>
+    <Card className="shadow-lg border-bb-yellow">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-2xl font-bold">Interaction</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center space-x-4">
+          <Avatar>
+            <AvatarImage src={houseguest.imageUrl} alt={houseguest.name} />
+            <AvatarFallback>{houseguest.name.substring(0, 2)}</AvatarFallback>
+          </Avatar>
+          <div>
+            <h3 className="text-lg font-semibold">{houseguest.name}</h3>
+            <Badge variant="secondary">{houseguest.occupation}</Badge>
+          </div>
+        </div>
         
-        {step === 'options' && (
-          <InteractionOptions 
-            houseguest={houseguest}
-            onSelectOption={handleSelectOption}
-          />
+        {!showResults && (
+          <div className="mt-4">
+            <CardDescription>Choose an interaction:</CardDescription>
+            <div className="grid gap-2 mt-2">
+              {interactionOptions.map((option) => (
+                <Button key={option.id} onClick={() => handleOptionSelected(option)}>
+                  {option.text}
+                </Button>
+              ))}
+            </div>
+          </div>
         )}
         
-        {step === 'result' && selectedOption && (
+        {showResults && (
           <InteractionResults 
-            houseguest={houseguest}
-            selectedOption={selectedOption}
-            onComplete={handleComplete}
+            selectedOption={selectedOption} 
+            onComplete={handleInteractionComplete}
           />
         )}
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 };
 

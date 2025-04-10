@@ -1,15 +1,14 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, HeartOff } from 'lucide-react';
 import { InteractionOption } from './types/interactions';
-import { Houseguest } from '@/models/houseguest';
+import { Houseguest } from '../../../models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 
 interface InteractionResultsProps {
   selectedOption: InteractionOption;
-  houseguest: Houseguest; // Changed from player/targetHouseguest to just houseguest
   onComplete: () => void;
+  houseguest: Houseguest;
 }
 
 const InteractionResults: React.FC<InteractionResultsProps> = ({ 
@@ -19,16 +18,12 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({
 }) => {
   const { getRelationship } = useGame();
   
-  // Get player from local storage
   const playerId = localStorage.getItem('playerId') || '';
   
-  // Determine if social skill was adequate for selected option
   const getSocialSkillFeedback = () => {
     if (!selectedOption?.requiredSocialStat) return null;
     
-    // Get the player's social stat - since we don't have access to the player object here,
-    // we'll skip this check for now. In a full implementation, we'd fetch this from context.
-    const playerSocialStat = 5; // Default value
+    const playerSocialStat = 5;
     
     if (playerSocialStat < selectedOption.requiredSocialStat - 2) {
       return (
@@ -57,14 +52,12 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({
     return null;
   };
   
-  // Provide feedback on trait compatibility
   const getTraitCompatibilityFeedback = () => {
     if (!selectedOption?.compatibleTraits && !selectedOption?.incompatibleTraits) return null;
     
     const compatibleTraits = selectedOption.compatibleTraits || [];
     const incompatibleTraits = selectedOption.incompatibleTraits || [];
     
-    // Check which traits the houseguest has (if any)
     const hasCompatible = houseguest.traits.some(trait => compatibleTraits.includes(trait));
     const hasIncompatible = houseguest.traits.some(trait => incompatibleTraits.includes(trait));
     
