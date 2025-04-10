@@ -1,3 +1,4 @@
+
 import { GameState, getOrCreateRelationship } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 
@@ -26,6 +27,8 @@ export function relationshipReducer(state: GameState, action: GameAction): GameS
       const socialBonus = Math.max(0, guest1.stats.social - 5) * 0.1; // 10% bonus per point over 5
       actualChange = Math.round(change * (1 + socialBonus));
     }
+    
+    console.log(`Relationship update: ${guest1.name} -> ${guest2.name}, change: ${actualChange}`);
     
     // Update relationship from guest1 to guest2
     const rel1 = getOrCreateRelationship(newRelationships, guestId1, guestId2);

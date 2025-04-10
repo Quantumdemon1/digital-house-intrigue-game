@@ -160,6 +160,7 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
             <InteractionResults
               selectedOption={selectedOption}
               player={player}
+              targetHouseguest={houseguest} // Pass the houseguest directly instead of using localStorage
               onComplete={handleComplete}
             />
           )}

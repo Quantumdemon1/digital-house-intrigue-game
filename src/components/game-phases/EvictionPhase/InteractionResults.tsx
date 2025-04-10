@@ -9,10 +9,16 @@ import { useGame } from '@/contexts/GameContext';
 interface InteractionResultsProps {
   selectedOption: InteractionOption;
   player: Houseguest;
+  targetHouseguest: Houseguest; // Add this prop to receive the houseguest directly
   onComplete: () => void;
 }
 
-const InteractionResults: React.FC<InteractionResultsProps> = ({ selectedOption, player, onComplete }) => {
+const InteractionResults: React.FC<InteractionResultsProps> = ({ 
+  selectedOption, 
+  player, 
+  targetHouseguest, // Use the directly passed houseguest
+  onComplete 
+}) => {
   const { getRelationship } = useGame();
   
   // Determine if social skill was adequate for selected option
@@ -53,21 +59,9 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({ selectedOption,
     const compatibleTraits = selectedOption.compatibleTraits || [];
     const incompatibleTraits = selectedOption.incompatibleTraits || [];
     
-    const houseguestId = localStorage.getItem('currentInteractionHouseguestId') || '';
-    const currentRelationship = getRelationship(player.id, houseguestId);
-    
-    // Track matches for feedback
-    let hasCompatible = false;
-    let hasIncompatible = false;
-    
     // Check which traits the houseguest has (if any)
-    const { getHouseguestById } = useGame();
-    const houseguest = getHouseguestById(houseguestId);
-    
-    if (houseguest) {
-      hasCompatible = houseguest.traits.some(trait => compatibleTraits.includes(trait));
-      hasIncompatible = houseguest.traits.some(trait => incompatibleTraits.includes(trait));
-    }
+    const hasCompatible = targetHouseguest.traits.some(trait => compatibleTraits.includes(trait));
+    const hasIncompatible = targetHouseguest.traits.some(trait => incompatibleTraits.includes(trait));
     
     if (hasIncompatible) {
       return (
