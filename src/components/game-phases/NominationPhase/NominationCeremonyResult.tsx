@@ -8,14 +8,19 @@ import { Button } from '@/components/ui/button';
 interface NominationCeremonyResultProps {
   nominees: Houseguest[];
   hoh?: Houseguest | null;
+  hohName?: string; // Added hohName as an alternative to hoh
   onContinue?: () => void;
 }
 
 const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
   nominees,
   hoh,
+  hohName,
   onContinue
 }) => {
+  // Use either the hoh.name or the provided hohName
+  const nominatorName = hoh?.name || hohName || "The HOH";
+  
   return (
     <Card className="shadow-lg border-bb-red">
       <CardHeader className="bg-bb-red text-white">
@@ -31,7 +36,7 @@ const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
           </div>
           <h3 className="text-xl font-bold">Nomination Ceremony Complete</h3>
           <p className="text-sm text-muted-foreground mt-2 mb-4 text-center">
-            {hoh?.name} has nominated:
+            {nominatorName} has nominated:
           </p>
           
           <div className="grid gap-2 text-center">
