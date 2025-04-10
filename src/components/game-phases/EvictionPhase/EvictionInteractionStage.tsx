@@ -104,7 +104,7 @@ const EvictionInteractionStage: React.FC<EvictionInteractionStageProps> = ({
         </CardContent>
       </Card>
       
-      {player && selectedHouseguest && (
+      {selectedHouseguest && (
         <EvictionInteractionDialog
           houseguest={selectedHouseguest}
           open={dialogOpen}

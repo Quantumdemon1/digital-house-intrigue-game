@@ -9,16 +9,13 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
 import InteractionResults from './InteractionResults';
-import { GameState } from '@/models/game-state';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface EvictionInteractionDialogProps {
   houseguest: Houseguest;
-  player: Houseguest;
-  gameState: GameState;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onInteractionComplete: () => void;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }
 
 const interactionOptions: InteractionOption[] = [
@@ -66,25 +63,24 @@ const interactionOptions: InteractionOption[] = [
 
 const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({ 
   houseguest, 
-  player, 
-  gameState, 
-  onInteractionComplete,
   open,
-  onOpenChange 
+  onOpenChange,
+  onInteractionComplete 
 }) => {
   const [selectedOption, setSelectedOption] = useState<InteractionOption | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const { dispatch } = useGame();
+  const { gameState, dispatch } = useGame();
   
-  if (!houseguest || !player) {
+  // Get player from gameState
+  const player = gameState.houseguests.find(hg => hg.isPlayer);
+  
+  if (!player) {
     return null;
   }
   
   const handleInteractionComplete = () => {
     onInteractionComplete();
-    if (onOpenChange) {
-      onOpenChange(false);
-    }
+    onOpenChange(false);
   };
   
   const handleOptionSelected = (option: InteractionOption) => {
