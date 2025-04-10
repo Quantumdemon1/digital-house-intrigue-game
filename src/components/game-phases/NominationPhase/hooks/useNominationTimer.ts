@@ -3,50 +3,45 @@ import { useState, useEffect } from 'react';
 
 interface UseNominationTimerProps {
   initialTime: number;
-  isNominating: boolean;
-  ceremonyComplete: boolean;
+  isPlayer: boolean; 
   onTimeExpired: () => void;
+  isComplete: boolean;
 }
 
-export const useNominationTimer = ({
-  initialTime,
-  isNominating,
-  ceremonyComplete,
+export const useNominationTimer = ({ 
+  initialTime, 
+  isPlayer,
   onTimeExpired,
+  isComplete
 }: UseNominationTimerProps) => {
   const [timeRemaining, setTimeRemaining] = useState(initialTime);
-  const [timerActive, setTimerActive] = useState(true);
   
-  // Countdown timer
+  // Only run the timer if the player is making a decision
+  // and the ceremony is not complete
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    if (!isPlayer || isComplete) return;
     
-    if (timerActive && !isNominating && !ceremonyComplete && timeRemaining > 0) {
-      timer = setTimeout(() => {
-        setTimeRemaining(prevTime => prevTime - 1);
+    let interval: NodeJS.Timeout;
+    
+    if (timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            onTimeExpired();
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
-    } else if (timerActive && timeRemaining <= 0) {
-      // When timer reaches zero
-      setTimerActive(false);
+    } else if (timeRemaining === 0) {
       onTimeExpired();
     }
     
     return () => {
-      if (timer) clearTimeout(timer);
+      if (interval) clearInterval(interval);
     };
-  }, [timeRemaining, timerActive, isNominating, ceremonyComplete, onTimeExpired]);
+  }, [timeRemaining, onTimeExpired, isPlayer, isComplete]);
   
-  // Stop timer when nominations are confirmed
-  useEffect(() => {
-    if (isNominating || ceremonyComplete) {
-      setTimerActive(false);
-    }
-  }, [isNominating, ceremonyComplete]);
-  
-  return {
-    timeRemaining,
-    timerActive,
-    setTimerActive,
-    setTimeRemaining
-  };
+  return { timeRemaining };
 };

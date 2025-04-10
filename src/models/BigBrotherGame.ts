@@ -1,5 +1,5 @@
 
-import { Houseguest, HouseguestStatus } from './houseguest';
+import { Houseguest } from './houseguest';
 import { Alliance } from './alliance';
 import { RelationshipSystem } from '../systems/relationship-system';
 import { CompetitionSystem } from '../systems/competition-system';
@@ -7,6 +7,7 @@ import { AIIntegrationSystem } from '../systems/ai-integration';
 import { GameStateBase } from '../game-states';
 import { InitializationState } from '../game-states';
 import { v4 as uuidv4 } from 'uuid';
+import { HouseguestStatus } from './houseguest'; // Import as a type
 
 export interface BigBrotherGameOptions {
   relationshipSystem: RelationshipSystem;
@@ -103,6 +104,7 @@ export class BigBrotherGame {
   }
 
   getActiveHouseguests(): Houseguest[] {
+    // Use type assertion to ensure this works correctly
     return this.houseguests.filter(h => h.status === HouseguestStatus.Active);
   }
 

@@ -1,6 +1,8 @@
+
 import type * as GameStates from '../game-states'; 
 import type { GameEvent } from '../models/BigBrotherGame'; 
 import type { Houseguest } from '../models/houseguest'; 
+import type { BigBrotherGame } from '../models/BigBrotherGame';
 // Import actual system types
 import type { RelationshipSystem } from '../systems/relationship-system';
 import type { CompetitionSystem } from '../systems/competition-system';
@@ -10,6 +12,7 @@ import type { Logger } from '../utils/logger';
 
 // Defines the interface for methods the Game States need from the Controller
 export interface IGameControllerFacade {
+  game: BigBrotherGame; // Added game property to fix the build error
   transitionTo(StateType: typeof GameStates.GameStateBase): Promise<void>;
   getGameStatus(): { week: number; phase: string; hoh: string | null; nominees: string; povHolder: string | null; };
   handlePlayerAction(actionId: string, params: any): Promise<boolean>;

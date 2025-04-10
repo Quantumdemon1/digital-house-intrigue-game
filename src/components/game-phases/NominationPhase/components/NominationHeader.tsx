@@ -1,24 +1,34 @@
 
 import React from 'react';
 import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Target } from 'lucide-react';
-import { useGame } from '@/contexts/GameContext';
+import { Houseguest } from '@/models/houseguest';
+import NominationCeremonyProgress from '../NominationCeremonyProgress';
 
 interface NominationHeaderProps {
-  hohName?: string;
+  hoh: Houseguest | null;
+  isNominating: boolean;
+  ceremonyComplete: boolean;
 }
 
-const NominationHeader: React.FC<NominationHeaderProps> = ({ hohName }) => {
-  const { gameState } = useGame();
-  
+const NominationHeader: React.FC<NominationHeaderProps> = ({ 
+  hoh,
+  isNominating,
+  ceremonyComplete
+}) => {
   return (
-    <CardHeader className="bg-bb-red text-white">
-      <CardTitle className="flex items-center">
-        <Target className="mr-2" /> Nomination Ceremony
-      </CardTitle>
-      <CardDescription className="text-white/80">
-        Week {gameState.week}
-      </CardDescription>
+    <CardHeader>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle className="text-2xl">Nomination Ceremony</CardTitle>
+          <CardDescription>
+            {hoh ? `Head of Household: ${hoh.name}` : 'No HOH Selected'}
+          </CardDescription>
+        </div>
+        <NominationCeremonyProgress 
+          isNominating={isNominating}
+          ceremonyComplete={ceremonyComplete}
+        />
+      </div>
     </CardHeader>
   );
 };

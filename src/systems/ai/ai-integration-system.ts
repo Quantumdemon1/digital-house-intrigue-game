@@ -11,6 +11,7 @@ import { AIMemoryManager } from './memory-manager';
 import { AIDecisionMaker } from './decision-maker';
 import { AIResponseParser } from './response-parser';
 import { AIFallbackGenerator } from './fallback-generator';
+import { config } from '@/config';
 
 export class AIIntegrationSystem {
   private logger: Logger;
@@ -107,6 +108,14 @@ export class AIIntegrationSystem {
    */
   addMemory(houseguestId: string, memoryText: string): void {
     this.memoryManager.addMemory(houseguestId, memoryText);
+  }
+  
+  /**
+   * Provides fallback decisions when the API fails
+   * - Direct access for useAINomination hook
+   */
+  getFallbackDecision(botId: string, decisionType: string, context: any, game: any): any {
+    return this.fallbackGenerator.getFallbackDecision(decisionType, context);
   }
   
   /**

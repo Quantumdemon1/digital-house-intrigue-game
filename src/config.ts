@@ -28,6 +28,12 @@ export const config = {
   DEFAULT_COMPETITION_ADVANTAGE_MULTIPLIER: 1.0,
   DEFAULT_SOCIAL_STAT_INFLUENCE: 0.1,
   
+  // AI integration settings
+  AI_REQUEST_INTERVAL: 1000, // ms between API calls
+  GEMINI_API_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+  GEMINI_TEMPERATURE: 0.7,
+  GEMINI_MAX_OUTPUT_TOKENS: 1024,
+  
   // Save game version
   SAVE_GAME_VERSION: "1.0.0",
   

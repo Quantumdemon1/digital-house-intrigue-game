@@ -2,15 +2,14 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { useNominationCeremony } from './hooks/useNominationCeremony';
-import { useAINomination } from './hooks/useAINomination';
 import { useNominationTimer } from './hooks/useNominationTimer';
-import NominationCeremonyResult from './NominationCeremonyResult';
-import NominationCeremonyProgress from './NominationCeremonyProgress';
+import { useAINomination } from './hooks/useAINomination';
 import NominationHeader from './components/NominationHeader';
 import NominationContent from './components/NominationContent';
 import NominationFooter from './components/NominationFooter';
+import NominationCeremonyResult from './NominationCeremonyResult';
 
-const NOMINATION_TIME_LIMIT = 60; // 60 seconds time limit
+const NOMINATION_TIME = 60; // seconds
 
 const NominationPhase: React.FC = () => {
   const {
@@ -24,52 +23,54 @@ const NominationPhase: React.FC = () => {
     gameState,
     hoh,
     handleTimeExpired,
+    getRelationship
   } = useNominationCeremony();
-  
+
   const { timeRemaining } = useNominationTimer({
-    initialTime: NOMINATION_TIME_LIMIT,
-    isNominating,
-    ceremonyComplete,
-    onTimeExpired: handleTimeExpired
+    initialTime: NOMINATION_TIME,
+    isPlayer: hoh?.isPlayer ?? false,
+    onTimeExpired: handleTimeExpired,
+    isComplete: ceremonyComplete
   });
-  
-  // Use AI nomination logic
+
+  // AI nomination logic
   useAINomination({
     hoh,
     potentialNominees,
     isNominating,
     ceremonyComplete,
-    getRelationship: useNominationCeremony().getRelationship,
+    getRelationship,
     confirmNominations,
     setNominees
   });
-  
-  // Return different views based on ceremony state
-  if (ceremonyComplete) {
-    return <NominationCeremonyResult nominees={nominees} hohName={hoh?.name} />;
-  }
-  
-  if (isNominating) {
-    return <NominationCeremonyProgress hohName={hoh?.name} />;
-  }
-  
+
   return (
-    <Card className="shadow-lg border-bb-red">
-      <NominationHeader hohName={hoh?.name} />
-      <NominationContent
+    <Card className="w-full max-w-4xl mx-auto">
+      <NominationHeader 
         hoh={hoh}
-        nominees={nominees}
-        potentialNominees={potentialNominees}
-        timeRemaining={timeRemaining}
-        onTimeExpired={handleTimeExpired}
-        onToggleNominee={toggleNominee}
-        onConfirmNominations={confirmNominations}
         isNominating={isNominating}
-        totalTime={NOMINATION_TIME_LIMIT}
+        ceremonyComplete={ceremonyComplete}
       />
+      
+      {ceremonyComplete ? (
+        <NominationCeremonyResult nominees={nominees} hoh={hoh} />
+      ) : (
+        <NominationContent 
+          hoh={hoh}
+          nominees={nominees}
+          potentialNominees={potentialNominees}
+          timeRemaining={timeRemaining}
+          onTimeExpired={handleTimeExpired}
+          onToggleNominee={toggleNominee}
+          onConfirmNominations={confirmNominations}
+          isNominating={isNominating}
+          totalTime={NOMINATION_TIME}
+        />
+      )}
+      
       <NominationFooter 
-        nominees={nominees}
-        isPlayerHoh={!!hoh?.isPlayer}
+        nominees={nominees} 
+        isPlayerHoh={hoh?.isPlayer ?? false} 
       />
     </Card>
   );
