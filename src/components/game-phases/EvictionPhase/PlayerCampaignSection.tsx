@@ -37,7 +37,7 @@ const PlayerCampaignSection: React.FC<PlayerCampaignSectionProps> = ({
             >
               <HouseguestCard 
                 houseguest={houseguest} 
-                isDisabled={remainingInteractions <= 0}
+                showRelationship={remainingInteractions <= 0}
               />
             </div>
           ))}

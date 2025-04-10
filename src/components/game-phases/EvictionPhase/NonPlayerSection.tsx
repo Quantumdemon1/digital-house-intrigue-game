@@ -57,7 +57,7 @@ const NonPlayerSection: React.FC<NonPlayerSectionProps> = ({
               >
                 <HouseguestCard 
                   houseguest={houseguest}
-                  isDisabled={remainingInteractions <= 0}
+                  showRelationship={remainingInteractions <= 0}
                 />
               </div>
             ))}
