@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useReducer, useEffect } from 'react';
 import { createInitialGameState, GameState, GamePhase, GameEvent } from '../models/game-state';
-import { Houseguest } from '../models/houseguest';
+import { Houseguest, HouseguestStatus } from '../models/houseguest';
 import { getOrCreateRelationship } from '../models/game-state';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -157,7 +157,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         if (guest.id === evicted.id) {
           return {
             ...guest,
-            status: toJury ? 'Jury' : 'Evicted',
+            status: toJury ? 'Jury' as HouseguestStatus : 'Evicted' as HouseguestStatus,
             isNominated: false,
           };
         }
@@ -170,7 +170,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       
       // Update jury if needed
       const updatedJury = toJury 
-        ? [...state.juryMembers, { ...evicted, status: 'Jury' }]
+        ? [...state.juryMembers, { ...evicted, status: 'Jury' as HouseguestStatus }]
         : state.juryMembers;
       
       return {
@@ -218,10 +218,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       // Update statuses
       const finalHouseguests = state.houseguests.map(guest => {
         if (guest.id === winner.id) {
-          return { ...guest, status: 'Winner' };
+          return { ...guest, status: 'Winner' as HouseguestStatus };
         }
         if (guest.id === runnerUp.id) {
-          return { ...guest, status: 'Runner-Up' };
+          return { ...guest, status: 'Runner-Up' as HouseguestStatus };
         }
         return guest;
       });
@@ -230,8 +230,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         phase: 'GameOver',
         houseguests: finalHouseguests,
-        winner: { ...winner, status: 'Winner' },
-        runnerUp: { ...runnerUp, status: 'Runner-Up' },
+        winner: { ...winner, status: 'Winner' as HouseguestStatus },
+        runnerUp: { ...runnerUp, status: 'Runner-Up' as HouseguestStatus },
       };
       
     default:
