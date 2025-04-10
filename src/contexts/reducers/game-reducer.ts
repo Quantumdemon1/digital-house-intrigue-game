@@ -11,6 +11,9 @@ import { logReducer } from './reducers/log-reducer';
 
 // Game reducer function that delegates to specific reducers based on action type
 export function gameReducer(state: GameState, action: GameAction): GameState {
+  // Log all actions for debugging
+  console.log('Game Reducer:', action.type, action.payload);
+  
   switch (action.type) {
     // Game setup actions
     case 'START_GAME':

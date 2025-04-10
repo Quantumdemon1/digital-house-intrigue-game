@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { PersonalityTrait } from '@/models/houseguest';
+import { PersonalityTrait, TRAIT_STAT_BOOSTS } from '@/models/houseguest';
 import { PlayerFormData } from './types';
-import { Camera, AlertCircle } from 'lucide-react';
+import { Camera, AlertCircle, HelpCircle, Info } from 'lucide-react';
 import PersonalityTraitSelector from './PersonalityTraitSelector';
 import StatsSelector from './StatsSelector';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PlayerFormProps {
   formData: PlayerFormData;
@@ -36,7 +37,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
     playerOccupation, 
     selectedTraits,
     houseguestCount,
-    stats 
+    stats,
+    remainingPoints
   } = formData;
 
   return (
@@ -109,16 +111,55 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
           />
         </div>
         
-        <PersonalityTraitSelector
-          selectedTraits={selectedTraits}
-          onToggleTrait={onToggleTrait}
-          personalityTraits={personalityTraits}
-        />
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <Label>Personality Traits (Choose 2)</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-sm text-muted-foreground cursor-help">
+                    <HelpCircle className="h-4 w-4 mr-1" />
+                    <span>About traits</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-md">
+                  <p>Each trait boosts specific stats:</p>
+                  <ul className="text-xs mt-1 space-y-1">
+                    {personalityTraits.map(trait => (
+                      <li key={trait} className="flex justify-between">
+                        <span className="font-medium">{trait}:</span>
+                        <span>
+                          +2 {TRAIT_STAT_BOOSTS[trait].primary}, 
+                          +1 {TRAIT_STAT_BOOSTS[trait].secondary}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <PersonalityTraitSelector
+            selectedTraits={selectedTraits}
+            onToggleTrait={onToggleTrait}
+            personalityTraits={personalityTraits}
+          />
+        </div>
         
-        <StatsSelector 
-          stats={stats} 
-          onStatsChange={onStatsChange} 
-        />
+        <div className="space-y-2 bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <div className="flex justify-between items-center mb-3">
+            <Label>Your Stats</Label>
+            <div className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md flex items-center">
+              <Info className="h-3.5 w-3.5 mr-1" />
+              <span>Points remaining: {remainingPoints}</span>
+            </div>
+          </div>
+          <StatsSelector 
+            stats={stats} 
+            onStatsChange={onStatsChange}
+            remainingPoints={remainingPoints}
+          />
+        </div>
         
         <div className="space-y-2">
           <Label htmlFor="houseguestCount">Number of Houseguests: {houseguestCount}</Label>

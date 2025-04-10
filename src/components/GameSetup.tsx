@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Houseguest, PersonalityTrait, createHouseguest, HouseguestStats } from '@/models/houseguest';
+import { Houseguest, PersonalityTrait, createHouseguest, HouseguestStats, TRAIT_STAT_BOOSTS, TRAIT_BOOST_VALUES } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 import PlayerForm from './game-setup/PlayerForm';
 import HouseguestList from './game-setup/HouseguestList';
@@ -25,6 +25,7 @@ const GameSetup: React.FC = () => {
       social: 5,
       luck: 5,
     },
+    remainingPoints: 5, // Starting with 5 points to distribute
     houseguestCount: 8
   });
   const [finalHouseguests, setFinalHouseguests] = useState<Houseguest[]>([]);
@@ -37,21 +38,54 @@ const GameSetup: React.FC = () => {
   };
 
   const handleStatsChange = (stat: keyof HouseguestStats, value: number) => {
+    const currentValue = playerFormData.stats[stat];
+    const difference = value - currentValue;
+    
+    // Check if we have enough points to increase the stat
+    if (difference > 0 && playerFormData.remainingPoints < difference) {
+      return; // Not enough points
+    }
+    
+    // Calculate new remaining points
+    const newRemainingPoints = playerFormData.remainingPoints - difference;
+    
     setPlayerFormData(prev => ({
       ...prev,
       stats: {
         ...prev.stats,
         [stat]: value
-      }
+      },
+      remainingPoints: newRemainingPoints
     }));
   };
 
   const toggleTrait = (trait: PersonalityTrait) => {
-    const { selectedTraits } = playerFormData;
+    const { selectedTraits, stats } = playerFormData;
+    
     if (selectedTraits.includes(trait)) {
-      handleFormDataChange('selectedTraits', selectedTraits.filter(t => t !== trait));
+      // Remove trait and its stat boosts
+      const newTraits = selectedTraits.filter(t => t !== trait);
+      const newStats = { ...stats };
+      
+      // Remove the boosts
+      const boost = TRAIT_STAT_BOOSTS[trait];
+      newStats[boost.primary] = Math.max(1, newStats[boost.primary] - TRAIT_BOOST_VALUES.primary);
+      newStats[boost.secondary] = Math.max(1, newStats[boost.secondary] - TRAIT_BOOST_VALUES.secondary);
+      
+      handleFormDataChange('selectedTraits', newTraits);
+      handleFormDataChange('stats', newStats);
     } else if (selectedTraits.length < 2) {
-      handleFormDataChange('selectedTraits', [...selectedTraits, trait]);
+      // Add trait and its stat boosts
+      const newTraits = [...selectedTraits, trait];
+      const newStats = { ...stats };
+      
+      // Apply the boosts
+      const boost = TRAIT_STAT_BOOSTS[trait];
+      newStats[boost.primary] = Math.min(10, newStats[boost.primary] + TRAIT_BOOST_VALUES.primary);
+      newStats[boost.secondary] = Math.min(10, newStats[boost.secondary] + TRAIT_BOOST_VALUES.secondary);
+      
+      handleFormDataChange('selectedTraits', newTraits);
+      handleFormDataChange('stats', newStats);
     }
   };
   
@@ -99,7 +133,7 @@ const GameSetup: React.FC = () => {
         guest.bio,
         guest.imageUrl,
         guest.traits,
-        {}, // random stats
+        {}, // random stats with trait boosts applied in createHouseguest
         false // isPlayer = false
       )
     );

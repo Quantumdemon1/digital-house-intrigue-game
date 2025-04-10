@@ -1,6 +1,7 @@
 
 import { GameState } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
+import { calculateCompetitionAdvantage } from '../../../models/houseguest';
 
 export function competitionReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {

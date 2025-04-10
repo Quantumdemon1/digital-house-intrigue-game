@@ -9,5 +9,6 @@ export interface PlayerFormData {
   playerOccupation: string;
   selectedTraits: PersonalityTrait[];
   stats: HouseguestStats;
+  remainingPoints: number; // Points left to allocate
   houseguestCount: number;
 }
