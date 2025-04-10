@@ -105,7 +105,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
         
         <div className="space-y-2 bg-gray-50 p-4 rounded-lg border border-gray-100">
           <div className="flex justify-between items-center mb-3">
-            <Label className="bg-blue-100 mx-px font-medium capitalize text-gray-800">Your Stats</Label>
+            <Label className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md flex items-center">Your Stats</Label>
             <div className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md flex items-center">
               <Info className="h-3.5 w-3.5 mr-1" />
               <span>Points remaining: {remainingPoints}</span>
