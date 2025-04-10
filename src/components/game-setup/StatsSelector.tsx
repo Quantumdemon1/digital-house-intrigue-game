@@ -36,7 +36,7 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({
             <span className="font-medium">{stats[stat]}/10</span>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={() => handleDecreaseStat(stat)} disabled={stats[stat] <= 1} className="h-7 w-7 shrink-0 text-zinc-950">
+            <Button variant="ghost" size="icon" onClick={() => handleDecreaseStat(stat)} disabled={stats[stat] <= 1} className="h-7 w-7 shrink-0 text-red-400">
               <MinusCircle className="h-4 w-4" />
             </Button>
             
