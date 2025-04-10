@@ -132,6 +132,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             ...guest,
             status: toJury ? 'Jury' as HouseguestStatus : 'Evicted' as HouseguestStatus,
             isNominated: false,
+            isPovHolder: false, // Clear POV status when evicted
           };
         }
         // Clear nomination status for everyone else too
