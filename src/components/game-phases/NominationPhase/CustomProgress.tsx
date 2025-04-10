@@ -23,7 +23,7 @@ const CustomProgress: React.FC<CustomProgressProps> = ({
       <div
         className={cn(
           "h-full flex-1 transition-all",
-          indicatorClassName || "bg-bb-gold"
+          indicatorClassName || "bg-primary"
         )}
         style={{ width: `${value}%` }}
       />

@@ -4,7 +4,6 @@ import { Label } from '@/components/ui/label';
 import { HouseguestStats } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { MinusCircle, PlusCircle } from 'lucide-react';
-import { Info } from 'lucide-react';
 import CustomProgress from '../game-phases/NominationPhase/CustomProgress';
 
 interface StatsSelectorProps {
@@ -26,27 +25,25 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
     }
   };
 
+  const getProgressColor = (value: number) => {
+    if (value <= 3) return 'bg-red-500';
+    if (value <= 6) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
   return (
-    <div className="space-y-5">
-      {/* Points remaining indicator */}
-      <div className="flex justify-end">
-        <div className="bg-blue-100 text-blue-800 rounded-md px-3 py-1 text-sm flex items-center shadow-sm border border-blue-200">
-          <Info className="h-4 w-4 mr-2" />
-          <span className="font-medium">Points remaining: {remainingPoints}</span>
-        </div>
-      </div>
-      
+    <div className="space-y-4">
       {(Object.keys(stats) as Array<keyof HouseguestStats>).map(stat => (
-        <div key={stat} className="space-y-2">
+        <div key={stat} className="space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="font-medium capitalize text-gray-800">{stat}</span>
-            <span className="font-medium text-gray-800">{stats[stat]}/10</span>
+            <span className="font-medium capitalize">{stat}</span>
+            <span className="font-medium">{stats[stat]}/10</span>
           </div>
           <div className="flex items-center space-x-2">
             <Button 
-              variant="outline"
+              variant="ghost"
               size="icon"
-              className="h-7 w-7 shrink-0 border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:text-gray-900 shadow-sm"
+              className="h-7 w-7 shrink-0"
               onClick={() => handleDecreaseStat(stat)}
               disabled={stats[stat] <= 1}
             >
@@ -56,14 +53,14 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({ stats, onStatsChange, rem
             <div className="flex-1">
               <CustomProgress 
                 value={stats[stat] * 10} 
-                indicatorClassName="bg-bb-gold"
+                indicatorClassName={getProgressColor(stats[stat])}
               />
             </div>
             
             <Button 
-              variant="outline"
+              variant="ghost"
               size="icon"
-              className="h-7 w-7 shrink-0 border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:text-gray-900 shadow-sm"
+              className="h-7 w-7 shrink-0"
               onClick={() => handleIncreaseStat(stat)}
               disabled={stats[stat] >= 10 || remainingPoints <= 0}
             >
