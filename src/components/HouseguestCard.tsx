@@ -114,11 +114,13 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({ houseguest, showRelatio
               <Progress 
                 value={50 + relationshipScore/2} 
                 className="h-1" 
-                indicatorClassName={
-                  relationshipScore > 0 
-                    ? "bg-gradient-to-r from-green-300 to-green-500" 
-                    : "bg-gradient-to-r from-red-300 to-red-500"
-                }
+                // Fixed: Removed indicatorClassName prop
+                // Instead, use a className that applies gradient conditionally
+                style={{
+                  background: relationshipScore > 0 
+                    ? 'linear-gradient(to right, #86efac, #22c55e)'
+                    : 'linear-gradient(to right, #fca5a5, #ef4444)'
+                }}
               />
             </div>
           )}

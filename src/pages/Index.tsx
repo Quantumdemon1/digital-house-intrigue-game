@@ -4,6 +4,7 @@ import { GameProvider } from '@/contexts/GameContext';
 import { useGame } from '@/contexts/GameContext';
 import GameSetup from '@/components/GameSetup';
 import GameScreen from '@/components/GameScreen';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const GameContent = () => {
   const { gameState } = useGame();
@@ -16,7 +17,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-bb-light flex flex-col">
       <GameProvider>
-        <GameContent />
+        <TooltipProvider>
+          <GameContent />
+        </TooltipProvider>
       </GameProvider>
     </div>
   );
