@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,13 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
   onTimeExpired, 
   totalTime 
 }) => {
+  // Call onTimeExpired when timer reaches zero
+  useEffect(() => {
+    if (timeRemaining === 0) {
+      onTimeExpired();
+    }
+  }, [timeRemaining, onTimeExpired]);
+  
   // Calculate percentage of time remaining
   const percentRemaining = (timeRemaining / totalTime) * 100;
   

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Clock, AlertCircle } from 'lucide-react';
 import CustomProgress from '../NominationPhase/CustomProgress';
 
@@ -14,6 +14,13 @@ const VotingTimer: React.FC<VotingTimerProps> = ({
   onTimeExpired,
   totalTime = 30 // Default to 30 seconds for voting
 }) => {
+  // Run onTimeExpired when timer reaches zero
+  useEffect(() => {
+    if (timeRemaining === 0 && onTimeExpired) {
+      onTimeExpired();
+    }
+  }, [timeRemaining, onTimeExpired]);
+
   // Calculate percentage of time remaining
   const percentRemaining = (timeRemaining / totalTime) * 100;
   

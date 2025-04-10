@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
 import { Houseguest } from '@/models/houseguest';
@@ -15,6 +15,7 @@ export function useEvictionPhase() {
   const [votes, setVotes] = useState<Record<string, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(VOTING_TIME_LIMIT);
   const [votingStarted, setVotingStarted] = useState(false);
+  const [timerExpired, setTimerExpired] = useState(false);
   
   const nominees = gameState.nominees;
   const activeHouseguests = gameState.houseguests.filter(guest => guest.status === 'Active');
@@ -26,13 +27,14 @@ export function useEvictionPhase() {
   // Check if player is one of the nominees
   const playerIsNominee = nominees.some(nominee => nominee.isPlayer);
 
-  // Start timer when voting begins
+  // Reset timer when stage changes to voting
   useEffect(() => {
-    if (stage === 'voting' && !votingStarted) {
+    if (stage === 'voting') {
       setVotingStarted(true);
       setTimeRemaining(VOTING_TIME_LIMIT);
+      setTimerExpired(false);
     }
-  }, [stage, votingStarted]);
+  }, [stage]);
 
   // Countdown timer for voting phase
   useEffect(() => {
@@ -47,60 +49,69 @@ export function useEvictionPhase() {
 
   // Handle time expiration
   useEffect(() => {
-    if (timeRemaining <= 0 && stage === 'voting') {
-      const missingVoters = nonNominees.filter(voter => !votes[voter.id]);
-      
-      // Cast random votes for anyone who hasn't voted
-      if (missingVoters.length > 0) {
-        toast({
-          title: "Time Expired!",
-          description: "Voting time has expired. Random votes have been cast for remaining houseguests.",
-          variant: "destructive",
-        });
-
-        const newVotes = {...votes};
-        missingVoters.forEach(voter => {
-          // Randomly vote for one of the nominees
-          const randomNominee = nominees[Math.floor(Math.random() * nominees.length)];
-          newVotes[voter.id] = randomNominee.id;
-          
-          // Update in game state using PLAYER_ACTION
-          dispatch({
-            type: 'PLAYER_ACTION',
-            payload: {
-              actionId: 'cast_vote',
-              params: {
-                voterId: voter.id,
-                nomineeId: randomNominee.id,
-                isRandomVote: true
-              }
-            }
-          });
-        });
-        
-        setVotes(newVotes);
-
-        // Move to results after a delay
-        setTimeout(() => {
-          setStage('results');
-        }, 2000);
-      }
+    if (timeRemaining <= 0 && stage === 'voting' && !timerExpired) {
+      setTimerExpired(true); // Prevent multiple executions
+      handleTimeExpired();
     }
-  }, [timeRemaining, votes, nominees, nonNominees, stage, dispatch, gameState, toast]);
+  }, [timeRemaining, stage]);
+
+  // Time expiration handler
+  const handleTimeExpired = useCallback(() => {
+    if (stage !== 'voting' || timerExpired) return;
+    
+    const missingVoters = nonNominees.filter(voter => !votes[voter.id]);
+    
+    // Cast random votes for anyone who hasn't voted
+    if (missingVoters.length > 0) {
+      toast({
+        title: "Time Expired!",
+        description: "Voting time has expired. Random votes have been cast for remaining houseguests.",
+        variant: "destructive",
+      });
+
+      const newVotes = {...votes};
+      missingVoters.forEach(voter => {
+        // Randomly vote for one of the nominees
+        const randomNominee = nominees[Math.floor(Math.random() * nominees.length)];
+        newVotes[voter.id] = randomNominee.id;
+        
+        // Update in game state using PLAYER_ACTION
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: {
+            actionId: 'cast_vote',
+            params: {
+              voterId: voter.id,
+              nomineeId: randomNominee.id,
+              isRandomVote: true
+            }
+          }
+        });
+      });
+      
+      setVotes(newVotes);
+
+      // Move to results after a delay
+      setTimeout(() => {
+        setStage('results');
+      }, 2000);
+    }
+  }, [votes, nominees, nonNominees, stage, dispatch, toast, timerExpired]);
 
   // Handle when interaction stage completes
-  const handleProceedToVoting = () => {
+  const handleProceedToVoting = useCallback(() => {
     setStage('voting');
     setVotingStarted(true);
+    setTimeRemaining(VOTING_TIME_LIMIT);
     
     toast({
       title: "Voting Phase",
       description: "Houseguests will now cast their votes to evict.",
     });
-  };
+  }, [toast]);
   
   // Handle vote submission
-  const handleVoteSubmit = (voterId: string, nomineeId: string) => {
+  const handleVoteSubmit = useCallback((voterId: string, nomineeId: string) => {
     setVotes(prev => ({
       ...prev,
       [voterId]: nomineeId
@@ -126,10 +137,10 @@ export function useEvictionPhase() {
         setStage('results');
       }, 2000);
     }
-  };
+  }, [votes, nonNominees.length, dispatch]);
   
   // Handle eviction completion
-  const handleEvictionComplete = (evictedHouseguest: Houseguest) => {
+  const handleEvictionComplete = useCallback((evictedHouseguest: Houseguest) => {
     // Process the eviction using PLAYER_ACTION
     dispatch({
       type: 'PLAYER_ACTION',
@@ -157,7 +168,7 @@ export function useEvictionPhase() {
         description: `Week ${gameState.week + 1} has begun.`,
       });
     }, 5000);
-  };
+  }, [dispatch, gameState.week, toast]);
 
   return {
     stage,
