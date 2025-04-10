@@ -1,4 +1,3 @@
-
 import { GameState, GameEvent, getOrCreateRelationship } from '../../models/game-state';
 import { HouseguestStatus } from '../../models/houseguest';
 import { GameAction } from '../types/game-context-types';
@@ -120,6 +119,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         relationships: newRelationships,
+      };
+      
+    case 'SET_EVICTION_VOTE':
+      // Add or update a vote in the eviction votes record
+      return {
+        ...state,
+        evictionVotes: {
+          ...state.evictionVotes,
+          [action.payload.voterId]: action.payload.nomineeId
+        }
       };
       
     case 'EVICT_HOUSEGUEST':
