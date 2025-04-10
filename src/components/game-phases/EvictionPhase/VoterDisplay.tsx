@@ -3,7 +3,6 @@ import React from 'react';
 import { Clock, User } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
-import VotingTimer from './VotingTimer';
 
 interface VoterDisplayProps {
   currentVoter: Houseguest;
@@ -11,10 +10,7 @@ interface VoterDisplayProps {
   isPlayerVoting: boolean;
   isVoting: boolean;
   showVote: boolean;
-  timeRemaining: number;
-  onTimeExpired: () => void;
   onVote: (nomineeId: string) => void;
-  totalTime: number;
 }
 
 const VoterDisplay: React.FC<VoterDisplayProps> = ({
@@ -23,10 +19,7 @@ const VoterDisplay: React.FC<VoterDisplayProps> = ({
   isPlayerVoting,
   isVoting,
   showVote,
-  timeRemaining,
-  onTimeExpired,
   onVote,
-  totalTime,
 }) => {
   return (
     <div className="bg-gray-100 p-4 rounded-md text-center">
@@ -34,14 +27,6 @@ const VoterDisplay: React.FC<VoterDisplayProps> = ({
         <span className="text-bb-red">Current Voter:</span> {currentVoter.name}
         {currentVoter.isPlayer ? " (You)" : ""}
       </p>
-      
-      {isPlayerVoting && !isVoting && (
-        <VotingTimer 
-          timeRemaining={timeRemaining}
-          onTimeExpired={onTimeExpired}
-          totalTime={totalTime}
-        />
-      )}
       
       {isVoting && (
         <div className="flex items-center justify-center">

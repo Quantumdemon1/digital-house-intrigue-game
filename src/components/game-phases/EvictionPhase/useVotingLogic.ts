@@ -8,42 +8,39 @@ interface VotingLogicProps {
   voters: Houseguest[];
   getRelationship: (voterId: string, nomineeId: string) => number;
   onVoteSubmit: (voterId: string, nomineeId: string) => void;
+  externalVotes?: Record<string, string>;
 }
-
-const VOTING_TIME_LIMIT = 30; // 30 seconds for each vote
 
 export const useVotingLogic = ({
   nominees,
   voters,
   getRelationship,
-  onVoteSubmit
+  onVoteSubmit,
+  externalVotes = {}
 }: VotingLogicProps) => {
   const { toast } = useToast();
   const [currentVoterIndex, setCurrentVoterIndex] = useState(0);
   const [isVoting, setIsVoting] = useState(false);
   const [showVote, setShowVote] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(VOTING_TIME_LIMIT);
-  const [timerActive, setTimerActive] = useState(true);
-  const [votes, setVotes] = useState<Record<string, string>>({});
+  const [votes, setVotes] = useState<Record<string, string>>(externalVotes);
   
   // Current voter
   const currentVoter = voters[currentVoterIndex];
   const isPlayerVoting = currentVoter?.isPlayer;
   
-  // Process AI votes or handle timer expiration
+  // Process AI votes
   useEffect(() => {
     if (!currentVoter || isVoting || Object.keys(votes).includes(currentVoter.id)) {
       return;
     }
     
-    // If it's the player's turn, let the timer run
+    // If it's the player's turn, let them vote
     if (isPlayerVoting) {
       return;
     }
     
     // For AI players, start voting process
     setIsVoting(true);
-    setTimerActive(false); // Pause the timer during AI thinking
     
     // Simulate AI thinking time
     const timer = setTimeout(() => {
@@ -68,34 +65,12 @@ export const useVotingLogic = ({
     }, 1500);
     
     return () => clearTimeout(timer);
-  }, [currentVoter, isPlayerVoting, isVoting, nominees, votes]);
-  
-  // Timer countdown for player votes
-  useEffect(() => {
-    if (!timerActive || !isPlayerVoting || isVoting || timeRemaining <= 0) {
-      return;
-    }
-    
-    const timer = setTimeout(() => {
-      setTimeRemaining(prev => prev - 1);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [timeRemaining, timerActive, isPlayerVoting, isVoting]);
-  
-  // Reset timer when moving to a new voter
-  useEffect(() => {
-    if (currentVoter) {
-      setTimeRemaining(VOTING_TIME_LIMIT);
-      setTimerActive(!isVoting && isPlayerVoting);
-    }
-  }, [currentVoterIndex, currentVoter, isPlayerVoting, isVoting]);
+  }, [currentVoter, isPlayerVoting, isVoting, nominees, votes, getRelationship, onVoteSubmit]);
   
   const handlePlayerVote = (nomineeId: string) => {
     if (!currentVoter) return;
     
     setIsVoting(true);
-    setTimerActive(false); // Stop timer when vote is cast
     const updatedVotes = { ...votes, [currentVoter.id]: nomineeId };
     setVotes(updatedVotes);
     onVoteSubmit(currentVoter.id, nomineeId);
@@ -111,25 +86,6 @@ export const useVotingLogic = ({
   
   const nextVoter = () => {
     setCurrentVoterIndex(prev => prev + 1);
-    setTimerActive(true);
-  };
-  
-  // Handle timer expiration - cast random vote
-  const handleTimeExpired = () => {
-    if (!currentVoter || isVoting || !isPlayerVoting) return;
-    
-    toast({
-      title: "Time Expired!",
-      description: "Your voting time has expired, a random vote has been cast.",
-      variant: "destructive",
-    });
-    
-    // Randomly select one of the nominees
-    const randomIndex = Math.floor(Math.random() * nominees.length);
-    const randomNomineeId = nominees[randomIndex].id;
-    
-    // Submit the random vote and continue
-    handlePlayerVote(randomNomineeId);
   };
   
   return {
@@ -138,10 +94,6 @@ export const useVotingLogic = ({
     isPlayerVoting,
     isVoting,
     showVote,
-    timeRemaining,
-    timerActive,
-    handlePlayerVote,
-    handleTimeExpired,
-    VOTING_TIME_LIMIT
+    handlePlayerVote
   };
 };

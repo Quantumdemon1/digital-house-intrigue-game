@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Clock, AlertCircle } from 'lucide-react';
 import CustomProgress from '../NominationPhase/CustomProgress';
 
@@ -36,20 +36,13 @@ const VotingTimer: React.FC<VotingTimerProps> = ({
     if (timeRemaining <= 10) return 'animate-pulse';
     return '';
   };
-
-  // Handle timer expiration
-  useEffect(() => {
-    if (timeRemaining <= 0 && onTimeExpired) {
-      onTimeExpired();
-    }
-  }, [timeRemaining, onTimeExpired]);
   
   return (
     <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
           <Clock className="w-5 h-5 mr-2" />
-          <h4 className="font-medium">Voting Timer</h4>
+          <h4 className="font-medium">House Vote Timer</h4>
         </div>
         <div className={`font-bold text-xl ${getColorClass()} ${getFlashClass()}`}>
           {timeRemaining <= 5 && <AlertCircle className="inline-block mr-1 w-4 h-4" />}
@@ -64,7 +57,7 @@ const VotingTimer: React.FC<VotingTimerProps> = ({
       />
       
       <p className="text-xs text-muted-foreground mt-2">
-        <strong className="font-semibold">Note:</strong> If time expires, a random vote will be cast
+        <strong className="font-semibold">Note:</strong> If time expires, random votes will be cast for any remaining voters
       </p>
     </div>
   );

@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { VoteIcon, User, Clock } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 import VoterDisplay from './VoterDisplay';
 import HohTiebreaker from './HohTiebreaker';
 import VotingStatus from './VotingStatus';
+import VotingTimer from './VotingTimer';
 import { useVotingLogic } from './useVotingLogic';
 
 interface EvictionVotingProps {
@@ -14,6 +14,8 @@ interface EvictionVotingProps {
   hoh: Houseguest | null;
   votes: Record<string, string>;
   onVoteSubmit: (voterId: string, nomineeId: string) => void;
+  timeRemaining: number;
+  totalTime: number;
 }
 
 const EvictionVoting: React.FC<EvictionVotingProps> = ({
@@ -22,6 +24,8 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
   hoh,
   votes: externalVotes,
   onVoteSubmit,
+  timeRemaining,
+  totalTime
 }) => {
   const { getRelationship } = useGame();
   
@@ -31,15 +35,13 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
     isPlayerVoting,
     isVoting,
     showVote,
-    timeRemaining,
     handlePlayerVote,
-    handleTimeExpired,
-    VOTING_TIME_LIMIT
   } = useVotingLogic({
     nominees,
     voters,
     getRelationship,
-    onVoteSubmit
+    onVoteSubmit,
+    externalVotes
   });
   
   // Check if all votes are in
@@ -63,6 +65,12 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
         </p>
       </div>
       
+      {/* Shared timer for all votes */}
+      <VotingTimer 
+        timeRemaining={timeRemaining}
+        totalTime={totalTime}
+      />
+
       <div className="flex justify-center items-center gap-10 my-6">
         {nominees.map(nominee => (
           <div key={nominee.id} className="text-center">
@@ -81,10 +89,7 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
           isPlayerVoting={isPlayerVoting}
           isVoting={isVoting}
           showVote={showVote}
-          timeRemaining={timeRemaining}
-          onTimeExpired={handleTimeExpired}
           onVote={handlePlayerVote}
-          totalTime={VOTING_TIME_LIMIT}
         />
       )}
       
