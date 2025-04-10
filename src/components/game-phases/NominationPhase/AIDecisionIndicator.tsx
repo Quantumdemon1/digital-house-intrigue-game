@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface AIDecisionIndicatorProps {
   hohName?: string;
@@ -8,11 +8,16 @@ interface AIDecisionIndicatorProps {
 
 const AIDecisionIndicator: React.FC<AIDecisionIndicatorProps> = ({ hohName }) => {
   return (
-    <div className="flex flex-col items-center">
-      <div className="animate-pulse">
-        <AlertCircle className="w-12 h-12 text-bb-red" />
+    <div className="flex flex-col items-center py-6">
+      <div className="animate-spin mb-4">
+        <Loader2 className="h-8 w-8 text-bb-red" />
       </div>
-      <h3 className="text-xl font-bold mt-4">Waiting for {hohName}'s Decision...</h3>
+      <p className="text-center">
+        {hohName || 'The Head of Household'} is deciding on nominations...
+      </p>
+      <p className="text-sm text-muted-foreground mt-2 text-center">
+        This may take a moment
+      </p>
     </div>
   );
 };

@@ -1,71 +1,38 @@
 
-import React, { useEffect } from 'react';
-import { Clock, AlertCircle } from 'lucide-react';
-import CustomProgress from './CustomProgress';
+import React from 'react';
+import { Progress } from '@/components/ui/progress';
 
 interface TimerDisplayProps {
   timeRemaining: number;
-  onTimeExpired?: () => void;
-  totalTime?: number;
+  onTimeExpired: () => void;
+  totalTime: number;
 }
 
 const TimerDisplay: React.FC<TimerDisplayProps> = ({ 
   timeRemaining, 
-  onTimeExpired,
-  totalTime = 60 
+  onTimeExpired, 
+  totalTime 
 }) => {
   // Calculate percentage of time remaining
   const percentRemaining = (timeRemaining / totalTime) * 100;
   
-  // Determine color based on time remaining
-  const getColorClass = () => {
-    if (timeRemaining > totalTime / 2) return 'text-green-600';
-    if (timeRemaining > totalTime / 6) return 'text-amber-500';
-    return 'text-red-600';
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
-  
-  // Get progress color
-  const getProgressColor = () => {
-    if (timeRemaining > totalTime / 2) return 'bg-green-600';
-    if (timeRemaining > totalTime / 6) return 'bg-amber-500';
-    return 'bg-red-600';
-  };
-
-  // Get text flash for urgent time
-  const getFlashClass = () => {
-    if (timeRemaining <= 10) return 'animate-pulse';
-    return '';
-  };
-
-  // Handle timer expiration
-  useEffect(() => {
-    if (timeRemaining <= 0 && onTimeExpired) {
-      onTimeExpired();
-    }
-  }, [timeRemaining, onTimeExpired]);
   
   return (
-    <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center">
-          <Clock className="w-6 h-6 mr-2" />
-          <h4 className="font-medium text-lg">Nomination Timer</h4>
-        </div>
-        <div className={`font-bold text-xl ${getColorClass()} ${getFlashClass()}`}>
-          {timeRemaining <= 10 && <AlertCircle className="inline-block mr-1 w-5 h-5" />}
-          {timeRemaining}s
-        </div>
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-sm font-medium">Time Remaining</span>
+        <span className="text-sm font-medium">{formatTime(timeRemaining)}</span>
       </div>
-      
-      <CustomProgress 
+      <Progress 
         value={percentRemaining} 
-        className="h-3"
-        indicatorClassName={getProgressColor()}
+        className={`h-2 ${percentRemaining < 25 ? 'bg-red-200' : 'bg-gray-200'}`}
       />
-      
-      <p className="text-sm text-muted-foreground mt-2">
-        <strong className="font-semibold">Important:</strong> If time expires, nominees will be randomly selected
-      </p>
     </div>
   );
 };

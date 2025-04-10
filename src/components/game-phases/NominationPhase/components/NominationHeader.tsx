@@ -25,6 +25,7 @@ const NominationHeader: React.FC<NominationHeaderProps> = ({
           </CardDescription>
         </div>
         <NominationCeremonyProgress 
+          hohName={hoh?.name}
           isNominating={isNominating}
           ceremonyComplete={ceremonyComplete}
         />
