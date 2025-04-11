@@ -10,4 +10,10 @@ export * from './model';
 export * from './creation';
 export * from './traits';
 export * from './competition';
-export * from './mental-state';
+export { 
+  MentalState as HouseguestMentalState, 
+  createDefaultMentalState,
+  updateHouseguestMentalState,
+  generateReflectionPrompt
+} from './mental-state';
+

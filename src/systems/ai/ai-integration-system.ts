@@ -1,3 +1,4 @@
+
 /**
  * @file src/systems/ai/ai-integration-system.ts
  * @description Main AI integration system that orchestrates all AI components
@@ -12,7 +13,10 @@ import { AIResponseParser } from './response-parser';
 import { AIFallbackGenerator } from './fallback-generator';
 import { RelationshipSystem } from '../relationship-system';
 import { config } from '@/config';
-import { updateHouseguestMentalState, generateReflectionPrompt } from '@/models/houseguest';
+import { 
+  updateHouseguestMentalState, 
+  generateReflectionPrompt 
+} from '@/models/houseguest/mental-state';
 import { RelationshipEventType } from '@/models/relationship-event';
 import { GamePhase } from '@/models/game-state';
 
