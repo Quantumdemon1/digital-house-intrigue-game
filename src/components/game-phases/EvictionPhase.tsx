@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
-import { UserX, Users, Clock } from 'lucide-react';
+import { UserX, Users, Clock, Target } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { updateHouseguestMentalState } from '@/models/houseguest';
@@ -10,6 +11,7 @@ import EvictionInteractionStage from './EvictionPhase/EvictionInteractionStage';
 import EvictionVoting from './EvictionPhase/EvictionVoting';
 import EvictionResults from './EvictionPhase/EvictionResults';
 import { useEvictionPhase } from './EvictionPhase/useEvictionPhase';
+
 const EvictionPhase: React.FC = () => {
   const {
     gameState,
@@ -44,6 +46,7 @@ const EvictionPhase: React.FC = () => {
         return <p>Preparing eviction ceremony...</p>;
     }
   };
+
   return <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-red-100/30">
       <CardHeader className="bg-bb-blue text-white">
         <div className="flex items-center justify-between">
@@ -60,15 +63,18 @@ const EvictionPhase: React.FC = () => {
       </CardHeader>
       
       <CardContent className="p-6">
-        {/* Nominees banner */}
-        <div className="bg-bb-blue text-white">
-          <div>
-            <p className="text-sm text-muted-foreground">Current Nominees</p>
-            <p className="text-lg font-semibold">
-              {nominees.map(nom => nom.name).join(' & ')}
-            </p>
+        {/* Nominees banner - made more prominent */}
+        <div className="bg-bb-blue text-white p-4 rounded-md border-2 border-red-300 shadow-md">
+          <div className="flex flex-col items-center space-y-2">
+            <p className="text-sm text-gray-300">Current Nominees</p>
+            <div className="flex items-center justify-center gap-3">
+              <Target className="h-5 w-5 text-red-400 animate-pulse" />
+              <p className="text-lg font-semibold">
+                {nominees.map(nom => nom.name).join(' & ')}
+              </p>
+              <Target className="h-5 w-5 text-red-400 animate-pulse" />
+            </div>
           </div>
-          
         </div>
         
         <Separator className="my-4" />
@@ -78,4 +84,5 @@ const EvictionPhase: React.FC = () => {
       </CardContent>
     </Card>;
 };
+
 export default EvictionPhase;
