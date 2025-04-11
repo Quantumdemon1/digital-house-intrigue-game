@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Users, MapPin, MessageSquare, Handshake, BarChart, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGame } from '@/contexts/GameContext';
-import { SocialActionChoice } from '@/game-states';
+import { SocialActionChoice } from '@/game-states/GameStateBase';
 
 const SocialInteractionPhase: React.FC = () => {
   const { game, logger, dispatch } = useGame();

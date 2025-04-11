@@ -1,5 +1,11 @@
 
-import { GameStateBase, SocialActionChoice, NominationState } from '../game-states';
+/**
+ * @file SocialInteractionState.ts
+ * @description Social interaction state
+ */
+
+import { GameStateBase, SocialActionChoice } from './GameStateBase';
+import { NominationState } from './NominationState';
 import type { IGameControllerFacade } from '../types/interfaces';
 import { Houseguest } from '../models/houseguest';
 
