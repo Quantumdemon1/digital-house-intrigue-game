@@ -144,7 +144,7 @@ const NominationPhase: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-              {nominees.map(nominee => <div key={nominee?.id} className="bg-red-50 border border-red-100 rounded-lg p-4 text-center shadow-sm">
+              {nominees.map(nominee => <div key={nominee?.id} className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b">
                   <Target className="h-5 w-5 mx-auto text-red-500 mb-2" />
                   <h4 className="font-semibold text-lg">{nominee?.name}</h4>
                   <p className="text-sm text-muted-foreground">{nominee?.occupation}</p>
