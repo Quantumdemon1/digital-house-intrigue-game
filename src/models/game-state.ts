@@ -24,6 +24,15 @@ export type Relationship = {
 
 export type RelationshipMap = Map<string, Map<string, Relationship>>;
 
+export interface GameEvent {
+  week: number;
+  phase: GamePhase;
+  type: string;
+  description: string;
+  involvedHouseguests: string[]; // Houseguest IDs
+  timestamp: number;
+}
+
 export interface GameState {
   week: number;
   phase: GamePhase;
@@ -39,15 +48,6 @@ export interface GameState {
   runnerUp: Houseguest | null;
   gameLog: GameEvent[];
 }
-
-export type GameEvent = {
-  week: number;
-  phase: GamePhase;
-  type: string;
-  description: string;
-  involvedHouseguests: string[]; // Houseguest IDs
-  timestamp: number;
-};
 
 export function createInitialGameState(): GameState {
   return {
