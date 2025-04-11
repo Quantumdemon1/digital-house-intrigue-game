@@ -94,7 +94,7 @@ const NominationPhase: React.FC = () => {
     });
   };
   return <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
-      <CardHeader className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b bg-[#161650]">
+      <CardHeader className="bg-bb-blue text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-amber-100 rounded-full">
