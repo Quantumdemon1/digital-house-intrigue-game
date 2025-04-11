@@ -20,12 +20,12 @@ export class BigBrotherGame {
   public phase: GamePhase = 'Initialization';
 
   // State tracking
-  public hohWinner: Houseguest | null = null;
-  public povWinner: Houseguest | null = null;
-  public nominees: Houseguest[] = [];
+  public hohWinner: string | null = null;
+  public povWinner: string | null = null;
+  public nominees: string[] = [];
   public evicted: Houseguest[] = [];
   public jury: Houseguest[] = [];
-  public juryMembers: Houseguest[] = [];
+  public juryMembers: string[] = [];
   public winner: Houseguest | null = null;
   public runnerUp: Houseguest | null = null;
   public finalTwo: Houseguest[] = [];
@@ -76,7 +76,9 @@ export class BigBrotherGame {
    */
   getEligibleVoters(): Houseguest[] {
     return this.getActiveHouseguests().filter(h => {
-      return !h.isHoH && !h.isNominated;
+      const isHoh = this.hohWinner === h.id;
+      const isNominated = this.nominees.includes(h.id);
+      return !isHoh && !isNominated;
     });
   }
 
