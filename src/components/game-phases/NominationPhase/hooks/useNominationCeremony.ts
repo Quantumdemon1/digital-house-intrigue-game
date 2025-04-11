@@ -1,5 +1,4 @@
-
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
 
@@ -8,11 +7,13 @@ export const useNominationCeremony = () => {
 
     // Local state for UI selection only
     const [selectedNomineesUI, setSelectedNomineesUI] = useState<Houseguest[]>([]);
+    const [localCeremonyComplete, setLocalCeremonyComplete] = useState(false);
 
     // Derive state from the central game instance
     const hoh = useMemo(() => {
-        return gameState.hohWinner;
-    }, [gameState.hohWinner]);
+        const hohId = gameState.hohWinner?.id;
+        return hohId ? gameState.houseguests.find(h => h.id === hohId) || null : null;
+    }, [gameState.hohWinner, gameState.houseguests]);
     
     const activeHouseguests = getActiveHouseguests();
     
@@ -20,15 +21,26 @@ export const useNominationCeremony = () => {
     const potentialNominees = useMemo(() => {
         return activeHouseguests.filter(houseguest => houseguest.id !== hoh?.id);
     }, [activeHouseguests, hoh]);
-    
-    const isPlayerHoh = hoh?.isPlayer ?? false;
 
     // Determine if the ceremony is complete based on game state
     const ceremonyComplete = useMemo(() => {
-        if (!gameState) return false;
-        // Check if nominees have been selected in the game state
-        return gameState.nominees.length === 2;
-    }, [gameState]);
+        // Check both local state and game state
+        return localCeremonyComplete || gameState.nominees.length === 2;
+    }, [localCeremonyComplete, gameState.nominees]);
+
+    // Keep UI nominees synced with game state when it updates
+    useEffect(() => {
+        if (gameState.nominees.length === 2) {
+            const nomineeObjects = gameState.nominees.map(
+                nomineeId => gameState.houseguests.find(h => h.id === nomineeId.id)
+            ).filter(Boolean) as Houseguest[];
+            
+            if (nomineeObjects.length === 2) {
+                setSelectedNomineesUI(nomineeObjects);
+                setLocalCeremonyComplete(true);
+            }
+        }
+    }, [gameState.nominees, gameState.houseguests]);
 
     const isNominating = useMemo(() => {
         // Logic to determine if we are in nomination phase and nominations are not yet complete
@@ -55,6 +67,9 @@ export const useNominationCeremony = () => {
         
         // Log the action being dispatched
         logger.info(`Player Action: Confirming nominations for ${selectedNomineesUI.map(n => n.name).join(' and ')}`);
+        
+        // Directly set local ceremony completion state
+        setLocalCeremonyComplete(true);
         
         // Dispatch a player action to make nominations
         dispatch({
@@ -85,6 +100,7 @@ export const useNominationCeremony = () => {
         logger.info('Nomination timer expired, selecting random nominees');
         
         setSelectedNomineesUI(randomNominees);
+        setLocalCeremonyComplete(true);
         
         // Don't wait, immediately make nominations
         dispatch({

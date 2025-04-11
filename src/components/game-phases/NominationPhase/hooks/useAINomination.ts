@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
-import { AIIntegrationSystem } from '@/systems/ai-integration';
 import { Logger, LogLevel } from '@/utils/logger';
 
 interface UseAINominationProps {
@@ -37,9 +36,9 @@ export const useAINomination = ({
     enableTimestamp: true
   });
 
-  // AI nomination logic - now much faster
+  // AI nomination logic - immediate execution
   useEffect(() => {
-    // Only process if HoH exists, HoH is AI, and we haven't already processed or started nominating
+    // Only process if HoH exists, HoH is AI, and we haven't already processed
     if (
       hoh && 
       !hoh.isPlayer && 
@@ -68,18 +67,16 @@ export const useAINomination = ({
             }, {} as Record<string, number>)
           };
           
+          // Immediately show toast for improved UX
           toast({
-            title: `${hoh.name} is thinking...`,
+            title: `${hoh.name} is nominating...`,
             description: "The Head of Household is choosing nominations.",
           });
-          
-          // No artificial delay for AI decisions
           
           // Get decision from the AI system
           let decision;
           try {
-            // Try to use the real AI system first
-            aiLogger.info(`Requesting AI decision for ${hoh.name}`);
+            // Try to use the AI system
             decision = await aiSystem.makeDecision(
               hoh.name,
               'nomination',
@@ -89,25 +86,19 @@ export const useAINomination = ({
             aiLogger.info(`Decision received: ${JSON.stringify(decision)}`);
           } catch (error: any) {
             // Fall back to the fallback generator
-            aiLogger.warn(`⚠️ Error getting AI decision, using fallback: ${error.message}`);
+            aiLogger.warn(`⚠️ Using fallback: ${error.message}`);
             decision = aiSystem.getFallbackDecision(
               hoh.id, 
               'nomination',
               nominationContext,
-              {
-                getHouseguestById: (name: string) => 
-                  potentialNominees.find(h => h.name === name) || null,
-                getActiveHouseguests: () => potentialNominees
-              }
+              game
             );
-            aiLogger.info(`Fallback decision generated: ${JSON.stringify(decision)}`);
+            aiLogger.info(`Fallback decision: ${JSON.stringify(decision)}`);
           }
           
           // Find the nominee objects based on the names returned by the AI
           const nominee1 = potentialNominees.find(h => h.name === decision.nominee1);
           const nominee2 = potentialNominees.find(h => h.name === decision.nominee2);
-          
-          aiLogger.debug(`Found nominees: ${nominee1?.name}, ${nominee2?.name}`);
           
           if (nominee1 && nominee2) {
             // Set AI-chosen nominees
@@ -123,47 +114,38 @@ export const useAINomination = ({
             
             // Immediately confirm nominations
             confirmNominations();
-            processingRef.current = false;
           } else {
             // Fallback if AI decision is invalid
-            aiLogger.error(`❌ AI nomination decision invalid: nominees not found`, { decision });
-            
-            // Show error toast
-            toast({
-              title: "Decision error",
-              description: "Using random nominations instead",
-              variant: "destructive"
-            });
+            aiLogger.error(`❌ Invalid nominees, using random selection`);
             
             // Choose random nominees as fallback
             const aiNominees = [...potentialNominees]
               .sort(() => 0.5 - Math.random())
               .slice(0, 2);
               
-            aiLogger.info(`Using fallback random nominees: ${aiNominees.map(n => n.name).join(', ')}`);
             setNominees(aiNominees);
+            toast({
+              title: `${hoh.name} has decided`,
+              description: `Nominated ${aiNominees[0].name} and ${aiNominees[1].name} for eviction.`,
+            });
             
             // Immediately confirm nominations
             confirmNominations();
-            processingRef.current = false;
           }
+          processingRef.current = false;
         } catch (error: any) {
           aiLogger.error(`❌ Error in AI nomination process: ${error.message}`);
-          
-          // Show error toast
-          toast({
-            title: "AI Error",
-            description: "Using random nominations instead",
-            variant: "destructive"
-          });
           
           // Fallback to random nominations
           const randomNominees = [...potentialNominees]
             .sort(() => 0.5 - Math.random())
             .slice(0, 2);
           
-          aiLogger.info(`Error occurred, using random nominees: ${randomNominees.map(n => n.name).join(', ')}`);  
           setNominees(randomNominees);
+          toast({
+            title: `${hoh.name} has decided`,
+            description: `Nominated ${randomNominees[0].name} and ${randomNominees[1].name} for eviction.`,
+          });
           
           // Immediately confirm nominations
           confirmNominations();
@@ -171,7 +153,7 @@ export const useAINomination = ({
         }
       };
       
-      // Start AI decision process immediately
+      // Immediately start AI decision process
       makeDecision();
     }
   }, [hoh, isNominating, ceremonyComplete, aiProcessed, potentialNominees, setNominees, confirmNominations, toast, aiSystem, game, getRelationship]);

@@ -20,14 +20,10 @@ export class AIApiClient {
    * Makes the actual API call to the LLM
    */
   async callLLMAPI(prompt: string): Promise<string> {
-    // Use fallback instead of simulating an API failure
-    this.logger.warn("⚠️ Using fallback decision logic instead of API call");
-    throw new Error("Using fallback decision generator");
-    
-    /* Original implementation - commented out for testing
-    if (!this.apiKey) {
-      this.logger.warn("No API key provided for LLM call. Using fallback decision.");
-      throw new Error("No API key provided for LLM call");
+    // Use fallback for testing/development environments
+    if (!this.apiKey || config.USE_AI_FALLBACK) {
+      this.logger.warn("No API key provided or fallback mode active. Using fallback decision generator");
+      throw new Error("Using fallback decision generator");
     }
     
     this.logger.info(`AI Request PREPARED for Gemini API`);
@@ -81,6 +77,5 @@ export class AIApiClient {
       this.logger.error(`API call error: ${error.message}`);
       throw error;
     }
-    */
   }
 }
