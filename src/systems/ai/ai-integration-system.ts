@@ -85,20 +85,33 @@ export class AIIntegrationSystem {
       const prompt = this.decisionMaker.generatePrompt(houseguest, decisionType, context, game, memories);
       
       // Make the API call
-      const response = await this.decisionMaker.callLLMAPI(prompt);
+      let response;
+      try {
+        response = await this.decisionMaker.callLLMAPI(prompt);
+      } catch (error) {
+        this.logger.error(`AI API call failed: ${error.message}`);
+        return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+      }
       
       // Parse and validate the response
-      const decision = this.responseParser.parseAndValidateResponse(response, decisionType);
+      let decision;
+      try {
+        decision = this.responseParser.parseAndValidateResponse(response, decisionType);
+        this.logger.info(`AI Decision SUCCESS for ${botName} (${decisionType})`);
+      } catch (error) {
+        this.logger.error(`AI Response validation failed: ${error.message}`);
+        return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+      }
       
       // Log the decision
-      this.logger.info(`AI Decision (${decisionType}): ${botName} decided: ${JSON.stringify(decision)}`);
+      this.logger.info(`AI Decision (${decisionType}): ${botName} decided: ${JSON.stringify(decision.decision)}`);
       
       // Update memories with this decision
       this.memoryManager.addMemory(houseguest.id, `You made a ${decisionType} decision: ${JSON.stringify(decision.decision)}`);
       
       return decision.decision;
     } catch (error: any) {
-      this.logger.error(`Error in AI decision (${decisionType}): ${error.message}`);
+      this.logger.error(`AI decision overall processing FAILED (${decisionType}): ${error.message}`);
       return this.fallbackGenerator.getFallbackDecision(decisionType, context);
     }
   }

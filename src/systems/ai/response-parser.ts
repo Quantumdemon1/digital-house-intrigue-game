@@ -25,32 +25,59 @@ export class AIResponseParser {
    */
   parseAndValidateResponse(response: string, decisionType: string): AIDecisionResponse {
     try {
-      // Try to parse the response as JSON
-      let data: AIDecisionResponse;
-      
+      // First, try direct JSON parsing
       try {
-        data = JSON.parse(response);
-      } catch (e) {
-        // If it's not valid JSON, try to extract JSON from the text response
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          data = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error("Could not parse JSON from response");
+        const data = JSON.parse(response);
+        this.logger.debug("Direct JSON parsing succeeded");
+        
+        // Validate that required fields exist
+        if (!data.reasoning || !data.decision) {
+          throw new Error("Response missing required fields");
         }
+        
+        // Validate decision structure based on type
+        this.validateDecisionStructure(data.decision, decisionType);
+        return data;
+      } catch (e) {
+        this.logger.debug("Direct JSON parsing failed, attempting to extract JSON from text");
+        
+        // If direct parsing fails, try to extract JSON from the text response
+        const jsonRegex = /\{[\s\S]*\}/g;
+        const jsonMatches = response.match(jsonRegex);
+        
+        if (!jsonMatches || jsonMatches.length === 0) {
+          throw new Error("No JSON object found in response");
+        }
+        
+        // Try each match until we find valid JSON
+        let validData: AIDecisionResponse | null = null;
+        let lastError: Error | null = null;
+        
+        for (const jsonStr of jsonMatches) {
+          try {
+            const parsedData = JSON.parse(jsonStr);
+            
+            // Check if it has the expected structure
+            if (parsedData.reasoning && parsedData.decision) {
+              this.validateDecisionStructure(parsedData.decision, decisionType);
+              validData = parsedData;
+              break;
+            }
+          } catch (err: any) {
+            lastError = err;
+            continue;
+          }
+        }
+        
+        if (validData) {
+          this.logger.debug("Successfully extracted valid JSON from response");
+          return validData;
+        }
+        
+        throw lastError || new Error("Failed to parse extracted JSON");
       }
-      
-      // Validate that required fields exist
-      if (!data.reasoning || !data.decision) {
-        throw new Error("Response missing required fields");
-      }
-      
-      // Validate decision structure based on type
-      this.validateDecisionStructure(data.decision, decisionType);
-      
-      return data;
     } catch (error: any) {
-      this.logger.error(`Failed to parse API response: ${error.message}. Response: ${response}`);
+      this.logger.error(`Failed to parse API response: ${error.message}`, { response });
       throw new Error(`Invalid API response format: ${error.message}`);
     }
   }
@@ -59,6 +86,8 @@ export class AIResponseParser {
    * Validates the structure of the decision based on type
    */
   private validateDecisionStructure(decision: any, decisionType: string): void {
+    this.logger.debug(`Validating decision structure for ${decisionType}`, decision);
+    
     switch (decisionType) {
       case 'nomination':
         if (!decision.nominee1 || !decision.nominee2) {
@@ -89,5 +118,7 @@ export class AIResponseParser {
         }
         break;
     }
+    
+    this.logger.debug(`Decision validation passed for ${decisionType}`);
   }
 }

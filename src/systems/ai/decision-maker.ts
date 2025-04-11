@@ -7,6 +7,7 @@
 import type { Houseguest } from '@/models/houseguest';
 import type { BigBrotherGame } from '@/models/BigBrotherGame';
 import type { Logger } from '@/utils/logger';
+import { config } from '@/config';
 
 export class AIDecisionMaker {
   private logger: Logger;
@@ -100,46 +101,58 @@ The finalists are: ${context.finalists?.join(', ')}`;
    */
   async callLLMAPI(prompt: string): Promise<string> {
     if (!this.apiKey) {
+      this.logger.warn("No API key provided for LLM call. Using fallback decision.");
       throw new Error("No API key provided for LLM call");
     }
     
-    this.logger.debug(`Making API call to Gemini API...`);
+    this.logger.info(`AI Request PREPARED for Gemini API`);
     
     try {
-      // Real Gemini API call would go here
-      // For Phase 1, we'll use a placeholder implementation
-      // that will be replaced in Phase 2 with the actual API call
+      const endpoint = config.GEMINI_API_ENDPOINT;
       
-      // Basic placeholder for testing
-      return JSON.stringify({
-        reasoning: "This is a placeholder response during Phase 1 implementation.",
-        decision: { placeholder: true }
+      const payload = {
+        contents: [{ 
+          role: 'user', 
+          parts: [{ text: prompt }] 
+        }],
+        generationConfig: {
+          temperature: config.GEMINI_TEMPERATURE,
+          maxOutputTokens: config.GEMINI_MAX_OUTPUT_TOKENS,
+        }
+      };
+      
+      // Log request details for debugging
+      this.logger.debug("API request payload", {
+        endpoint: endpoint,
+        payload: payload
       });
       
-      // Actual implementation would look like:
-      /*
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.apiKey}`, {
+      const response = await fetch(`${endpoint}?key=${this.apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 800,
-          }
-        })
+        body: JSON.stringify(payload)
       });
       
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(`API call failed: ${data.error?.message || 'Unknown error'}`);
+        const errorData = await response.json().catch(() => ({}));
+        this.logger.error(`Gemini API Error: ${response.status} ${response.statusText}`, errorData);
+        throw new Error(`API call failed: ${response.statusText}`);
       }
       
-      return data.candidates[0].content.parts[0].text;
-      */
+      const data = await response.json();
+      this.logger.info(`AI Raw Response Received from Gemini API`);
+      
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+        this.logger.error("Unexpected API response structure", data);
+        throw new Error("Invalid API response structure");
+      }
+      
+      const textContent = data.candidates[0].content.parts[0].text;
+      this.logger.debug("API response text", { text: textContent });
+      
+      return textContent;
     } catch (error: any) {
       this.logger.error(`API call error: ${error.message}`);
       throw error;

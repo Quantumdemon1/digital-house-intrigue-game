@@ -4,4 +4,4 @@
  * @description Re-exports AI integration system for backward compatibility
  */
 
-export { AIIntegrationSystem } from './ai';
+export { AIIntegrationSystem } from './ai/ai-integration-system';

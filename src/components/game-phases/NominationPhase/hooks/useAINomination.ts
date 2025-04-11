@@ -27,7 +27,7 @@ export const useAINomination = ({
 }: UseAINominationProps) => {
   const [aiProcessed, setAiProcessed] = useState(false);
   const { toast } = useToast();
-  const { game } = useGame();
+  const { aiSystem, game, logger: gameLogger } = useGame();
   
   // Create a logger instance for AI operation logs
   const aiLogger = new Logger({
@@ -45,34 +45,52 @@ export const useAINomination = ({
       
       const makeDecision = async () => {
         try {
-          // Setup AI system with no API key for fallback decisions
-          const aiSystem = new AIIntegrationSystem(aiLogger, "");
+          // Log the start of AI decision process
+          aiLogger.info(`AI HoH ${hoh.name} making nomination decision...`);
           
           // Prepare the nomination context
           const nominationContext = {
             eligible: potentialNominees.map(hg => hg.name),
-            situation: `You are the Head of Household and must nominate two houseguests for eviction.`
+            situation: `You are the Head of Household and must nominate two houseguests for eviction.`,
+            relationships: potentialNominees.reduce((acc, nominee) => {
+              acc[nominee.name] = getRelationship(hoh.id, nominee.id);
+              return acc;
+            }, {} as Record<string, number>)
           };
           
-          // Log the start of AI decision process
-          aiLogger.info(`AI HoH ${hoh.name} making nomination decision...`);
+          toast({
+            title: `${hoh.name} is thinking...`,
+            description: "The Head of Household is choosing nominations.",
+          });
           
-          // Simulate AI decision making delay
-          const delay = Math.floor(Math.random() * 1000) + 1500;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          // Simulate thinking time
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
-          // Use fallback decision maker (since we're not using real AI in this phase)
-          const decision = aiSystem.getFallbackDecision(
-            hoh.id, 
-            'nomination',
-            nominationContext,
-            // Minimal game object implementation with just what we need
-            {
-              getHouseguestById: (name: string) => 
-                potentialNominees.find(h => h.name === name) || null,
-              getActiveHouseguests: () => potentialNominees
-            }
-          );
+          // Get decision from the AI system
+          let decision;
+          try {
+            // Try to use the real AI system first
+            decision = await aiSystem.makeDecision(
+              hoh.name,
+              'nomination',
+              nominationContext,
+              game
+            );
+            aiLogger.info(`AI decision received from AI system for ${hoh.name}`);
+          } catch (error) {
+            // Fall back to the fallback generator
+            aiLogger.warn(`Error getting AI decision, using fallback: ${error}`);
+            decision = aiSystem.getFallbackDecision(
+              hoh.id, 
+              'nomination',
+              nominationContext,
+              {
+                getHouseguestById: (name: string) => 
+                  potentialNominees.find(h => h.name === name) || null,
+                getActiveHouseguests: () => potentialNominees
+              }
+            );
+          }
           
           // Find the nominee objects based on the names returned by the AI
           const nominee1 = potentialNominees.find(h => h.name === decision.nominee1);
@@ -83,10 +101,6 @@ export const useAINomination = ({
             setNominees([nominee1, nominee2]);
             
             aiLogger.info(`AI HoH ${hoh.name} nominated ${nominee1.name} and ${nominee2.name}`);
-            toast({
-              title: `${hoh.name} is thinking...`,
-              description: "The Head of Household is choosing nominations.",
-            });
             
             // Delay before confirming to simulate decision making
             setTimeout(() => {
@@ -118,7 +132,7 @@ export const useAINomination = ({
       // Small delay before starting AI decision process
       setTimeout(makeDecision, 1000);
     }
-  }, [hoh, isNominating, ceremonyComplete, aiProcessed, potentialNominees, setNominees, confirmNominations, toast]);
+  }, [hoh, isNominating, ceremonyComplete, aiProcessed, potentialNominees, setNominees, confirmNominations, toast, aiSystem, game, getRelationship]);
 
   return { aiProcessed };
 };
