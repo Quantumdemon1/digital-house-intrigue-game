@@ -1,4 +1,3 @@
-
 /**
  * @file src/models/game-state.ts
  * @description Game state types and interfaces
@@ -73,8 +72,8 @@ export function createInitialGameState(): GameState {
     juryMembers: [],
     winner: null,
     runnerUp: null,
-    week: 1,
-    phase: 'Initialization',
+    week: 0,
+    phase: 'Setup',
     relationships: new Map(),
     evictionVotes: {},
     gameLog: []

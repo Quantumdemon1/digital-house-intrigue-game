@@ -29,7 +29,7 @@ export function setupReducer(state: GameState, action: GameAction): GameState {
       ...state,
       houseguests: action.payload,
       relationships,
-      phase: 'HoH' as GamePhase,
+      phase: 'HoH' as GamePhase, // Set to 'HoH' after setup
       week: 1,
       gameLog: [
         {

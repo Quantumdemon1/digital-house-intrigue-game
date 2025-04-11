@@ -33,6 +33,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [gameState, dispatch] = useReducer(gameReducer, createInitialGameState());
     const [isPaused, setIsPaused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // Log initial game state for debugging
+    useEffect(() => {
+        logger.info(`Game initialized with phase: ${gameState.phase}`);
+    }, []);
 
     // Helper functions that use the game state
     const getHouseguestById = useCallback((id: string) => {
