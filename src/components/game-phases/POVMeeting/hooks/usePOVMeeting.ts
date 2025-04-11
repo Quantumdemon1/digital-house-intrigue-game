@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
@@ -14,6 +13,48 @@ export const usePOVMeeting = () => {
   const nominees = gameState.nominees;
   const hoh = gameState.hohWinner;
   const activeHouseguests = getActiveHouseguests();
+  
+  // Fast forward handler
+  useEffect(() => {
+    const handleFastForward = () => {
+      const unsubscribe = document.addEventListener('game:fastForward', () => {
+        if (meetingStage === 'initial' && povHolder && !povHolder.isPlayer) {
+          // Simulate POV holder decision
+          let decision = false;
+          
+          // POV holder saves self if nominated
+          if (povHolder.isNominated) {
+            decision = true;
+            handleVetoDecision(true);
+          } else {
+            // Decide based on relationship with nominees
+            const relationships = nominees.map(nominee => {
+              const relationshipsForGuest = gameState.relationships.get(povHolder.id);
+              if (relationshipsForGuest) {
+                const relation = relationshipsForGuest.get(nominee.id);
+                return relation ? relation.score : 0;
+              }
+              return 0;
+            });
+            
+            // If any relationship is > 30, use veto
+            const bestRelationship = Math.max(...relationships);
+            if (bestRelationship > 30) {
+              decision = true;
+              handleVetoDecision(true);
+            } else {
+              decision = false;
+              handleVetoDecision(false);
+            }
+          }
+        }
+      });
+      
+      return () => document.removeEventListener('game:fastForward', unsubscribe as any);
+    };
+    
+    return handleFastForward();
+  }, [meetingStage, povHolder, nominees, gameState.relationships]);
   
   const handleVetoDecision = (decision: boolean) => {
     setUseVeto(decision);

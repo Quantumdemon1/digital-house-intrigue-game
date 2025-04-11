@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import GamePhaseHeader from '../GamePhaseHeader';
+import GameHeader from './GameHeader';
 import GameSidebar from './GameSidebar';
 import PhaseContent from './PhaseContent';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -22,7 +22,7 @@ const GameScreen: React.FC = () => {
   }, [phase, logger]);
   
   return <div className="container mx-auto p-4 flex flex-col h-full surveillance-bg">
-      <GamePhaseHeader />
+      <GameHeader />
       
       <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-lg overflow-hidden">
         <ResizablePanel defaultSize={65} minSize={50} className="bg-background">

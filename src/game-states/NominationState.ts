@@ -34,6 +34,36 @@ export class NominationState extends GameStateBase {
           return true;
         }
         return false;
+      
+      case 'fast_forward':
+        // When fast forwarding, make AI nominations if HoH exists
+        const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+        
+        if (hoh) {
+          // Get list of eligible houseguests for nominations (not HoH)
+          const eligibleNominees = this.game.getActiveHouseguests()
+            .filter(hg => hg.id !== this.game.hohWinner);
+          
+          if (eligibleNominees.length >= 2) {
+            // Choose two random nominees
+            const randomNominees = eligibleNominees
+              .sort(() => 0.5 - Math.random())
+              .slice(0, 2)
+              .map(hg => hg.id);
+            
+            this.getLogger().info(`Fast forward - Auto nominations: ${randomNominees.map(id => 
+              this.game.getHouseguestById(id)?.name).join(', ')}`);
+            
+            // Set nominees and advance
+            this.game.nominees = randomNominees;
+            this.controller.changeState('PovCompetitionState');
+            return true;
+          }
+        }
+        
+        // If we can't make nominations, just advance
+        this.controller.changeState('PovCompetitionState');
+        return true;
         
       case 'continue_to_pov':
         // After nominations are made, immediately advance to PoV competition

@@ -1,3 +1,4 @@
+
 import { GameState } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 
@@ -17,6 +18,12 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
     // Note: Most of these will also be handled by the game state machine
     
     switch (payload.actionId) {
+      case 'fast_forward':
+        // Fast forward is handled by the game state machine
+        // Just log it here for debugging
+        console.log('Fast forwarding from phase:', payload.params.currentPhase);
+        break;
+        
       case 'make_nominations':
         // This is typically handled in nomination-reducer, just for transparency
         console.log('Player nominated:', payload.params.nomineeIds);
