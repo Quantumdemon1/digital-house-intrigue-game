@@ -68,9 +68,7 @@ const EvictionPhase: React.FC = () => {
               {nominees.map(nom => nom.name).join(' & ')}
             </p>
           </div>
-          <div className="p-3 bg-red-200 rounded-h-20 w-12">
-            <Users className="h-6 w-6 text-red-600" />
-          </div>
+          
         </div>
         
         <Separator className="my-4" />
