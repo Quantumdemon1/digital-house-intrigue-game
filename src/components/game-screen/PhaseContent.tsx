@@ -8,6 +8,7 @@ import POVMeeting from '../game-phases/POVMeeting';
 import EvictionPhase from '../game-phases/EvictionPhase';
 import FinalePhase from '../game-phases/FinalePhase';
 import GameOverPhase from '../game-phases/GameOverPhase';
+import SocialInteractionPhase from '../game-phases/SocialInteractionPhase';
 
 interface PhaseContentProps {
   phase: GamePhase;
@@ -26,6 +27,8 @@ const PhaseContent: React.FC<PhaseContentProps> = ({ phase }) => {
       return <POVMeeting />;
     case 'Eviction':
       return <EvictionPhase />;
+    case 'SocialInteraction':
+      return <SocialInteractionPhase />;
     case 'Finale':
       return <FinalePhase />;
     case 'GameOver':

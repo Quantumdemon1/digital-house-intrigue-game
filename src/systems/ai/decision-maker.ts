@@ -1,3 +1,4 @@
+
 /**
  * @file src/systems/ai/decision-maker.ts
  * @description Handles AI decision making logic and API calls
@@ -99,6 +100,44 @@ The nominees are: ${context.nominees?.join(', ')}`;
   "reasoning": "[explain your reasoning]"
 }
 The finalists are: ${context.finalists?.join(', ')}`;
+        break;
+        
+      case 'dialogue':
+        prompt += `For dialogue response, your decision object must include:
+{
+  "decision": {
+    "response": "[what you say out loud]",
+    "tone": "[friendly/strategic/cautious/deceptive/aggressive/dismissive/neutral]",
+    "thoughts": "[your private thoughts about this interaction]"
+  },
+  "reasoning": "[explain your response choices]"
+}
+The conversation context: ${context.situation}
+The speaker just said: "${context.message}"`;
+        break;
+        
+      case 'alliance_proposal':
+        prompt += `For alliance proposal, your decision object must include:
+{
+  "decision": {
+    "propose": true/false,
+    "allianceName": "[creative alliance name if proposing]",
+    "targetMemberNames": ["[name1]", "[name2]", ...] or null if not proposing
+  },
+  "reasoning": "[explain your decision]"
+}
+Consider these potential alliance members: ${context.eligibleNames?.join(', ')}`;
+        break;
+        
+      case 'alliance_response':
+        prompt += `For alliance response, your decision object must include:
+{
+  "decision": {
+    "accept": true/false
+  },
+  "reasoning": "[explain your decision]"
+}
+${context.proposer} has invited you to join alliance "${context.allianceName}" with ${context.memberNames?.join(', ')}`;
         break;
     }
     

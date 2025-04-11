@@ -174,4 +174,11 @@ export class AIIntegrationSystem {
     
     this.lastApiCall = Date.now();
   }
+  
+  /**
+   * Helper method to describe relationship scores
+   */
+  describeRelationship(score: number): string {
+    return this.fallbackGenerator.describeRelationship(score);
+  }
 }

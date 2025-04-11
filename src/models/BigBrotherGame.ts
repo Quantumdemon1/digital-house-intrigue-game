@@ -43,6 +43,7 @@ export class BigBrotherGame {
   public eventLog: GameEvent[] = [];
   public currentState: GameStateBase | null = null;
   public currentWeek: number = 1;
+  public currentLocation: string = 'living-room'; // Add default location
 
   // Systems
   public relationshipSystem: RelationshipSystem;
@@ -145,6 +146,7 @@ export class BigBrotherGame {
       runnerUp: this.runnerUp,
       finalTwo: this.finalTwo,
       eventLog: this.eventLog,
+      currentLocation: this.currentLocation, // Save location
       // State is handled in restoreState after loading
       currentStateName: this.currentState?.constructor.name || 'InitializationState'
     };
@@ -160,6 +162,7 @@ export class BigBrotherGame {
     this.currentWeek = gameData.currentWeek || gameData.week;
     this.phase = gameData.phase;
     this.eventLog = gameData.eventLog || [];
+    this.currentLocation = gameData.currentLocation || 'living-room'; // Load location
     
     // Restore references to objects
     this.hohWinner = gameData.hohWinner;

@@ -139,6 +139,37 @@ export class NominationState extends GameStateBase {
   }
 }
 
+// Social interaction state
+export class SocialInteractionState extends GameStateBase {
+  private interactionsRemaining: number = 3; // Allow 3 interactions per state entry
+  private targetPhase: typeof GameStateBase; // Which state to go to next
+
+  constructor(controller: IGameControllerFacade, targetPhase: typeof GameStateBase = NominationState) {
+    super(controller);
+    this.targetPhase = targetPhase; // The state to transition to when done
+  }
+
+  async enter(): Promise<void> {
+    await super.enter();
+    this.game.phase = 'SocialInteraction';
+    this.interactionsRemaining = 3; // Reset interactions on entry
+    this.getLogger().info(`Entering social phase. Target: ${this.targetPhase.name}. Interactions left: ${this.interactionsRemaining}`);
+    
+    // Trigger UI to show choices
+    this.controller.promptNextAction();
+  }
+
+  getAvailableActions(): any[] {
+    // This will be implemented in SocialInteractionState.ts
+    return [];
+  }
+
+  async handleAction(actionId: string, params: any): Promise<boolean> {
+    // This will be implemented in SocialInteractionState.ts
+    return false;
+  }
+}
+
 // PoV competition state
 export class PovCompetitionState extends GameStateBase {
   async enter(): Promise<void> {
@@ -273,6 +304,7 @@ export const states = {
   InitializationState,
   HohCompetitionState,
   NominationState,
+  SocialInteractionState, // Add the new state
   PovCompetitionState,
   PovMeetingState,
   EvictionState,

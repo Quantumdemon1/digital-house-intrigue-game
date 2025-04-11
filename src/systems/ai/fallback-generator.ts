@@ -78,9 +78,65 @@ export class AIFallbackGenerator {
         return decision;
       }
       
+      case 'dialogue': {
+        // Provide generic dialogue response
+        const responses = [
+          "Hey, what's up?", 
+          "I'm just thinking about the game.", 
+          "Not sure what to do next.", 
+          "Trying to figure out who to trust."
+        ];
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        decision = { 
+          response: randomResponse,
+          tone: "neutral",
+          thoughts: "I should be careful what I say."
+        };
+        this.logger.info(`🎯 Fallback dialogue: "${randomResponse}"`);
+        return decision;
+      }
+      
+      case 'alliance_proposal': {
+        // Default to not proposing alliance in fallback
+        decision = { 
+          propose: false, 
+          allianceName: null, 
+          targetMemberNames: null, 
+          reasoning: "Fallback: Not proposing alliance" 
+        };
+        this.logger.info(`🎯 Fallback alliance proposal: Not proposing`);
+        return decision;
+      }
+      
+      case 'alliance_response': {
+        // Random response to alliance proposal in fallback
+        const accept = Math.random() > 0.5;
+        decision = { 
+          accept, 
+          reasoning: `Fallback: ${accept ? 'Accepted' : 'Declined'} alliance proposal randomly` 
+        };
+        this.logger.info(`🎯 Fallback alliance response: ${accept ? 'ACCEPT' : 'DECLINE'}`);
+        return decision;
+      }
+      
       default:
         this.logger.error(`Unknown decision type: ${decisionType}`);
         return { error: "Unknown decision type" };
     }
+  }
+  
+  /**
+   * Describes a relationship based on numeric score
+   */
+  describeRelationship(score: number): string {
+    if (score >= 75) return 'Loyal Ally';
+    if (score >= 50) return 'Close Friend';
+    if (score >= 25) return 'Friend';
+    if (score >= 10) return 'Friendly';
+    if (score >= -10) return 'Neutral';
+    if (score >= -25) return 'Unfriendly';
+    if (score >= -50) return 'Dislike';
+    if (score >= -75) return 'Enemy';
+    return 'Bitter Rival';
   }
 }
