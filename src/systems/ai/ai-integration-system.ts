@@ -624,18 +624,24 @@ export class AIIntegrationSystem {
     enhancedContext.gameContext = {
       week: game.week,
       phase: game.phase,
-      hohName: game.hohWinner?.name || "None",
-      nominees: game.nominees.map(n => n.name),
-      povWinner: game.povWinner?.name || "None"
+      hohName: game.hohWinner ? (typeof game.hohWinner === 'string' ? game.hohWinner : game.hohWinner.name) || "None" : "None",
+      nominees: Array.isArray(game.nominees) ? 
+        game.nominees.map(n => typeof n === 'string' ? n : n.name) : 
+        [],
+      povWinner: game.povWinner ? (typeof game.povWinner === 'string' ? game.povWinner : game.povWinner.name) || "None" : "None"
     };
     
     // Add recent game events for context
-    enhancedContext.recentEvents = game.gameLog
-      .filter(log => log.week === game.week || log.week === game.week - 1)
-      .filter(log => log.involvedHouseguests.includes(houseguest.id) || 
-                     log.involvedHouseguests.includes(context.speakerId))
-      .slice(-5)
-      .map(log => log.description);
+    if (Array.isArray(game.eventLog)) {
+      enhancedContext.recentEvents = game.eventLog
+        .filter(log => log.week === game.week || log.week === game.week - 1)
+        .filter(log => log.involvedHouseguests.includes(houseguest.id) || 
+                      log.involvedHouseguests.includes(context.speakerId))
+        .slice(-5)
+        .map(log => log.description);
+    } else {
+      enhancedContext.recentEvents = [];
+    }
     
     return enhancedContext;
   }

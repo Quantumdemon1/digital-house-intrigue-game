@@ -159,7 +159,7 @@ export class SocialInteractionState extends GameStateBase {
             speakerName: player.name,
             message: "Hey, I wanted to talk to you for a bit.",  // Initial greeting
             situation: `You approached ${targetName} for a conversation.`,
-            phase: this.game.phase,
+            phase: this.game.phase as GamePhase,
             week: this.game.week
           };
           

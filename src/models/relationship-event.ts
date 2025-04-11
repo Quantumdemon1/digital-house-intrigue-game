@@ -25,4 +25,9 @@ export type RelationshipEventType =
   | 'alliance_formed' // Formed alliance
   | 'alliance_betrayed' // Betrayed alliance
   | 'competition_help' // Helped in competition
-  | 'general_interaction'; // General interaction
+  | 'general_interaction' // General interaction
+  | 'strategy_discussion' // Discussed game strategy
+  | 'deception' // Deceived another player
+  | 'confrontation' // Had a confrontation
+  | 'positive_connection' // Made a positive connection
+  | 'negative_interaction'; // Had a negative interaction

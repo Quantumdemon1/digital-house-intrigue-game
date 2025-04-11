@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { GameState } from '@/contexts/types/game-context-types';
@@ -101,7 +100,7 @@ export const useAIDecisions = ({
         // Base score
         let score = relationship?.score || 0;
         
-        // Check for mental state impact (stress and mood)
+        // Mental state impact (stress and mood)
         let mentalStateModifier = 0;
         
         // Mental state affects decision-making
@@ -274,7 +273,7 @@ export const useAIDecisions = ({
           
           // Extra score based on significant events
           const eventEffect = significantEvents.reduce((effect, event) => {
-            switch (event.type) {
+            switch (event.type as RelationshipEventType) {
               case 'betrayal':
                 return effect - 30; // Much more likely to nominate someone who betrayed you
               case 'saved':
