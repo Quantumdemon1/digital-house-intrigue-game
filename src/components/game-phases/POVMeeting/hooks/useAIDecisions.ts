@@ -100,6 +100,35 @@ export const useAIDecisions = ({
         // Base score
         let score = relationship?.score || 0;
         
+        // Check for mental state impact (stress and mood)
+        let mentalStateModifier = 0;
+        
+        // Mental state affects decision-making
+        if (povHolder.mood === 'Happy' || povHolder.mood === 'Content') {
+          mentalStateModifier += 10; // More likely to use veto when in good mood
+        } else if (povHolder.mood === 'Upset' || povHolder.mood === 'Angry') {
+          mentalStateModifier -= 10; // Less likely to use veto when in bad mood
+        }
+        
+        if (povHolder.stressLevel === 'Stressed' || povHolder.stressLevel === 'Overwhelmed') {
+          mentalStateModifier -= 15; // Less likely to take risks when stressed
+        } else if (povHolder.stressLevel === 'Relaxed') {
+          mentalStateModifier += 10; // More likely to make power moves when relaxed
+        }
+        
+        // Personality impact on decision
+        if (povHolder.traits.includes('Loyal') && score > 0) {
+          mentalStateModifier += 20; // Much more likely to save allies if loyal
+        }
+        
+        if (povHolder.traits.includes('Strategic')) {
+          // Strategic players weigh game considerations more heavily
+          const isCompThreat = nominee.competitionsWon.hoh > 0 || nominee.competitionsWon.pov > 0;
+          if (isCompThreat) {
+            mentalStateModifier -= 15; // Less likely to save competition threats
+          }
+        }
+        
         // Enhance with effective score (group dynamics)
         if (gameState.relationships.size > 0) {
           // Check for allies-of-allies or enemies-of-allies
@@ -108,7 +137,8 @@ export const useAIDecisions = ({
           
           relMap?.forEach((otherRel, otherId) => {
             if (otherId !== nominee.id) {
-              const nomineeRelWithOther = gameState.relationships.get(nominee.id)?.get(otherId)?.score || 0;
+              const nomineeRelMap = gameState.relationships.get(nominee.id);
+              const nomineeRelWithOther = nomineeRelMap?.get(otherId)?.score || 0;
               
               // If both have similar feelings toward a third person, strengthen relationship
               // If opposite feelings, weaken relationship
@@ -148,7 +178,7 @@ export const useAIDecisions = ({
         
         return {
           nominee,
-          score: score + eventBonus,
+          score: score + eventBonus + mentalStateModifier,
           hasAlliance: events.some(e => e.type === 'alliance_formed'),
           wasBetrayed: events.some(e => e.type === 'betrayal')
         };
@@ -209,6 +239,22 @@ export const useAIDecisions = ({
           // Base score (lower is worse, more likely to be nominated)
           let score = relationship?.score || 0;
           
+          // Mental state impact
+          let mentalStateModifier = 0;
+          
+          // Stress and mood affect decision-making
+          if (hoh.mood === 'Angry' || hoh.mood === 'Upset') {
+            mentalStateModifier -= 20; // More likely to make aggressive nominations when angry
+          }
+          
+          if (hoh.stressLevel === 'Stressed' || hoh.stressLevel === 'Overwhelmed') {
+            if (hoh.traits.includes('Emotional')) {
+              mentalStateModifier -= 30; // Emotional players are strongly affected by stress
+            } else {
+              mentalStateModifier -= 15; // Others are still affected but less so
+            }
+          }
+          
           // Check for significant events
           const events = relationship?.events || [];
           const significantEvents = events.filter(e => 
@@ -229,12 +275,33 @@ export const useAIDecisions = ({
           }, 0);
           
           // Calculate reciprocity - if they like you less than you like them, more likely to nominate
-          const theirRel = gameState.relationships.get(houseguest.id)?.get(hoh.id)?.score || 0;
+          const theirRelMap = gameState.relationships.get(houseguest.id);
+          const theirRel = theirRelMap?.get(hoh.id)?.score || 0;
           const reciprocityEffect = (theirRel - score) * config.RECIPROCITY_FACTOR;
+          
+          // Personality-driven considerations
+          let personalityModifier = 0;
+          
+          if (hoh.traits.includes('Strategic')) {
+            // Strategic players target competition threats
+            if (houseguest.competitionsWon.hoh > 0 || houseguest.competitionsWon.pov > 0) {
+              personalityModifier -= 15; // More likely to target comp threats
+            }
+          }
+          
+          if (hoh.traits.includes('Confrontational')) {
+            // Confrontational players are more likely to make bold moves
+            personalityModifier -= 10; // More aggressive nominations
+          }
+          
+          if (hoh.traits.includes('Loyal') && score > 30) {
+            // Loyal players strongly protect those they like
+            personalityModifier += 30; // Much less likely to nominate allies
+          }
           
           return {
             houseguest,
-            score: score + eventEffect + reciprocityEffect
+            score: score + eventEffect + reciprocityEffect + mentalStateModifier + personalityModifier
           };
         });
         

@@ -49,10 +49,27 @@ export class PovMeetingState extends GameStateBase {
               `${povHolder.name} used the Power of Veto to save you from the block.`
             );
             
+            // Update mood and stress levels
+            if (nominee && povHolder) {
+              // Being saved from the block improves mood and reduces stress
+              const savedNominee = this.game.getHouseguestById(nominee.id);
+              if (savedNominee) {
+                this.getLogger().info(`Updating ${savedNominee.name}'s mental state after being saved`);
+                savedNominee.mood = 'Happy'; // Direct assignment for immediate impact
+                savedNominee.stressLevel = 'Relaxed';
+                
+                // Add reflection about being saved
+                if (!savedNominee.internalThoughts) savedNominee.internalThoughts = [];
+                savedNominee.internalThoughts.push(
+                  `I'm so relieved that ${povHolder.name} saved me with the veto! I owe them big time.`
+                );
+              }
+            }
+            
             // Update relationships for other houseguests who see this act of loyalty
             if (nominee.id !== povHolder.id) { // Only if saving someone else
               this.game.houseguests.forEach(hg => {
-                if (hg.id !== povHolder.id && hg.id !== nominee.id && !hg.isEvicted) {
+                if (hg.id !== povHolder.id && hg.id !== nominee.id && hg.status === 'Active') {
                   // How other houseguests perceive this act depends on their relationship with the saved nominee
                   const theirRelWithNominee = this.controller.relationshipSystem.getRelationship(hg.id, nominee.id);
                   
@@ -94,6 +111,20 @@ export class PovMeetingState extends GameStateBase {
               config.NOMINATION_PENALTY_NOMINEE,
               `${hoh.name} nominated you as a replacement nominee.`
             );
+            
+            // Update the replacement nominee's mood and stress
+            if (replacement) {
+              this.getLogger().info(`Updating ${replacement.name}'s mental state after nomination`);
+              // Being nominated is stressful and upsetting
+              replacement.mood = 'Upset';
+              replacement.stressLevel = 'Stressed';
+              
+              // Add internal thought about being nominated
+              if (!replacement.internalThoughts) replacement.internalThoughts = [];
+              replacement.internalThoughts.push(
+                `I can't believe ${hoh.name} put me up as a replacement nominee. This is not good for my game.`
+              );
+            }
             
             // The reciprocal relationship is also affected but less strongly
             this.controller.relationshipSystem.updateRelationship(

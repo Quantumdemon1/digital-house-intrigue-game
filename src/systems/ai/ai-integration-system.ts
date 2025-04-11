@@ -1,3 +1,4 @@
+
 /**
  * @file src/systems/ai/ai-integration-system.ts
  * @description Main AI integration system that orchestrates all AI components
@@ -12,6 +13,7 @@ import { AIResponseParser } from './response-parser';
 import { AIFallbackGenerator } from './fallback-generator';
 import { RelationshipSystem } from '../relationship-system';
 import { config } from '@/config';
+import { updateHouseguestMentalState, generateReflectionPrompt } from '@/models/houseguest';
 
 export class AIIntegrationSystem {
   private logger: Logger;
@@ -86,10 +88,10 @@ export class AIIntegrationSystem {
     }
 
     try {
-      this.logger.info(`🤖 AI decision requested for ${botName} (${decisionType})`);
+      this.logger.info(`🤖 AI decision requested for ${botName} (${decisionType}), Mood: ${houseguest.mood}, Stress: ${houseguest.stressLevel}`);
       
-      // Enhance context with relationship data
-      this.enhanceContextWithRelationships(houseguest, decisionType, context);
+      // Enhance context with relationship data and mental state
+      this.enhanceContextWithHouseguestState(houseguest, decisionType, context, game);
       
       // Rate limit API calls
       await this.respectRateLimit();
@@ -141,55 +143,259 @@ export class AIIntegrationSystem {
   }
 
   /**
-   * Enhance the context with relationship data
+   * Enhance the context with relationship data and houseguest mental state
    */
-  private enhanceContextWithRelationships(
+  private enhanceContextWithHouseguestState(
     houseguest: Houseguest,
     decisionType: string,
-    context: any
+    context: any,
+    game: BigBrotherGame
   ): void {
-    if (!this.relationshipSystem) return;
+    // Add mental state information to context
+    context.mentalState = {
+      mood: houseguest.mood,
+      stressLevel: houseguest.stressLevel,
+      currentGoals: houseguest.currentGoals || [],
+      internalThoughts: houseguest.internalThoughts || []
+    };
     
-    // Add relationship data to the context
-    const enhancedContext = { ...context };
+    // Determine if personality-driven behavior should override normal logic
+    // Higher stress increases chance of personality-driven (potentially irrational) behavior
+    const stressLevelMap: Record<string, number> = {
+      'Relaxed': 0.1,
+      'Normal': 0.2,
+      'Tense': 0.4,
+      'Stressed': 0.6,
+      'Overwhelmed': 0.8
+    };
     
-    // Add relationship information for eligible houseguests
-    if (Array.isArray(context.eligible)) {
-      const relationshipData: Record<string, any> = {};
+    const moodMap: Record<string, number> = {
+      'Happy': 0.1,
+      'Content': 0.2,
+      'Neutral': 0.3,
+      'Upset': 0.6,
+      'Angry': 0.8
+    };
+    
+    const stressInfluence = stressLevelMap[houseguest.stressLevel] || 0.3;
+    const moodInfluence = moodMap[houseguest.mood] || 0.3;
+    
+    // Calculate how much personality/emotion should override strategic thinking
+    const personalityDrivenFactor = (stressInfluence * config.STRESS_IMPACT_FACTOR) + 
+                                   (moodInfluence * config.MOOD_IMPACT_FACTOR);
+    
+    context.personality = {
+      traits: houseguest.traits,
+      personalityDrivenFactor: Math.min(1, personalityDrivenFactor)
+    };
+
+    // Add relationship information if available
+    if (this.relationshipSystem) {
+      const enhancedContext = { ...context };
       
-      context.eligible.forEach((hgName: string) => {
-        // Find the ID for this houseguest
-        // In a real implementation, we would have a proper lookup method
-        const targetHg = houseguest.id; // Simplified for this example
+      // Add relationship information for eligible houseguests
+      if (Array.isArray(context.eligible)) {
+        const relationshipData: Record<string, any> = {};
         
-        if (targetHg) {
-          // Get relationship data
-          const baseScore = this.relationshipSystem!.getRelationship(houseguest.id, targetHg);
-          const effectiveScore = this.relationshipSystem!.getEffectiveRelationship(houseguest.id, targetHg);
-          const reciprocityFactor = this.relationshipSystem!.calculateReciprocityModifier(houseguest.id, targetHg);
-          const level = this.relationshipSystem!.getRelationshipLevel(houseguest.id, targetHg);
+        context.eligible.forEach((hgName: string) => {
+          // Find the ID for this houseguest
+          const targetHg = game.houseguests.find(h => h.name === hgName);
           
-          // Get significant events
-          const events = this.relationshipSystem!.getRelationshipEvents(houseguest.id, targetHg)
-            .filter(e => ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type) ||
-                    Math.abs(e.impactScore) >= 15)
-            .map(e => e.description);
-          
-          relationshipData[hgName] = {
-            score: baseScore,
-            effectiveScore,
-            reciprocityFactor,
-            level,
-            significantEvents: events
-          };
-        }
-      });
+          if (targetHg) {
+            // Get relationship data
+            const baseScore = this.relationshipSystem!.getRelationship(houseguest.id, targetHg.id);
+            const effectiveScore = this.relationshipSystem!.getEffectiveRelationship(houseguest.id, targetHg.id);
+            const reciprocityFactor = this.relationshipSystem!.calculateReciprocityModifier(houseguest.id, targetHg.id);
+            const level = this.relationshipSystem!.getRelationshipLevel(houseguest.id, targetHg.id);
+            
+            // Get significant events
+            const events = this.relationshipSystem!.getRelationshipEvents(houseguest.id, targetHg.id)
+              .filter(e => ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type) ||
+                      Math.abs(e.impactScore) >= 15)
+              .map(e => e.description);
+            
+            relationshipData[hgName] = {
+              score: baseScore,
+              effectiveScore,
+              reciprocityFactor,
+              level,
+              significantEvents: events
+            };
+          }
+        });
+        
+        enhancedContext.relationships = relationshipData;
+      }
       
-      enhancedContext.relationships = relationshipData;
+      // Replace the context with our enhanced version
+      Object.assign(context, enhancedContext);
+    }
+  }
+
+  /**
+   * Generates a reflection for an AI houseguest based on their current state in the game
+   * @param houseguestId ID of the houseguest to generate reflection for
+   * @param game The current game state
+   */
+  async generateReflection(houseguestId: string, game: BigBrotherGame): Promise<boolean> {
+    const houseguest = game.houseguests.find(h => h.id === houseguestId);
+    if (!houseguest) {
+      this.logger.error(`Cannot generate reflection: No houseguest with ID ${houseguestId} found.`);
+      return false;
     }
     
-    // Replace the context with our enhanced version
-    Object.assign(context, enhancedContext);
+    // Only generate reflections for AI houseguests
+    if (houseguest.isPlayer) {
+      this.logger.warn(`Cannot generate reflection for player character ${houseguest.name}.`);
+      return false;
+    }
+    
+    // Only generate reflection if it's time for a new one
+    if (houseguest.lastReflectionWeek && game.week - houseguest.lastReflectionWeek < config.REFLECTION_INTERVAL) {
+      this.logger.info(`Skipping reflection for ${houseguest.name} - not enough time has passed since last reflection`);
+      return false;
+    }
+    
+    this.logger.info(`🧠 Generating reflection for ${houseguest.name} (Week ${game.week})`);
+    
+    try {
+      // Rate limit API calls
+      await this.respectRateLimit();
+      
+      if (!this.apiKey) {
+        this.logger.warn(`No API key, skipping reflection for ${houseguest.name}`);
+        return this.generateFallbackReflection(houseguest, game);
+      }
+      
+      // Generate the reflection prompt
+      const prompt = generateReflectionPrompt(houseguest, game);
+      
+      // Call the API
+      let response;
+      try {
+        response = await this.decisionMaker.callLLMAPI(prompt);
+      } catch (error: any) {
+        this.logger.error(`❌ Reflection API call failed: ${error.message}`);
+        return this.generateFallbackReflection(houseguest, game);
+      }
+      
+      // Parse the response
+      try {
+        const parsedResponse = JSON.parse(response);
+        
+        if (!parsedResponse.reflection || !parsedResponse.goals || !parsedResponse.strategy) {
+          throw new Error("Invalid reflection format");
+        }
+        
+        // Update the houseguest with the reflection results
+        houseguest.internalThoughts = houseguest.internalThoughts || [];
+        houseguest.internalThoughts.push(parsedResponse.reflection);
+        
+        // Cap internal thoughts at a reasonable number
+        if (houseguest.internalThoughts.length > 10) {
+          houseguest.internalThoughts = houseguest.internalThoughts.slice(-10);
+        }
+        
+        houseguest.currentGoals = parsedResponse.goals;
+        houseguest.lastReflectionWeek = game.week;
+        
+        // Add the strategy to memory
+        this.memoryManager.addMemory(houseguest.id, `Week ${game.week} strategy: ${parsedResponse.strategy}`);
+        
+        this.logger.info(`✅ Generated reflection for ${houseguest.name}: ${parsedResponse.reflection.substring(0, 50)}...`);
+        return true;
+        
+      } catch (error: any) {
+        this.logger.error(`❌ Reflection parsing failed: ${error.message}`, { response });
+        return this.generateFallbackReflection(houseguest, game);
+      }
+    } catch (error: any) {
+      this.logger.error(`❌ Reflection generation failed: ${error.message}`);
+      return this.generateFallbackReflection(houseguest, game);
+    }
+  }
+  
+  /**
+   * Generate a simple fallback reflection when API is unavailable
+   */
+  private generateFallbackReflection(houseguest: Houseguest, game: BigBrotherGame): boolean {
+    this.logger.info(`Generating fallback reflection for ${houseguest.name}`);
+    
+    const isNominated = houseguest.isNominated;
+    const isHoH = houseguest.isHoH;
+    const isPov = houseguest.isPovHolder;
+    
+    // Create personality-based reflections
+    let reflection = "";
+    let goals: string[] = [];
+    
+    // Base reflection on houseguest's status
+    if (isNominated) {
+      reflection = `I need to find a way to stay in this game. Being on the block is stressful, but I'm not giving up.`;
+      goals = ["Win the veto competition", "Campaign to stay in the house", "Find out who I can trust"];
+    } else if (isHoH) {
+      reflection = `Having HoH power is a big responsibility. I need to make moves that benefit my game long-term.`;
+      goals = ["Make strategic nominations", "Build stronger alliances", "Gather information about house dynamics"];
+    } else if (isPov) {
+      reflection = `The veto gives me some power this week. I need to decide how to use it wisely.`;
+      goals = ["Decide whether to use the veto", "Position myself better for next week", "Strengthen key relationships"];
+    } else {
+      // General reflection based on primary trait
+      const primaryTrait = houseguest.traits[0];
+      
+      switch(primaryTrait) {
+        case 'Strategic':
+          reflection = `I need to assess where I stand in the power structure of the house and make moves accordingly.`;
+          goals = ["Identify the biggest threats", "Form strategic alliances", "Position myself better in the house"];
+          break;
+        case 'Social':
+          reflection = `Building strong connections is key to my game. I should focus on strengthening my relationships.`;
+          goals = ["Bond with more houseguests", "Be a social connector", "Stay out of drama"];
+          break;
+        case 'Competitive':
+          reflection = `I need to win competitions to control my fate in this game. I can't rely on others.`;
+          goals = ["Win the next competition", "Target other competition threats", "Build a competitive alliance"];
+          break;
+        case 'Loyal':
+          reflection = `I need to stay true to my allies while watching out for my own game.`;
+          goals = ["Protect my closest allies", "Identify potential betrayals", "Form stronger bonds"];
+          break;
+        case 'Sneaky':
+          reflection = `The key to winning is manipulating the house dynamics from the shadows. Information is power.`;
+          goals = ["Gather intel on other players", "Create subtle discord", "Position myself with multiple groups"];
+          break;
+        default:
+          reflection = `I need to adapt to the changing dynamics of the game and find my path forward.`;
+          goals = ["Assess house dynamics", "Build stronger relationships", "Position myself better"];
+      }
+    }
+    
+    // Factor in their mood and stress
+    if (houseguest.mood === 'Happy' || houseguest.mood === 'Content') {
+      reflection += ` I'm feeling good about my position right now.`;
+    } else if (houseguest.mood === 'Upset' || houseguest.mood === 'Angry') {
+      reflection += ` I'm really not happy with how things are going.`;
+    }
+    
+    if (houseguest.stressLevel === 'Stressed' || houseguest.stressLevel === 'Overwhelmed') {
+      reflection += ` The pressure is really getting to me.`;
+    } else if (houseguest.stressLevel === 'Relaxed') {
+      reflection += ` I feel relaxed and confident moving forward.`;
+    }
+    
+    // Update the houseguest
+    houseguest.internalThoughts = houseguest.internalThoughts || [];
+    houseguest.internalThoughts.push(reflection);
+    
+    // Cap internal thoughts at a reasonable number
+    if (houseguest.internalThoughts.length > 10) {
+      houseguest.internalThoughts = houseguest.internalThoughts.slice(-10);
+    }
+    
+    houseguest.currentGoals = goals;
+    houseguest.lastReflectionWeek = game.week;
+    
+    return true;
   }
 
   /**
@@ -197,6 +403,23 @@ export class AIIntegrationSystem {
    */
   addMemory(houseguestId: string, memoryText: string): void {
     this.memoryManager.addMemory(houseguestId, memoryText);
+  }
+  
+  /**
+   * Updates a houseguest's mental state based on a game event
+   */
+  updateHouseguestMentalState(
+    houseguestId: string,
+    event: 'nominated' | 'saved' | 'competition_win' | 'competition_loss' | 'ally_evicted' | 'enemy_evicted' | 'betrayed' | 'positive_interaction' | 'negative_interaction'
+  ): void {
+    const game = this.relationshipSystem?.getGameRef();
+    if (!game) return;
+    
+    const houseguest = game.houseguests.find(h => h.id === houseguestId);
+    if (!houseguest) return;
+    
+    updateHouseguestMentalState(houseguest, event);
+    this.logger.info(`Updated ${houseguest.name}'s mental state after ${event} event - now ${houseguest.mood}/${houseguest.stressLevel}`);
   }
   
   /**

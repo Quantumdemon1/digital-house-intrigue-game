@@ -1,4 +1,3 @@
-
 import { GameState, getOrCreateRelationship } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { RelationshipEventType } from '../../../models/relationship-event';
@@ -92,8 +91,8 @@ export function relationshipReducer(state: GameState, action: GameAction): GameS
   }
   
   // Handle week changes for relationship decay
-  if (action.type === 'SET_WEEK') {
-    const newWeek = action.payload;
+  if (action.type === 'ADVANCE_WEEK') {
+    const newWeek = action.payload.week;
     const newRelationships = new Map(state.relationships);
     
     // Apply relationship decay if enabled

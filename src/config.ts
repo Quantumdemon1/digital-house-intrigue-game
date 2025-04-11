@@ -31,6 +31,13 @@ export const config = {
   GROUP_DYNAMICS_WEIGHT: 0.2,    // How much allies-of-allies/enemies-of-allies affects score
   MEMORY_RETENTION_WEEKS: 3,     // How many weeks significant events remain at full strength
   
+  // AI personality settings
+  REFLECTION_INTERVAL: 1,        // Number of weeks between AI reflections
+  STRESS_IMPACT_FACTOR: 0.7,     // How much stress affects decision making (0-1)
+  MOOD_IMPACT_FACTOR: 0.5,       // How much mood affects decision making (0-1)
+  RANDOM_THOUGHT_CHANCE: 0.3,    // Chance of generating random thoughts/observations
+  PERSONALITY_WEIGHT: 0.8,       // How much personality traits influence decisions
+  
   // Competition settings
   DEFAULT_COMP_DIFFICULTY: 5,
   DEFAULT_COMPETITION_ADVANTAGE_MULTIPLIER: 1.0,

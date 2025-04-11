@@ -10,29 +10,13 @@ import { CompetitionSystem } from '../systems/competition-system';
 import { AIIntegrationSystem } from '../systems/ai-integration';
 import { GameRecapGenerator } from '../utils/recap';
 import { Logger, LogLevel } from '../utils/logger';
-import { GameAction, GameContextType, GameState } from './types/game-context-types';
+import { GameAction, GameContextType } from './types/game-context-types';
+import { createInitialGameState, GameState } from '../models/game-state';
 import { gameReducer } from './reducers/game-reducer';
 import { config } from '@/config';
 
 // Create the context
 const GameContext = createContext<GameContextType | null>(null);
-
-// Initial state for the game
-const initialGameState: GameState = {
-  houseguests: [],
-  alliances: [],
-  hohWinner: null,
-  povWinner: null,
-  nominees: [],
-  juryMembers: [],
-  winner: null,
-  runnerUp: null,
-  week: 1,
-  phase: 'Setup',
-  relationships: new Map(),
-  evictionVotes: {},
-  gameLog: []
-};
 
 // --- Provider Component ---
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -47,7 +31,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // --- State Management ---
     const [gameInstance, setGameInstance] = useState<BigBrotherGame | null>(null);
-    const [gameState, dispatch] = useReducer(gameReducer, initialGameState);
+    const [gameState, dispatch] = useReducer(gameReducer, createInitialGameState());
     const [isPaused, setIsPaused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
