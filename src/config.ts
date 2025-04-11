@@ -23,6 +23,14 @@ export const config = {
   COMP_LOSS_PENALTY_COMPETITIVE: -5,
   ALLIANCE_FORMATION_BOOST: 15,
   
+  // New advanced relationship settings
+  BACKSTAB_PENALTY: -30,         // Penalty for betraying an ally
+  SAVED_ALLY_BONUS: 25,          // Bonus for saving an ally with veto
+  RELATIONSHIP_DECAY_RATE: 0.05, // 5% decay toward neutral (0) per week if no interaction
+  RECIPROCITY_FACTOR: 0.3,       // How much unbalanced relationships affect actions (0-1)
+  GROUP_DYNAMICS_WEIGHT: 0.2,    // How much allies-of-allies/enemies-of-allies affects score
+  MEMORY_RETENTION_WEEKS: 3,     // How many weeks significant events remain at full strength
+  
   // Competition settings
   DEFAULT_COMP_DIFFICULTY: 5,
   DEFAULT_COMPETITION_ADVANTAGE_MULTIPLIER: 1.0,

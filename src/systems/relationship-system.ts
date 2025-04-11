@@ -1,10 +1,13 @@
-
 import { Houseguest } from '../models/houseguest';
+import { RelationshipEvent, RelationshipEventType } from '../models/relationship-event';
+import { config } from '../config';
 
 export interface Relationship {
   score: number;        // -100 to 100 scale
   alliance: string | null; // alliance ID if they're in an alliance together
   notes: string[];      // Important events that affected relationship
+  events: RelationshipEvent[]; // History of significant relationship events
+  lastInteractionWeek: number; // Last week there was a direct interaction
 }
 
 export type RelationshipMap = Map<string, Map<string, Relationship>>;
@@ -12,9 +15,59 @@ export type RelationshipMap = Map<string, Map<string, Relationship>>;
 export class RelationshipSystem {
   private relationships: RelationshipMap = new Map();
   private logger: any;
+  private currentWeek: number = 1;
 
   constructor(logger: any) {
     this.logger = logger;
+  }
+
+  // Update the current week
+  setCurrentWeek(week: number): void {
+    this.currentWeek = week;
+    // When week changes, handle relationship decay
+    if (config.RELATIONSHIP_DECAY_RATE > 0) {
+      this.applyRelationshipDecay();
+    }
+  }
+
+  // Apply relationship decay to all relationships
+  private applyRelationshipDecay(): void {
+    this.logger.info(`Applying relationship decay for week ${this.currentWeek}`);
+    
+    this.relationships.forEach((guestRelationships, guestId1) => {
+      guestRelationships.forEach((relationship, guestId2) => {
+        // Only decay if there hasn't been an interaction this week
+        if (relationship.lastInteractionWeek < this.currentWeek) {
+          const weeksWithoutInteraction = this.currentWeek - relationship.lastInteractionWeek;
+          
+          // Apply decay to the overall score
+          if (relationship.score !== 0) {
+            const decayAmount = relationship.score * config.RELATIONSHIP_DECAY_RATE * weeksWithoutInteraction;
+            relationship.score -= decayAmount;
+            
+            // Move toward 0 (neutral)
+            if ((relationship.score > 0 && relationship.score - decayAmount < 0) ||
+                (relationship.score < 0 && relationship.score - decayAmount > 0)) {
+              relationship.score = 0;
+            }
+            
+            this.logger.debug(`Relationship decay: ${guestId1} -> ${guestId2}: ${decayAmount.toFixed(2)}`);
+          }
+          
+          // Also apply decay to individual event impacts if they're decayable
+          relationship.events.forEach(event => {
+            if (event.decayable) {
+              const eventAgeInWeeks = (this.currentWeek - Math.floor(event.timestamp / 604800000));
+              if (eventAgeInWeeks > config.MEMORY_RETENTION_WEEKS) {
+                const decayRate = event.decayRate || config.RELATIONSHIP_DECAY_RATE;
+                const decayFactor = Math.pow(1 - decayRate, eventAgeInWeeks - config.MEMORY_RETENTION_WEEKS);
+                event.impactScore *= decayFactor;
+              }
+            }
+          });
+        }
+      });
+    });
   }
 
   initializeRelationships(houseguests: Houseguest[]): void {
@@ -43,7 +96,13 @@ export class RelationshipSystem {
     // Get or create the relationship
     let relationship = guest1Map.get(guestId2);
     if (!relationship) {
-      relationship = { score: 0, alliance: null, notes: [] };
+      relationship = { 
+        score: 0, 
+        alliance: null, 
+        notes: [],
+        events: [],
+        lastInteractionWeek: this.currentWeek
+      };
       guest1Map.set(guestId2, relationship);
     }
     
@@ -58,13 +117,124 @@ export class RelationshipSystem {
     return relationship ? relationship.score : 0;
   }
 
+  /**
+   * Gets the effective relationship score, considering group dynamics
+   * This accounts for allies-of-allies and enemies-of-allies
+   */
+  getEffectiveRelationship(guestId1: string, guestId2: string): number {
+    const baseScore = this.getRelationship(guestId1, guestId2);
+    
+    // Skip group dynamics calculation if disabled
+    if (config.GROUP_DYNAMICS_WEIGHT <= 0) return baseScore;
+    
+    // Get all relationships for both houseguests
+    const relationships1 = this.relationships.get(guestId1);
+    const relationships2 = this.relationships.get(guestId2);
+    
+    if (!relationships1 || !relationships2) return baseScore;
+    
+    let groupModifier = 0;
+    let relationshipsConsidered = 0;
+    
+    // Check shared relationships (both positive and negative)
+    relationships1.forEach((rel1, sharedId) => {
+      if (sharedId !== guestId2 && relationships2.has(sharedId)) {
+        const rel2 = relationships2.get(sharedId)!;
+        
+        // If both have similar feelings toward a third person, strengthen relationship
+        // If opposite feelings, weaken relationship
+        const similarity = Math.sign(rel1.score) === Math.sign(rel2.score) ? 1 : -1;
+        const magnitude = Math.min(Math.abs(rel1.score), Math.abs(rel2.score)) / 100;
+        
+        groupModifier += similarity * magnitude;
+        relationshipsConsidered++;
+      }
+    });
+    
+    // If no shared relationships considered, return base score
+    if (relationshipsConsidered === 0) return baseScore;
+    
+    // Average the modifiers and apply group dynamics weight
+    const averageModifier = groupModifier / relationshipsConsidered * config.GROUP_DYNAMICS_WEIGHT * 10;
+    const effectiveScore = Math.max(config.RELATIONSHIP_MIN, 
+      Math.min(config.RELATIONSHIP_MAX, baseScore + averageModifier));
+    
+    return effectiveScore;
+  }
+
   setRelationship(guestId1: string, guestId2: string, score: number, note?: string): void {
     const relationship = this.getOrCreateRelationship(guestId1, guestId2);
-    relationship.score = Math.max(-100, Math.min(100, score)); // Clamp between -100 and 100
+    relationship.score = Math.max(config.RELATIONSHIP_MIN, Math.min(config.RELATIONSHIP_MAX, score)); // Clamp between -100 and 100
     
     if (note) {
       relationship.notes.push(note);
     }
+    
+    // Update last interaction week
+    relationship.lastInteractionWeek = this.currentWeek;
+  }
+
+  /**
+   * Add a significant relationship event
+   */
+  addRelationshipEvent(
+    guestId1: string, 
+    guestId2: string, 
+    eventType: RelationshipEventType, 
+    description: string, 
+    impactScore: number,
+    decayable: boolean = true,
+    decayRate?: number
+  ): void {
+    const relationship = this.getOrCreateRelationship(guestId1, guestId2);
+    
+    const event: RelationshipEvent = {
+      timestamp: Date.now(),
+      type: eventType,
+      description,
+      impactScore,
+      decayable,
+      decayRate
+    };
+    
+    relationship.events.push(event);
+    relationship.notes.push(description);
+    
+    // Update the relationship score
+    relationship.score = Math.max(config.RELATIONSHIP_MIN, 
+      Math.min(config.RELATIONSHIP_MAX, relationship.score + impactScore));
+    
+    // Update last interaction week
+    relationship.lastInteractionWeek = this.currentWeek;
+    
+    this.logger.debug(`Added relationship event: ${guestId1} -> ${guestId2}: ${eventType} (${impactScore})`);
+  }
+
+  /**
+   * Get all significant events between two houseguests
+   */
+  getRelationshipEvents(guestId1: string, guestId2: string): RelationshipEvent[] {
+    const relationship = this.getOrCreateRelationship(guestId1, guestId2);
+    return [...relationship.events];
+  }
+
+  /**
+   * Calculate reciprocity - how much does the imbalance in relationships affect actions
+   * Returns a modifier value that can be used to adjust decision weights
+   * Positive means guest2 should be more favorable to guest1
+   * Negative means guest2 should be less favorable to guest1
+   */
+  calculateReciprocityModifier(guestId1: string, guestId2: string): number {
+    const rel1to2 = this.getRelationship(guestId1, guestId2);
+    const rel2to1 = this.getRelationship(guestId2, guestId1);
+    
+    // Calculate the imbalance - how much more/less does guest1 like guest2 than vice versa
+    const imbalance = rel1to2 - rel2to1;
+    
+    // Apply reciprocity factor to determine how much this imbalance affects decisions
+    const modifier = imbalance * config.RECIPROCITY_FACTOR / 100;
+    
+    return modifier;
   }
 
   updateRelationship(guestId1: string, guestId2: string, change: number, note?: string): void {
@@ -74,7 +244,7 @@ export class RelationshipSystem {
     this.logger.debug(`Updated relationship: ${guestId1} -> ${guestId2} by ${change} to ${currentScore + change}`);
   }
 
-  updateRelationships(guest1: Houseguest, guest2: Houseguest, change: number, note?: string): void {
+  updateRelationships(guest1: Houseguest, guest2: Houseguest, change: number, note?: string, eventType?: RelationshipEventType): void {
     // Calculate base relationship change
     let actualChange = change;
     
@@ -87,13 +257,69 @@ export class RelationshipSystem {
     
     this.logger.info(`Relationship update: ${guest1.name} -> ${guest2.name}, change: ${actualChange}`);
     
-    // Update relationship from guest1 to guest2
-    this.updateRelationship(guest1.id, guest2.id, actualChange, note);
+    // Add as relationship event if eventType is provided
+    if (eventType) {
+      this.addRelationshipEvent(
+        guest1.id, 
+        guest2.id, 
+        eventType, 
+        note || `Relationship changed by ${actualChange}`, 
+        actualChange
+      );
+    } else {
+      // Otherwise just update score directly
+      this.updateRelationship(guest1.id, guest2.id, actualChange, note);
+    }
     
     // Update relationship from guest2 to guest1 (with a slight variation)
     // The reciprocal relationship changes slightly differently
     const reciprocalChange = change * (0.8 + Math.random() * 0.4); // 80-120% of original change
-    this.updateRelationship(guest2.id, guest1.id, reciprocalChange, note);
+    
+    if (eventType) {
+      this.addRelationshipEvent(
+        guest2.id, 
+        guest1.id, 
+        eventType, 
+        note || `Relationship changed by ${reciprocalChange.toFixed(1)}`, 
+        reciprocalChange
+      );
+    } else {
+      this.updateRelationship(guest2.id, guest1.id, reciprocalChange, note);
+    }
+  }
+
+  /**
+   * Record a betrayal event (strong negative effect)
+   */
+  recordBetrayal(betrayerId: string, targetId: string, description: string): void {
+    // Add a significant betrayal event with the configured penalty
+    this.addRelationshipEvent(
+      targetId,
+      betrayerId,
+      'betrayal',
+      description,
+      config.BACKSTAB_PENALTY,
+      false // Don't decay betrayals, they're remembered
+    );
+    
+    this.logger.info(`Betrayal recorded: ${betrayerId} betrayed ${targetId}: ${description}`);
+  }
+  
+  /**
+   * Record a saved ally event (strong positive effect)
+   */
+  recordSave(saviorId: string, savedId: string, description: string): void {
+    // Add a significant save event with the configured bonus
+    this.addRelationshipEvent(
+      savedId,
+      saviorId,
+      'saved',
+      description,
+      config.SAVED_ALLY_BONUS,
+      false // Don't decay saves, they're remembered
+    );
+    
+    this.logger.info(`Save recorded: ${saviorId} saved ${savedId}: ${description}`);
   }
 
   getRelationshipLevel(guestId1: string, guestId2: string): string {
@@ -174,7 +400,9 @@ export class RelationshipSystem {
         guestMap.set(guestId2, {
           score: rel.score || 0,
           alliance: rel.alliance || null,
-          notes: Array.isArray(rel.notes) ? [...rel.notes] : []
+          notes: Array.isArray(rel.notes) ? [...rel.notes] : [],
+          events: Array.isArray(rel.events) ? [...rel.events] : [],
+          lastInteractionWeek: rel.lastInteractionWeek || this.currentWeek
         });
       });
     });

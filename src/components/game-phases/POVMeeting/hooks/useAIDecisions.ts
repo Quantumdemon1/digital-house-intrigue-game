@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { GameState } from '@/contexts/types/game-context-types';
+import { config } from '@/config';
 
 interface UseAIDecisionsProps {
   meetingStage: 'initial' | 'selectSaved' | 'selectReplacement' | 'complete';
@@ -84,40 +85,102 @@ export const useAIDecisions = ({
     ) {
       let decision = false;
       
+      // Always use veto if nominated
       if (povHolder.isNominated) {
         decision = true;
-      } else {
-        const getRelationshipWithNominees = () => {
-          let bestRelationship = -101;
-          let bestNominee = null;
-          
-          for (const nominee of nominees) {
-            if (gameState.relationships.has(povHolder.id)) {
-              const relMap = gameState.relationships.get(povHolder.id);
-              if (relMap && relMap.has(nominee.id)) {
-                const rel = relMap.get(nominee.id)?.score || 0;
-                if (rel > bestRelationship) {
-                  bestRelationship = rel;
-                  bestNominee = nominee;
-                }
-              }
-            }
-          }
-          
-          return { bestNominee, bestRelationship };
-        };
-        
-        const { bestNominee, bestRelationship } = getRelationshipWithNominees();
-        
-        if (bestRelationship > 30 && bestNominee) {
-          decision = true;
-          setTimeout(() => handleSaveNominee(bestNominee), 1500);
-        } else {
-          decision = false;
-        }
+        setTimeout(() => handleVetoDecision(decision), 2000);
+        return;
       }
       
-      setTimeout(() => handleVetoDecision(decision), 2000);
+      // For each nominee, check relationship scores and significant events
+      const nomineeData = nominees.map(nominee => {
+        const relMap = gameState.relationships.get(povHolder.id);
+        const relationship = relMap?.get(nominee.id);
+        
+        // Base score
+        let score = relationship?.score || 0;
+        
+        // Enhance with effective score (group dynamics)
+        if (gameState.relationships.size > 0) {
+          // Check for allies-of-allies or enemies-of-allies
+          let groupDynamicsScore = 0;
+          let relationsChecked = 0;
+          
+          relMap?.forEach((otherRel, otherId) => {
+            if (otherId !== nominee.id) {
+              const nomineeRelWithOther = gameState.relationships.get(nominee.id)?.get(otherId)?.score || 0;
+              
+              // If both have similar feelings toward a third person, strengthen relationship
+              // If opposite feelings, weaken relationship
+              const similarity = Math.sign(otherRel.score) === Math.sign(nomineeRelWithOther) ? 1 : -1;
+              const magnitude = Math.min(Math.abs(otherRel.score), Math.abs(nomineeRelWithOther)) / 100;
+              
+              groupDynamicsScore += similarity * magnitude;
+              relationsChecked++;
+            }
+          });
+          
+          // Apply group dynamics modifier
+          if (relationsChecked > 0) {
+            const averageModifier = groupDynamicsScore / relationsChecked * config.GROUP_DYNAMICS_WEIGHT * 10;
+            score += averageModifier;
+          }
+        }
+        
+        // Check for significant events that might affect decision
+        const events = relationship?.events || [];
+        const significantEvents = events.filter(e => 
+          ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type));
+        
+        // Extra score based on significant events
+        const eventBonus = significantEvents.reduce((bonus, event) => {
+          switch (event.type) {
+            case 'betrayal':
+              return bonus - 15; // Less likely to save someone who betrayed you
+            case 'saved':
+              return bonus + 15; // More likely to save someone who saved you
+            case 'alliance_formed':
+              return bonus + 20; // Much more likely to save an ally
+            default:
+              return bonus;
+          }
+        }, 0);
+        
+        return {
+          nominee,
+          score: score + eventBonus,
+          hasAlliance: events.some(e => e.type === 'alliance_formed'),
+          wasBetrayed: events.some(e => e.type === 'betrayal')
+        };
+      });
+      
+      // Find the nominee with best relationship
+      const bestNominee = nomineeData.reduce(
+        (best, current) => current.score > best.score ? current : best, 
+        { nominee: null, score: -101, hasAlliance: false, wasBetrayed: false }
+      );
+      
+      // Make decision based on relationship score and other factors
+      if (bestNominee.nominee) {
+        if (
+          bestNominee.score > 30 || // Good relationship
+          bestNominee.hasAlliance || // In alliance
+          (povHolder.traits && povHolder.traits.includes('Loyal') && bestNominee.score > 10) // Loyal personality
+        ) {
+          decision = true;
+          setTimeout(() => {
+            handleVetoDecision(decision);
+            setTimeout(() => handleSaveNominee(bestNominee.nominee!), 1500);
+          }, 2000);
+        } else {
+          decision = false;
+          setTimeout(() => handleVetoDecision(decision), 2000);
+        }
+      } else {
+        // Fall back to default
+        decision = Math.random() > 0.7; // 30% chance to use veto randomly  
+        setTimeout(() => handleVetoDecision(decision), 2000);
+      }
     }
   }, [meetingStage, povHolder, useVeto, nominees, handleSaveNominee, handleVetoDecision, gameState.relationships]);
   
@@ -138,23 +201,48 @@ export const useAIDecisions = ({
       );
       
       if (eligibleReplacements.length > 0) {
-        let worstRelationship = 101;
-        let worstHouseguest = eligibleReplacements[0];
-        
-        for (const houseguest of eligibleReplacements) {
-          if (gameState.relationships.has(hoh.id)) {
-            const relMap = gameState.relationships.get(hoh.id);
-            if (relMap && relMap.has(houseguest.id)) {
-              const rel = relMap.get(houseguest.id)?.score || 0;
-              if (rel < worstRelationship) {
-                worstRelationship = rel;
-                worstHouseguest = houseguest;
-              }
+        // Calculate scores for each eligible replacement
+        const replacementData = eligibleReplacements.map(houseguest => {
+          const relMap = gameState.relationships.get(hoh.id);
+          const relationship = relMap?.get(houseguest.id);
+          
+          // Base score (lower is worse, more likely to be nominated)
+          let score = relationship?.score || 0;
+          
+          // Check for significant events
+          const events = relationship?.events || [];
+          const significantEvents = events.filter(e => 
+            ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type));
+          
+          // Extra score based on significant events
+          const eventEffect = significantEvents.reduce((effect, event) => {
+            switch (event.type) {
+              case 'betrayal':
+                return effect - 30; // Much more likely to nominate someone who betrayed you
+              case 'saved':
+                return effect + 20; // Less likely to nominate someone who saved you
+              case 'alliance_formed':
+                return effect + 40; // Much less likely to nominate an ally
+              default:
+                return effect;
             }
-          }
-        }
+          }, 0);
+          
+          // Calculate reciprocity - if they like you less than you like them, more likely to nominate
+          const theirRel = gameState.relationships.get(houseguest.id)?.get(hoh.id)?.score || 0;
+          const reciprocityEffect = (theirRel - score) * config.RECIPROCITY_FACTOR;
+          
+          return {
+            houseguest,
+            score: score + eventEffect + reciprocityEffect
+          };
+        });
         
-        setTimeout(() => handleSelectReplacement(worstHouseguest), 2500);
+        // Sort by score (lowest first = most likely to nominate)
+        replacementData.sort((a, b) => a.score - b.score);
+        const worstRelationship = replacementData[0];
+        
+        setTimeout(() => handleSelectReplacement(worstRelationship.houseguest), 2500);
       }
     }
   }, [meetingStage, savedNominee, hoh, replacementNominee, activeHouseguests, handleSelectReplacement, gameState.relationships]);

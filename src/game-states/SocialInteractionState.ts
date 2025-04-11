@@ -1,4 +1,3 @@
-
 /**
  * @file SocialInteractionState.ts
  * @description Social interaction state
@@ -8,6 +7,7 @@ import { GameStateBase, SocialActionChoice } from './GameStateBase';
 import { NominationState } from './NominationState';
 import type { IGameControllerFacade } from '../types/interfaces';
 import { Houseguest } from '../models/houseguest';
+import { RelationshipEventType } from '../models/relationship-event';
 
 // Define possible locations
 export const LOCATIONS = ['living-room', 'kitchen', 'bedroom', 'backyard', 'hoh-room', 'diary-room'];
@@ -90,8 +90,27 @@ export class SocialInteractionState extends GameStateBase {
         disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
       });
     }
+    
+    // 5. New action: Share Information (which can build trust or be a lie)
+    if (presentGuests.length > 0) {
+      actions.push({
+        text: "Share Game Information",
+        actionId: 'share_info',
+        parameters: { type: 'honest' },
+        disabled: this.interactionsRemaining <= 0,
+        disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+      });
+      
+      actions.push({
+        text: "Spread Misinformation",
+        actionId: 'share_info',
+        parameters: { type: 'deceptive' },
+        disabled: this.interactionsRemaining <= 0,
+        disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+      });
+    }
 
-    // 5. Advance Phase Action
+    // 6. Advance Phase Action
     actions.push({
       text: `Proceed to ${this.targetPhase.name.replace('State', '')}`,
       actionId: 'advance_phase'
@@ -125,18 +144,143 @@ export class SocialInteractionState extends GameStateBase {
         const targetName = params?.targetName;
         if (targetId && targetName) {
           this.getLogger().info(`You approach ${targetName} to talk...`);
-          // Simple placeholder for now
-          // In a complete implementation, this would trigger AI conversation
           
-          // Simulate a response for now
+          // Implement a richer social interaction system
+          // Get the player houseguest
+          const playerGuest = this.game.houseguests.find(h => h.isPlayer);
+          if (!playerGuest) break;
+          
+          // Get relationship data
+          const targetGuest = this.game.getHouseguestById(targetId);
+          const currentRelationship = this.controller.relationshipSystem.getRelationship(playerGuest.id, targetId);
+          const reciprocityFactor = this.controller.relationshipSystem.calculateReciprocityModifier(targetId, playerGuest.id);
+          
+          // Calculate response based on existing relationship and reciprocity factor
+          const baseChangeAmount = 2;
+          let finalChangeAmount = baseChangeAmount;
+          
+          // Apply reciprocity - if they like you more than you like them, they'll be more responsive
+          if (reciprocityFactor > 0) {
+            finalChangeAmount += Math.ceil(reciprocityFactor * 2);
+          }
+          
+          // Random element based on personality
+          const personalityBonus = Math.floor(Math.random() * 3);
+          finalChangeAmount += personalityBonus;
+          
+          // Simulate a response and update relationship
           setTimeout(() => {
-            this.getLogger().info(`${targetName} says: "Hey there! What's up?"`);
+            const responseOptions = [
+              "Hey there! What's up?",
+              "Good to see you!",
+              "How's your game going?",
+              "Want to talk strategy?"
+            ];
+            const response = responseOptions[Math.floor(Math.random() * responseOptions.length)];
+            this.getLogger().info(`${targetName} says: "${response}"`);
             
-            // Update relationship slightly
-            const playerGuest = this.game.houseguests[0]; // Assuming player is first houseguest
-            this.controller.relationshipSystem.updateRelationship(playerGuest.id, targetId, 2);
+            // Update relationship as a significant event
+            this.controller.relationshipSystem.addRelationshipEvent(
+              playerGuest.id,
+              targetId,
+              'general_interaction',
+              `You had a positive conversation with ${targetName}.`,
+              finalChangeAmount,
+              true
+            );
             
-            this.getLogger().info(`Your relationship with ${targetName} has improved slightly.`);
+            // Reciprocal relationship change for the target
+            this.controller.relationshipSystem.addRelationshipEvent(
+              targetId,
+              playerGuest.id,
+              'general_interaction',
+              `${playerGuest.name} sought you out for a conversation.`,
+              finalChangeAmount * 0.8,
+              true
+            );
+            
+            this.getLogger().info(`Your relationship with ${targetName} improved by ${finalChangeAmount}.`);
+          }, 500);
+        }
+        break;
+        
+      case 'share_info':
+        const infoType = params?.type;
+        const presentGuests = this.game.getActiveHouseguests().filter(hg => !hg.isPlayer);
+        const randomTarget = presentGuests[Math.floor(Math.random() * presentGuests.length)];
+        const playerGuest = this.game.houseguests.find(h => h.isPlayer);
+        
+        if (!playerGuest || !randomTarget) break;
+        
+        if (infoType === 'honest') {
+          // Sharing honest information builds trust
+          this.getLogger().info(`You share honest game information with ${randomTarget.name}.`);
+          
+          setTimeout(() => {
+            this.getLogger().info(`${randomTarget.name} appreciates your honesty!`);
+            
+            // Record as significant event - builds trust
+            this.controller.relationshipSystem.addRelationshipEvent(
+              playerGuest.id,
+              randomTarget.id,
+              'shared_info',
+              `You shared valuable game information with ${randomTarget.name}.`,
+              5,
+              false // Trust building is remembered
+            );
+            
+            // Reciprocal effect - they trust you more
+            this.controller.relationshipSystem.addRelationshipEvent(
+              randomTarget.id,
+              playerGuest.id,
+              'shared_info',
+              `${playerGuest.name} shared valuable game information with you.`,
+              7,
+              false // Trust building is remembered
+            );
+          }, 500);
+        } else if (infoType === 'deceptive') {
+          // Lying can damage relationships if caught
+          this.getLogger().info(`You spread misinformation to ${randomTarget.name}.`);
+          
+          // 40% chance of getting caught
+          const caughtLying = Math.random() < 0.4;
+          
+          setTimeout(() => {
+            if (caughtLying) {
+              this.getLogger().info(`${randomTarget.name} caught you in a lie!`);
+              
+              // Record as significant betrayal event
+              this.controller.relationshipSystem.recordBetrayal(
+                playerGuest.id,
+                randomTarget.id,
+                `${playerGuest.name} lied to you about game information.`
+              );
+              
+              // Other houseguests may hear about this
+              const witnesses = this.game.getActiveHouseguests()
+                .filter(hg => !hg.isPlayer && hg.id !== randomTarget.id)
+                .slice(0, 2); // Up to 2 other houseguests find out
+                
+              witnesses.forEach(witness => {
+                this.controller.relationshipSystem.updateRelationship(
+                  witness.id,
+                  playerGuest.id,
+                  -5,
+                  `${witness.name} heard that you lied to ${randomTarget.name}.`
+                );
+              });
+            } else {
+              this.getLogger().info(`${randomTarget.name} believes your misinformation!`);
+              
+              // Short-term boost but potential for future damage
+              this.controller.relationshipSystem.updateRelationship(
+                randomTarget.id,
+                playerGuest.id,
+                3,
+                `${randomTarget.name} trusts your information.`
+              );
+            }
           }, 500);
         }
         break;
@@ -152,28 +296,101 @@ export class SocialInteractionState extends GameStateBase {
         
         if (randomGuest) {
           setTimeout(() => {
-            // 70% chance of acceptance
-            const accepted = Math.random() > 0.3;
+            const playerGuest = this.game.houseguests.find(hg => hg.isPlayer);
+            if (!playerGuest) return;
+            
+            // Get relationship data
+            const relationshipScore = this.controller.relationshipSystem.getEffectiveRelationship(
+              randomGuest.id,
+              playerGuest.id
+            );
+            
+            // Decision based on relationship - better relationship = higher chance of acceptance
+            const baseAcceptanceChance = 0.3;
+            const relationshipFactor = Math.max(0, Math.min(0.5, relationshipScore / 100));
+            const acceptanceChance = baseAcceptanceChance + relationshipFactor;
+            
+            // More likely to accept if they have a good relationship
+            const accepted = Math.random() < acceptanceChance;
+            
             if (accepted) {
               this.getLogger().info(`${randomGuest.name} whispers: "I'm in. Let's work together."`);
+              
+              // Record alliance formation in relationship events
+              this.controller.relationshipSystem.addRelationshipEvent(
+                playerGuest.id,
+                randomGuest.id,
+                'alliance_formed',
+                `You formed an alliance with ${randomGuest.name}.`,
+                10,
+                false // Alliances are significant and remembered
+              );
+              
+              // Reciprocal event
+              this.controller.relationshipSystem.addRelationshipEvent(
+                randomGuest.id,
+                playerGuest.id,
+                'alliance_formed',
+                `You formed an alliance with ${playerGuest.name}.`,
+                10,
+                false
+              );
+              
               // Create alliance (in a full implementation)
               this.getLogger().info(`You've formed an alliance with ${randomGuest.name}!`);
             } else {
               this.getLogger().info(`${randomGuest.name} says: "I need to think about it..."`);
+              
+              // Still might have a small positive effect
+              this.controller.relationshipSystem.updateRelationship(
+                randomGuest.id,
+                playerGuest.id,
+                2,
+                `You considered ${playerGuest.name}'s alliance offer.`
+              );
             }
           }, 1000);
         }
         break;
 
       case 'check_relationships':
-        // Simple logging of relationships
+        // Expanded relationship checking that includes significant events
         this.getLogger().info("--- Your Relationships ---");
         const playerGuest = this.game.houseguests[0]; // Assuming player is first houseguest
+        
+        if (!playerGuest) break;
+        
         this.game.houseguests.forEach(guest => {
-          if (guest.id !== playerGuest.id) {
-            const score = this.controller.relationshipSystem.getRelationship(playerGuest.id, guest.id);
-            const description = this.describeRelationship(score);
-            this.getLogger().info(`${guest.name}: ${description} (${score})`);
+          if (guest.id !== playerGuest.id && !guest.isEvicted) {
+            const baseScore = this.controller.relationshipSystem.getRelationship(playerGuest.id, guest.id);
+            const effectiveScore = this.controller.relationshipSystem.getEffectiveRelationship(playerGuest.id, guest.id);
+            const description = this.describeRelationship(effectiveScore);
+            
+            this.getLogger().info(`${guest.name}: ${description} (${effectiveScore.toFixed(1)})`);
+            
+            // Get significant events
+            if (this.controller.relationshipSystem.getRelationshipEvents) {
+              const events = this.controller.relationshipSystem.getRelationshipEvents(playerGuest.id, guest.id)
+                .filter(e => ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type) ||
+                      Math.abs(e.impactScore) >= 15);
+                      
+              // Display significant events
+              if (events.length > 0) {
+                this.getLogger().info(`  Significant events with ${guest.name}:`);
+                events.forEach(event => {
+                  this.getLogger().info(`  - ${event.description}`);
+                });
+              }
+              
+              // Show reciprocity factor
+              const reciprocity = this.controller.relationshipSystem.calculateReciprocityModifier(guest.id, playerGuest.id);
+              if (Math.abs(reciprocity) > 0.1) {
+                const reciprocityDesc = reciprocity > 0 
+                  ? `${guest.name} likes you more than you like them.`
+                  : `You like ${guest.name} more than they like you.`;
+                this.getLogger().info(`  * ${reciprocityDesc}`);
+              }
+            }
           }
         });
         break;

@@ -1,6 +1,7 @@
 
 import type { Houseguest } from './houseguest';
 import type { Alliance } from './alliance';
+import type { RelationshipEvent } from './relationship-event';
 
 export type GamePhase = 
   | 'Setup'           // Game setup, player creation
@@ -17,6 +18,8 @@ export type Relationship = {
   score: number;        // -100 to 100 scale
   alliance: string | null; // alliance ID if they're in an alliance together
   notes: string[];      // Important events that affected relationship
+  events: RelationshipEvent[]; // History of significant relationship events
+  lastInteractionWeek: number; // Last week there was a direct interaction
 };
 
 export type RelationshipMap = Map<string, Map<string, Relationship>>;
@@ -80,7 +83,13 @@ export function getOrCreateRelationship(
   // Get or create the relationship
   let relationship = guest1Map.get(guest2Id);
   if (!relationship) {
-    relationship = { score: 0, alliance: null, notes: [] };
+    relationship = { 
+      score: 0, 
+      alliance: null, 
+      notes: [],
+      events: [],
+      lastInteractionWeek: 1
+    };
     guest1Map.set(guest2Id, relationship);
   }
   
