@@ -9,6 +9,7 @@ import type { CompetitionSystem } from '../../systems/competition-system';
 import type { AIIntegrationSystem } from '../../systems/ai-integration';
 import type { GameRecapGenerator } from '../../utils/recap';
 import type { Logger } from '../../utils/logger';
+import type { RelationshipEvent, RelationshipEventType } from '../../models/relationship-event';
 
 // --- Action Definitions ---
 
@@ -42,7 +43,7 @@ type GameStateAction =
   | { type: 'SET_HOH'; payload: Houseguest }
   | { type: 'SET_POV_WINNER'; payload: Houseguest }
   | { type: 'SET_NOMINEES'; payload: Houseguest[] }
-  | { type: 'UPDATE_RELATIONSHIPS'; payload: { guestId1: string; guestId2: string; change: number; note?: string } }
+  | { type: 'UPDATE_RELATIONSHIPS'; payload: { guestId1: string; guestId2: string; change: number; note?: string; eventType?: RelationshipEventType } }
   | { type: 'SET_EVICTION_VOTE'; payload: { voterId: string; nomineeId: string } }
   | { type: 'EVICT_HOUSEGUEST'; payload: { evicted: Houseguest; toJury: boolean } }
   | { type: 'SET_PHASE'; payload: GamePhase }
@@ -70,14 +71,7 @@ export interface GameState {
     score: number; 
     alliance: string | null; 
     notes: string[];
-    events: Array<{
-      timestamp: number;
-      type: string;
-      description: string;
-      impactScore: number;
-      decayable: boolean;
-      decayRate?: number;
-    }>;
+    events: RelationshipEvent[];
     lastInteractionWeek: number;
   }>>;
   evictionVotes: Record<string, string>;

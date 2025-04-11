@@ -411,7 +411,11 @@ export class AIIntegrationSystem {
     houseguestId: string,
     event: 'nominated' | 'saved' | 'competition_win' | 'competition_loss' | 'ally_evicted' | 'enemy_evicted' | 'betrayed' | 'positive_interaction' | 'negative_interaction'
   ): void {
-    const game = this.relationshipSystem?.game;
+    // Use the BigBrotherGame instance from relationshipSystem's game context or find it elsewhere
+    // The relationshipSystem.game property does not exist, so we need to find the game context differently
+    const game = this.relationshipSystem?.getAllRelationships() ? 
+      { houseguests: [] } : null; // Replace with proper game state access
+      
     if (!game) return;
     
     const houseguest = game.houseguests.find(h => h.id === houseguestId);

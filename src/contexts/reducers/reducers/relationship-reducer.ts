@@ -1,3 +1,4 @@
+
 import { GameState, getOrCreateRelationship } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { RelationshipEventType } from '../../../models/relationship-event';
@@ -5,13 +6,13 @@ import { config } from '../../../config';
 
 export function relationshipReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'UPDATE_RELATIONSHIPS') {
-    const { guestId1, guestId2, change, note, eventType } = action.payload as { 
+    const { guestId1, guestId2, change, note, eventType } = (action.payload as { 
       guestId1: string; 
       guestId2: string; 
       change: number; 
       note?: string;
       eventType?: RelationshipEventType;
-    };
+    });
     const newRelationships = new Map(state.relationships);
     
     // Get the houseguests from state

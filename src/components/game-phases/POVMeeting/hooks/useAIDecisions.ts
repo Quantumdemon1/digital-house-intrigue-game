@@ -1,7 +1,9 @@
+
 import { useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { GameState } from '@/contexts/types/game-context-types';
 import { config } from '@/config';
+import { RelationshipEventType } from '@/models/relationship-event';
 
 interface UseAIDecisionsProps {
   meetingStage: 'initial' | 'selectSaved' | 'selectReplacement' | 'complete';
@@ -158,8 +160,11 @@ export const useAIDecisions = ({
         
         // Check for significant events that might affect decision
         const events = relationship?.events || [];
-        const significantEvents = events.filter(e => 
-          ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type));
+        // Check if events exists and is an array before filtering
+        const significantEvents = Array.isArray(events) ? 
+          events.filter(e => 
+            ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type)) : 
+          [];
         
         // Extra score based on significant events
         const eventBonus = significantEvents.reduce((bonus, event) => {
@@ -178,8 +183,8 @@ export const useAIDecisions = ({
         return {
           nominee,
           score: score + eventBonus + mentalStateModifier,
-          hasAlliance: events.some(e => e.type === 'alliance_formed'),
-          wasBetrayed: events.some(e => e.type === 'betrayal')
+          hasAlliance: events && Array.isArray(events) ? events.some(e => e.type === 'alliance_formed') : false,
+          wasBetrayed: events && Array.isArray(events) ? events.some(e => e.type === 'betrayal') : false
         };
       });
       
@@ -256,8 +261,11 @@ export const useAIDecisions = ({
           
           // Check for significant events
           const events = relationship?.events || [];
-          const significantEvents = events.filter(e => 
-            ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type));
+          // Check if events exists and is an array before filtering
+          const significantEvents = Array.isArray(events) ? 
+            events.filter(e => 
+              ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type)) : 
+            [];
           
           // Extra score based on significant events
           const eventEffect = significantEvents.reduce((effect, event) => {
