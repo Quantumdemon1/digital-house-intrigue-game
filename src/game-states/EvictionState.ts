@@ -31,11 +31,11 @@ export class EvictionState extends GameStateBase {
           // After tiebreaker vote, advance to next week/phase
           setTimeout(() => {
             // If we're in finale, go to GameOver, otherwise advance week
-            if (this.game.week >= this.gameController.getGameSettings().finalWeek) {
-              this.gameController.changeState('GameOverState');
+            if (this.game.week >= this.controller.getGameSettings().finalWeek) {
+              this.controller.changeState('GameOverState');
             } else {
               this.game.advanceWeek();
-              this.gameController.changeState('HohCompetitionState');
+              this.controller.changeState('HohCompetitionState');
             }
           }, 3000);
           return true;
@@ -45,11 +45,11 @@ export class EvictionState extends GameStateBase {
         // After eviction is complete, advance to next week/phase
         setTimeout(() => {
           // If we're in finale, go to GameOver, otherwise advance week
-          if (this.game.week >= this.gameController.getGameSettings().finalWeek) {
-            this.gameController.changeState('GameOverState');
+          if (this.game.week >= this.controller.getGameSettings().finalWeek) {
+            this.controller.changeState('GameOverState');
           } else {
             this.game.advanceWeek();
-            this.gameController.changeState('HohCompetitionState');
+            this.controller.changeState('HohCompetitionState');
           }
         }, 2000);
         return true;

@@ -17,7 +17,7 @@ export class PovCompetitionState extends GameStateBase {
       this.getLogger().info(`AI PoV winner ${povWinner.name} automatically proceeding to PoV meeting`);
       // After a small delay to allow UI to update, advance to PoV meeting phase
       setTimeout(() => {
-        this.gameController.changeState('PovMeetingState');
+        this.controller.changeState('PovMeetingState');
       }, 2000);
     }
   }
@@ -33,7 +33,7 @@ export class PovCompetitionState extends GameStateBase {
           const povWinner = this.game.getHouseguestById(params.povId);
           if (povWinner && !povWinner.isPlayer) {
             setTimeout(() => {
-              this.gameController.changeState('PovMeetingState');
+              this.controller.changeState('PovMeetingState');
             }, 2000);
           }
           return true;

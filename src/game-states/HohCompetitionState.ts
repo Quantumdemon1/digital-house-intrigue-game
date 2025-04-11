@@ -17,7 +17,7 @@ export class HohCompetitionState extends GameStateBase {
       this.getLogger().info(`AI HoH ${hoh.name} automatically proceeding to nominations`);
       // After a small delay to allow UI to update, advance to nomination phase
       setTimeout(() => {
-        this.gameController.changeState('NominationState');
+        this.controller.changeState('NominationState');
       }, 2000);
     }
   }

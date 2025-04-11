@@ -30,7 +30,7 @@ export class NominationState extends GameStateBase {
           
           // After nominations are made, automatically advance to PoV competition
           setTimeout(() => {
-            this.gameController.changeState('PovCompetitionState');
+            this.controller.changeState('PovCompetitionState');
           }, 2000);
           return true;
         }
