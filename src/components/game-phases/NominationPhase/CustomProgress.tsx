@@ -13,6 +13,9 @@ const CustomProgress: React.FC<CustomProgressProps> = ({
   className, 
   indicatorClassName 
 }) => {
+  // Ensure value is between 0 and 100
+  const safeValue = Math.max(0, Math.min(100, value));
+  
   return (
     <div 
       className={cn(
@@ -25,7 +28,7 @@ const CustomProgress: React.FC<CustomProgressProps> = ({
           "h-full flex-1 transition-all",
           indicatorClassName || "bg-primary"
         )}
-        style={{ width: `${value}%` }}
+        style={{ width: `${safeValue}%` }}
       />
     </div>
   );

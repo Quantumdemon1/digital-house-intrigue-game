@@ -23,17 +23,25 @@ export const useNominationTimer = ({
 
   // Timer countdown effect
   useEffect(() => {
-    // Only start timer if player is active and ceremony isn't complete
+    // Only run timer if player is active, ceremony isn't complete, and time is remaining
     if (!isPlayer || isComplete || timeRemaining <= 0) return;
     
     console.log("Starting nomination timer countdown from", timeRemaining);
     
-    const timer = setTimeout(() => {
-      setTimeRemaining(prevTime => prevTime - 1);
+    const timer = setInterval(() => {
+      setTimeRemaining(prevTime => {
+        const newTime = prevTime - 1;
+        if (newTime <= 0) {
+          clearInterval(timer); // Clear interval when we reach zero
+          return 0;
+        }
+        return newTime;
+      });
     }, 1000);
     
-    return () => clearTimeout(timer);
-  }, [timeRemaining, isPlayer, isComplete]);
+    // Clean up interval on unmount or when dependencies change
+    return () => clearInterval(timer);
+  }, [isPlayer, isComplete, timeRemaining]);
   
   // Handle timer expiration
   useEffect(() => {
