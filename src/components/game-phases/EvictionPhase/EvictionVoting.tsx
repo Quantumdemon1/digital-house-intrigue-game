@@ -27,7 +27,7 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
   timeRemaining,
   totalTime
 }) => {
-  const { getRelationship } = useGame();
+  const { getRelationship, logger } = useGame();
   
   const {
     votes,
@@ -54,7 +54,26 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
     const votesForNominee1 = Object.values(votes).filter(v => v === nominees[0].id).length;
     const votesForNominee2 = Object.values(votes).filter(v => v === nominees[1].id).length;
     hohNeedsTieBreaker = votesForNominee1 === votesForNominee2;
+    
+    // Log the tie situation for verification
+    if (hohNeedsTieBreaker) {
+      logger.info(`Eviction vote TIE detected: ${votesForNominee1}-${votesForNominee2}. HOH ${hoh.name} needs to break the tie.`);
+    }
   }
+
+  // Handle HOH tiebreaker vote
+  const handleHohTiebreaker = (hohId: string, nomineeId: string) => {
+    logger.info(`Player Action: HOH ${hoh?.name} breaking tie by voting to evict ${nominees.find(n => n.id === nomineeId)?.name}`);
+    onVoteSubmit(hohId, nomineeId);
+  };
+  
+  // Enhance player vote with logging
+  const enhancedPlayerVote = (nomineeId: string) => {
+    if (currentVoter) {
+      logger.info(`Player Action: ${currentVoter.name} voting to evict ${nominees.find(n => n.id === nomineeId)?.name}`);
+    }
+    handlePlayerVote(nomineeId);
+  };
   
   return (
     <div className="space-y-6">
@@ -89,7 +108,7 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
           isPlayerVoting={isPlayerVoting}
           isVoting={isVoting}
           showVote={showVote}
-          onVote={handlePlayerVote}
+          onVote={enhancedPlayerVote}
         />
       )}
       
@@ -97,7 +116,7 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
         <HohTiebreaker 
           hoh={hoh} 
           nominees={nominees} 
-          onVote={onVoteSubmit} 
+          onVote={handleHohTiebreaker} 
         />
       )}
       

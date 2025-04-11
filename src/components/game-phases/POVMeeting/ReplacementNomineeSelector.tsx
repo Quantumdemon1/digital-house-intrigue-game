@@ -13,7 +13,7 @@ const ReplacementNomineeSelector: React.FC<ReplacementNomineeSelectorProps> = ({
   eligibleHouseguests,
   onSelect
 }) => {
-  const { gameState } = useGame();
+  const { gameState, logger } = useGame();
   const hoh = gameState.hohWinner;
   
   // Sort houseguests by relationship with HoH if HoH exists
@@ -29,6 +29,12 @@ const ReplacementNomineeSelector: React.FC<ReplacementNomineeSelectorProps> = ({
     return getRelationship(a.id) - getRelationship(b.id);
   });
 
+  // Enhanced select handler with logging
+  const handleSelectNominee = (nominee: Houseguest) => {
+    logger.info(`Player Action: HoH ${hoh?.name} selecting ${nominee.name} as replacement nominee`);
+    onSelect(nominee);
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -37,7 +43,7 @@ const ReplacementNomineeSelector: React.FC<ReplacementNomineeSelectorProps> = ({
             key={houseguest.id}
             variant="outline"
             className="h-auto py-4 flex flex-col items-center border-2 hover:border-bb-red hover:bg-red-50 transition-colors"
-            onClick={() => onSelect(houseguest)}
+            onClick={() => handleSelectNominee(houseguest)}
           >
             <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-lg mb-2">
               {houseguest.name.charAt(0)}

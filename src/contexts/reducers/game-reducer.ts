@@ -8,6 +8,7 @@ import { relationshipReducer } from './reducers/relationship-reducer';
 import { evictionReducer } from './reducers/eviction-reducer';
 import { gameProgressReducer } from './reducers/game-progress-reducer';
 import { logReducer } from './reducers/log-reducer';
+import { playerActionReducer } from './reducers/player-action-reducer';
 
 // Game reducer function that delegates to specific reducers based on action type
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -47,6 +48,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'LOG_EVENT':
       return logReducer(state, action);
     
+    // Player action handling
+    case 'PLAYER_ACTION':
+      return playerActionReducer(state, action);
+    
     // System actions (usually handled in the context provider)
     case 'INITIALIZE_GAME':
     case 'START_NEW_GAME_INSTANCE':
@@ -55,7 +60,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'LOAD_GAME_REQUEST':
     case 'TOGGLE_PAUSE':
     case 'FORCE_REFRESH':
-    case 'PLAYER_ACTION':
     case 'SHOW_NARRATOR_MESSAGE':
     case 'SHOW_DIALOGUE':
       // These actions are typically handled in the GameContext provider

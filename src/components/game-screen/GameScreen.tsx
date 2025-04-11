@@ -1,16 +1,26 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import GamePhaseHeader from '../GamePhaseHeader';
 import GameSidebar from './GameSidebar';
 import PhaseContent from './PhaseContent';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+
 const GameScreen: React.FC = () => {
   const {
-    gameState
+    gameState,
+    logger
   } = useGame();
+  
   const {
     phase
   } = gameState;
+  
+  // Log phase changes for debugging
+  useEffect(() => {
+    logger.info(`Current game phase: ${phase}`);
+  }, [phase, logger]);
+  
   return <div className="container mx-auto p-4 flex flex-col h-full surveillance-bg">
       <GamePhaseHeader />
       
@@ -31,4 +41,5 @@ const GameScreen: React.FC = () => {
       </ResizablePanelGroup>
     </div>;
 };
+
 export default GameScreen;

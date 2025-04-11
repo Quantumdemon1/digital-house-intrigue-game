@@ -3,6 +3,7 @@ import React from 'react';
 import { User } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
+import { useGame } from '@/contexts/GameContext';
 
 interface HohTiebreakerProps {
   hoh: Houseguest;
@@ -11,6 +12,14 @@ interface HohTiebreakerProps {
 }
 
 const HohTiebreaker: React.FC<HohTiebreakerProps> = ({ hoh, nominees, onVote }) => {
+  const { logger } = useGame();
+
+  // Handle the HOH's tiebreaker vote with clear logging
+  const handleTiebreakerVote = (nomineeId: string) => {
+    logger.info(`HoH Tiebreaker: ${hoh.name} casting tiebreaker vote`);
+    onVote(hoh.id, nomineeId);
+  };
+
   return (
     <div className="bg-yellow-50 p-4 rounded-md text-center border border-yellow-200">
       <p className="font-medium mb-2">
@@ -26,7 +35,7 @@ const HohTiebreaker: React.FC<HohTiebreakerProps> = ({ hoh, nominees, onVote }) 
                 key={nominee.id}
                 variant="destructive"
                 className="flex items-center"
-                onClick={() => onVote(hoh.id, nominee.id)}
+                onClick={() => handleTiebreakerVote(nominee.id)}
               >
                 <User className="mr-1 h-4 w-4" />
                 {nominee.name}

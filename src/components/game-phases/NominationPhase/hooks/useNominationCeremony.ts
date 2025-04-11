@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
 
@@ -51,8 +51,11 @@ export const useNominationCeremony = () => {
     };
 
     // Dispatch action to confirm nominations
-    const confirmNominations = () => {
+    const confirmNominations = useCallback(() => {
         if (selectedNomineesUI.length !== 2) return;
+        
+        // Log the action being dispatched
+        logger.info(`Player Action: Confirming nominations for ${selectedNomineesUI.map(n => n.name).join(' and ')}`);
         
         dispatch({
             type: 'PLAYER_ACTION',
@@ -63,14 +66,24 @@ export const useNominationCeremony = () => {
                 }
             }
         });
-    };
+        
+        // Directly set nominees for immediate UI feedback
+        // This may be overridden by the state machine later
+        dispatch({
+            type: 'SET_NOMINEES',
+            payload: selectedNomineesUI
+        });
+        
+    }, [selectedNomineesUI, dispatch, logger]);
 
     // Handle time expiry with random nominees
-    const handleTimeExpired = () => {
+    const handleTimeExpired = useCallback(() => {
         if (ceremonyComplete || !isNominating) return;
         
         const { getRandomNominees } = useGame();
         const randomNominees = getRandomNominees(2, [hoh?.id || '']);
+        
+        logger.info('Nomination timer expired, selecting random nominees');
         
         setSelectedNomineesUI(randomNominees);
         
@@ -80,12 +93,19 @@ export const useNominationCeremony = () => {
                 payload: {
                     actionId: 'make_nominations',
                     params: {
-                        nomineeIds: randomNominees.map(nominee => nominee.id)
+                        nomineeIds: randomNominees.map(nominee => nominee.id),
+                        isAutomatic: true
                     }
                 }
             });
+            
+            // Directly set nominees for immediate UI feedback
+            dispatch({
+                type: 'SET_NOMINEES',
+                payload: randomNominees
+            });
         }, 1000);
-    };
+    }, [ceremonyComplete, isNominating, dispatch, hoh, logger]);
 
     return {
         nominees: selectedNomineesUI,
