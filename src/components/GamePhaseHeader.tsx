@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Crown, Target, Shield, Vote, Users, Trophy, Clock, Key } from 'lucide-react';
@@ -29,7 +28,12 @@ const GamePhaseHeader: React.FC = () => {
   };
   
   const formatPhaseTitle = (phaseStr: string) => {
-    // Convert camelCase to Title Case with spaces
+    // For HoH phase, return the full name
+    if (phaseStr === 'HoH') {
+      return 'Head of Household (HOH)';
+    }
+    
+    // For other phases, convert camelCase to Title Case with spaces (keep existing behavior)
     return phaseStr
       .replace(/([A-Z])/g, ' $1') // Add space before capital letters
       .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
