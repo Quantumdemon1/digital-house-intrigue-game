@@ -21,7 +21,7 @@ export class AIApiClient {
    */
   async callLLMAPI(prompt: string): Promise<string> {
     // Use fallback for testing/development environments
-    if (!this.apiKey || config.USE_AI_FALLBACK) {
+    if (!this.apiKey || config.FORCE_FALLBACK_MODE) {
       this.logger.warn("No API key provided or fallback mode active. Using fallback decision generator");
       throw new Error("Using fallback decision generator");
     }
