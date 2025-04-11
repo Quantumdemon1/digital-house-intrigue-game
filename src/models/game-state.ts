@@ -9,6 +9,7 @@ export type GamePhase =
   | 'PoV'             // Power of Veto competition
   | 'PoVMeeting'      // Decision to use or not use veto
   | 'Eviction'        // House votes to evict one nominee
+  | 'SocialInteraction' // Social interactions between houseguests
   | 'Finale'          // Final HoH, jury vote
   | 'GameOver';       // Game recap, winner celebration
 

@@ -18,6 +18,7 @@ export interface IGameControllerFacade {
   handlePlayerAction(actionId: string, params: any): Promise<boolean>;
   saveGame(): Promise<boolean>;
   loadGame(): Promise<boolean>;
+  promptNextAction(): void; // Added this method
   // Provide direct access to systems for states
   relationshipSystem: RelationshipSystem;
   competitionSystem: CompetitionSystem;

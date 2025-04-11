@@ -156,7 +156,11 @@ export class SocialInteractionState extends GameStateBase {
     this.getLogger().info(`Entering social phase. Target: ${this.targetPhase.name}. Interactions left: ${this.interactionsRemaining}`);
     
     // Trigger UI to show choices
-    this.controller.promptNextAction();
+    if (typeof this.controller.promptNextAction === 'function') {
+      this.controller.promptNextAction();
+    } else {
+      this.getLogger().warn("promptNextAction not available on controller");
+    }
   }
 
   getAvailableActions(): any[] {
