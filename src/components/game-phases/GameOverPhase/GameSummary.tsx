@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { useGame } from '@/contexts/GameContext';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { FileText, Calendar, User, Users, Award, Trophy } from 'lucide-react';
-import { NominationCount } from '@/contexts/reducers/reducers/nomination-reducer';
+import { NominationCount } from '@/models/houseguest';
+import { GameEvent } from '@/models/game-state';
 
 const GameSummary: React.FC = () => {
   const { gameState } = useGame();

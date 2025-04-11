@@ -27,10 +27,10 @@ export class NominationState extends GameStateBase {
       case 'make_nominations':
         if (params && params.nomineeIds && params.nomineeIds.length === 2) {
           const nomineeIds = params.nomineeIds;
-          const nominees = nomineeIds.map((id: string) => this.game.getHouseguestById(id));
+          const nominees = nomineeIds.map((id: string) => this.game.getHouseguestById(id)).filter(Boolean);
           this.getLogger().info(`Nominations confirmed: ${nominees.map((n: any) => n?.name).join(', ')}`);
           
-          // Set nominees in the game state
+          // Set nominees in the game state - store the IDs
           this.game.nominees = nomineeIds;
           
           return true;

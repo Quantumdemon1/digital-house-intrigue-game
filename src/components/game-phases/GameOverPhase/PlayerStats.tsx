@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { NominationCount } from '@/contexts/reducers/reducers/nomination-reducer';
+import { NominationCount } from '@/models/houseguest';
 
 type SortField = 'name' | 'competitions' | 'nominations' | 'status';
 type SortDirection = 'asc' | 'desc';
