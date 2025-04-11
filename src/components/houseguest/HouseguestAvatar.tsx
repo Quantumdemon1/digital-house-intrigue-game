@@ -7,12 +7,14 @@ interface HouseguestAvatarProps {
   houseguest: Houseguest;
   size?: 'sm' | 'md' | 'lg';
   rounded?: boolean;
+  className?: string; // Add className to the props interface
 }
 
 const HouseguestAvatar: React.FC<HouseguestAvatarProps> = ({ 
   houseguest, 
   size = 'md',
-  rounded = true
+  rounded = true,
+  className = '' // Default to empty string
 }) => {
   const sizeClasses = {
     sm: 'w-10 h-10',
@@ -21,7 +23,7 @@ const HouseguestAvatar: React.FC<HouseguestAvatarProps> = ({
   };
 
   return (
-    <Avatar className={`${sizeClasses[size]} ${rounded ? 'rounded-full' : 'rounded-md'} shadow-md`}>
+    <Avatar className={`${sizeClasses[size]} ${rounded ? 'rounded-full' : 'rounded-md'} shadow-md ${className}`}>
       <AvatarFallback className={`camera-lens ${rounded ? '' : 'rounded-md'} bg-gray-200`}>
         {houseguest.name.charAt(0)}
       </AvatarFallback>
