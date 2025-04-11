@@ -36,9 +36,6 @@ export class NominationState extends GameStateBase {
         return false;
         
       case 'continue_to_pov':
-        // Log that we're handling this action
-        this.getLogger().info("Handling continue_to_pov action, changing to PovCompetitionState");
-        
         // After nominations are made, immediately advance to PoV competition
         this.controller.changeState('PovCompetitionState');
         return true;

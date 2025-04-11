@@ -1,13 +1,14 @@
 
 import React, { useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useNominationCeremony } from './hooks/useNominationCeremony';
 import { useAINomination } from './hooks/useAINomination';
 import NominationHeader from './components/NominationHeader';
 import NominationCeremonyResult from './NominationCeremonyResult';
+import { Button } from '@/components/ui/button';
+import { useGame } from '@/contexts/GameContext';
 import NominationContent from './components/NominationContent';
 import NominationFooter from './components/NominationFooter';
-import AIDecisionIndicator from './AIDecisionIndicator';
 
 const NominationPhase: React.FC = () => {
   const {
@@ -24,6 +25,8 @@ const NominationPhase: React.FC = () => {
     getRelationship
   } = useNominationCeremony();
 
+  const { dispatch } = useGame();
+  
   // Use the AI nomination hook for AI-controlled HoH
   useAINomination({
     hoh,
@@ -35,7 +38,18 @@ const NominationPhase: React.FC = () => {
     setNominees
   });
 
-  // Debug logs for ceremony status
+  // Continue to next phase after nominations are completed
+  const handleContinue = () => {
+    dispatch({
+      type: 'PLAYER_ACTION',
+      payload: {
+        actionId: 'continue_to_pov',
+        params: {}
+      }
+    });
+  };
+
+  // If nominations are done, immediately show results
   useEffect(() => {
     console.log("Ceremony complete status:", ceremonyComplete);
     console.log("Current nominees:", nominees.map(n => n.name).join(", "));
@@ -52,6 +66,7 @@ const NominationPhase: React.FC = () => {
         <NominationCeremonyResult 
           nominees={nominees} 
           hoh={hoh}
+          onContinue={handleContinue}
         />
       ) : hoh?.isPlayer ? (
         // Only show nomination interface for player HoH
@@ -67,8 +82,16 @@ const NominationPhase: React.FC = () => {
           totalTime={30}
         />
       ) : (
-        // Show AI decision indicator for AI HoH
-        <AIDecisionIndicator hohName={hoh?.name} />
+        // For AI HoH, show immediate result
+        <CardContent className="text-center p-6">
+          <p className="mb-4">{hoh?.name} is automatically making nominations...</p>
+          <Button 
+            onClick={handleTimeExpired} 
+            className="bg-bb-red hover:bg-bb-red/90"
+          >
+            Skip Wait
+          </Button>
+        </CardContent>
       )}
       
       <NominationFooter 

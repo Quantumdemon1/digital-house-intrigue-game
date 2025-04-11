@@ -14,10 +14,6 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
           phase: 'Finale',
         };
       }
-      
-      // Log the phase change for debugging
-      console.log(`Changing game phase from ${state.phase} to ${action.payload}`);
-      
       return {
         ...state,
         phase: action.payload,
