@@ -103,9 +103,9 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
           <PersonalityTraitSelector selectedTraits={selectedTraits} onToggleTrait={onToggleTrait} personalityTraits={personalityTraits} />
         </div>
         
-        <div className="space-y-2 bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div className="space-y-2 p-4 rounded-lg border border-gray-100 bg-slate-950">
           <div className="flex justify-between items-center mb-3">
-            <Label className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md flex items-center">Your Stats</Label>
+            <Label className="text-sm text-muted-foreground">Your Stats</Label>
             <div className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md flex items-center">
               <Info className="h-3.5 w-3.5 mr-1" />
               <span>Points remaining: {remainingPoints}</span>
