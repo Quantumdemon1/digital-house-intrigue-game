@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { GameState, GamePhase, createInitialGameState } from './game-state';
+import { GameState, GamePhase, createInitialGameState, GameEvent } from './game-state';
 import { createHouseguest, Houseguest, HouseguestStatus } from './houseguest';
 import { Logger } from '../utils/logger';
 import { GameStateBase } from '../game-states/GameStateBase';
@@ -160,6 +160,13 @@ export class BigBrotherGame implements IGameControllerFacade {
     };
     
     this.gameState.gameLog.push(event);
+    
+    // Also add to eventLog for compatibility
+    if (!this.gameState.eventLog) {
+      this.gameState.eventLog = [];
+    }
+    this.gameState.eventLog.push(event);
+    
     this.logger.info(`Game event logged: ${description}`);
   }
   
@@ -273,7 +280,24 @@ export class BigBrotherGame implements IGameControllerFacade {
   }
   
   // Added for compatibility with interface
-  get gameLog(): any[] {
+  get gameLog(): GameEvent[] {
     return this.gameState.gameLog;
+  }
+  
+  // Add compatibility with eventLog references
+  get eventLog(): GameEvent[] {
+    return this.gameState.eventLog || this.gameState.gameLog;
+  }
+  
+  // Added for compatibility
+  get currentWeek(): number {
+    return this.gameState.week;
+  }
+  
+  get finalTwo(): [Houseguest, Houseguest] | null {
+    if (this.gameState.winner && this.gameState.runnerUp) {
+      return [this.gameState.winner, this.gameState.runnerUp];
+    }
+    return null;
   }
 }

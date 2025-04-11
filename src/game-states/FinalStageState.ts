@@ -10,7 +10,7 @@ export class FinalStageState extends GameStateBase {
 
   async enter(): Promise<void> {
     await super.enter();
-    this.controller.phase = 'Finale';
+    this.controller.phase = 'Finale'; // Changed from 'Final' to 'Finale' to match GamePhase type
     this.getLogger().info("Entering final stage");
   }
 

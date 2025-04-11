@@ -47,6 +47,7 @@ export interface GameState {
   winner: Houseguest | null;
   runnerUp: Houseguest | null;
   gameLog: GameEvent[];
+  eventLog?: GameEvent[]; // Added for compatibility with some existing code
 }
 
 export function createInitialGameState(): GameState {
@@ -64,6 +65,7 @@ export function createInitialGameState(): GameState {
     winner: null,
     runnerUp: null,
     gameLog: [],
+    eventLog: [], // Initialize empty eventLog for compatibility
   };
 }
 
