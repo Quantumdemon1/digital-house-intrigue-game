@@ -1,9 +1,7 @@
-
 import React from 'react';
 import { Clock, User } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
-
 interface VoterDisplayProps {
   currentVoter: Houseguest;
   nominees: Houseguest[];
@@ -12,49 +10,34 @@ interface VoterDisplayProps {
   showVote: boolean;
   onVote: (nomineeId: string) => void;
 }
-
 const VoterDisplay: React.FC<VoterDisplayProps> = ({
   currentVoter,
   nominees,
   isPlayerVoting,
   isVoting,
   showVote,
-  onVote,
+  onVote
 }) => {
-  return (
-    <div className="bg-gray-100 p-4 rounded-md text-center">
+  return <div className="bg-bb-blue text-white">
       <p className="font-medium mb-2">
         <span className="text-bb-red">Current Voter:</span> {currentVoter.name}
         {currentVoter.isPlayer ? " (You)" : ""}
       </p>
       
-      {isVoting && (
-        <div className="flex items-center justify-center">
+      {isVoting && <div className="flex items-center justify-center">
           <Clock className="animate-pulse mr-2" />
           <span>{showVote ? "Vote cast!" : "Thinking..."}</span>
-        </div>
-      )}
+        </div>}
       
-      {isPlayerVoting && !isVoting && (
-        <div className="mt-4 space-y-2">
+      {isPlayerVoting && !isVoting && <div className="mt-4 space-y-2">
           <p>Vote to evict:</p>
           <div className="flex justify-center gap-4">
-            {nominees.map(nominee => (
-              <Button
-                key={nominee.id}
-                variant="destructive"
-                className="flex items-center"
-                onClick={() => onVote(nominee.id)}
-              >
+            {nominees.map(nominee => <Button key={nominee.id} variant="destructive" className="flex items-center" onClick={() => onVote(nominee.id)}>
                 <User className="mr-1 h-4 w-4" />
                 {nominee.name}
-              </Button>
-            ))}
+              </Button>)}
           </div>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
-
 export default VoterDisplay;
