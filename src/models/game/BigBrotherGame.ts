@@ -7,6 +7,7 @@
 import { Houseguest, HouseguestStatus } from '../houseguest';
 import { Alliance } from '../alliance';
 import { GamePhase, GameEvent } from '../game-state';
+import { Promise } from '../promise'; // Add import for Promise type
 import { 
   logGameEvent, 
   advancePhase, 
@@ -58,6 +59,9 @@ export class BigBrotherGame implements GameStateInterface {
   // Event log
   public eventLog: GameEvent[] = [];
   public gameLog: GameEvent[] = [];
+  
+  // Promises system
+  public promises: Promise[] = []; // Add promises array for tracking
 
   constructor(
     houseguests: Houseguest[] = [],

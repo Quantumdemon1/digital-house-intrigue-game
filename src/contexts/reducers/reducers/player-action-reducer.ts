@@ -1,6 +1,7 @@
 
 import { GameState, GamePhase } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
+import { Promise, PromiseType } from '../../../models/promise';
 
 export interface PlayerActionPayload {
   actionId: string;
@@ -117,6 +118,38 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
           nominees: [],
           evictionVotes: {}
         };
+        
+      case 'make_promise':
+        // Process a player-made promise
+        if (payload.params.targetId && payload.params.promiseType) {
+          // Create the promise object
+          const newPromise: Promise = {
+            id: `promise-${Date.now()}`,
+            fromId: payload.params.voterId || state.houseguests.find(h => h.isPlayer)?.id || '',
+            toId: payload.params.targetId,
+            type: payload.params.promiseType as PromiseType,
+            description: payload.params.promiseDescription || `Made a promise to ${payload.params.targetName}`,
+            madeOnWeek: state.week,
+            status: 'pending',
+            context: {}
+          };
+          
+          // Add to promises array
+          const updatedPromises = state.promises ? [...state.promises, newPromise] : [newPromise];
+          
+          return {
+            ...state,
+            promises: updatedPromises
+          };
+        }
+        break;
+      
+      case 'strategic_discussion':
+      case 'relationship_building':
+      case 'eavesdrop':
+        // These are handled by the game state machine
+        // No immediate state updates needed
+        break;
         
       default:
         // No immediate state update needed

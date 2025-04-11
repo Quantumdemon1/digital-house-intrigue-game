@@ -80,7 +80,10 @@ export function createInitialGameState(): GameState {
   };
 }
 
-// Game state interface
+// Import existing types (this would be added to the existing imports)
+import { Promise } from './promise';
+
+// Add promise array to GameState (would be added to existing interface)
 export interface GameState {
   houseguests: any[];
   alliances: any[];
@@ -101,6 +104,7 @@ export interface GameState {
   }>>;
   evictionVotes: Record<string, string>;
   gameLog: GameEvent[];
+  promises?: Promise[];
 }
 
 // Define relationship map type for use in other components

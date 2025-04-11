@@ -1,6 +1,7 @@
+
 /**
  * @file SocialInteractionState.ts
- * @description Social interaction state
+ * @description Social interaction state with enhanced player actions
  */
 
 import { GameStateBase, SocialActionChoice } from './GameStateBase';
@@ -9,9 +10,18 @@ import type { IGameControllerFacade } from '../types/interfaces';
 import { Houseguest } from '../models/houseguest';
 import { RelationshipEventType } from '../models/relationship-event';
 import { GamePhase } from '../models/game-state';
+import { Promise, PromiseType, PromiseStatus } from '../models/promise';
 
 // Define possible locations
 export const LOCATIONS = ['living-room', 'kitchen', 'bedroom', 'backyard', 'hoh-room', 'diary-room'];
+
+// Strategic discussion types
+export type StrategicDiscussionType = 
+  | 'suggest_target' 
+  | 'vote_intentions'
+  | 'final_two_deal'
+  | 'spread_rumor'
+  | 'general_strategy';
 
 export class SocialInteractionState extends GameStateBase {
   private interactionsRemaining: number = 3; // Allow 3 interactions per state entry
@@ -60,13 +70,101 @@ export class SocialInteractionState extends GameStateBase {
       return Math.random() > 0.3; // ~70% chance present
     });
 
-    // 2. Talk Actions
+    // 2. Talk Actions - Enhanced with specific types
     if (presentGuests.length > 0) {
+      // Basic conversation
       presentGuests.forEach(guest => {
         actions.push({
           text: `Talk to ${guest.name}`,
           actionId: 'talk_to',
           parameters: { targetId: guest.id, targetName: guest.name },
+          disabled: this.interactionsRemaining <= 0,
+          disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+        });
+        
+        // Strategic discussions
+        actions.push({
+          text: `Discuss strategy with ${guest.name}`,
+          actionId: 'strategic_discussion',
+          parameters: { 
+            targetId: guest.id, 
+            targetName: guest.name,
+            discussionType: 'general_strategy'
+          },
+          disabled: this.interactionsRemaining <= 0,
+          disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+        });
+        
+        actions.push({
+          text: `Suggest target to ${guest.name}`,
+          actionId: 'strategic_discussion',
+          parameters: { 
+            targetId: guest.id, 
+            targetName: guest.name,
+            discussionType: 'suggest_target'
+          },
+          disabled: this.interactionsRemaining <= 0,
+          disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+        });
+        
+        actions.push({
+          text: `Ask ${guest.name} about voting plans`,
+          actionId: 'strategic_discussion',
+          parameters: { 
+            targetId: guest.id, 
+            targetName: guest.name,
+            discussionType: 'vote_intentions'
+          },
+          disabled: this.interactionsRemaining <= 0,
+          disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+        });
+        
+        // Relationship building actions
+        actions.push({
+          text: `Compliment ${guest.name}`,
+          actionId: 'relationship_building',
+          parameters: { 
+            targetId: guest.id, 
+            targetName: guest.name,
+            actionType: 'compliment'
+          },
+          disabled: this.interactionsRemaining <= 0,
+          disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+        });
+        
+        actions.push({
+          text: `Apologize to ${guest.name}`,
+          actionId: 'relationship_building',
+          parameters: { 
+            targetId: guest.id, 
+            targetName: guest.name,
+            actionType: 'apologize'
+          },
+          disabled: this.interactionsRemaining <= 0,
+          disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+        });
+        
+        // Promise system
+        actions.push({
+          text: `Make promise to ${guest.name}`,
+          actionId: 'make_promise',
+          parameters: { 
+            targetId: guest.id, 
+            targetName: guest.name,
+          },
+          disabled: this.interactionsRemaining <= 0,
+          disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+        });
+        
+        // Final 2 deal is special
+        actions.push({
+          text: `Propose final 2 deal to ${guest.name}`,
+          actionId: 'strategic_discussion',
+          parameters: { 
+            targetId: guest.id, 
+            targetName: guest.name,
+            discussionType: 'final_two_deal'
+          },
           disabled: this.interactionsRemaining <= 0,
           disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
         });
@@ -78,14 +176,30 @@ export class SocialInteractionState extends GameStateBase {
         disabled: true 
       });
     }
+    
+    // 3. Information gathering
+    if (currentLocation !== 'diary-room' && presentGuests.length > 1) {
+      actions.push({
+        text: "Eavesdrop on conversation",
+        actionId: 'eavesdrop',
+        disabled: this.interactionsRemaining <= 0,
+        disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+      });
+    }
 
-    // 3. Check Relationships
+    // 4. Check Relationships
     actions.push({ 
       text: "Check Relationships", 
       actionId: 'check_relationships' 
     });
     
-    // 4. Alliance Management Actions
+    // 5. Check Promises
+    actions.push({
+      text: "Check Promises",
+      actionId: 'check_promises'
+    });
+    
+    // 6. Alliance Management Actions
     actions.push({
       text: "Propose Alliance",
       actionId: 'propose_alliance',
@@ -117,7 +231,7 @@ export class SocialInteractionState extends GameStateBase {
       }
     }
     
-    // 5. Share Information Actions
+    // 7. Share Information Actions
     if (presentGuests.length > 0) {
       actions.push({
         text: "Share Game Information",
@@ -134,9 +248,22 @@ export class SocialInteractionState extends GameStateBase {
         disabled: this.interactionsRemaining <= 0,
         disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
       });
+      
+      // Spread specific rumor
+      actions.push({
+        text: "Spread Rumor",
+        actionId: 'strategic_discussion',
+        parameters: { 
+          targetId: presentGuests[0].id,
+          targetName: presentGuests[0].name,
+          discussionType: 'spread_rumor'
+        },
+        disabled: this.interactionsRemaining <= 0,
+        disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+      });
     }
 
-    // 6. Advance Phase Action
+    // 8. Advance Phase Action
     actions.push({
       text: `Proceed to ${this.targetPhase.name.replace('State', '')}`,
       actionId: 'advance_phase'
@@ -149,9 +276,15 @@ export class SocialInteractionState extends GameStateBase {
     this.getLogger().debug(`Social Interaction Action: ${actionId}`, params);
     
     // Decrement interactions for most actions except checking status or advancing
-    if (!['check_relationships', 'check_alliances', 'advance_phase', 'move_location'].includes(actionId) && this.interactionsRemaining > 0) {
+    if (!['check_relationships', 'check_alliances', 'check_promises', 'advance_phase', 'move_location'].includes(actionId) && this.interactionsRemaining > 0) {
       this.interactionsRemaining--;
       this.getLogger().info(`Interactions remaining: ${this.interactionsRemaining}`);
+    }
+
+    const player = this.game.houseguests.find(h => h.isPlayer);
+    if (!player) {
+      this.getLogger().error("Player not found");
+      return false;
     }
 
     switch (actionId) {
@@ -170,10 +303,6 @@ export class SocialInteractionState extends GameStateBase {
         const targetName = params?.targetName;
         if (targetId && targetName) {
           this.getLogger().info(`You approach ${targetName} to talk...`);
-          
-          // Get the player houseguest
-          const player = this.game.houseguests.find(h => h.isPlayer);
-          if (!player) break;
           
           // Get the target AI houseguest
           const targetGuest = this.game.getHouseguestById(targetId);
@@ -234,14 +363,29 @@ export class SocialInteractionState extends GameStateBase {
           }, 500);
         }
         break;
+
+      case 'strategic_discussion':
+        await this.handleStrategicDiscussion(player, params);
+        break;
+        
+      case 'relationship_building':
+        await this.handleRelationshipBuilding(player, params);
+        break;
+        
+      case 'make_promise':
+        await this.handleMakePromise(player, params);
+        break;
+        
+      case 'eavesdrop':
+        await this.handleEavesdrop(player);
+        break;
         
       case 'share_info':
         const infoType = params?.type;
         const presentGuests = this.game.getActiveHouseguests().filter(hg => !hg.isPlayer);
         const randomTarget = presentGuests[Math.floor(Math.random() * presentGuests.length)];
-        const infoPlayerGuest = this.game.houseguests.find(h => h.isPlayer);
         
-        if (!infoPlayerGuest || !randomTarget) break;
+        if (!randomTarget) break;
         
         if (infoType === 'honest') {
           // Sharing honest information builds trust
@@ -252,7 +396,7 @@ export class SocialInteractionState extends GameStateBase {
             
             // Record as significant event - builds trust
             this.controller.relationshipSystem.addRelationshipEvent(
-              infoPlayerGuest.id,
+              player.id,
               randomTarget.id,
               'shared_info',
               `You shared valuable game information with ${randomTarget.name}.`,
@@ -263,9 +407,9 @@ export class SocialInteractionState extends GameStateBase {
             // Reciprocal effect - they trust you more
             this.controller.relationshipSystem.addRelationshipEvent(
               randomTarget.id,
-              infoPlayerGuest.id,
+              player.id,
               'shared_info',
-              `${infoPlayerGuest.name} shared valuable game information with you.`,
+              `${player.name} shared valuable game information with you.`,
               7,
               false // Trust building is remembered
             );
@@ -283,9 +427,9 @@ export class SocialInteractionState extends GameStateBase {
               
               // Record as significant betrayal event
               this.controller.relationshipSystem.recordBetrayal(
-                infoPlayerGuest.id,
+                player.id,
                 randomTarget.id,
-                `${infoPlayerGuest.name} lied to you about game information.`
+                `${player.name} lied to you about game information.`
               );
               
               // Other houseguests may hear about this
@@ -296,7 +440,7 @@ export class SocialInteractionState extends GameStateBase {
               witnesses.forEach(witness => {
                 this.controller.relationshipSystem.updateRelationship(
                   witness.id,
-                  infoPlayerGuest.id,
+                  player.id,
                   -5,
                   `${witness.name} heard that you lied to ${randomTarget.name}.`
                 );
@@ -307,7 +451,7 @@ export class SocialInteractionState extends GameStateBase {
               // Short-term boost but potential for future damage
               this.controller.relationshipSystem.updateRelationship(
                 randomTarget.id,
-                infoPlayerGuest.id,
+                player.id,
                 3,
                 `${randomTarget.name} trusts your information.`
               );
@@ -327,9 +471,6 @@ export class SocialInteractionState extends GameStateBase {
           this.getLogger().info("Alliance system not available.");
           break;
         }
-        
-        const player = this.game.houseguests.find(h => h.isPlayer);
-        if (!player) break;
         
         const alliances = this.controller.allianceSystem.getAlliancesForHouseguest(player.id);
         
@@ -397,19 +538,16 @@ export class SocialInteractionState extends GameStateBase {
       case 'check_relationships':
         // Expanded relationship checking that includes significant events
         this.getLogger().info("--- Your Relationships ---");
-        const checkPlayerGuest = this.game.houseguests.find(h => h.isPlayer);
-        
-        if (!checkPlayerGuest) break;
 
         // Check if alliance system is available
         const allianceSystem = this.controller.allianceSystem;
         const playerAllies = allianceSystem ? 
-          allianceSystem.getAllAlliesForHouseguest(checkPlayerGuest.id) : [];
+          allianceSystem.getAllAlliesForHouseguest(player.id) : [];
         
         this.game.houseguests.forEach(guest => {
-          if (guest.id !== checkPlayerGuest.id && guest.status !== 'Evicted') {
-            const baseScore = this.controller.relationshipSystem.getRelationship(checkPlayerGuest.id, guest.id);
-            const effectiveScore = this.controller.relationshipSystem.getEffectiveRelationship(checkPlayerGuest.id, guest.id);
+          if (guest.id !== player.id && guest.status !== 'Evicted') {
+            const baseScore = this.controller.relationshipSystem.getRelationship(player.id, guest.id);
+            const effectiveScore = this.controller.relationshipSystem.getEffectiveRelationship(player.id, guest.id);
             const description = this.describeRelationship(effectiveScore);
             
             // Check alliance status
@@ -420,7 +558,7 @@ export class SocialInteractionState extends GameStateBase {
             
             // Get significant events
             if (this.controller.relationshipSystem.getRelationshipEvents) {
-              const events = this.controller.relationshipSystem.getRelationshipEvents(checkPlayerGuest.id, guest.id)
+              const events = this.controller.relationshipSystem.getRelationshipEvents(player.id, guest.id)
                 .filter(e => ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type) ||
                       Math.abs(e.impactScore) >= 15);
                       
@@ -433,7 +571,7 @@ export class SocialInteractionState extends GameStateBase {
               }
               
               // Show reciprocity factor
-              const reciprocity = this.controller.relationshipSystem.calculateReciprocityModifier(guest.id, checkPlayerGuest.id);
+              const reciprocity = this.controller.relationshipSystem.calculateReciprocityModifier(guest.id, player.id);
               if (Math.abs(reciprocity) > 0.1) {
                 const reciprocityDesc = reciprocity > 0 
                   ? `${guest.name} likes you more than you like them.`
@@ -441,10 +579,28 @@ export class SocialInteractionState extends GameStateBase {
                 this.getLogger().info(`  * ${reciprocityDesc}`);
               }
             }
+            
+            // Check for promises between player and this houseguest
+            const promises = this.getPromisesBetween(player.id, guest.id);
+            if (promises.length > 0) {
+              this.getLogger().info(`  Promises with ${guest.name}:`);
+              promises.forEach(promise => {
+                const statusText = promise.status === 'pending' ? 'Active' : 
+                                  promise.status === 'kept' ? 'Kept' : 'Broken';
+                const directionText = promise.fromId === player.id ? 
+                                     `You promised ${guest.name}` : 
+                                     `${guest.name} promised you`;
+                this.getLogger().info(`  - ${directionText}: ${promise.description} (${statusText})`);
+              });
+            }
           }
         });
         break;
 
+      case 'check_promises':
+        this.displayPlayerPromises(player.id);
+        break;
+        
       case 'advance_phase':
         this.getLogger().info(`Advancing phase from Social Interaction to ${this.targetPhase.name}`);
         await this.transitionTo(this.targetPhase);
@@ -458,6 +614,534 @@ export class SocialInteractionState extends GameStateBase {
     // After handling an action, re-prompt the player with updated choices
     this.controller.promptNextAction();
     return true; // Action was handled
+  }
+  
+  /**
+   * Handle strategic discussion with another houseguest
+   */
+  private async handleStrategicDiscussion(player: Houseguest, params: any): Promise<void> {
+    const { targetId, targetName, discussionType } = params;
+    if (!targetId || !targetName) return;
+    
+    const targetGuest = this.game.getHouseguestById(targetId);
+    if (!targetGuest) return;
+    
+    let message = "";
+    let situationContext = "";
+    
+    switch (discussionType as StrategicDiscussionType) {
+      case 'general_strategy':
+        message = "I'd like to talk some strategy with you.";
+        situationContext = `You approached ${targetName} to discuss general strategy.`;
+        break;
+        
+      case 'suggest_target':
+        // Get a potential target that isn't the player or the current conversation partner
+        const potentialTargets = this.game.getActiveHouseguests()
+          .filter(hg => hg.id !== player.id && hg.id !== targetId);
+        
+        if (potentialTargets.length === 0) {
+          this.getLogger().info("There's no one else to target in the game.");
+          return;
+        }
+        
+        // Find someone with lowest relationship to the player
+        potentialTargets.sort((a, b) => {
+          const relationshipA = this.controller.relationshipSystem.getEffectiveRelationship(player.id, a.id);
+          const relationshipB = this.controller.relationshipSystem.getEffectiveRelationship(player.id, b.id);
+          return relationshipA - relationshipB;
+        });
+        
+        const suggestedTarget = potentialTargets[0];
+        message = `I think we should target ${suggestedTarget.name} next.`;
+        situationContext = `You suggested targeting ${suggestedTarget.name} to ${targetName}.`;
+        break;
+        
+      case 'vote_intentions':
+        message = "How are you thinking of voting this week?";
+        situationContext = `You asked ${targetName} about their voting plans.`;
+        break;
+        
+      case 'final_two_deal':
+        message = "I wanted to talk about potentially going to the final 2 together.";
+        situationContext = `You proposed a final 2 deal to ${targetName}.`;
+        break;
+        
+      case 'spread_rumor':
+        // Get another houseguest to spread a rumor about
+        const otherHouseguests = this.game.getActiveHouseguests()
+          .filter(hg => hg.id !== player.id && hg.id !== targetId);
+        
+        if (otherHouseguests.length === 0) {
+          this.getLogger().info("There's no one to spread rumors about.");
+          return;
+        }
+        
+        const rumorTarget = otherHouseguests[Math.floor(Math.random() * otherHouseguests.length)];
+        
+        // Generate a plausible rumor
+        const rumors = [
+          `${rumorTarget.name} mentioned targeting you soon.`,
+          `${rumorTarget.name} doesn't trust you and has been talking about you behind your back.`,
+          `${rumorTarget.name} is in a secret alliance with others.`,
+          `${rumorTarget.name} told me they're going to nominate you if they win HoH.`
+        ];
+        
+        const rumor = rumors[Math.floor(Math.random() * rumors.length)];
+        message = `Just so you know, ${rumor}`;
+        situationContext = `You spread a rumor to ${targetName} about ${rumorTarget.name}.`;
+        break;
+    }
+    
+    // Log the start of the conversation
+    this.getLogger().info(`${situationContext}`);
+    
+    // Create dialogue context
+    const dialogueContext = {
+      speakerId: player.id,
+      speakerName: player.name,
+      message: message,
+      situation: situationContext,
+      phase: this.game.phase as GamePhase,
+      week: this.game.week,
+      gameContext: {
+        hohName: this.getHohName(),
+        nominees: this.getNomineeNames(),
+        povWinner: this.getPovHolderName()
+      },
+      discussionType
+    };
+    
+    // Send to AI system for response
+    setTimeout(async () => {
+      try {
+        if (this.controller.aiSystem) {
+          // Use the AI dialogue system
+          const response = await this.controller.aiSystem.generateDialogueResponse(
+            targetId,
+            dialogueContext,
+            this.game
+          );
+          
+          // Display the response to the player
+          this.getLogger().info(`${targetName} says: "${response.response}"`);
+          
+          // Handle special actions based on discussion type
+          this.handlePostDiscussionEffects(player.id, targetId, discussionType as StrategicDiscussionType, response);
+          
+          // Apply relationship effects
+          this.applyDialogueRelationshipEffects(player.id, targetId, response);
+        } else {
+          // Fallback generic responses by discussion type
+          let response = "";
+          
+          switch (discussionType as StrategicDiscussionType) {
+            case 'general_strategy':
+              response = "I think we need to be careful about who's building power in the house.";
+              break;
+            case 'suggest_target':
+              response = "Interesting suggestion. I'll think about it.";
+              break;
+            case 'vote_intentions':
+              response = "I haven't fully decided yet, but I'm leaning toward voting with the house.";
+              break;
+            case 'final_two_deal':
+              response = "I'd be open to that. Let's see how things develop.";
+              break;
+            case 'spread_rumor':
+              response = "Really? That's concerning. Thanks for letting me know.";
+              break;
+          }
+          
+          this.getLogger().info(`${targetName} says: "${response}"`);
+          
+          // Apply basic relationship change
+          this.controller.relationshipSystem.updateRelationship(
+            player.id,
+            targetId,
+            1,
+            `You had a strategic conversation with ${targetName}.`
+          );
+        }
+      } catch (error) {
+        this.getLogger().error(`Error generating dialogue: ${error}`);
+        this.getLogger().info(`${targetName} says: "Let me think about that."`);
+      }
+    }, 500);
+  }
+  
+  /**
+   * Handle relationship building actions (compliment, apologize, etc.)
+   */
+  private async handleRelationshipBuilding(player: Houseguest, params: any): Promise<void> {
+    const { targetId, targetName, actionType } = params;
+    if (!targetId || !targetName || !actionType) return;
+    
+    const targetGuest = this.game.getHouseguestById(targetId);
+    if (!targetGuest) return;
+    
+    let message = "";
+    let situationContext = "";
+    let baseRelationshipChange = 0;
+    
+    switch (actionType) {
+      case 'compliment':
+        message = "I just wanted to say that I really appreciate how you've been playing the game.";
+        situationContext = `You complimented ${targetName}.`;
+        baseRelationshipChange = 5;
+        break;
+        
+      case 'apologize':
+        message = "I wanted to apologize if I've done anything to upset you.";
+        situationContext = `You apologized to ${targetName}.`;
+        baseRelationshipChange = 3;
+        break;
+        
+      case 'offer_help':
+        message = "If you ever need someone to have your back in this game, I'm here.";
+        situationContext = `You offered help to ${targetName}.`;
+        baseRelationshipChange = 4;
+        break;
+    }
+    
+    // Log the start of the conversation
+    this.getLogger().info(`${situationContext}`);
+    
+    // Create dialogue context
+    const dialogueContext = {
+      speakerId: player.id,
+      speakerName: player.name,
+      message: message,
+      situation: situationContext,
+      phase: this.game.phase as GamePhase,
+      week: this.game.week
+    };
+    
+    // Apply immediate relationship boost (will be further modified by response)
+    this.controller.relationshipSystem.updateRelationship(
+      player.id,
+      targetId,
+      baseRelationshipChange,
+      situationContext
+    );
+    
+    // Send to AI system for response
+    setTimeout(async () => {
+      try {
+        if (this.controller.aiSystem) {
+          // Use the AI dialogue system
+          const response = await this.controller.aiSystem.generateDialogueResponse(
+            targetId,
+            dialogueContext,
+            this.game
+          );
+          
+          // Display the response to the player
+          this.getLogger().info(`${targetName} says: "${response.response}"`);
+          
+          // Apply additional relationship effects based on tone
+          this.applyDialogueRelationshipEffects(player.id, targetId, response);
+        } else {
+          // Fallback generic responses by action type
+          let response = "";
+          
+          switch (actionType) {
+            case 'compliment':
+              response = "That means a lot to me. Thank you for saying that.";
+              break;
+            case 'apologize':
+              response = "I appreciate the apology. It's all good between us.";
+              break;
+            case 'offer_help':
+              response = "I appreciate that. It's good to know I have people I can count on.";
+              break;
+          }
+          
+          this.getLogger().info(`${targetName} says: "${response}"`);
+          
+          // Apply reciprocal relationship change
+          this.controller.relationshipSystem.updateRelationship(
+            targetId,
+            player.id,
+            Math.floor(baseRelationshipChange * 0.8), // Slightly less than what player gave
+            `${targetName} appreciated your ${actionType}.`
+          );
+        }
+      } catch (error) {
+        this.getLogger().error(`Error generating dialogue: ${error}`);
+        this.getLogger().info(`${targetName} nods but doesn't say much.`);
+      }
+    }, 500);
+  }
+  
+  /**
+   * Handle making promises to other houseguests
+   */
+  private async handleMakePromise(player: Houseguest, params: any): Promise<void> {
+    const { targetId, targetName } = params;
+    if (!targetId || !targetName) return;
+    
+    const targetGuest = this.game.getHouseguestById(targetId);
+    if (!targetGuest) return;
+    
+    // Define promise types
+    const promiseTypes = [
+      { 
+        type: 'safety', 
+        description: `I promise not to nominate you next time I'm HoH.`,
+        gameImpact: 'high' 
+      },
+      { 
+        type: 'vote', 
+        description: `I promise to vote how you want this week.`,
+        gameImpact: 'medium' 
+      },
+      { 
+        type: 'final_2', 
+        description: `I promise to take you to the final 2 if I get the chance.`,
+        gameImpact: 'high' 
+      },
+      { 
+        type: 'alliance_loyalty', 
+        description: `I promise to stay loyal to our alliance.`,
+        gameImpact: 'medium' 
+      },
+      { 
+        type: 'information', 
+        description: `I promise to share any information I learn with you.`,
+        gameImpact: 'low' 
+      }
+    ];
+    
+    // Log promise options
+    this.getLogger().info(`What type of promise do you want to make to ${targetName}?`);
+    promiseTypes.forEach((promise, index) => {
+      this.getLogger().info(`${index + 1}. ${promise.description} (${promise.gameImpact} impact)`);
+    });
+    
+    // In a real implementation, this would be a UI choice
+    // For now, simulate a choice with the first option
+    const selectedPromise = promiseTypes[0];
+    
+    setTimeout(() => {
+      this.getLogger().info(`You tell ${targetName}: "${selectedPromise.description}"`);
+      
+      // Create the promise object
+      const newPromise: Promise = {
+        id: `promise-${Date.now()}`,
+        fromId: player.id,
+        toId: targetId,
+        type: selectedPromise.type as PromiseType,
+        description: selectedPromise.description,
+        madeOnWeek: this.game.week,
+        status: 'pending',
+        context: {}
+      };
+      
+      // Add promise to game state
+      this.addPromise(newPromise);
+      
+      // Get AI response to the promise
+      setTimeout(async () => {
+        try {
+          if (this.controller.aiSystem) {
+            // Create dialogue context for promise
+            const dialogueContext = {
+              speakerId: player.id,
+              speakerName: player.name,
+              message: selectedPromise.description,
+              situation: `You made a promise to ${targetName}.`,
+              phase: this.game.phase as GamePhase,
+              week: this.game.week,
+              promiseType: selectedPromise.type
+            };
+            
+            // Get AI response
+            const response = await this.controller.aiSystem.generateDialogueResponse(
+              targetId,
+              dialogueContext, 
+              this.game
+            );
+            
+            // Display the response
+            this.getLogger().info(`${targetName} says: "${response.response}"`);
+            
+            // Check if they believe you based on internal thoughts
+            const believesPromise = !response.thoughts.toLowerCase().includes("don't trust") && 
+                                  !response.thoughts.toLowerCase().includes("lying") &&
+                                  !response.thoughts.toLowerCase().includes("doubt");
+            
+            // Apply relationship effect based on whether they believe you
+            const relationshipChange = believesPromise ? 5 : 2;
+            
+            // Record the belief in the promise context
+            newPromise.context.initiallyBelieved = believesPromise;
+            
+            this.controller.relationshipSystem.updateRelationship(
+              player.id,
+              targetId,
+              relationshipChange,
+              `You made a promise to ${targetName}.`
+            );
+            
+            if (believesPromise) {
+              this.getLogger().info(`${targetName} seems to trust your promise.`);
+            } else {
+              this.getLogger().info(`${targetName} seems skeptical of your promise.`);
+            }
+          } else {
+            // Fallback without AI
+            const responses = [
+              "I appreciate that. I'll remember it.",
+              "That means a lot to me.",
+              "I'm counting on you to keep your word."
+            ];
+            
+            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+            this.getLogger().info(`${targetName} says: "${randomResponse}"`);
+            
+            // Apply relationship effect
+            this.controller.relationshipSystem.updateRelationship(
+              player.id,
+              targetId,
+              4,
+              `You made a promise to ${targetName}.`
+            );
+          }
+        } catch (error) {
+          this.getLogger().error(`Error in promise dialogue: ${error}`);
+          this.getLogger().info(`${targetName} nods silently, considering your promise.`);
+        }
+      }, 800);
+    }, 500);
+  }
+  
+  /**
+   * Handle eavesdropping on conversations
+   */
+  private async handleEavesdrop(player: Houseguest): Promise<void> {
+    this.getLogger().info("You try to eavesdrop on nearby conversations...");
+    
+    // Get houseguests in the current location (excluding player)
+    const presentGuests = this.game.getActiveHouseguests().filter(hg => !hg.isPlayer);
+    
+    if (presentGuests.length < 2) {
+      this.getLogger().info("There aren't enough people here having conversations to eavesdrop on.");
+      return;
+    }
+    
+    // Calculate success chance based on player's stats
+    // If we had a stealth stat, we'd use it here
+    // For now, use a combination of social and mental
+    const baseStealth = (player.stats.social + player.stats.mental) / 2;
+    const stealthModifier = baseStealth / 10; // 0.1 to 1.0
+    
+    // Base chance is 50%, modified by stealth
+    const successChance = 0.5 + (stealthModifier * 0.3); // 50-80% based on stats
+    
+    // Select random pair of houseguests
+    const guest1 = presentGuests[Math.floor(Math.random() * presentGuests.length)];
+    let guest2;
+    do {
+      guest2 = presentGuests[Math.floor(Math.random() * presentGuests.length)];
+    } while (guest2.id === guest1.id);
+    
+    // Check for paranoid trait which increases detection chance
+    const isParanoid = guest1.traits.includes('Paranoid') || guest2.traits.includes('Paranoid');
+    const detectionChance = isParanoid ? 0.4 : 0.2;
+    
+    setTimeout(() => {
+      // Check if player succeeds at eavesdropping
+      if (Math.random() <= successChance) {
+        // Success - player overhears something valuable
+        const conversationTypes = [
+          {
+            type: 'nomination_target',
+            message: `I'm thinking of putting ${this.getRandomNonAllyName(guest1.id)} on the block if I win HoH.`
+          },
+          {
+            type: 'alliance_discussion',
+            message: `I think we need to make sure our alliance stays solid. We can't trust ${this.getRandomNonAllyName(guest1.id)}.`
+          },
+          {
+            type: 'vote_plans',
+            message: `I'm planning to vote out ${this.getRandomNomineeName()} this week.`
+          },
+          {
+            type: 'player_assessment',
+            message: `I don't trust ${player.name}. I think we need to watch out for them.`
+          }
+        ];
+        
+        const conversation = conversationTypes[Math.floor(Math.random() * conversationTypes.length)];
+        
+        this.getLogger().info(`You overhear ${guest1.name} telling ${guest2.name}: "${conversation.message}"`);
+        
+        // Record this information as a game event
+        this.game.logEvent(
+          'INTELLIGENCE',
+          `You overheard ${guest1.name} talking about game plans.`,
+          [player.id, guest1.id, guest2.id]
+        );
+        
+        // Check if you're detected despite success
+        if (Math.random() <= detectionChance) {
+          setTimeout(() => {
+            this.getLogger().info(`${guest1.name} notices you eavesdropping: "Were you listening to us?"`);
+            
+            // Negative relationship impact for being caught
+            this.controller.relationshipSystem.updateRelationship(
+              guest1.id,
+              player.id,
+              -7,
+              `Caught ${player.name} eavesdropping on a private conversation.`
+            );
+            
+            this.controller.relationshipSystem.updateRelationship(
+              guest2.id,
+              player.id,
+              -7,
+              `Caught ${player.name} eavesdropping on a private conversation.`
+            );
+          }, 700);
+        }
+      } else {
+        // Failure - player doesn't get useful information
+        // Check if detected while failing
+        if (Math.random() <= detectionChance * 1.5) { // Higher detection chance when failing
+          this.getLogger().info(`${guest1.name} catches you trying to eavesdrop: "What are you doing over there?"`);
+          
+          // Larger negative relationship impact for failing and being caught
+          this.controller.relationshipSystem.updateRelationship(
+            guest1.id,
+            player.id,
+            -10,
+            `Caught ${player.name} trying to spy on a conversation.`
+          );
+          
+          this.controller.relationshipSystem.updateRelationship(
+            guest2.id,
+            player.id,
+            -10,
+            `Caught ${player.name} trying to spy on a conversation.`
+          );
+          
+          // This could spread to others too
+          const otherGuest = presentGuests.find(g => g.id !== guest1.id && g.id !== guest2.id);
+          if (otherGuest) {
+            this.controller.relationshipSystem.updateRelationship(
+              otherGuest.id,
+              player.id,
+              -5,
+              `Heard that ${player.name} was caught spying on others.`
+            );
+          }
+        } else {
+          // Not detected, but didn't hear anything useful
+          this.getLogger().info("You couldn't make out what they were saying.");
+        }
+      }
+    }, 800);
   }
   
   /**
@@ -662,9 +1346,162 @@ export class SocialInteractionState extends GameStateBase {
     
     this.getLogger().info(`Relationship with ${this.game.getHouseguestById(aiId)?.name} changed by ${finalChange.toFixed(1)} (${eventType})`);
   }
+
+  /**
+   * Handle post-discussion special effects
+   */
+  private handlePostDiscussionEffects(
+    playerId: string,
+    targetId: string,
+    discussionType: StrategicDiscussionType,
+    response: any
+  ): void {
+    const targetGuest = this.game.getHouseguestById(targetId);
+    if (!targetGuest) return;
+    
+    // Handle special effects based on discussion type
+    switch (discussionType) {
+      case 'final_two_deal':
+        // Check if AI accepted the final 2 deal
+        const acceptedDeal = response.response.toLowerCase().includes('agree') || 
+                            response.response.toLowerCase().includes('accept') || 
+                            response.response.toLowerCase().includes('deal') || 
+                            response.thoughts.toLowerCase().includes('good deal');
+                            
+        if (acceptedDeal) {
+          this.getLogger().info(`${targetGuest.name} accepted your final 2 deal!`);
+          
+          // Create a promise for this deal
+          const finalTwoPromise: Promise = {
+            id: `promise-final2-${Date.now()}`,
+            fromId: playerId,
+            toId: targetId,
+            type: 'final_2',
+            description: `You promised to take ${targetGuest.name} to the final 2.`,
+            madeOnWeek: this.game.week,
+            status: 'pending',
+            context: {
+              reciprocal: true // This is a mutual promise
+            }
+          };
+          
+          // Create the reciprocal promise
+          const reciprocalPromise: Promise = {
+            id: `promise-final2-recip-${Date.now()}`,
+            fromId: targetId,
+            toId: playerId,
+            type: 'final_2',
+            description: `${targetGuest.name} promised to take you to the final 2.`,
+            madeOnWeek: this.game.week,
+            status: 'pending',
+            context: {
+              reciprocal: true,
+              relatedPromiseId: finalTwoPromise.id
+            }
+          };
+          
+          // Add both promises to the game state
+          this.addPromise(finalTwoPromise);
+          this.addPromise(reciprocalPromise);
+          
+          // Add significant relationship boost
+          this.controller.relationshipSystem.addRelationshipEvent(
+            playerId,
+            targetId,
+            'alliance_formed',
+            `You formed a final 2 deal with ${targetGuest.name}`,
+            15,
+            false // This shouldn't decay easily
+          );
+          
+          this.controller.relationshipSystem.addRelationshipEvent(
+            targetId,
+            playerId,
+            'alliance_formed',
+            `${this.game.getHouseguestById(playerId)?.name} formed a final 2 deal with you`,
+            15,
+            false
+          );
+        } else {
+          this.getLogger().info(`${targetGuest.name} seems hesitant about a final 2 deal.`);
+        }
+        break;
+        
+      case 'suggest_target':
+        // Check if they've agreed to the target
+        const agreedToTarget = response.response.toLowerCase().includes('agree') || 
+                             response.response.toLowerCase().includes('good idea') ||
+                             !response.thoughts.toLowerCase().includes('disagree');
+                             
+        if (agreedToTarget) {
+          this.getLogger().info(`${targetGuest.name} seems to agree with your target suggestion.`);
+          
+          // This creates alignment between player and AI
+          this.controller.relationshipSystem.addRelationshipEvent(
+            playerId,
+            targetId,
+            'strategy_alignment',
+            `${targetGuest.name} agreed with your target suggestion`,
+            7,
+            true
+          );
+        }
+        break;
+        
+      case 'spread_rumor':
+        // Check if they believed the rumor
+        const believedRumor = !response.thoughts.toLowerCase().includes("don't believe") &&
+                             !response.thoughts.toLowerCase().includes("skeptical") &&
+                             !response.thoughts.toLowerCase().includes("lying");
+                             
+        if (believedRumor) {
+          this.getLogger().info(`${targetGuest.name} seems to have believed your rumor.`);
+          
+          // Extract who the rumor was about from the response or context
+          // This is a simplification - in a real implementation, we'd track this better
+          const rumorSubject = this.extractRumorSubject(response.response);
+          if (rumorSubject) {
+            this.getLogger().info(`This might affect ${targetGuest.name}'s relationship with ${rumorSubject}.`);
+            
+            // Find the rumor subject in houseguests
+            const rumorSubjectHg = this.game.houseguests.find(hg => 
+              hg.name.toLowerCase().includes(rumorSubject.toLowerCase())
+            );
+            
+            if (rumorSubjectHg) {
+              // Damage the relationship between target and rumor subject
+              this.controller.relationshipSystem.updateRelationship(
+                targetId,
+                rumorSubjectHg.id,
+                -8,
+                `${targetGuest.name} heard a rumor about ${rumorSubjectHg.name}`
+              );
+            }
+          }
+        } else {
+          this.getLogger().info(`${targetGuest.name} seems skeptical of what you told them.`);
+        }
+        break;
+    }
+  }
+  
+  /**
+   * Extract the subject of a rumor from text
+   * This is a simple implementation - would be more sophisticated in practice
+   */
+  private extractRumorSubject(text: string): string | null {
+    // Look for names of houseguests in the text
+    for (const houseguest of this.game.houseguests) {
+      if (text.includes(houseguest.name) && !houseguest.isPlayer) {
+        return houseguest.name;
+      }
+    }
+    return null;
+  }
   
   /**
    * Show dialogue options for the player to respond to the AI
+   * (In a real implementation, this would integrate with a UI)
    */
   private showDialogueOptions(
     playerId: string,
@@ -695,5 +1532,140 @@ export class SocialInteractionState extends GameStateBase {
     if (score >= -40) return "Distrustful";
     if (score >= -60) return "Enemies";
     return "Bitter Rivals";
+  }
+  
+  // Helper methods for promise system
+  
+  /**
+   * Add a promise to the game state
+   */
+  private addPromise(promise: Promise): void {
+    if (!this.game.promises) {
+      this.game.promises = [];
+    }
+    this.game.promises.push(promise);
+  }
+  
+  /**
+   * Get promises involving a specific houseguest
+   */
+  private getPromisesForHouseguest(houseguestId: string): Promise[] {
+    if (!this.game.promises) {
+      return [];
+    }
+    
+    return this.game.promises.filter(p => 
+      p.fromId === houseguestId || p.toId === houseguestId
+    );
+  }
+  
+  /**
+   * Get promises between two specific houseguests
+   */
+  private getPromisesBetween(guest1Id: string, guest2Id: string): Promise[] {
+    if (!this.game.promises) {
+      return [];
+    }
+    
+    return this.game.promises.filter(p => 
+      (p.fromId === guest1Id && p.toId === guest2Id) || 
+      (p.fromId === guest2Id && p.toId === guest1Id)
+    );
+  }
+  
+  /**
+   * Display active promises for a player
+   */
+  private displayPlayerPromises(playerId: string): void {
+    const promises = this.getPromisesForHouseguest(playerId);
+    
+    if (promises.length === 0) {
+      this.getLogger().info("You currently have no active promises.");
+      return;
+    }
+    
+    this.getLogger().info("--- Your Promises ---");
+    
+    // Group by promises made by player vs to player
+    const promisesMade = promises.filter(p => p.fromId === playerId);
+    const promisesReceived = promises.filter(p => p.toId === playerId);
+    
+    if (promisesMade.length > 0) {
+      this.getLogger().info("Promises you've made:");
+      promisesMade.forEach(promise => {
+        const targetName = this.game.getHouseguestById(promise.toId)?.name || "Unknown";
+        const statusText = promise.status === 'pending' ? 'Active' : 
+                          promise.status === 'kept' ? 'Kept ✓' : 'Broken ✗';
+        this.getLogger().info(`- To ${targetName}: ${promise.description} (${statusText})`);
+      });
+    }
+    
+    if (promisesReceived.length > 0) {
+      this.getLogger().info("Promises made to you:");
+      promisesReceived.forEach(promise => {
+        const fromName = this.game.getHouseguestById(promise.fromId)?.name || "Unknown";
+        const statusText = promise.status === 'pending' ? 'Active' : 
+                          promise.status === 'kept' ? 'Kept ✓' : 'Broken ✗';
+        this.getLogger().info(`- From ${fromName}: ${promise.description} (${statusText})`);
+      });
+    }
+  }
+  
+  // Helper methods for getting game state info
+  
+  private getHohName(): string {
+    const hoh = this.game.houseguests.find(hg => hg.isHoH);
+    return hoh ? hg.name : 'None';
+  }
+  
+  private getNomineeNames(): string[] {
+    return this.game.nominees.map(id => {
+      const hg = this.game.getHouseguestById(id);
+      return hg ? hg.name : 'Unknown';
+    });
+  }
+  
+  private getPovHolderName(): string | null {
+    const pov = this.game.houseguests.find(hg => hg.isPovHolder);
+    return pov ? pov.name : null;
+  }
+  
+  private getRandomNonAllyName(houseguestId: string): string {
+    // Get a non-ally of the given houseguest
+    const allianceSystem = this.controller.allianceSystem;
+    
+    if (!allianceSystem) {
+      // Fallback to random active houseguest
+      const active = this.game.getActiveHouseguests();
+      const random = active[Math.floor(Math.random() * active.length)];
+      return random.name;
+    }
+    
+    const allies = allianceSystem.getAllAlliesForHouseguest(houseguestId);
+    const nonAllies = this.game.getActiveHouseguests().filter(hg => 
+      hg.id !== houseguestId && !allies.includes(hg.id)
+    );
+    
+    if (nonAllies.length === 0) {
+      // No non-allies, fall back to random houseguest
+      const active = this.game.getActiveHouseguests();
+      const random = active[Math.floor(Math.random() * active.length)];
+      return random.name;
+    }
+    
+    return nonAllies[Math.floor(Math.random() * nonAllies.length)].name;
+  }
+  
+  private getRandomNomineeName(): string {
+    // Get a random current nominee
+    if (this.game.nominees.length === 0) {
+      // No nominees, return generic response
+      return "someone";
+    }
+    
+    const nomineeId = this.game.nominees[Math.floor(Math.random() * this.game.nominees.length)];
+    const nominee = this.game.getHouseguestById(nomineeId);
+    
+    return nominee ? nominee.name : "someone";
   }
 }
