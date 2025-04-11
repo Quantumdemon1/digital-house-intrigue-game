@@ -3,10 +3,10 @@ import type { GamePhase } from '../../models/game-state';
 import type { BigBrotherGame } from '../../models/BigBrotherGame'; 
 import type { Houseguest } from '../../models/houseguest';
 import type { Alliance } from '../../models/alliance';
-import type { IGameControllerFacade, IUIManagerFacade } from '../../types/interfaces';
+import type { IGameControllerFacade } from '../../types/interfaces';
 import type { RelationshipSystem } from '../../systems/relationship-system';
 import type { CompetitionSystem } from '../../systems/competition-system';
-import type { AIIntegrationSystem } from '../../systems/ai-integration';
+import type { AIIntegrationSystem } from '../../systems/ai/ai-integration-system';
 import type { GameRecapGenerator } from '../../utils/recap';
 import type { Logger } from '../../utils/logger';
 import type { RelationshipEvent, RelationshipEventType } from '../../models/relationship-event';
@@ -21,7 +21,8 @@ type SystemAction =
   | { type: 'SAVE_GAME_REQUEST' }
   | { type: 'LOAD_GAME_REQUEST' }
   | { type: 'TOGGLE_PAUSE' }
-  | { type: 'FORCE_REFRESH' };
+  | { type: 'FORCE_REFRESH' }
+  | { type: 'UPDATE_GAME_STATE'; payload: any }; // Added this action type
 
 // Player actions
 type PlayerAction = {
@@ -101,4 +102,5 @@ export type GameContextType = {
     getRandomNominees: (count?: number, excludeIds?: string[]) => Houseguest[];
     getGameStatus: () => { week: number; phase: string; hoh: string | null; nominees: string; povHolder: string | null; };
     showToast: (title: string, options?: { description?: string; variant?: 'success' | 'error' | 'info' | 'warning'; duration?: number }) => void;
+    loading: boolean; // Add loading state
 };

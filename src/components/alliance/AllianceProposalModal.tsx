@@ -29,7 +29,7 @@ const AllianceProposalModal: React.FC<AllianceProposalModalProps> = ({
   onClose,
   onSubmit
 }) => {
-  const { game, logger } = useGame();
+  const { game, relationshipSystem } = useGame();
   const { toast } = useToast();
 
   // State for the form
@@ -69,8 +69,8 @@ const AllianceProposalModal: React.FC<AllianceProposalModalProps> = ({
 
   // Get relationship with a houseguest
   const getRelationshipScore = (houseguestId: string): number => {
-    if (!game || !playerHouseguest) return 0;
-    return game.controller.relationshipSystem.getEffectiveRelationship(
+    if (!relationshipSystem || !playerHouseguest) return 0;
+    return relationshipSystem.getEffectiveRelationship(
       playerHouseguest.id,
       houseguestId
     );
@@ -78,8 +78,8 @@ const AllianceProposalModal: React.FC<AllianceProposalModalProps> = ({
 
   // Get relationship level with a houseguest
   const getRelationshipLevel = (houseguestId: string): string => {
-    if (!game || !playerHouseguest) return 'Unknown';
-    return game.controller.relationshipSystem.getRelationshipLevel(
+    if (!relationshipSystem || !playerHouseguest) return 'Unknown';
+    return relationshipSystem.getRelationshipLevel(
       playerHouseguest.id,
       houseguestId
     );

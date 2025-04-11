@@ -17,7 +17,7 @@ import type { IGameControllerFacade } from '../types/interfaces';
 
 export class BigBrotherGame implements IGameControllerFacade {
   // Game state
-  private gameState: GameState;
+  gameState: GameState;
   
   // Current game phase state
   currentState?: GameStateBase;
@@ -270,5 +270,10 @@ export class BigBrotherGame implements IGameControllerFacade {
   
   set runnerUp(runnerUp: Houseguest | null) {
     this.gameState.runnerUp = runnerUp;
+  }
+  
+  // Added for compatibility with interface
+  get gameLog(): any[] {
+    return this.gameState.gameLog;
   }
 }

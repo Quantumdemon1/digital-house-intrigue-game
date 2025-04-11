@@ -43,7 +43,7 @@ const SocialInteractionPhase: React.FC = () => {
           <Users className="mr-2 text-blue-600" /> Social Phase
         </CardTitle>
         <CardDescription>
-          Week {game.currentWeek} - Interact with other houseguests.
+          Week {game.week} - Interact with other houseguests.
         </CardDescription>
       </CardHeader>
       

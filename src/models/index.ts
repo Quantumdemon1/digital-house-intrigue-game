@@ -7,5 +7,5 @@
 export * from './houseguest';
 export * from './alliance';
 export { BigBrotherGame } from './BigBrotherGame';
-export type { GameEvent } from './BigBrotherGame';
-export * from './game-state';
+export * from './game-state'; // This includes GameEvent
+

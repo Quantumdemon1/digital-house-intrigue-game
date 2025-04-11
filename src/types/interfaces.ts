@@ -4,6 +4,9 @@ import type { AIIntegrationSystem } from "../systems/ai/ai-integration-system";
 import type { RelationshipSystem } from "../systems/relationship-system";
 import type { BigBrotherGame } from "../models/BigBrotherGame";
 import type { AllianceSystem } from "../systems/alliance-system";
+import type { GameState } from "../models/game-state";
+import type { Houseguest } from "../models/houseguest";
+import type { GameStateBase } from "../game-states/GameStateBase";
 
 /**
  * Interface for the game controller facade
@@ -14,9 +17,28 @@ export interface IGameControllerFacade {
   relationshipSystem: RelationshipSystem;
   aiSystem?: AIIntegrationSystem;
   allianceSystem?: AllianceSystem;
-  gameState: BigBrotherGame;
+  gameState: GameState;
+  currentLocation: string;
+  currentState?: GameStateBase;
+  
+  // Game state getters
+  week: number;
+  phase: string;
+  houseguests: Houseguest[];
+  hohWinner: Houseguest | null;
+  povWinner: Houseguest | null;
+  nominees: Houseguest[];
+  gameLog: any[];
+  
+  // Methods
   promptNextAction: () => void;
   saveGame: () => void;
   loadGame: () => void;
   openAllianceProposalUI: () => void;
+  getActiveHouseguests: () => Houseguest[];
+  getHouseguestById: (id: string) => Houseguest | undefined;
+  transitionToState: (state: typeof GameStateBase) => Promise<void>;
 }
+
+// Export GameEvent type from game-state.ts
+export type { GameEvent } from "../models/game-state";

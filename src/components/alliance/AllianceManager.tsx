@@ -22,7 +22,7 @@ export const AllianceManager: React.FC = () => {
 
   // Function to submit an alliance proposal
   const handleAllianceProposal = useCallback((data: AllianceProposalData) => {
-    if (!game || !game.controller.allianceSystem) return;
+    if (!game || !game.allianceSystem) return;
     
     const playerHouseguest = game.houseguests.find(h => h.isPlayer);
     if (!playerHouseguest) return;
@@ -37,7 +37,7 @@ export const AllianceManager: React.FC = () => {
     
     try {
       // Create the alliance
-      const alliance = game.controller.allianceSystem.createAlliance(
+      const alliance = game.allianceSystem.createAlliance(
         data.name,
         allMembers,
         playerHouseguest,
@@ -51,10 +51,10 @@ export const AllianceManager: React.FC = () => {
       
       // Trigger AI evaluation of the alliance proposal for each member
       selectedMembers.forEach(async (member) => {
-        if (!member || !game.controller.aiSystem) return;
+        if (!member || !game.aiSystem) return;
         
         // Get relationship data for context
-        const relationshipScore = game.controller.relationshipSystem.getRelationship(
+        const relationshipScore = game.relationshipSystem.getRelationship(
           member.id,
           playerHouseguest.id
         );
@@ -73,15 +73,15 @@ export const AllianceManager: React.FC = () => {
         allMembers.forEach(m => {
           if (m.id !== member.id) {
             allianceContext.relationships[m.name] = {
-              score: game.controller.relationshipSystem.getEffectiveRelationship(member.id, m.id),
-              level: game.controller.relationshipSystem.getRelationshipLevel(member.id, m.id)
+              score: game.relationshipSystem.getEffectiveRelationship(member.id, m.id),
+              level: game.relationshipSystem.getRelationshipLevel(member.id, m.id)
             };
           }
         });
         
         // Make AI decision about alliance acceptance
         try {
-          const decision = await game.controller.aiSystem.makeDecision(
+          const decision = await game.aiSystem.makeDecision(
             member.name,
             'alliance_response',
             allianceContext,
@@ -96,7 +96,7 @@ export const AllianceManager: React.FC = () => {
             });
           } else {
             // If rejected, remove from alliance
-            game.controller.allianceSystem.removeMemberFromAlliance(
+            game.allianceSystem.removeMemberFromAlliance(
               alliance,
               member.id,
               "Declined alliance invitation"
@@ -115,7 +115,7 @@ export const AllianceManager: React.FC = () => {
           const willAccept = relationshipScore > 20 || Math.random() < 0.5;
           
           if (!willAccept) {
-            game.controller.allianceSystem.removeMemberFromAlliance(
+            game.allianceSystem.removeMemberFromAlliance(
               alliance,
               member.id,
               "Declined alliance invitation"
@@ -131,7 +131,13 @@ export const AllianceManager: React.FC = () => {
       });
       
       // Update game state to reflect the new alliance
-      dispatch({ type: 'UPDATE_GAME_STATE', payload: { ...game } });
+      dispatch({ 
+        type: 'PLAYER_ACTION', 
+        payload: { 
+          actionId: 'alliance_created', 
+          params: { alliance: alliance } 
+        } 
+      });
       
     } catch (error) {
       console.error("Error creating alliance:", error);
@@ -145,8 +151,8 @@ export const AllianceManager: React.FC = () => {
 
   // Register openProposalModal with the game controller
   React.useEffect(() => {
-    if (game && game.controller) {
-      game.controller.openAllianceProposalUI = openProposalModal;
+    if (game) {
+      game.openAllianceProposalUI = openProposalModal;
     }
   }, [game, openProposalModal]);
 

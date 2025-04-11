@@ -4,22 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
 
-const NominationPhase: React.FC = () => {
+const HohPhase: React.FC = () => {
   const { game } = useGame();
   
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Nomination Ceremony</CardTitle>
+        <CardTitle>Head of Household Competition</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>This is a placeholder for the nomination phase.</p>
+        <p>This is a placeholder for the HoH competition phase.</p>
         <p>Current week: {game?.week}</p>
         {game?.hohWinner && (
-          <p>Current HoH: {game.hohWinner.name}</p>
-        )}
-        {game?.nominees && game.nominees.length > 0 && (
-          <p>Nominees: {game.nominees.map(nominee => nominee.name).join(', ')}</p>
+          <p>Current HoH winner: {game.hohWinner.name}</p>
         )}
         <div className="mt-4">
           <Button>Next Phase</Button>
@@ -29,4 +26,4 @@ const NominationPhase: React.FC = () => {
   );
 };
 
-export default NominationPhase;
+export default HohPhase;

@@ -1,66 +1,26 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserX } from 'lucide-react';
-import { useEvictionPhase } from './EvictionPhase/useEvictionPhase';
-import EvictionInteractionStage from './EvictionPhase/EvictionInteractionStage';
-import EvictionVoting from './EvictionPhase/EvictionVoting';
-import EvictionResults from './EvictionPhase/EvictionResults';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useGame } from '@/contexts/GameContext';
 
 const EvictionPhase: React.FC = () => {
-  const {
-    stage,
-    votes,
-    timeRemaining,
-    nominees,
-    nonNominees,
-    hoh,
-    playerIsNominee,
-    handleProceedToVoting,
-    handleVoteSubmit,
-    handleEvictionComplete,
-    VOTING_TIME_LIMIT
-  } = useEvictionPhase();
+  const { game } = useGame();
   
   return (
-    <Card className="shadow-lg border-bb-red">
-      <CardHeader className="bg-bb-red text-white">
-        <CardTitle className="flex items-center">
-          <UserX className="mr-2" /> Eviction Night
-        </CardTitle>
-        <CardDescription className="text-white/80">
-          Week {/* Get week from context */}
-        </CardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Eviction Ceremony</CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">
-        {stage === 'interaction' && (
-          <EvictionInteractionStage
-            nominees={nominees}
-            nonNominees={nonNominees}
-            playerIsNominee={playerIsNominee}
-            onInteractionStageComplete={handleProceedToVoting}
-          />
+      <CardContent>
+        <p>This is a placeholder for the eviction phase.</p>
+        <p>Current week: {game?.week}</p>
+        {game?.nominees && game.nominees.length > 0 && (
+          <p>Current nominees: {game.nominees.map(nominee => nominee.name).join(', ')}</p>
         )}
-        
-        {stage === 'voting' && (
-          <EvictionVoting 
-            nominees={nominees} 
-            voters={nonNominees}
-            hoh={hoh}
-            onVoteSubmit={handleVoteSubmit}
-            votes={votes}
-            timeRemaining={timeRemaining}
-            totalTime={VOTING_TIME_LIMIT}
-          />
-        )}
-        
-        {stage === 'results' && (
-          <EvictionResults 
-            nominees={nominees}
-            votes={votes}
-            onComplete={handleEvictionComplete}
-          />
-        )}
+        <div className="mt-4">
+          <Button>Next Phase</Button>
+        </div>
       </CardContent>
     </Card>
   );
