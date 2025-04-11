@@ -79,8 +79,9 @@ export class EvictionState extends GameStateBase {
             this.game.juryMembers.push(params.evictedId);
             
             // The remaining two houseguests become the final two
-            const finalTwo = this.game.getActiveHouseguests().filter(hg => hg.id !== params.evictedId);
-            this.game.finalTwo = finalTwo.map(hg => hg.id);
+            // But we need Houseguest objects, not just IDs
+            const finalTwoHouseguests = this.game.getActiveHouseguests().filter(hg => hg.id !== params.evictedId);
+            this.game.finalTwo = finalTwoHouseguests; // Now assigning Houseguest[] instead of string[]
             
             // Advance to Finale phase
             this.controller.changeState('FinalStageState');
