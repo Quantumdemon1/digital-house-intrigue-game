@@ -41,6 +41,15 @@ export function useFastForward() {
           }
         });
         
+        // Dispatch EVICT_HOUSEGUEST directly
+        dispatch({
+          type: 'EVICT_HOUSEGUEST',
+          payload: {
+            evicted: evictedNominee,
+            toJury: gameState.week >= 5
+          }
+        });
+        
         // Complete the eviction process
         dispatch({
           type: 'PLAYER_ACTION',

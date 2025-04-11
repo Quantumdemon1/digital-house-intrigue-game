@@ -105,7 +105,7 @@ export class BigBrotherGame {
   }
 
   getActiveHouseguests(): Houseguest[] {
-    // Use string comparison instead of enum
+    // Filter out houseguests that are not active (evicted or in jury)
     return this.houseguests.filter(h => h.status === 'Active');
   }
 

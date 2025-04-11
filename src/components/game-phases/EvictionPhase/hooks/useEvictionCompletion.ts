@@ -31,6 +31,15 @@ export function useEvictionCompletion() {
       }
     });
     
+    // Also dispatch direct EVICT_HOUSEGUEST action to ensure the reducer processes it
+    dispatch({
+      type: 'EVICT_HOUSEGUEST',
+      payload: {
+        evicted: evictedHouseguest,
+        toJury: gameState.week >= 5
+      }
+    });
+    
     toast({
       title: "Houseguest Evicted",
       description: `${evictedHouseguest.name} has been evicted from the Big Brother house.`,

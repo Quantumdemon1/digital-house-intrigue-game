@@ -5,6 +5,7 @@
  */
 
 import { GameStateBase } from './GameStateBase';
+import { HouseguestStatus } from '../models/houseguest';
 
 export class EvictionState extends GameStateBase {
   async enter(): Promise<void> {
@@ -37,20 +38,21 @@ export class EvictionState extends GameStateBase {
           this.getLogger().info(`Evicting houseguest: ${params.evictedId}`);
           
           // Get the evicted houseguest
-          const evictedHouseguest = this.game.getHouseguestById(params.evictedId);
+          const evictedHouseguest = this.game.houseguests.find(hg => hg.id === params.evictedId);
           if (evictedHouseguest) {
             // Update the houseguest's status based on jury eligibility
-            evictedHouseguest.status = params.toJury ? 'Jury' : 'Evicted';
+            const newStatus = params.toJury ? 'Jury' : 'Evicted';
+            evictedHouseguest.status = newStatus as HouseguestStatus;
             
             // If they're going to jury, add them to jury members
             if (params.toJury) {
               this.game.juryMembers.push(params.evictedId);
             }
             
-            // Remove from active nominees
+            // Important: Remove from nominees list
             this.game.nominees = this.game.nominees.filter(id => id !== params.evictedId);
             
-            this.getLogger().info(`${evictedHouseguest.name} has been evicted and removed from the house`);
+            this.getLogger().info(`${evictedHouseguest.name} has been evicted and removed from active houseguests`);
           }
           return true;
         }
