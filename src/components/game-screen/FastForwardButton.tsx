@@ -27,15 +27,44 @@ export const FastForwardButton: React.FC = () => {
     });
 
     // If we're in eviction phase, also trigger eviction_complete
+    // This ensures the eviction is processed and the houseguest is removed
     if (gameState.phase === 'Eviction') {
-      console.log("In Eviction phase, also dispatching eviction_complete");
-      dispatch({
-        type: 'PLAYER_ACTION',
-        payload: {
-          actionId: 'eviction_complete',
-          params: {}
-        }
-      });
+      console.log("In Eviction phase, handling eviction and advancing week");
+      
+      // If we have nominees, pick one to evict automatically
+      if (gameState.nominees && gameState.nominees.length > 0) {
+        const evictedNominee = gameState.nominees[0]; // Just pick the first nominee
+        
+        // First evict the houseguest
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: {
+            actionId: 'evict_houseguest',
+            params: {
+              evictedId: evictedNominee.id,
+              toJury: gameState.week >= 5 // Jury starts week 5 or later
+            }
+          }
+        });
+        
+        // Then complete the eviction process
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: {
+            actionId: 'eviction_complete',
+            params: {}
+          }
+        });
+      } else {
+        // Just complete the eviction phase if no nominees are available
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: {
+            actionId: 'eviction_complete',
+            params: {}
+          }
+        });
+      }
     }
 
     toast({

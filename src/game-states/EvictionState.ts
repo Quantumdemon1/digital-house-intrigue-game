@@ -24,24 +24,37 @@ export class EvictionState extends GameStateBase {
           return true;
         }
         return false;
+        
       case 'hoh_tiebreaker':
         if (params && params.hohId && params.nomineeId) {
           this.getLogger().info(`HoH ${params.hohId} broke tie by voting to evict ${params.nomineeId}`);
+          return true;
+        }
+        return false;
+        
+      case 'evict_houseguest':
+        if (params && params.evictedId) {
+          this.getLogger().info(`Evicting houseguest: ${params.evictedId}`);
           
-          // After tiebreaker vote, advance immediately to next week/phase
-          // If we're in finale, go to GameOver, otherwise advance week
-          if (this.game.week >= this.controller.getGameSettings().finalWeek) {
-            this.controller.changeState('GameOverState');
-          } else {
-            this.game.advanceWeek();
-            this.controller.changeState('HohCompetitionState');
+          // Get the evicted houseguest
+          const evictedHouseguest = this.game.getHouseguestById(params.evictedId);
+          if (evictedHouseguest) {
+            // Update the houseguest's status based on jury eligibility
+            evictedHouseguest.status = params.toJury ? 'Jury' : 'Evicted';
+            
+            // If they're going to jury, add them to jury members
+            if (params.toJury) {
+              this.game.juryMembers.push(params.evictedId);
+            }
+            
+            // Remove from active nominees
+            this.game.nominees = this.game.nominees.filter(id => id !== params.evictedId);
+            
+            this.getLogger().info(`${evictedHouseguest.name} has been evicted and removed from the house`);
           }
           return true;
         }
         return false;
-      case 'evict_houseguest':
-        this.getLogger().info(`Evicting houseguest: ${params.evictedId}`);
-        return true;
         
       case 'advance_week':
         this.getLogger().info("Advancing week after eviction");
@@ -77,6 +90,7 @@ export class EvictionState extends GameStateBase {
           this.controller.changeState('HohCompetitionState');
         }
         return true;
+        
       default:
         return false;
     }

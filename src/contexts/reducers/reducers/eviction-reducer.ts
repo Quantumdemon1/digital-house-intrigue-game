@@ -26,6 +26,7 @@ export function evictionReducer(state: GameState, action: GameAction): GameState
             status: toJury ? 'Jury' as HouseguestStatus : 'Evicted' as HouseguestStatus,
             isNominated: false,
             isPovHolder: false, // Clear POV status when evicted
+            isHoH: false, // Also clear HoH status if they somehow had it
           };
         }
         // Clear nomination status for everyone else too
@@ -40,12 +41,15 @@ export function evictionReducer(state: GameState, action: GameAction): GameState
         ? [...state.juryMembers, { ...evicted, status: 'Jury' as HouseguestStatus }]
         : state.juryMembers;
       
+      // Clear nominees array to ensure evicted players are completely removed
+      const updatedNominees = state.nominees.filter(nominee => nominee.id !== evicted.id);
+      
       return {
         ...state,
         houseguests: updatedHouseguestsAfterEviction,
-        nominees: [],
+        nominees: updatedNominees,
         juryMembers: updatedJury,
-        evictionVotes: {},
+        evictionVotes: {}, // Clear votes after eviction
       };
     }
     
