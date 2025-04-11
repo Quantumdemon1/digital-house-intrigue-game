@@ -14,7 +14,7 @@ const GameSidebar: React.FC = () => {
   return <ScrollArea className="h-full">
       <div className="space-y-6 pr-2">
         {/* Houseguest list */}
-        <div className="rounded-lg shadow-lg p-4 border bg-[#005a9a]">
+        <div className="bg-bb-blue text-white">
           <h2 className="font-bold text-lg mb-4">Houseguests</h2>
           
           <h3 className="text-xs uppercase text-muted-foreground font-semibold mb-2">Active</h3>
