@@ -17,11 +17,11 @@ const NominationPhase: React.FC = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   
   // Convert HoH ID to Houseguest object
-  const hoh = gameState?.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
+  const hoh = gameState?.hohWinner ? getHouseguestById(gameState.hohWinner.id) : null;
   
   // Convert nominee IDs to Houseguest objects, if they exist
   const nominees = gameState?.nominees?.map(nomineeId => 
-    getHouseguestById(nomineeId)
+    getHouseguestById(nomineeId.id)
   ).filter(Boolean) || [];
   
   // Get all eligible houseguests (active and not HoH)
