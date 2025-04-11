@@ -1,4 +1,3 @@
-
 /**
  * @file src/systems/ai/ai-integration-system.ts
  * @description Main AI integration system that orchestrates all AI components
@@ -138,7 +137,7 @@ export class AIIntegrationSystem {
    * Provides fallback decisions when the API fails
    * - Direct access for useAINomination hook
    */
-  getFallbackDecision(botId: string, decisionType: string, context: any, game: any): any {
+  getFallbackDecision(botId: string, decisionType: string, context: any, game: any) {
     return this.useFallback(decisionType, context);
   }
   

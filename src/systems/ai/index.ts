@@ -9,3 +9,6 @@ export { AIMemoryManager } from './memory-manager';
 export { AIDecisionMaker } from './decision-maker';
 export { AIResponseParser } from './response-parser';
 export { AIFallbackGenerator } from './fallback-generator';
+export { AIApiClient } from './api-client';
+export { PromptGenerator } from './prompt-generator';
+
