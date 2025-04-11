@@ -112,8 +112,8 @@ const NominationPhase: React.FC = () => {
         {/* HoH Banner */}
         <div className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b">
           <div>
-            <p className="text-sm text-slate-50">Head of Household</p>
-            <p className="text-lg font-semibold text-slate-950">{hoh?.name || 'No HoH'}</p>
+            <p className="bg-bb-blue text-white">Head of Household</p>
+            <p className="bg-bb-blue text-white">{hoh?.name || 'No HoH'}</p>
           </div>
           
         </div>
