@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { GameState } from '@/contexts/types/game-context-types';

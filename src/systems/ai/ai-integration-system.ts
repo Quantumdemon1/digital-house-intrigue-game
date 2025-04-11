@@ -1,4 +1,3 @@
-
 /**
  * @file src/systems/ai/ai-integration-system.ts
  * @description Main AI integration system that orchestrates all AI components
@@ -412,7 +411,7 @@ export class AIIntegrationSystem {
     houseguestId: string,
     event: 'nominated' | 'saved' | 'competition_win' | 'competition_loss' | 'ally_evicted' | 'enemy_evicted' | 'betrayed' | 'positive_interaction' | 'negative_interaction'
   ): void {
-    const game = this.relationshipSystem?.getGameRef();
+    const game = this.relationshipSystem?.game;
     if (!game) return;
     
     const houseguest = game.houseguests.find(h => h.id === houseguestId);

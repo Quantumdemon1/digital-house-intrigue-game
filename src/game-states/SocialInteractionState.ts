@@ -208,9 +208,9 @@ export class SocialInteractionState extends GameStateBase {
         const infoType = params?.type;
         const presentGuests = this.game.getActiveHouseguests().filter(hg => !hg.isPlayer);
         const randomTarget = presentGuests[Math.floor(Math.random() * presentGuests.length)];
-        const playerGuest = this.game.houseguests.find(h => h.isPlayer);
+        const infoPlayerGuest = this.game.houseguests.find(h => h.isPlayer);
         
-        if (!playerGuest || !randomTarget) break;
+        if (!infoPlayerGuest || !randomTarget) break;
         
         if (infoType === 'honest') {
           // Sharing honest information builds trust
@@ -221,7 +221,7 @@ export class SocialInteractionState extends GameStateBase {
             
             // Record as significant event - builds trust
             this.controller.relationshipSystem.addRelationshipEvent(
-              playerGuest.id,
+              infoPlayerGuest.id,
               randomTarget.id,
               'shared_info',
               `You shared valuable game information with ${randomTarget.name}.`,
@@ -232,9 +232,9 @@ export class SocialInteractionState extends GameStateBase {
             // Reciprocal effect - they trust you more
             this.controller.relationshipSystem.addRelationshipEvent(
               randomTarget.id,
-              playerGuest.id,
+              infoPlayerGuest.id,
               'shared_info',
-              `${playerGuest.name} shared valuable game information with you.`,
+              `${infoPlayerGuest.name} shared valuable game information with you.`,
               7,
               false // Trust building is remembered
             );
@@ -252,9 +252,9 @@ export class SocialInteractionState extends GameStateBase {
               
               // Record as significant betrayal event
               this.controller.relationshipSystem.recordBetrayal(
-                playerGuest.id,
+                infoPlayerGuest.id,
                 randomTarget.id,
-                `${playerGuest.name} lied to you about game information.`
+                `${infoPlayerGuest.name} lied to you about game information.`
               );
               
               // Other houseguests may hear about this
@@ -265,7 +265,7 @@ export class SocialInteractionState extends GameStateBase {
               witnesses.forEach(witness => {
                 this.controller.relationshipSystem.updateRelationship(
                   witness.id,
-                  playerGuest.id,
+                  infoPlayerGuest.id,
                   -5,
                   `${witness.name} heard that you lied to ${randomTarget.name}.`
                 );
@@ -276,7 +276,7 @@ export class SocialInteractionState extends GameStateBase {
               // Short-term boost but potential for future damage
               this.controller.relationshipSystem.updateRelationship(
                 randomTarget.id,
-                playerGuest.id,
+                infoPlayerGuest.id,
                 3,
                 `${randomTarget.name} trusts your information.`
               );
@@ -356,21 +356,21 @@ export class SocialInteractionState extends GameStateBase {
       case 'check_relationships':
         // Expanded relationship checking that includes significant events
         this.getLogger().info("--- Your Relationships ---");
-        const playerGuest = this.game.houseguests[0]; // Assuming player is first houseguest
+        const checkPlayerGuest = this.game.houseguests.find(h => h.isPlayer); // Renamed to avoid duplication
         
-        if (!playerGuest) break;
+        if (!checkPlayerGuest) break;
         
         this.game.houseguests.forEach(guest => {
-          if (guest.id !== playerGuest.id && !guest.isEvicted) {
-            const baseScore = this.controller.relationshipSystem.getRelationship(playerGuest.id, guest.id);
-            const effectiveScore = this.controller.relationshipSystem.getEffectiveRelationship(playerGuest.id, guest.id);
+          if (guest.id !== checkPlayerGuest.id && guest.status !== 'Evicted') { // Changed isEvicted to status check
+            const baseScore = this.controller.relationshipSystem.getRelationship(checkPlayerGuest.id, guest.id);
+            const effectiveScore = this.controller.relationshipSystem.getEffectiveRelationship(checkPlayerGuest.id, guest.id);
             const description = this.describeRelationship(effectiveScore);
             
             this.getLogger().info(`${guest.name}: ${description} (${effectiveScore.toFixed(1)})`);
             
             // Get significant events
             if (this.controller.relationshipSystem.getRelationshipEvents) {
-              const events = this.controller.relationshipSystem.getRelationshipEvents(playerGuest.id, guest.id)
+              const events = this.controller.relationshipSystem.getRelationshipEvents(checkPlayerGuest.id, guest.id)
                 .filter(e => ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type) ||
                       Math.abs(e.impactScore) >= 15);
                       
@@ -383,7 +383,7 @@ export class SocialInteractionState extends GameStateBase {
               }
               
               // Show reciprocity factor
-              const reciprocity = this.controller.relationshipSystem.calculateReciprocityModifier(guest.id, playerGuest.id);
+              const reciprocity = this.controller.relationshipSystem.calculateReciprocityModifier(guest.id, checkPlayerGuest.id);
               if (Math.abs(reciprocity) > 0.1) {
                 const reciprocityDesc = reciprocity > 0 
                   ? `${guest.name} likes you more than you like them.`

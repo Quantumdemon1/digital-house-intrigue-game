@@ -66,7 +66,20 @@ export interface GameState {
   runnerUp: Houseguest | null;
   week: number;
   phase: GamePhase;
-  relationships: Map<string, Map<string, { score: number; alliance: string | null; notes: string[] }>>;
+  relationships: Map<string, Map<string, { 
+    score: number; 
+    alliance: string | null; 
+    notes: string[];
+    events: Array<{
+      timestamp: number;
+      type: string;
+      description: string;
+      impactScore: number;
+      decayable: boolean;
+      decayRate?: number;
+    }>;
+    lastInteractionWeek: number;
+  }>>;
   evictionVotes: Record<string, string>;
   gameLog: Array<{
     week: number;
