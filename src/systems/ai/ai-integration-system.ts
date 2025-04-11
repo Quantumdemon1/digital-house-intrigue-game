@@ -5,7 +5,7 @@
 
 import type { Houseguest } from '@/models/houseguest';
 import type { Logger } from '@/utils/logger';
-import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import { AIMemoryManager } from './memory-manager';
 import { AIDecisionMaker } from './decision-maker';
 import { AIResponseParser } from './response-parser';

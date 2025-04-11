@@ -4,7 +4,7 @@
  * @description Builds recaps for individual game weeks
  */
 
-import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import type { GameEvent } from '@/models/game-state';
 import type { Logger } from '@/utils/logger';
 

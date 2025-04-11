@@ -1,10 +1,11 @@
+
 /**
  * @file src/systems/competition-system.ts
  * @description Manages competitions between houseguests
  */
 
 import type { Houseguest } from '@/models/houseguest';
-import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import type { Logger } from '@/utils/logger';
 import type { CompetitionType } from '@/models/houseguest';
 

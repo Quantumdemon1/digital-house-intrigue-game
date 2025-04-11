@@ -20,12 +20,12 @@ import {
   changeGameState,
   cloneGame
 } from './gameStateManager';
-import { GameState } from './types';
+import { GameStateInterface } from './types';
 
 // Re-export original type for backward compatibility
 export type { GameEvent } from '../game-state';
 
-export class BigBrotherGame implements GameState {
+export class BigBrotherGame implements GameStateInterface {
   // Game configuration
   public houseguests: Houseguest[] = [];
   public week: number = 1;

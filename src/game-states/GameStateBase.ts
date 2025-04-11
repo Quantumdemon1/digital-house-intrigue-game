@@ -4,7 +4,7 @@
  * @description Base class for all game states
  */
 
-import { BigBrotherGame } from '../models/BigBrotherGame';
+import { BigBrotherGame } from '../models/game/BigBrotherGame';
 import type { IGameControllerFacade } from '../types/interfaces';
 
 // Define structure for actions the social state can return

@@ -15,7 +15,8 @@ export interface GameSettings {
   finalWeek: number;
 }
 
-export interface GameState {
+// Rename this to avoid clash with the one in game-state.ts
+export interface GameStateInterface {
   houseguests: Houseguest[];
   week: number;
   phase: GamePhase;
@@ -38,3 +39,6 @@ export interface GameState {
   eventLog: GameEvent[];
   gameLog: GameEvent[];
 }
+
+// This is the actual GameState type that BigBrotherGame implements
+export type GameState = GameStateInterface;

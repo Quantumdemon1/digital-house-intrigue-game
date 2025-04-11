@@ -1,9 +1,8 @@
-
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from "sonner"; // Import sonner toast
 
 // Import Core Classes & Types
-import { BigBrotherGame } from '../models/BigBrotherGame';
+import { BigBrotherGame } from '../models/game/BigBrotherGame';
 import { Houseguest } from '../models/houseguest';
 import { RelationshipSystem } from '../systems/relationship-system';
 import { CompetitionSystem } from '../systems/competition-system';

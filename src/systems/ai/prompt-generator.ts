@@ -1,10 +1,11 @@
+
 /**
  * @file src/systems/ai/prompt-generator.ts
  * @description Generates AI prompts based on game context
  */
 
 import type { Houseguest } from '@/models/houseguest';
-import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import type { Logger } from '@/utils/logger';
 
 export class PromptGenerator {

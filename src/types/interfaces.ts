@@ -2,7 +2,7 @@
 import type { Logger } from "../utils/logger";
 import type { AIIntegrationSystem } from "../systems/ai/ai-integration-system";
 import type { RelationshipSystem } from "../systems/relationship-system";
-import type { BigBrotherGame } from "../models/BigBrotherGame";
+import type { BigBrotherGame } from "../models/game/BigBrotherGame";
 import type { AllianceSystem } from "../systems/alliance-system";
 import type { GameState } from "../models/game-state";
 import type { Houseguest } from "../models/houseguest";

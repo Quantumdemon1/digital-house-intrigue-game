@@ -4,7 +4,7 @@
  * @description Builds finale-related sections of the game recap
  */
 
-import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import type { GameEvent } from '@/models/game-state';
 import type { Logger } from '@/utils/logger';
 

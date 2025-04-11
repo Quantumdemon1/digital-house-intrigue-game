@@ -1,6 +1,6 @@
 
 import type { GamePhase } from '../../models/game-state';
-import type { BigBrotherGame } from '../../models/BigBrotherGame'; 
+import type { BigBrotherGame } from '../../models/game/BigBrotherGame'; 
 import type { Houseguest } from '../../models/houseguest';
 import type { Alliance } from '../../models/alliance';
 import type { IGameControllerFacade } from '../../types/interfaces';

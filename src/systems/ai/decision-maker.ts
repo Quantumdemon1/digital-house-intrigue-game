@@ -1,11 +1,10 @@
-
 /**
  * @file src/systems/ai/decision-maker.ts
  * @description Coordinates AI decision making using other specialized classes
  */
 
 import type { Houseguest } from '@/models/houseguest';
-import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import type { Logger } from '@/utils/logger';
 import { AIApiClient } from './api-client';
 import { PromptGenerator } from './prompt-generator';
