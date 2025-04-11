@@ -1,25 +1,37 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Target } from 'lucide-react';
+import { CardContent } from '@/components/ui/card';
+import { Target } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
+import { useGame } from '@/contexts/GameContext';
 
 interface NominationCeremonyResultProps {
   nominees: Houseguest[];
   hoh?: Houseguest | null;
   hohName?: string;
-  onContinue?: () => void;
 }
 
 const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
   nominees,
   hoh,
-  hohName,
-  onContinue
+  hohName
 }) => {
+  const { dispatch } = useGame();
+  
   // Use either the hoh.name or the provided hohName
   const nominatorName = hoh?.name || hohName || "The HOH";
+  
+  const handleContinue = () => {
+    // Dispatch action to continue to POV phase
+    dispatch({
+      type: 'PLAYER_ACTION',
+      payload: {
+        actionId: 'continue_to_pov',
+        params: {}
+      }
+    });
+  };
   
   return (
     <CardContent className="pt-6">
@@ -49,14 +61,12 @@ const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
           for a chance to save themselves from eviction.
         </div>
         
-        {onContinue && (
-          <Button 
-            onClick={onContinue} 
-            className="mt-2 bg-bb-red hover:bg-bb-red/90"
-          >
-            Continue to Power of Veto
-          </Button>
-        )}
+        <Button 
+          onClick={handleContinue} 
+          className="mt-2 bg-bb-red hover:bg-bb-red/90"
+        >
+          Continue to Power of Veto
+        </Button>
       </div>
     </CardContent>
   );
