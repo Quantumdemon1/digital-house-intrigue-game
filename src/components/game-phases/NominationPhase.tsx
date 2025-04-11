@@ -94,7 +94,7 @@ const NominationPhase: React.FC = () => {
     });
   };
   return <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
-      <CardHeader className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b">
+      <CardHeader className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b bg-[#161650]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-amber-100 rounded-full">
@@ -112,12 +112,10 @@ const NominationPhase: React.FC = () => {
         {/* HoH Banner */}
         <div className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b">
           <div>
-            <p className="text-sm text-muted-foreground">Head of Household</p>
+            <p className="text-sm text-slate-50">Head of Household</p>
             <p className="text-lg font-semibold text-slate-950">{hoh?.name || 'No HoH'}</p>
           </div>
-          <div className="p-3 bg-amber-100 rounded-full">
-            <Crown className="h-6 w-6 text-amber-600" />
-          </div>
+          
         </div>
         
         {!ceremonyStarted ? <div className="text-center space-y-6 py-8">
@@ -144,10 +142,10 @@ const NominationPhase: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-              {nominees.map(nominee => <div key={nominee?.id} className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b">
+              {nominees.map(nominee => <div key={nominee?.id} className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b bg-[#161650]">
                   <Target className="h-5 w-5 mx-auto text-red-500 mb-2" />
-                  <h4 className="font-semibold text-lg">{nominee?.name}</h4>
-                  <p className="text-sm text-muted-foreground">{nominee?.occupation}</p>
+                  <h4 className="font-semibold text-lg text-center">{nominee?.name}</h4>
+                  <p className="text-muted-foreground text-sm font-bold text-center">{nominee?.occupation}</p>
                 </div>)}
             </div>
             
