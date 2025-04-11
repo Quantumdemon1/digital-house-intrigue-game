@@ -42,6 +42,12 @@ export abstract class GameStateBase {
     return false;
   }
 
+  // Added base implementation that can be overridden by specific states
+  getAvailableActions(): SocialActionChoice[] {
+    // Default implementation returns an empty array
+    return [];
+  }
+
   protected getLogger(): any {
     return this.controller.logger;
   }
@@ -155,6 +161,9 @@ export class SocialInteractionState extends GameStateBase {
     this.interactionsRemaining = 3; // Reset interactions on entry
     this.getLogger().info(`Entering social phase. Target: ${this.targetPhase.name}. Interactions left: ${this.interactionsRemaining}`);
     
+    // Notify the player
+    this.getLogger().info(`You are in the ${this.game.currentLocation.replace('-', ' ')}.`);
+    
     // Trigger UI to show choices
     if (typeof this.controller.promptNextAction === 'function') {
       this.controller.promptNextAction();
@@ -163,7 +172,7 @@ export class SocialInteractionState extends GameStateBase {
     }
   }
 
-  getAvailableActions(): any[] {
+  getAvailableActions(): SocialActionChoice[] {
     // This will be implemented in SocialInteractionState.ts
     return [];
   }
