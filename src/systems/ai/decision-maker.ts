@@ -1,4 +1,3 @@
-
 /**
  * @file src/systems/ai/decision-maker.ts
  * @description Handles AI decision making logic and API calls
@@ -111,6 +110,11 @@ The finalists are: ${context.finalists?.join(', ')}`;
    * Makes the actual API call to the LLM
    */
   async callLLMAPI(prompt: string): Promise<string> {
+    // SIMULATE API FAILURE FOR TESTING
+    this.logger.warn("⚠️ SIMULATING API FAILURE FOR TESTING FALLBACK LOGIC ⚠️");
+    throw new Error("Simulated API Fail - Testing Fallback Logic");
+    
+    /* Original implementation - commented out for testing
     if (!this.apiKey) {
       this.logger.warn("No API key provided for LLM call. Using fallback decision.");
       throw new Error("No API key provided for LLM call");
@@ -167,5 +171,6 @@ The finalists are: ${context.finalists?.join(', ')}`;
       this.logger.error(`API call error: ${error.message}`);
       throw error;
     }
+    */
   }
 }

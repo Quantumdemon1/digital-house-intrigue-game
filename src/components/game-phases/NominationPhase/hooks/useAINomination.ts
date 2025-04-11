@@ -33,7 +33,7 @@ export const useAINomination = ({
   // Create a logger instance for AI operation logs
   const aiLogger = new Logger({
     logLevel: LogLevel.DEBUG,
-    prefix: "AI",
+    prefix: "AI-NOM",
     enableTimestamp: true
   });
 
@@ -57,7 +57,7 @@ export const useAINomination = ({
       const makeDecision = async () => {
         try {
           // Log the start of AI decision process
-          aiLogger.info(`AI HoH ${hoh.name} making nomination decision...`);
+          aiLogger.info(`🤖 AI HoH ${hoh.name} making nomination decision...`);
           
           // Prepare the nomination context
           const nominationContext = {
@@ -88,10 +88,10 @@ export const useAINomination = ({
               nominationContext,
               game
             );
-            aiLogger.info(`AI decision received from AI system for ${hoh.name}: ${JSON.stringify(decision)}`);
-          } catch (error) {
+            aiLogger.info(`Decision received: ${JSON.stringify(decision)}`);
+          } catch (error: any) {
             // Fall back to the fallback generator
-            aiLogger.warn(`Error getting AI decision, using fallback: ${error}`);
+            aiLogger.warn(`⚠️ Error getting AI decision, using fallback: ${error.message}`);
             decision = aiSystem.getFallbackDecision(
               hoh.id, 
               'nomination',
@@ -117,6 +117,12 @@ export const useAINomination = ({
             
             aiLogger.info(`AI HoH ${hoh.name} nominated ${nominee1.name} and ${nominee2.name}`);
             
+            // Show a toast to inform the user
+            toast({
+              title: `${hoh.name} has decided`,
+              description: `Nominated ${nominee1.name} and ${nominee2.name} for eviction.`,
+            });
+            
             // Delay before confirming to simulate decision making
             setTimeout(() => {
               confirmNominations();
@@ -124,7 +130,15 @@ export const useAINomination = ({
             }, 2500);
           } else {
             // Fallback if AI decision is invalid
-            aiLogger.error('AI nomination decision invalid: nominees not found', { decision });
+            aiLogger.error(`❌ AI nomination decision invalid: nominees not found`, { decision });
+            
+            // Show error toast
+            toast({
+              title: "Decision error",
+              description: "Using random nominations instead",
+              variant: "destructive"
+            });
+            
             // Choose random nominees as fallback
             const aiNominees = [...potentialNominees]
               .sort(() => 0.5 - Math.random())
@@ -139,7 +153,15 @@ export const useAINomination = ({
             }, 1500);
           }
         } catch (error: any) {
-          aiLogger.error(`Error in AI nomination: ${error.message}`);
+          aiLogger.error(`❌ Error in AI nomination process: ${error.message}`);
+          
+          // Show error toast
+          toast({
+            title: "AI Error",
+            description: "Using random nominations instead",
+            variant: "destructive"
+          });
+          
           // Fallback to random nominations
           const randomNominees = [...potentialNominees]
             .sort(() => 0.5 - Math.random())

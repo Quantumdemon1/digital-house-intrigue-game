@@ -22,6 +22,8 @@ export class AIIntegrationSystem {
   private fallbackGenerator: AIFallbackGenerator;
   private lastApiCall: number = 0;
   private readonly minCallInterval: number = config.AI_REQUEST_INTERVAL || 1000;
+  private fallbackCount: number = 0;
+  private totalDecisions: number = 0;
 
   constructor(logger: Logger, apiKey: string = '') {
     if (!logger) throw new Error("AIIntegrationSystem requires a logger instance.");
@@ -59,64 +61,69 @@ export class AIIntegrationSystem {
     context: any,
     game: BigBrotherGame
   ): Promise<any> {
+    this.totalDecisions++;
+    
     // Find the houseguest
     const houseguest = game.houseguests.find(h => h.name === botName);
     if (!houseguest) {
       this.logger.error(`Cannot make decision: No houseguest named ${botName} found.`);
-      return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+      return this.useFallback(decisionType, context);
     }
     
     if (houseguest.isPlayer) {
       this.logger.error(`Cannot make AI decision for player character ${botName}.`);
-      return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+      return this.useFallback(decisionType, context);
     }
 
     try {
+      this.logger.info(`🤖 AI decision requested for ${botName} (${decisionType})`);
+      
       // Rate limit API calls
       await this.respectRateLimit();
       
       // If we're in development or testing mode without an API key, use fallback
       if (!this.apiKey) {
         this.logger.warn(`No API key, using fallback for ${decisionType} decision by ${botName}`);
-        return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+        return this.useFallback(decisionType, context);
       }
       
       // Generate prompt based on decision type
       const memories = this.memoryManager.getMemoriesForHouseguest(houseguest.id);
       const prompt = this.decisionMaker.generatePrompt(houseguest, decisionType, context, game, memories);
       
-      this.logger.info(`AI decision request for ${botName} (${decisionType})`);
-      
       // Make the API call
       let response;
       try {
         response = await this.decisionMaker.callLLMAPI(prompt);
-        this.logger.debug(`Raw API response received: ${response.substring(0, 100)}...`);
+        this.logger.debug(`Raw API response received: ${response?.substring(0, 100)}...`);
       } catch (error: any) {
-        this.logger.error(`AI API call failed: ${error.message}`);
-        return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+        this.logger.error(`❌ AI API call failed: ${error.message}`);
+        return this.useFallback(decisionType, context);
       }
       
       // Parse and validate the response
       let decision;
       try {
         decision = this.responseParser.parseAndValidateResponse(response, decisionType);
-        this.logger.info(`AI Decision SUCCESS for ${botName} (${decisionType})`);
+        this.logger.info(`✅ AI Decision SUCCESS for ${botName} (${decisionType})`);
       } catch (error: any) {
-        this.logger.error(`AI Response validation failed: ${error.message}`, { response });
-        return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+        this.logger.error(`❌ AI Response validation failed: ${error.message}`, { response });
+        return this.useFallback(decisionType, context);
       }
       
       // Log the decision
-      this.logger.info(`AI Decision (${decisionType}): ${botName} decided: ${JSON.stringify(decision.decision)}`);
+      this.logger.info(`✅ AI Decision (${decisionType}): ${botName} decided: ${JSON.stringify(decision.decision)}`);
       
       // Update memories with this decision
       this.memoryManager.addMemory(houseguest.id, `You made a ${decisionType} decision: ${JSON.stringify(decision.decision)}`);
       
+      // Print fallback stats
+      this.printFallbackStats();
+      
       return decision.decision;
     } catch (error: any) {
-      this.logger.error(`AI decision overall processing FAILED (${decisionType}): ${error.message}`);
-      return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+      this.logger.error(`❌ AI decision overall processing FAILED (${decisionType}): ${error.message}`);
+      return this.useFallback(decisionType, context);
     }
   }
 
@@ -132,7 +139,25 @@ export class AIIntegrationSystem {
    * - Direct access for useAINomination hook
    */
   getFallbackDecision(botId: string, decisionType: string, context: any, game: any): any {
-    return this.fallbackGenerator.getFallbackDecision(decisionType, context);
+    return this.useFallback(decisionType, context);
+  }
+  
+  /**
+   * Helper method to use fallback and track metrics
+   */
+  private useFallback(decisionType: string, context: any): any {
+    this.fallbackCount++;
+    const decision = this.fallbackGenerator.getFallbackDecision(decisionType, context);
+    this.printFallbackStats();
+    return decision;
+  }
+  
+  /**
+   * Print fallback usage statistics
+   */
+  private printFallbackStats(): void {
+    const fallbackRate = (this.fallbackCount / this.totalDecisions * 100).toFixed(1);
+    this.logger.info(`📊 FALLBACK STATS: ${this.fallbackCount}/${this.totalDecisions} decisions (${fallbackRate}%)`);
   }
   
   /**

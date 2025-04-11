@@ -33,7 +33,10 @@ export const config = {
   GEMINI_API_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
   GEMINI_TEMPERATURE: 0.7,
   GEMINI_MAX_OUTPUT_TOKENS: 1024,
-  GEMINI_API_KEY: import.meta.env.VITE_GEMINI_API_KEY || '',
+  GEMINI_API_KEY: import.meta.env.VITE_GEMINI_API_KEY || 'test-key-for-fallback-testing', // Added fallback for testing
+  
+  // TESTING FLAG - Set to true to force fallback mode
+  FORCE_FALLBACK_MODE: true,
   
   // Save game version
   SAVE_GAME_VERSION: "1.0.0",
