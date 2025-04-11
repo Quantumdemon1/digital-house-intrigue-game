@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { FileText, Calendar, User, Users, Award, Trophy } from 'lucide-react';
+import { NominationCount } from '@/contexts/reducers/reducers/nomination-reducer';
 
 const GameSummary: React.FC = () => {
   const { gameState } = useGame();
@@ -21,8 +21,17 @@ const GameSummary: React.FC = () => {
   // Find winner's journey highlights
   const winnerHoHWins = gameState.winner?.competitionsWon.hoh || 0;
   const winnerPovWins = gameState.winner?.competitionsWon.pov || 0;
-  const winnerNominations = gameState.winner?.nominations || 0;
   
+  // Helper function to safely get nominations count
+  const getNominationsCount = (nominations: NominationCount | number | undefined): number => {
+    if (typeof nominations === 'object' && nominations !== null) {
+      return nominations.times;
+    }
+    return typeof nominations === 'number' ? nominations : 0;
+  };
+  
+  const winnerNominations = getNominationsCount(gameState.winner?.nominations);
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -79,7 +88,7 @@ const GameSummary: React.FC = () => {
                 </li>
                 <li className="flex justify-between">
                   <span className="text-muted-foreground">Times Nominated:</span>
-                  <span className="font-medium">{typeof winnerNominations === 'number' ? winnerNominations : winnerNominations.times}</span>
+                  <span className="font-medium">{winnerNominations}</span>
                 </li>
               </ul>
             </CardContent>
@@ -158,7 +167,7 @@ const GameSummary: React.FC = () => {
                 <li className="flex justify-between">
                   <span className="text-muted-foreground">Times Nominated:</span>
                   <span className="font-medium">
-                    {typeof playerHouseguest.nominations === 'number' ? playerHouseguest.nominations : playerHouseguest.nominations.times}
+                    {getNominationsCount(playerHouseguest.nominations)}
                   </span>
                 </li>
                 <li className="flex justify-between">

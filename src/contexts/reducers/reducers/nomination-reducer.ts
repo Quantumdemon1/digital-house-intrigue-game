@@ -10,19 +10,27 @@ export interface NominationCount {
 export function nominationReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_NOMINEES') {
     // Update the nominated status of all houseguests
-    const houseguestsWithNominations = state.houseguests.map(guest => ({
-      ...guest,
-      isNominated: action.payload.some(nominee => nominee.id === guest.id),
-      nominations: action.payload.some(nominee => nominee.id === guest.id) 
-        ? guest.nominations + 1 
-        : guest.nominations
-    }));
-    
-    // Update nomination count in houseguest stats
-    houseguestsWithNominations.forEach(houseguest => {
-      if (action.payload.some(nominee => nominee.id === houseguest.id)) {
-        updateNominationCount(houseguest, state.week);
+    const houseguestsWithNominations = state.houseguests.map(guest => {
+      const isNominated = action.payload.some(nominee => nominee.id === guest.id);
+      
+      // Create a proper nominations object if it doesn't exist yet
+      if (typeof guest.nominations !== 'object') {
+        guest.nominations = { times: 0, receivedOn: [] };
       }
+      
+      // Update nomination count if this houseguest is nominated
+      if (isNominated) {
+        return {
+          ...guest,
+          isNominated,
+          nominations: {
+            times: guest.nominations.times + 1,
+            receivedOn: [...guest.nominations.receivedOn, state.week]
+          }
+        };
+      }
+      
+      return { ...guest, isNominated };
     });
     
     return {
@@ -34,15 +42,3 @@ export function nominationReducer(state: GameState, action: GameAction): GameSta
   
   return state;
 }
-
-// Update the nomination count in the houseguest stats
-const updateNominationCount = (houseguest: any, week: number): void => {
-  // Initialize nomination stats if not present
-  if (!houseguest.stats.nominations) {
-    houseguest.stats.nominations = { times: 0, receivedOn: [] };
-  }
-  
-  // Increment nomination count and track the week
-  houseguest.stats.nominations.times += 1;
-  houseguest.stats.nominations.receivedOn.push(week);
-};

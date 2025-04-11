@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { ChartBar, Trophy, Award, User, UserX } from 'lucide-react';
@@ -19,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { NominationCount } from '@/contexts/reducers/reducers/nomination-reducer';
 
 type SortField = 'name' | 'competitions' | 'nominations' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -29,6 +29,14 @@ const statusOrder: Record<string, number> = {
   'Jury': 3,
   'Evicted': 4,
   'Active': 5 // This shouldn't exist at game over, but including for completeness
+};
+
+// Helper function to safely get nominations count
+const getNominationsCount = (nominations: NominationCount | number | undefined): number => {
+  if (typeof nominations === 'object' && nominations !== null) {
+    return nominations.times;
+  }
+  return typeof nominations === 'number' ? nominations : 0;
 };
 
 const PlayerStats: React.FC = () => {
@@ -53,9 +61,9 @@ const PlayerStats: React.FC = () => {
         comparison = aTotal - bTotal;
         break;
       case 'nominations':
-        const aNoms = typeof a.nominations === 'number' ? a.nominations : a.nominations.times;
-        const bNoms = typeof b.nominations === 'number' ? b.nominations : b.nominations.times;
-        comparison = Number(aNoms) - Number(bNoms);
+        const aNoms = getNominationsCount(a.nominations);
+        const bNoms = getNominationsCount(b.nominations);
+        comparison = aNoms - bNoms;
         break;
       case 'status':
         comparison = statusOrder[a.status] - statusOrder[b.status];
@@ -208,7 +216,7 @@ const PlayerStats: React.FC = () => {
                 </TableCell>
                 <TableCell>
                   <span>
-                    {typeof hg.nominations === 'number' ? hg.nominations : hg.nominations.times}
+                    {getNominationsCount(hg.nominations)}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
@@ -265,13 +273,13 @@ const PlayerStats: React.FC = () => {
               {(() => {
                 const sorted = [...gameState.houseguests].sort(
                   (a, b) => {
-                    const aNoms = typeof a.nominations === 'number' ? a.nominations : a.nominations.times;
-                    const bNoms = typeof b.nominations === 'number' ? b.nominations : b.nominations.times;
-                    return Number(bNoms) - Number(aNoms);
+                    const aNoms = getNominationsCount(a.nominations);
+                    const bNoms = getNominationsCount(b.nominations);
+                    return bNoms - aNoms;
                   }
                 );
                 const top = sorted[0];
-                const nomCount = typeof top.nominations === 'number' ? top.nominations : top.nominations.times;
+                const nomCount = getNominationsCount(top.nominations);
                 return top && nomCount > 0 ? (
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl mb-2 overflow-hidden">

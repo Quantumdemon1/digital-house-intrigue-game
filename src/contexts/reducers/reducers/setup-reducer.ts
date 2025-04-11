@@ -1,8 +1,7 @@
 
-import { GameState } from '../../models/game-state';
+import { GameState, GamePhase } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { getOrCreateRelationship } from '../../../models/game-state';
-import { GamePhase } from '../../../models/game-state';
 
 export function setupReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'START_GAME') {

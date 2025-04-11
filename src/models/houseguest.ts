@@ -57,6 +57,12 @@ export const TRAIT_BOOST_VALUES = {
   secondary: 1
 };
 
+// Define the nomination count interface separately
+export interface NominationCount {
+  times: number;
+  receivedOn: number[];
+}
+
 // Houseguest stats
 export interface HouseguestStats {
   physical: number;
@@ -67,10 +73,7 @@ export interface HouseguestStats {
   competition: number;
   strategic: number;
   loyalty: number;
-  nominations?: {
-    times: number;
-    receivedOn: number[];
-  };
+  nominations?: NominationCount;
 }
 
 // Houseguest competition stats
@@ -118,7 +121,7 @@ export interface Houseguest {
   
   // Competition history
   competitionsWon: CompetitionStats;
-  nominations: number;
+  nominations: NominationCount;
   timesVetoed: number;
   
   // Visual representation
@@ -191,7 +194,7 @@ export function createHouseguest(
     isPovHolder: false,
     isNominated: false,
     competitionsWon: { hoh: 0, pov: 0, other: 0 },
-    nominations: 0,
+    nominations: { times: 0, receivedOn: [] }, // Ensure this is an object
     timesVetoed: 0,
     imageUrl,
     avatarUrl: imageUrl, // Set avatarUrl to the same as imageUrl initially

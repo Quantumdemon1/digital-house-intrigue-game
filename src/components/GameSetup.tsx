@@ -42,7 +42,7 @@ const GameSetup: React.FC = () => {
   };
 
   const handleStatsChange = (stat: keyof HouseguestStats, value: number) => {
-    const currentValue = playerFormData.stats[stat];
+    const currentValue = playerFormData.stats[stat] as number;
     const difference = value - currentValue;
     
     // Check if we have enough points to increase the stat
@@ -73,8 +73,8 @@ const GameSetup: React.FC = () => {
       
       // Remove the boosts
       const boost = TRAIT_STAT_BOOSTS[trait];
-      newStats[boost.primary] = Math.max(1, newStats[boost.primary] - TRAIT_BOOST_VALUES.primary);
-      newStats[boost.secondary] = Math.max(1, newStats[boost.secondary] - TRAIT_BOOST_VALUES.secondary);
+      newStats[boost.primary] = Math.max(1, (newStats[boost.primary] as number) - TRAIT_BOOST_VALUES.primary);
+      newStats[boost.secondary] = Math.max(1, (newStats[boost.secondary] as number) - TRAIT_BOOST_VALUES.secondary);
       
       handleFormDataChange('selectedTraits', newTraits);
       handleFormDataChange('stats', newStats);
@@ -85,8 +85,8 @@ const GameSetup: React.FC = () => {
       
       // Apply the boosts
       const boost = TRAIT_STAT_BOOSTS[trait];
-      newStats[boost.primary] = Math.min(10, newStats[boost.primary] + TRAIT_BOOST_VALUES.primary);
-      newStats[boost.secondary] = Math.min(10, newStats[boost.secondary] + TRAIT_BOOST_VALUES.secondary);
+      newStats[boost.primary] = Math.min(10, (newStats[boost.primary] as number) + TRAIT_BOOST_VALUES.primary);
+      newStats[boost.secondary] = Math.min(10, (newStats[boost.secondary] as number) + TRAIT_BOOST_VALUES.secondary);
       
       handleFormDataChange('selectedTraits', newTraits);
       handleFormDataChange('stats', newStats);
