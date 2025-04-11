@@ -6,16 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Users, MapPin, MessageSquare, Handshake, BarChart, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGame } from '@/contexts/GameContext';
-import { SocialInteractionState, SocialActionChoice } from '@/game-states';
+import { SocialActionChoice } from '@/game-states';
 
 const SocialInteractionPhase: React.FC = () => {
   const { game, logger, dispatch } = useGame();
 
-  if (!game || !game.currentState || !(game.currentState instanceof SocialInteractionState)) {
+  if (!game || !game.currentState || !(game.currentState.constructor.name === 'SocialInteractionState')) {
     return <Card><CardContent className="pt-6">Loading Social Phase...</CardContent></Card>;
   }
 
-  const currentState = game.currentState as SocialInteractionState;
+  const currentState = game.currentState;
   const currentLocation = game.currentLocation;
   const activeGuests = game.getActiveHouseguests();
   

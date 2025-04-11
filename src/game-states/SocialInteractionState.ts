@@ -1,9 +1,8 @@
 
-import { GameStateBase } from './GameStateBase';
-import { HohCompetitionState } from './HohCompetitionState';
-import { NominationState } from './NominationState';
-import type { IGameControllerFacade } from '@/types/interfaces';
-import { Houseguest } from '@/models/houseguest';
+import { GameStateBase } from '../game-states';
+import { NominationState } from '../game-states';
+import type { IGameControllerFacade } from '../types/interfaces';
+import { Houseguest } from '../models/houseguest';
 
 // Define possible locations
 export const LOCATIONS = ['living-room', 'kitchen', 'bedroom', 'backyard', 'hoh-room', 'diary-room'];

@@ -174,6 +174,15 @@ export class SocialInteractionState extends GameStateBase {
   }
 }
 
+// Define structure for actions the social state can return
+export interface SocialActionChoice {
+  text: string;
+  actionId: string;
+  disabled?: boolean;
+  disabledReason?: string;
+  parameters?: any;
+}
+
 // PoV competition state
 export class PovCompetitionState extends GameStateBase {
   async enter(): Promise<void> {
