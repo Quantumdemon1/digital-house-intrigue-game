@@ -1,5 +1,5 @@
 
-import { GameState } from '../../../models/game-state';
+import { GameState, GamePhase } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { HouseguestStatus } from '../../../models/houseguest';
 
@@ -11,12 +11,12 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
         // Skip PoV at final 3 and go straight to finale
         return {
           ...state,
-          phase: 'Finale',
+          phase: 'Finale' as GamePhase,
         };
       }
       return {
         ...state,
-        phase: action.payload,
+        phase: action.payload as GamePhase,
       };
       
     case 'ADVANCE_WEEK':
@@ -30,7 +30,7 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       
       // Check if we're at final 3 - if so, skip to finale
       const activeHouseguests = resetHouseguests.filter(h => h.status === 'Active').length;
-      const nextPhase = activeHouseguests <= 3 ? 'Finale' : 'HoH';
+      const nextPhase = activeHouseguests <= 3 ? ('Finale' as GamePhase) : ('HoH' as GamePhase);
       
       return {
         ...state,
@@ -59,7 +59,7 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       
       return {
         ...state,
-        phase: 'GameOver',
+        phase: 'GameOver' as GamePhase,
         houseguests: finalHouseguests,
         winner: { ...winner, status: 'Winner' as HouseguestStatus },
         runnerUp: { ...runnerUp, status: 'Runner-Up' as HouseguestStatus },

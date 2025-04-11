@@ -11,7 +11,7 @@ const GameLog: React.FC = () => {
     return <p>No game data available.</p>;
   }
   
-  const events = game.eventLog || [];
+  const events = game.gameLog || [];
   
   return (
     <Card>

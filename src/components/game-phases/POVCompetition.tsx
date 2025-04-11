@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Award, ShieldCheck, User, Users } from 'lucide-react';
@@ -9,7 +8,7 @@ import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
 
 // Types of competitions that can be held
-const COMPETITION_TYPES = ['Physical', 'Mental', 'Endurance', 'Luck', 'Social'];
+const COMPETITION_TYPES: CompetitionType[] = ['physical', 'mental', 'endurance', 'luck', 'social'];
 
 const POVCompetition: React.FC = () => {
   const { gameState, dispatch, getActiveHouseguests } = useGame();
@@ -70,11 +69,11 @@ const POVCompetition: React.FC = () => {
     // Get the relevant stat based on competition type
     const getRelevantStat = (guest: Houseguest): number => {
       switch (competitionType) {
-        case 'Physical': return guest.stats.physical;
-        case 'Mental': return guest.stats.mental;
-        case 'Endurance': return guest.stats.endurance;
-        case 'Social': return guest.stats.social;
-        case 'Luck': return guest.stats.luck;
+        case 'physical': return guest.stats.physical;
+        case 'mental': return guest.stats.mental;
+        case 'endurance': return guest.stats.endurance;
+        case 'social': return guest.stats.social;
+        case 'luck': return guest.stats.luck;
         default: return Math.floor(Math.random() * 10) + 1;
       }
     };
@@ -131,11 +130,11 @@ const POVCompetition: React.FC = () => {
     // Get base stat
     let baseStat;
     switch (competitionType) {
-      case 'Physical': baseStat = houseguest.stats.physical; break;
-      case 'Mental': baseStat = houseguest.stats.mental; break;
-      case 'Endurance': baseStat = houseguest.stats.endurance; break;
-      case 'Social': baseStat = houseguest.stats.social; break; 
-      case 'Luck': baseStat = houseguest.stats.luck; break;
+      case 'physical': baseStat = houseguest.stats.physical; break;
+      case 'mental': baseStat = houseguest.stats.mental; break;
+      case 'endurance': baseStat = houseguest.stats.endurance; break;
+      case 'social': baseStat = houseguest.stats.social; break; 
+      case 'luck': baseStat = houseguest.stats.luck; break;
       default: baseStat = 5;
     }
     

@@ -1,4 +1,3 @@
-
 import { GameState } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 
@@ -28,7 +27,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         if (payload.params.currentPhase === 'Nomination') {
           return {
             ...state,
-            phase: 'PoV'  // Immediately update UI phase
+            phase: 'PoV' as GamePhase  // Immediately update UI phase
           };
         }
         
@@ -38,7 +37,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
           return {
             ...state,
             week: state.week + 1,
-            phase: 'HoH',
+            phase: 'HoH' as GamePhase,
             nominees: [],
             evictionVotes: {}
           };
@@ -50,7 +49,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         console.log('Continue to PoV - updating UI phase');
         return {
           ...state,
-          phase: 'PoV'  // Immediately update UI phase
+          phase: 'PoV' as GamePhase  // Immediately update UI phase
         };
         
       case 'make_nominations':
@@ -102,7 +101,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         return {
           ...state,
           week: state.week + 1,
-          phase: 'HoH',
+          phase: 'HoH' as GamePhase,
           nominees: [],
           evictionVotes: {}
         };
@@ -113,7 +112,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         return {
           ...state,
           week: state.week + 1,
-          phase: 'HoH',
+          phase: 'HoH' as GamePhase,
           nominees: [],
           evictionVotes: {}
         };

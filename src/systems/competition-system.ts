@@ -1,161 +1,83 @@
+/**
+ * @file src/systems/competition-system.ts
+ * @description Manages competitions between houseguests
+ */
 
-import { Houseguest, CompetitionType, calculateCompetitionAdvantage } from '../models/houseguest';
-
-export interface CompetitionResult {
-  houseguest: Houseguest;
-  score: number;
-  position: number;
-}
+import type { Houseguest } from '@/models/houseguest';
+import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { Logger } from '@/utils/logger';
+import type { CompetitionType } from '@/models/houseguest';
 
 export class CompetitionSystem {
-  private logger: any;
+  private game: BigBrotherGame | null = null;
+  private logger: Logger | null = null;
 
-  constructor(logger: any) {
+  constructor(logger: Logger) {
     this.logger = logger;
   }
 
-  runCompetition(
-    participants: Houseguest[],
-    competitionType: CompetitionType,
-    options: {
-      numberOfWinners?: number;
-      excludeFromWinning?: string[];
-    } = {}
-  ): CompetitionResult[] {
-    const { numberOfWinners = 1, excludeFromWinning = [] } = options;
-    
-    if (participants.length === 0) {
-      this.logger.warn('Cannot run competition with 0 participants');
-      return [];
-    }
-    
-    // Calculate scores for each participant
-    const results: CompetitionResult[] = participants.map(houseguest => {
-      // Base score based on relevant stat
-      let baseScore = 0;
-      
-      switch (competitionType) {
-        case 'Physical':
-          baseScore = houseguest.stats.physical * 1.5;
-          break;
-        case 'Mental':
-          baseScore = houseguest.stats.mental * 1.5;
-          break;
-        case 'Endurance':
-          baseScore = houseguest.stats.endurance * 1.5;
-          break;
-        case 'Social':
-          baseScore = houseguest.stats.social * 1.5;
-          break;
-        case 'Luck':
-          // Everyone has roughly equal chance in luck competitions
-          baseScore = houseguest.stats.luck + 5;
-          break;
-      }
-      
-      // Add trait-based advantage
-      const traitBonus = calculateCompetitionAdvantage(houseguest, competitionType);
-      
-      // Add randomness
-      const randomFactor = 0.7 + Math.random() * 0.6; // 70%-130% random factor
-      
-      // Calculate final score
-      const score = (baseScore + traitBonus) * randomFactor;
-      
-      return {
-        houseguest,
-        score,
-        position: 0 // Will be calculated after sorting
-      };
-    });
-    
-    // Sort by score descending
-    results.sort((a, b) => b.score - a.score);
-    
-    // Assign positions (ranks)
-    results.forEach((result, index) => {
-      result.position = index + 1;
-    });
-    
-    // Handle exclusions (can't win but still compete)
-    if (excludeFromWinning.length > 0) {
-      // Filter excluded houseguests from potential winners
-      const eligibleResults = results.filter(
-        result => !excludeFromWinning.includes(result.houseguest.id)
-      );
-      
-      // If we have enough eligible participants for winners
-      if (eligibleResults.length >= numberOfWinners) {
-        // Move eligible houseguests to the top positions
-        for (let i = 0; i < numberOfWinners; i++) {
-          if (excludeFromWinning.includes(results[i].houseguest.id)) {
-            // Find next eligible houseguest
-            const nextEligible = results.findIndex(
-              r => !excludeFromWinning.includes(r.houseguest.id) && r.position > numberOfWinners
-            );
-            
-            if (nextEligible !== -1) {
-              // Swap positions
-              const temp = results[i].position;
-              results[i].position = results[nextEligible].position;
-              results[nextEligible].position = temp;
-              
-              // Also swap in the array to maintain sorted order
-              [results[i], results[nextEligible]] = [results[nextEligible], results[i]];
-            }
-          }
-        }
-      }
-    }
-    
-    this.logger.info(`Competition (${competitionType}) results:`, 
-      results.slice(0, 3).map(r => `${r.position}. ${r.houseguest.name}: ${r.score.toFixed(2)}`));
-    
-    return results;
+  setGame(game: BigBrotherGame): void {
+    this.game = game;
   }
 
-  simulateHoHCompetition(
-    participants: Houseguest[]
-  ): CompetitionResult[] {
-    // Select a random competition type
-    const competitionTypes: CompetitionType[] = ['Physical', 'Mental', 'Endurance', 'Social', 'Luck'];
-    const competitionType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
-    
-    this.logger.info(`Running HoH Competition (${competitionType}) with ${participants.length} participants`);
-    
-    const results = this.runCompetition(participants, competitionType, {
-      numberOfWinners: 1
-    });
-    
-    // Log the winner
-    if (results.length > 0) {
-      const winner = results[0];
-      this.logger.info(`${winner.houseguest.name} won the HoH competition!`);
-    }
-    
-    return results;
+  setLogger(logger: Logger): void {
+    this.logger = logger;
   }
 
-  simulatePovCompetition(
-    participants: Houseguest[], 
-    hohId: string
-  ): CompetitionResult[] {
-    // Select a random competition type
-    const competitionTypes: CompetitionType[] = ['Physical', 'Mental', 'Endurance', 'Social', 'Luck'];
-    const competitionType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
-    
-    this.logger.info(`Running PoV Competition (${competitionType}) with ${participants.length} participants`);
-    
-    const results = this.runCompetition(participants, competitionType, {
-      numberOfWinners: 1
-    });
-    
-    // Log the winner
-    if (results.length > 0) {
-      const winner = results[0];
-      this.logger.info(`${winner.houseguest.name} won the Power of Veto!`);
+  // Calculate the average stat of a houseguest
+  getAverageStat(houseguest: Houseguest): number {
+    const stats = houseguest.stats;
+    const sum = stats.physical + stats.mental + stats.endurance + stats.social + stats.luck;
+    return sum / 5;
+  }
+
+  // Calculate the relevant stat based on the competition type
+  getRelevantStat(houseguest: Houseguest, competitionType: CompetitionType): number {
+    switch (competitionType) {
+      case 'physical':
+        return houseguest.stats.physical;
+      case 'mental':
+        return houseguest.stats.mental;
+      case 'endurance':
+        return houseguest.stats.endurance;
+      case 'social':
+        return houseguest.stats.social;
+      case 'luck':
+        return houseguest.stats.luck;
+      default:
+        this.logger.warn(`Unknown competition type: ${competitionType}, defaulting to average`);
+        return this.getAverageStat(houseguest);
     }
-    
-    return results;
+  }
+
+  // Run a competition with a specific type, or random if not specified
+  runCompetition(competitors: Houseguest[], competitionType?: CompetitionType): {
+    winner: Houseguest;
+    results: {houseguest: Houseguest; score: number}[];
+  } {
+    // Choose a random competition type if none specified
+    const type = competitionType || this.getRandomCompetitionType();
+
+    // Log the competition type
+    this.logger?.info(`Running ${type} competition between ${competitors.map(c => c.name).join(', ')}`);
+
+    // Calculate scores for each competitor
+    const results = competitors.map(houseguest => {
+      const score = this.getRelevantStat(houseguest, type) * (0.75 + Math.random() * 0.5); // Add some randomness
+      return { houseguest, score };
+    });
+
+    // Determine the winner
+    const winner = results.reduce((prev, current) => (prev.score > current.score) ? prev : current).houseguest;
+
+    // Log the winner
+    this.logger?.info(`${winner.name} won the ${type} competition`);
+
+    return { winner, results };
+  }
+
+  getRandomCompetitionType(): CompetitionType {
+    const types: CompetitionType[] = ['physical', 'mental', 'endurance', 'social', 'luck'];
+    return types[Math.floor(Math.random() * types.length)];
   }
 }

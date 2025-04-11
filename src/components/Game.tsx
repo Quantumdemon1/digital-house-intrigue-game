@@ -18,7 +18,7 @@ import { AllianceManager } from './alliance/AllianceManager';
 import { Separator } from './ui/separator';
 
 const Game = () => {
-  const { game, loading } = useGame();
+  const { game, loading, gameState } = useGame();
   const [activeTab, setActiveTab] = useState<'phase' | 'house' | 'log'>('phase');
 
   if (loading) {
@@ -70,7 +70,13 @@ const Game = () => {
 
   return (
     <div className="container py-4 mx-auto">
-      <GamePhaseHeader />
+      <GamePhaseHeader 
+        week={game.week}
+        phase={game.phase}
+        hoh={game.hohWinner}
+        pov={game.povWinner}
+        nominees={game.nominees || []}
+      />
       
       <div className="flex border-b mb-4">
         <button

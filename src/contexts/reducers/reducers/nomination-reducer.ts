@@ -1,6 +1,10 @@
-
 import { GameState } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
+
+interface NominationCount {
+  times: number;
+  receivedOn: number[];
+}
 
 export function nominationReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_NOMINEES') {
@@ -13,6 +17,11 @@ export function nominationReducer(state: GameState, action: GameAction): GameSta
         : guest.nominations
     }));
     
+    // Update nomination count in houseguest stats
+    houseguestsWithNominations.forEach(houseguest => {
+      updateNominationCount(houseguest, action.payload[0].week);
+    });
+    
     return {
       ...state,
       nominees: action.payload,
@@ -22,3 +31,15 @@ export function nominationReducer(state: GameState, action: GameAction): GameSta
   
   return state;
 }
+
+// Update the nomination count in the housegeust stats
+const updateNominationCount = (houseguest: any, week: number): void => {
+  // Initialize nomination stats if not present
+  if (!houseguest.stats.nominations) {
+    houseguest.stats.nominations = { times: 0, receivedOn: [] };
+  }
+  
+  // Increment nomination count and track the week
+  houseguest.stats.nominations.times += 1;
+  houseguest.stats.nominations.receivedOn.push(week);
+};

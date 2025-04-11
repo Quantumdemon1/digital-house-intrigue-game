@@ -12,7 +12,13 @@ export type GamePhase =
   | 'POV Competition' 
   | 'POV Meeting' 
   | 'Eviction'
-  | 'Finale';
+  | 'Finale'
+  | 'Setup'
+  | 'HoH'
+  | 'PoV'
+  | 'PoVMeeting'
+  | 'SocialInteraction'
+  | 'GameOver';
 
 // Game event interface
 export interface GameEvent {

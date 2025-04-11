@@ -18,19 +18,19 @@ const selectRandomWinner = (houseguests: Houseguest[], competitionType: Competit
 
     // Adjust weight based on competition type and related stats
     switch (competitionType) {
-      case 'Physical':
+      case 'physical':
         weight = houseguest.stats.physical * 1.5;
         break;
-      case 'Mental':
+      case 'mental':
         weight = houseguest.stats.mental * 1.5;
         break;
-      case 'Endurance':
+      case 'endurance':
         weight = houseguest.stats.endurance * 1.5;
         break;
-      case 'Social':
+      case 'social':
         weight = houseguest.stats.social * 1.5;
         break;
-      case 'Luck':
+      case 'luck':
         // Everyone has roughly equal chance in luck competitions
         weight = houseguest.stats.luck + 5;
         break;
@@ -57,7 +57,9 @@ const selectRandomWinner = (houseguests: Houseguest[], competitionType: Competit
   // Fallback (should never happen)
   return houseguests[0];
 };
-const competitionTypes: CompetitionType[] = ['Physical', 'Mental', 'Endurance', 'Luck', 'Social'];
+
+const competitionTypes: CompetitionType[] = ['physical', 'mental', 'endurance', 'luck', 'social'];
+
 const HOHCompetition: React.FC = () => {
   const {
     gameState,
@@ -257,4 +259,5 @@ const HOHCompetition: React.FC = () => {
       </CardFooter>
     </Card>;
 };
+
 export default HOHCompetition;

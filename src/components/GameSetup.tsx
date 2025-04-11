@@ -159,7 +159,7 @@ const GameSetup: React.FC = () => {
       type: 'LOG_EVENT', 
       payload: {
         week: 1,
-        phase: 'Setup',
+        phase: 'Setup' as GamePhase,
         type: 'GAME_START',
         description: `${playerFormData.playerName} and ${playerFormData.houseguestCount - 1} other houseguests entered the Big Brother house.`,
         involvedHouseguests: finalHouseguests.map(guest => guest.id),

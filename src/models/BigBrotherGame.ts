@@ -1,3 +1,4 @@
+
 /**
  * @file models/BigBrotherGame.ts
  * @description Big Brother Game state definition
@@ -9,7 +10,8 @@ import { Alliance } from './alliance';
 // Game phases
 import { GamePhase, GameEvent } from './game-state';
 
-export { GameEvent } from './game-state'; // Re-export for backward compatibility
+// Re-export for backward compatibility
+export type { GameEvent } from './game-state'; 
 
 export class BigBrotherGame {
   // Game configuration
@@ -23,10 +25,22 @@ export class BigBrotherGame {
   public nominees: Houseguest[] = [];
   public evicted: Houseguest[] = [];
   public jury: Houseguest[] = [];
+  public juryMembers: Houseguest[] = [];
   public winner: Houseguest | null = null;
   public runnerUp: Houseguest | null = null;
   public finalTwo: Houseguest[] = [];
   public currentWeek: number = 1;
+  
+  // Game systems
+  public relationshipSystem: any = null;
+  public competitionSystem: any = null;
+  public aiSystem: any = null;
+  public allianceSystem: any = null;
+  
+  // Game state management
+  public currentState: any = null;
+  public currentLocation: string = 'living-room';
+  public openAllianceProposalUI: () => void = () => {};
 
   // Event log
   public eventLog: GameEvent[] = [];

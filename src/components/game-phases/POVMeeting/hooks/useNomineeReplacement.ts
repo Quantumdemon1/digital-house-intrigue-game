@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';

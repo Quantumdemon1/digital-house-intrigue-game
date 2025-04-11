@@ -34,7 +34,7 @@ export function setupReducer(state: GameState, action: GameAction): GameState {
       gameLog: [
         {
           week: 1,
-          phase: 'Setup',
+          phase: 'Setup' as GamePhase,
           type: 'GAME_START',
           description: `The game has begun with ${houseguests.length} houseguests!`,
           involvedHouseguests: houseguests.map(h => h.id),
