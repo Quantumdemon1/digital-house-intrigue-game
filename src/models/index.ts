@@ -7,12 +7,13 @@
 export * from './houseguest';
 export * from './alliance';
 export { BigBrotherGame } from './game/BigBrotherGame';
-export { 
-  GameEvent, 
+export { GameEvent } from './game-state'; 
+export type { 
   GamePhase,
-  getOrCreateRelationship,
-  createInitialGameState,
   RelationshipMap
-} from './game-state'; // Export specific types but not GameState 
+} from './game-state'; // Export specific types with 'export type'
+export { 
+  getOrCreateRelationship,
+  createInitialGameState
+} from './game-state'; // Export functions normally
 export * from './game/types'; // This includes GameState from types.ts
-
