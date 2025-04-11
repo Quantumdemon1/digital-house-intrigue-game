@@ -4,7 +4,7 @@
  * @description Exports all model components
  */
 
-export * from './houseguest';
+export * from './houseguest/index';
 export * from './alliance';
 export { BigBrotherGame } from './game/BigBrotherGame';
 export type { GameEvent } from './game-state'; 
