@@ -43,7 +43,6 @@ export const useAINomination = ({
     if (
       hoh && 
       !hoh.isPlayer && 
-      !isNominating && 
       !ceremonyComplete && 
       !aiProcessed && 
       !processingRef.current

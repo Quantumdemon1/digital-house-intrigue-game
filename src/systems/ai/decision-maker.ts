@@ -149,9 +149,9 @@ ${context.proposer} has invited you to join alliance "${context.allianceName}" w
    * Makes the actual API call to the LLM
    */
   async callLLMAPI(prompt: string): Promise<string> {
-    // SIMULATE API FAILURE FOR TESTING
-    this.logger.warn("⚠️ SIMULATING API FAILURE FOR TESTING FALLBACK LOGIC ⚠️");
-    throw new Error("Simulated API Fail - Testing Fallback Logic");
+    // Use fallback instead of simulating an API failure
+    this.logger.warn("⚠️ Using fallback decision logic instead of API call");
+    throw new Error("Using fallback decision generator");
     
     /* Original implementation - commented out for testing
     if (!this.apiKey) {

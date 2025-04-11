@@ -56,6 +56,7 @@ export const useNominationCeremony = () => {
         // Log the action being dispatched
         logger.info(`Player Action: Confirming nominations for ${selectedNomineesUI.map(n => n.name).join(' and ')}`);
         
+        // Dispatch a player action to make nominations
         dispatch({
             type: 'PLAYER_ACTION',
             payload: {
@@ -67,7 +68,6 @@ export const useNominationCeremony = () => {
         });
         
         // Directly set nominees for immediate UI feedback
-        // This may be overridden by the state machine later
         dispatch({
             type: 'SET_NOMINEES',
             payload: selectedNomineesUI
@@ -86,24 +86,23 @@ export const useNominationCeremony = () => {
         
         setSelectedNomineesUI(randomNominees);
         
-        setTimeout(() => {
-            dispatch({
-                type: 'PLAYER_ACTION',
-                payload: {
-                    actionId: 'make_nominations',
-                    params: {
-                        nomineeIds: randomNominees.map(nominee => nominee.id),
-                        isAutomatic: true
-                    }
+        // Don't wait, immediately make nominations
+        dispatch({
+            type: 'PLAYER_ACTION',
+            payload: {
+                actionId: 'make_nominations',
+                params: {
+                    nomineeIds: randomNominees.map(nominee => nominee.id),
+                    isAutomatic: true
                 }
-            });
-            
-            // Directly set nominees for immediate UI feedback
-            dispatch({
-                type: 'SET_NOMINEES',
-                payload: randomNominees
-            });
-        }, 1000);
+            }
+        });
+        
+        // Directly set nominees for immediate UI feedback
+        dispatch({
+            type: 'SET_NOMINEES',
+            payload: randomNominees
+        });
     }, [ceremonyComplete, isNominating, dispatch, hoh, logger, getRandomNominees]);
 
     return {

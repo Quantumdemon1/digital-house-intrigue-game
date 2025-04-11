@@ -27,7 +27,14 @@ export class HohCompetitionState extends GameStateBase {
       case 'select_hoh':
         if (params && params.hohId) {
           this.getLogger().info(`Selected HoH: ${params.hohId}`);
-          // Set HoH logic here
+          this.game.hohWinner = params.hohId; // Set HoH in the game state
+          
+          // Check if the HoH is AI-controlled and immediately proceed to nominations if so
+          const hoh = this.game.getHouseguestById(params.hohId);
+          if (hoh && !hoh.isPlayer) {
+            this.controller.changeState('NominationState');
+          }
+          
           return true;
         }
         return false;
