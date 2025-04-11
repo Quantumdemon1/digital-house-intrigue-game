@@ -42,29 +42,26 @@ export const useVotingLogic = ({
     // For AI players, start voting process immediately
     setIsVoting(true);
     
-    // Reduced AI thinking time for faster gameplay
-    const timer = setTimeout(() => {
-      // AI voting logic based on relationships
-      let nominee1Relationship = getRelationship(currentVoter.id, nominees[0].id);
-      let nominee2Relationship = getRelationship(currentVoter.id, nominees[1].id);
-      
-      // AI votes to evict the houseguest they like less
-      const voteForId = nominee1Relationship < nominee2Relationship ? nominees[0].id : nominees[1].id;
-      
-      const updatedVotes = { ...votes, [currentVoter.id]: voteForId };
-      setVotes(updatedVotes);
-      onVoteSubmit(currentVoter.id, voteForId);
-      setShowVote(true);
-      
-      // Show the vote briefly, then move to next voter quickly
-      setTimeout(() => {
-        setShowVote(false);
-        setIsVoting(false);
-        nextVoter();
-      }, 800); // Reduced from 2000ms to 800ms for faster progression
-    }, 500); // Reduced from 1500ms to 500ms for faster thinking time
+    // AI votes immediately without delay
+    // AI voting logic based on relationships
+    let nominee1Relationship = getRelationship(currentVoter.id, nominees[0].id);
+    let nominee2Relationship = getRelationship(currentVoter.id, nominees[1].id);
     
-    return () => clearTimeout(timer);
+    // AI votes to evict the houseguest they like less
+    const voteForId = nominee1Relationship < nominee2Relationship ? nominees[0].id : nominees[1].id;
+    
+    const updatedVotes = { ...votes, [currentVoter.id]: voteForId };
+    setVotes(updatedVotes);
+    onVoteSubmit(currentVoter.id, voteForId);
+    setShowVote(true);
+    
+    // Show the vote briefly, then move to next voter immediately
+    setTimeout(() => {
+      setShowVote(false);
+      setIsVoting(false);
+      nextVoter();
+    }, 300); // Extremely fast voting for AI players
+    
   }, [currentVoter, isPlayerVoting, isVoting, nominees, votes, getRelationship, onVoteSubmit]);
   
   const handlePlayerVote = (nomineeId: string) => {

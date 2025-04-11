@@ -15,7 +15,7 @@ export class NominationState extends GameStateBase {
     const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
     if (hoh && !hoh.isPlayer) {
       this.getLogger().info(`AI HoH ${hoh.name} will automatically make nominations`);
-      // No need to do anything here - the useAINomination hook will handle this automatically
+      // No need to do anything here - the useAINomination hook will handle this immediately
     }
   }
   
@@ -28,10 +28,8 @@ export class NominationState extends GameStateBase {
           const nominees = params.nomineeIds.map((id: string) => this.game.getHouseguestById(id));
           this.getLogger().info(`Nominations confirmed: ${nominees.map((n: any) => n?.name).join(', ')}`);
           
-          // After nominations are made, automatically advance to PoV competition
-          setTimeout(() => {
-            this.controller.changeState('PovCompetitionState');
-          }, 2000);
+          // After nominations are made, immediately advance to PoV competition
+          this.controller.changeState('PovCompetitionState');
           return true;
         }
         return false;

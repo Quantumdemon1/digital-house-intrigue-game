@@ -28,22 +28,7 @@ export class EvictionState extends GameStateBase {
         if (params && params.hohId && params.nomineeId) {
           this.getLogger().info(`HoH ${params.hohId} broke tie by voting to evict ${params.nomineeId}`);
           
-          // After tiebreaker vote, advance to next week/phase
-          setTimeout(() => {
-            // If we're in finale, go to GameOver, otherwise advance week
-            if (this.game.week >= this.controller.getGameSettings().finalWeek) {
-              this.controller.changeState('GameOverState');
-            } else {
-              this.game.advanceWeek();
-              this.controller.changeState('HohCompetitionState');
-            }
-          }, 3000);
-          return true;
-        }
-        return false;
-      case 'eviction_complete':
-        // After eviction is complete, advance to next week/phase
-        setTimeout(() => {
+          // After tiebreaker vote, advance immediately to next week/phase
           // If we're in finale, go to GameOver, otherwise advance week
           if (this.game.week >= this.controller.getGameSettings().finalWeek) {
             this.controller.changeState('GameOverState');
@@ -51,7 +36,18 @@ export class EvictionState extends GameStateBase {
             this.game.advanceWeek();
             this.controller.changeState('HohCompetitionState');
           }
-        }, 2000);
+          return true;
+        }
+        return false;
+      case 'eviction_complete':
+        // After eviction is complete, advance immediately to next week/phase
+        // If we're in finale, go to GameOver, otherwise advance week
+        if (this.game.week >= this.controller.getGameSettings().finalWeek) {
+          this.controller.changeState('GameOverState');
+        } else {
+          this.game.advanceWeek();
+          this.controller.changeState('HohCompetitionState');
+        }
         return true;
       default:
         return false;

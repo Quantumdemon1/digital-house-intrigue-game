@@ -37,7 +37,7 @@ export const useAINomination = ({
     enableTimestamp: true
   });
 
-  // AI nomination logic
+  // AI nomination logic - now much faster
   useEffect(() => {
     // Only process if HoH exists, HoH is AI, and we haven't already processed or started nominating
     if (
@@ -74,8 +74,7 @@ export const useAINomination = ({
             description: "The Head of Household is choosing nominations.",
           });
           
-          // Reduced thinking time for faster gameplay
-          await new Promise(resolve => setTimeout(resolve, 800)); // Reduced from 2000ms
+          // No artificial delay for AI decisions
           
           // Get decision from the AI system
           let decision;
@@ -123,11 +122,9 @@ export const useAINomination = ({
               description: `Nominated ${nominee1.name} and ${nominee2.name} for eviction.`,
             });
             
-            // Reduced delay before confirming for faster gameplay
-            setTimeout(() => {
-              confirmNominations();
-              processingRef.current = false;
-            }, 1000); // Reduced from 2500ms
+            // Immediately confirm nominations
+            confirmNominations();
+            processingRef.current = false;
           } else {
             // Fallback if AI decision is invalid
             aiLogger.error(`❌ AI nomination decision invalid: nominees not found`, { decision });
@@ -147,10 +144,9 @@ export const useAINomination = ({
             aiLogger.info(`Using fallback random nominees: ${aiNominees.map(n => n.name).join(', ')}`);
             setNominees(aiNominees);
             
-            setTimeout(() => {
-              confirmNominations();
-              processingRef.current = false;
-            }, 800); // Reduced from 1500ms
+            // Immediately confirm nominations
+            confirmNominations();
+            processingRef.current = false;
           }
         } catch (error: any) {
           aiLogger.error(`❌ Error in AI nomination process: ${error.message}`);
@@ -170,15 +166,14 @@ export const useAINomination = ({
           aiLogger.info(`Error occurred, using random nominees: ${randomNominees.map(n => n.name).join(', ')}`);  
           setNominees(randomNominees);
           
-          setTimeout(() => {
-            confirmNominations();
-            processingRef.current = false;
-          }, 800); // Reduced from 1000ms
+          // Immediately confirm nominations
+          confirmNominations();
+          processingRef.current = false;
         }
       };
       
-      // Reduced delay before starting AI decision process
-      setTimeout(makeDecision, 300); // Reduced from 1000ms
+      // Start AI decision process immediately
+      makeDecision();
     }
   }, [hoh, isNominating, ceremonyComplete, aiProcessed, potentialNominees, setNominees, confirmNominations, toast, aiSystem, game, getRelationship]);
 
