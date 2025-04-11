@@ -4,7 +4,8 @@
  * @description Builds recaps for individual game weeks
  */
 
-import type { BigBrotherGame, GameEvent } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { GameEvent } from '@/models/game-state';
 import type { Logger } from '@/utils/logger';
 
 export class WeeklyRecapBuilder {
@@ -80,8 +81,8 @@ export class WeeklyRecapBuilder {
     const nominees: string[] = [];
     
     events.filter(e => e.type === 'NOMINATION').forEach(event => {
-      if (event.data?.nomineeId) {
-        const nominee = this.game?.getHouseguestById(event.data.nomineeId);
+      if (event.data?.nomineeId && this.game) {
+        const nominee = this.game.getHouseguestById(event.data.nomineeId);
         if (nominee) nominees.push(nominee.name);
       }
     });
@@ -114,8 +115,8 @@ export class WeeklyRecapBuilder {
   private findReplacementNominee(events: GameEvent[]): string | null {
     const replacementEvent = events.find(e => e.type === 'REPLACEMENT_NOM');
     
-    if (replacementEvent?.data?.nomineeId) {
-      const nominee = this.game?.getHouseguestById(replacementEvent.data.nomineeId);
+    if (replacementEvent?.data?.nomineeId && this.game) {
+      const nominee = this.game.getHouseguestById(replacementEvent.data.nomineeId);
       return nominee?.name || null;
     }
     return null;

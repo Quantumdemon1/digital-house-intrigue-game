@@ -4,7 +4,8 @@
  * @description Formats and groups game events for recap generation
  */
 
-import type { BigBrotherGame, GameEvent } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { GameEvent } from '@/models/game-state';
 import type { Logger } from '@/utils/logger';
 
 export class EventFormatter {

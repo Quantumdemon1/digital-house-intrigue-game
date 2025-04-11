@@ -7,17 +7,9 @@ import { Houseguest, HouseguestStatus } from './houseguest';
 import { Alliance } from './alliance';
 
 // Game phases
-import { GamePhase } from './game-state';
+import { GamePhase, GameEvent } from './game-state';
 
-// Game event interface (now exported)
-export interface GameEvent {
-  week: number;
-  phase: GamePhase;
-  type: string;
-  description: string;
-  involvedHouseguests: string[];
-  timestamp: number;
-}
+export { GameEvent } from './game-state'; // Re-export for backward compatibility
 
 export class BigBrotherGame {
   // Game configuration
@@ -34,9 +26,16 @@ export class BigBrotherGame {
   public winner: Houseguest | null = null;
   public runnerUp: Houseguest | null = null;
   public finalTwo: Houseguest[] = [];
+  public currentWeek: number = 1;
 
   // Event log
   public eventLog: GameEvent[] = [];
+  public gameLog: GameEvent[] = [];
+
+  // Methods to support GameSummary and systems
+  public getHouseguestById(id: string): Houseguest | undefined {
+    return this.houseguests.find(h => h.id === id);
+  }
 
   constructor(
     houseguests: Houseguest[] = [],
@@ -46,6 +45,7 @@ export class BigBrotherGame {
     this.houseguests = houseguests;
     this.week = week;
     this.phase = phase;
+    this.currentWeek = week;
   }
 
   /**
@@ -71,7 +71,8 @@ export class BigBrotherGame {
   logEvent(
     eventType: string,
     description: string,
-    involvedHouseguests: string[] = []
+    involvedHouseguests: string[] = [],
+    data?: Record<string, any>
   ): void {
     const event: GameEvent = {
       week: this.week,
@@ -80,9 +81,11 @@ export class BigBrotherGame {
       description,
       involvedHouseguests,
       timestamp: Date.now(),
+      data
     };
 
     this.eventLog.push(event);
+    this.gameLog.push(event); // Add to gameLog as well for compatibility
   }
 
   /**
@@ -107,6 +110,7 @@ export class BigBrotherGame {
     if (currentPhaseIndex === phaseOrder.length - 1) {
       this.phase = phaseOrder[0];
       this.week += 1;
+      this.currentWeek = this.week;
     } else {
       // Otherwise, advance to the next phase
       this.phase = phaseOrder[currentPhaseIndex + 1];
@@ -132,6 +136,15 @@ export class BigBrotherGame {
 
     this.logEvent('system', `Week ${this.week} has begun.`);
   }
+  
+  /**
+   * Advances the week
+   */
+  advanceWeek(): void {
+    this.week += 1;
+    this.currentWeek = this.week;
+    this.resetWeek();
+  }
 
   /**
    * Creates a new instance of the game with a copy of the current state
@@ -142,6 +155,7 @@ export class BigBrotherGame {
     // Copy all properties
     clonedGame.houseguests = [...this.houseguests];
     clonedGame.week = this.week;
+    clonedGame.currentWeek = this.week;
     clonedGame.phase = this.phase;
     clonedGame.hohWinner = this.hohWinner;
     clonedGame.povWinner = this.povWinner;
@@ -151,6 +165,7 @@ export class BigBrotherGame {
     clonedGame.winner = this.winner;
     clonedGame.runnerUp = this.runnerUp;
     clonedGame.eventLog = [...this.eventLog];
+    clonedGame.gameLog = [...this.eventLog]; // Set gameLog from eventLog for compatibility
     clonedGame.finalTwo = [...(this.finalTwo || [])];
     
     return clonedGame;

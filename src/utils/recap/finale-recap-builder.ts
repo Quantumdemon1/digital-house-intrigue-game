@@ -4,7 +4,8 @@
  * @description Builds finale-related sections of the game recap
  */
 
-import type { BigBrotherGame, GameEvent } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { GameEvent } from '@/models/game-state';
 import type { Logger } from '@/utils/logger';
 
 export class FinaleRecapBuilder {
@@ -28,19 +29,16 @@ export class FinaleRecapBuilder {
     if (!this.game || !this.game.winner) return '';
     
     let markdown = '';
-    const winnerHG = this.game.getHouseguestById(this.game.winner);
+    const winnerHG = this.game.winner;
     
     if (winnerHG) {
       markdown += `## Winner: ${winnerHG.name}\n\n`;
       
       // If we have finalists
       if (this.game.finalTwo && this.game.finalTwo.length >= 2) {
-        const runnerId = this.game.finalTwo.find(id => id !== this.game.winner);
-        if (runnerId) {
-          const runnerHG = this.game.getHouseguestById(runnerId);
-          if (runnerHG) {
-            markdown += `**Runner-up**: ${runnerHG.name}\n\n`;
-          }
+        const runner = this.game.runnerUp;
+        if (runner) {
+          markdown += `**Runner-up**: ${runner.name}\n\n`;
         }
       }
     }

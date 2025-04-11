@@ -5,7 +5,8 @@
  */
 
 import { Houseguest } from '@/models/houseguest';
-import type { BigBrotherGame, GameEvent } from '@/models/BigBrotherGame';
+import type { BigBrotherGame } from '@/models/BigBrotherGame';
+import type { GameEvent } from '@/models/game-state';
 import type { Logger } from '@/utils/logger';
 import { WeeklyRecapBuilder } from './weekly-recap-builder';
 import { FinaleRecapBuilder } from './finale-recap-builder';

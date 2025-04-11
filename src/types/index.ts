@@ -16,8 +16,8 @@ export type { Logger } from '../utils/logger';
 // Export model types
 export type { Houseguest } from '../models/houseguest';
 export type { Alliance } from '../models/alliance';
-export type { BigBrotherGame, GameEvent } from '../models/BigBrotherGame';
-export type { GamePhase } from '../models/game-state';
+export type { BigBrotherGame } from '../models/BigBrotherGame';
+export type { GameEvent, GamePhase } from '../models/game-state';
 
 // Export context types
 export type { GameAction, GameState, GameContextType } from '../contexts/types/game-context-types';
