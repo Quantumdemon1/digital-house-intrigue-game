@@ -145,61 +145,66 @@ export class SocialInteractionState extends GameStateBase {
         if (targetId && targetName) {
           this.getLogger().info(`You approach ${targetName} to talk...`);
           
-          // Implement a richer social interaction system
           // Get the player houseguest
-          const playerGuest = this.game.houseguests.find(h => h.isPlayer);
-          if (!playerGuest) break;
+          const player = this.game.houseguests.find(h => h.isPlayer);
+          if (!player) break;
           
-          // Get relationship data
+          // Get the target AI houseguest
           const targetGuest = this.game.getHouseguestById(targetId);
-          const currentRelationship = this.controller.relationshipSystem.getRelationship(playerGuest.id, targetId);
-          const reciprocityFactor = this.controller.relationshipSystem.calculateReciprocityModifier(targetId, playerGuest.id);
+          if (!targetGuest) break;
           
-          // Calculate response based on existing relationship and reciprocity factor
-          const baseChangeAmount = 2;
-          let finalChangeAmount = baseChangeAmount;
+          // Create a dialogue context that will be displayed to the player
+          const dialogueContext = {
+            speakerId: player.id,
+            speakerName: player.name,
+            message: "Hey, I wanted to talk to you for a bit.",  // Initial greeting
+            situation: `You approached ${targetName} for a conversation.`,
+            phase: this.game.phase,
+            week: this.game.week
+          };
           
-          // Apply reciprocity - if they like you more than you like them, they'll be more responsive
-          if (reciprocityFactor > 0) {
-            finalChangeAmount += Math.ceil(reciprocityFactor * 2);
-          }
-          
-          // Random element based on personality
-          const personalityBonus = Math.floor(Math.random() * 3);
-          finalChangeAmount += personalityBonus;
-          
-          // Simulate a response and update relationship
-          setTimeout(() => {
-            const responseOptions = [
-              "Hey there! What's up?",
-              "Good to see you!",
-              "How's your game going?",
-              "Want to talk strategy?"
-            ];
-            const response = responseOptions[Math.floor(Math.random() * responseOptions.length)];
-            this.getLogger().info(`${targetName} says: "${response}"`);
-            
-            // Update relationship as a significant event
-            this.controller.relationshipSystem.addRelationshipEvent(
-              playerGuest.id,
-              targetId,
-              'general_interaction',
-              `You had a positive conversation with ${targetName}.`,
-              finalChangeAmount,
-              true
-            );
-            
-            // Reciprocal relationship change for the target
-            this.controller.relationshipSystem.addRelationshipEvent(
-              targetId,
-              playerGuest.id,
-              'general_interaction',
-              `${playerGuest.name} sought you out for a conversation.`,
-              finalChangeAmount * 0.8,
-              true
-            );
-            
-            this.getLogger().info(`Your relationship with ${targetName} improved by ${finalChangeAmount}.`);
+          // Generate AI response using the enhanced dialogue system
+          setTimeout(async () => {
+            try {
+              if (this.controller.aiSystem) {
+                // Use the improved AI dialogue system
+                const response = await this.controller.aiSystem.generateDialogueResponse(
+                  targetId,
+                  dialogueContext,
+                  this.game
+                );
+                
+                // Display the response to the player
+                this.getLogger().info(`${targetName} says: "${response.response}"`);
+                
+                // Apply relationship changes based on the tone and thoughts
+                this.applyDialogueRelationshipEffects(player.id, targetId, response);
+                
+                // Optionally show dialogue options for the player to respond
+                this.showDialogueOptions(player.id, targetId, response);
+              } else {
+                // Fallback if AI system not available
+                const responses = [
+                  "Hey there! What's up?",
+                  "Good to see you!",
+                  "How's your game going?",
+                  "Want to talk strategy?"
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                this.getLogger().info(`${targetName} says: "${randomResponse}"`);
+                
+                // Apply basic relationship change
+                this.controller.relationshipSystem.updateRelationship(
+                  player.id,
+                  targetId,
+                  2,
+                  `You had a conversation with ${targetName}.`
+                );
+              }
+            } catch (error) {
+              this.getLogger().error(`Error generating dialogue: ${error}`);
+              this.getLogger().info(`${targetName} says: "Sorry, I need to go do something real quick."`);
+            }
           }, 500);
         }
         break;
@@ -409,6 +414,137 @@ export class SocialInteractionState extends GameStateBase {
     this.controller.promptNextAction();
     return true; // Action was handled
   }
+  
+  /**
+   * Apply relationship effects based on AI dialogue response
+   */
+  private applyDialogueRelationshipEffects(
+    playerId: string,
+    aiId: string,
+    response: { response: string; tone: string; thoughts: string; }
+  ): void {
+    const { tone, thoughts } = response;
+    
+    // Base relationship change based on tone
+    let baseChange = 0;
+    let eventType: RelationshipEventType = 'general_interaction';
+    let note = "";
+    
+    // Determine relationship change based on tone
+    switch (tone) {
+      case 'friendly':
+        baseChange = 4;
+        note = `${this.game.getHouseguestById(aiId)?.name} was friendly during your conversation.`;
+        break;
+      case 'strategic':
+        baseChange = 3;
+        note = `${this.game.getHouseguestById(aiId)?.name} discussed strategy with you.`;
+        eventType = 'strategy_discussion';
+        break;
+      case 'cautious':
+        baseChange = 1;
+        note = `${this.game.getHouseguestById(aiId)?.name} was cautious during your conversation.`;
+        break;
+      case 'deceptive':
+        // Deception isn't immediately apparent, might have a negative effect later
+        baseChange = 2; // Seems positive initially
+        note = `${this.game.getHouseguestById(aiId)?.name} seemed agreeable, but was being deceptive.`;
+        eventType = 'deception';
+        break;
+      case 'aggressive':
+        baseChange = -3;
+        note = `${this.game.getHouseguestById(aiId)?.name} was aggressive toward you.`;
+        eventType = 'confrontation';
+        break;
+      case 'dismissive':
+        baseChange = -2;
+        note = `${this.game.getHouseguestById(aiId)?.name} dismissed your conversation.`;
+        break;
+      default: // neutral
+        baseChange = 1;
+        note = `You had a conversation with ${this.game.getHouseguestById(aiId)?.name}.`;
+        break;
+    }
+    
+    // Check internal thoughts for alignment or misalignment with spoken words
+    const positiveThoughtIndicators = ['like', 'trust', 'friend', 'ally', 'appreciate', 'helpful'];
+    const negativeThoughtIndicators = ['annoyed', 'angry', 'upset', 'suspicious', 'don\'t trust', 'irritating'];
+    
+    const hasPositiveThoughts = positiveThoughtIndicators.some(indicator => 
+      thoughts.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    const hasNegativeThoughts = negativeThoughtIndicators.some(indicator => 
+      thoughts.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    // Modify relationship change based on thoughts
+    let thoughtModifier = 0;
+    
+    if ((tone === 'friendly' || tone === 'strategic') && hasPositiveThoughts) {
+      // Genuine positive interaction
+      thoughtModifier = 2;
+      eventType = 'positive_connection';
+    } else if ((tone === 'friendly' || tone === 'strategic') && hasNegativeThoughts) {
+      // Superficially nice but actually negative - this is deception
+      thoughtModifier = -1;
+      eventType = 'deception';
+      note += " (Their internal thoughts don't match their friendly words)";
+    } else if ((tone === 'aggressive' || tone === 'dismissive') && hasNegativeThoughts) {
+      // Genuine negativity
+      thoughtModifier = -1;
+      eventType = 'negative_interaction';
+    }
+    
+    // Calculate final relationship change
+    const finalChange = baseChange + thoughtModifier;
+    
+    // Apply the relationship change with the event type
+    this.controller.relationshipSystem.addRelationshipEvent(
+      playerId,
+      aiId,
+      eventType,
+      note,
+      finalChange,
+      true // Decayable over time
+    );
+    
+    // Apply reciprocal effect from AI to player (may be different)
+    const reciprocalChange = finalChange * (0.8 + Math.random() * 0.4); // 80-120%
+    
+    // Add relationship event in the other direction
+    this.controller.relationshipSystem.addRelationshipEvent(
+      aiId,
+      playerId,
+      eventType,
+      `You had a conversation with ${this.game.getHouseguestById(playerId)?.name}.`,
+      reciprocalChange,
+      true
+    );
+    
+    this.getLogger().info(`Relationship with ${this.game.getHouseguestById(aiId)?.name} changed by ${finalChange.toFixed(1)} (${eventType})`);
+  }
+  
+  /**
+   * Show dialogue options for the player to respond to the AI
+   */
+  private showDialogueOptions(
+    playerId: string,
+    aiId: string,
+    aiResponse: { response: string; tone: string; thoughts: string; }
+  ): void {
+    // TODO: For a future enhancement, implement a full dialogue system with player response options
+    // For now, just print a message that the conversation concluded
+    const aiName = this.game.getHouseguestById(aiId)?.name;
+    setTimeout(() => {
+      this.getLogger().info(`Your conversation with ${aiName} comes to a natural conclusion.`);
+    }, 2000);
+  }
+
+  async exit(): Promise<void> {
+    await super.exit();
+    // Cleanup if needed
+  }
 
   // Helper to describe relationship scores in words
   private describeRelationship(score: number): string {
@@ -421,10 +557,5 @@ export class SocialInteractionState extends GameStateBase {
     if (score >= -40) return "Distrustful";
     if (score >= -60) return "Enemies";
     return "Bitter Rivals";
-  }
-
-  async exit(): Promise<void> {
-    await super.exit();
-    // Cleanup if needed
   }
 }

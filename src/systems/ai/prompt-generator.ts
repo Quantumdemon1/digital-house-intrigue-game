@@ -1,4 +1,3 @@
-
 /**
  * @file src/systems/ai/prompt-generator.ts
  * @description Generates AI prompts based on game context
@@ -185,9 +184,44 @@ Your relationships with these finalists: ${JSON.stringify(context.relationships 
   },
   "reasoning": "[explain your response choices]"
 }
-The conversation context: ${context.situation}
-The speaker just said: "${context.message}"
-Your current mood (${mood}) and stress level (${stressLevel}) should significantly influence your tone and response.`;
+
+DIALOGUE CONTEXT:
+You are in game phase: ${context.phase} during Week ${context.week}
+The speaker is ${context.speakerName} who just said: "${context.message}"
+Situation: ${context.situation || "A general conversation"}
+
+${context.relationship ? `RELATIONSHIP WITH SPEAKER:
+- Your feelings toward them: ${context.relationship.myFeelings} (${context.relationship.level})
+- Their feelings toward you: ${context.relationship.theirFeelings}
+- Reciprocity factor: ${context.relationship.reciprocityFactor} (higher means they like you more than you like them)`: ''}
+
+${context.significantEvents && context.significantEvents.length > 0 ? `SIGNIFICANT EVENTS WITH SPEAKER:
+${context.significantEvents.join('\n')}` : ''}
+
+${context.recentEvents && context.recentEvents.length > 0 ? `RECENT GAME EVENTS:
+${context.recentEvents.join('\n')}` : ''}
+
+${context.gameContext ? `CURRENT GAME STATE:
+- HoH: ${context.gameContext.hohName}
+- Nominees: ${context.gameContext.nominees.join(', ')}
+- POV Holder: ${context.gameContext.povWinner}` : ''}
+
+DIALOGUE RESPONSE INSTRUCTIONS:
+- Your response should reflect your ${traits} personality
+- Your current mood (${mood}) and stress level (${stressLevel}) should significantly influence your tone
+- Consider your relationship history with the speaker
+- Your response MUST align with your game strategy and goals
+- Consider being deceptive if it helps your game, especially if you have the 'Sneaky' trait
+- Reference specific game events or past conversations where relevant
+- Your "thoughts" should reveal your true feelings/strategy, which may differ from what you say
+- Choose a tone that matches your personality, mood, and the situation:
+  * friendly - warm, open, positive
+  * strategic - game-focused, alliance-building
+  * cautious - guarded, non-committal
+  * deceptive - intentionally misleading
+  * aggressive - confrontational, challenging
+  * dismissive - uninterested, brushing off
+  * neutral - balanced, even-toned`;
         break;
         
       case 'alliance_proposal':

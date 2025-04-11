@@ -160,6 +160,7 @@ export const useAIDecisions = ({
         
         // Check for significant events that might affect decision
         const events = relationship?.events || [];
+        
         // Check if events exists and is an array before filtering
         const significantEvents = Array.isArray(events) ? 
           events.filter(e => 
@@ -180,11 +181,14 @@ export const useAIDecisions = ({
           }
         }, 0);
         
+        const hasAlliance = Array.isArray(events) ? events.some(e => e.type === 'alliance_formed') : false;
+        const wasBetrayed = Array.isArray(events) ? events.some(e => e.type === 'betrayal') : false;
+        
         return {
           nominee,
           score: score + eventBonus + mentalStateModifier,
-          hasAlliance: events && Array.isArray(events) ? events.some(e => e.type === 'alliance_formed') : false,
-          wasBetrayed: events && Array.isArray(events) ? events.some(e => e.type === 'betrayal') : false
+          hasAlliance,
+          wasBetrayed
         };
       });
       
@@ -261,6 +265,7 @@ export const useAIDecisions = ({
           
           // Check for significant events
           const events = relationship?.events || [];
+          
           // Check if events exists and is an array before filtering
           const significantEvents = Array.isArray(events) ? 
             events.filter(e => 
@@ -276,6 +281,12 @@ export const useAIDecisions = ({
                 return effect + 20; // Less likely to nominate someone who saved you
               case 'alliance_formed':
                 return effect + 40; // Much less likely to nominate an ally
+              case 'deception':
+                return effect - 20; // More likely to nominate someone who deceived you
+              case 'positive_connection':
+                return effect + 15; // Less likely to nominate someone you connected with
+              case 'negative_interaction':
+                return effect - 15; // More likely to nominate someone after a negative interaction
               default:
                 return effect;
             }

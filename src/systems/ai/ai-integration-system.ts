@@ -13,6 +13,8 @@ import { AIFallbackGenerator } from './fallback-generator';
 import { RelationshipSystem } from '../relationship-system';
 import { config } from '@/config';
 import { updateHouseguestMentalState, generateReflectionPrompt } from '@/models/houseguest';
+import { RelationshipEventType } from '@/models/relationship-event';
+import { GamePhase } from '@/models/game-state';
 
 export class AIIntegrationSystem {
   private logger: Logger;
@@ -411,14 +413,9 @@ export class AIIntegrationSystem {
     houseguestId: string,
     event: 'nominated' | 'saved' | 'competition_win' | 'competition_loss' | 'ally_evicted' | 'enemy_evicted' | 'betrayed' | 'positive_interaction' | 'negative_interaction'
   ): void {
-    // Use the BigBrotherGame instance from relationshipSystem's game context or find it elsewhere
-    // The relationshipSystem.game property does not exist, so we need to find the game context differently
-    const game = this.relationshipSystem?.getAllRelationships() ? 
-      { houseguests: [] } : null; // Replace with proper game state access
+    const houseguests = this.relationshipSystem?.getAllRelationships() ? [] : [];
       
-    if (!game) return;
-    
-    const houseguest = game.houseguests.find(h => h.id === houseguestId);
+    const houseguest = houseguests.find(h => h.id === houseguestId);
     if (!houseguest) return;
     
     updateHouseguestMentalState(houseguest, event);
@@ -485,5 +482,280 @@ export class AIIntegrationSystem {
    */
   describeRelationship(score: number): string {
     return this.fallbackGenerator.describeRelationship(score);
+  }
+
+  /**
+   * Generate a dialogue response from an AI houseguest
+   * @param houseguestId ID of the AI houseguest responding
+   * @param context Dialogue context data
+   * @param game Game state reference
+   * @returns Promise resolving to a dialogue response object
+   */
+  async generateDialogueResponse(
+    houseguestId: string,
+    context: {
+      speakerId: string;
+      speakerName: string;
+      message: string;
+      situation: string;
+      phase: GamePhase;
+      week: number;
+    },
+    game: BigBrotherGame
+  ): Promise<{
+    response: string;
+    tone: 'friendly' | 'strategic' | 'cautious' | 'deceptive' | 'aggressive' | 'dismissive' | 'neutral';
+    thoughts: string;
+  }> {
+    this.totalDecisions++;
+    
+    // Find the houseguest
+    const houseguest = game.houseguests.find(h => h.id === houseguestId);
+    if (!houseguest) {
+      this.logger.error(`Cannot generate dialogue: No houseguest with ID ${houseguestId} found.`);
+      return this.getFallbackDialogue(context, game);
+    }
+    
+    try {
+      this.logger.info(`🗣️ Dialogue response requested from ${houseguest.name}, Mood: ${houseguest.mood}, Stress: ${houseguest.stressLevel}`);
+      
+      // Create an enhanced context with relationship data
+      const enhancedContext = this.createEnhancedDialogueContext(houseguest, context, game);
+      
+      // Rate limit API calls
+      await this.respectRateLimit();
+      
+      // If we're in development or testing mode without API key, use fallback
+      if (!this.apiKey) {
+        this.logger.warn(`No API key, using fallback for dialogue by ${houseguest.name}`);
+        return this.getFallbackDialogue(context, game);
+      }
+      
+      // Generate prompt based on dialogue context
+      const memories = this.memoryManager.getMemoriesForHouseguest(houseguest.id);
+      const prompt = this.decisionMaker.generatePrompt(houseguest, 'dialogue', enhancedContext, game, memories);
+      
+      // Make the API call
+      let response;
+      try {
+        response = await this.decisionMaker.callLLMAPI(prompt);
+        this.logger.debug(`Raw dialogue API response received: ${response?.substring(0, 100)}...`);
+      } catch (error: any) {
+        this.logger.error(`❌ Dialogue API call failed: ${error.message}`);
+        return this.getFallbackDialogue(context, game);
+      }
+      
+      // Parse and validate the response
+      let decision;
+      try {
+        decision = this.responseParser.parseAndValidateResponse(response, 'dialogue');
+        this.logger.info(`✅ AI Dialogue SUCCESS for ${houseguest.name}`);
+      } catch (error: any) {
+        this.logger.error(`❌ Dialogue response validation failed: ${error.message}`, { response });
+        return this.getFallbackDialogue(context, game);
+      }
+      
+      // Log the dialogue response
+      this.logger.info(`✅ ${houseguest.name} responds: "${decision.decision.response}" (${decision.decision.tone})`);
+      this.logger.debug(`${houseguest.name} thinks: "${decision.decision.thoughts}"`);
+      
+      // Add a memory of this conversation
+      this.memoryManager.addMemory(
+        houseguest.id, 
+        `${context.speakerName} said to you: "${context.message}" and you responded: "${decision.decision.response}"`
+      );
+      
+      // Update houseguest mental state based on this interaction
+      this.updateMentalStateFromDialogue(houseguest, decision.decision, context);
+      
+      // Print fallback stats
+      this.printFallbackStats();
+      
+      return decision.decision;
+    } catch (error: any) {
+      this.logger.error(`❌ Dialogue generation FAILED: ${error.message}`);
+      return this.getFallbackDialogue(context, game);
+    }
+  }
+  
+  /**
+   * Create an enhanced context for dialogue generation with rich relationship data
+   */
+  private createEnhancedDialogueContext(
+    houseguest: Houseguest,
+    context: any,
+    game: BigBrotherGame
+  ): any {
+    const enhancedContext = { ...context };
+    
+    // Add speaker relationship data if available
+    if (this.relationshipSystem && context.speakerId) {
+      // Get relationship data in both directions
+      const myRelationship = this.relationshipSystem.getEffectiveRelationship(
+        houseguest.id, 
+        context.speakerId
+      );
+      
+      const theirRelationship = this.relationshipSystem.getEffectiveRelationship(
+        context.speakerId, 
+        houseguest.id
+      );
+      
+      enhancedContext.relationship = {
+        myFeelings: myRelationship,
+        theirFeelings: theirRelationship,
+        reciprocityFactor: this.relationshipSystem.calculateReciprocityModifier(
+          houseguest.id,
+          context.speakerId
+        ),
+        level: this.relationshipSystem.getRelationshipLevel(houseguest.id, context.speakerId)
+      };
+      
+      // Get significant events between these houseguests
+      const events = this.relationshipSystem.getRelationshipEvents(houseguest.id, context.speakerId)
+        .filter(e => ['betrayal', 'saved', 'alliance_formed', 'alliance_betrayed'].includes(e.type) ||
+                Math.abs(e.impactScore) >= 15)
+        .map(e => e.description);
+                
+      enhancedContext.significantEvents = events;
+    }
+    
+    // Add game state context
+    enhancedContext.gameContext = {
+      week: game.week,
+      phase: game.phase,
+      hohName: game.hohWinner?.name || "None",
+      nominees: game.nominees.map(n => n.name),
+      povWinner: game.povWinner?.name || "None"
+    };
+    
+    // Add recent game events for context
+    enhancedContext.recentEvents = game.gameLog
+      .filter(log => log.week === game.week || log.week === game.week - 1)
+      .filter(log => log.involvedHouseguests.includes(houseguest.id) || 
+                     log.involvedHouseguests.includes(context.speakerId))
+      .slice(-5)
+      .map(log => log.description);
+    
+    return enhancedContext;
+  }
+  
+  /**
+   * Updates a houseguest's mental state based on dialogue outcomes
+   */
+  private updateMentalStateFromDialogue(
+    houseguest: Houseguest, 
+    dialogueResult: { response: string; tone: string; thoughts: string; },
+    context: { speakerId: string; speakerName: string; message: string; }
+  ): void {
+    // Extract tone from dialogue
+    const tone = dialogueResult.tone;
+    const thoughts = dialogueResult.thoughts;
+    
+    // Update mental state based on tone and thoughts
+    let eventType: 'positive_interaction' | 'negative_interaction' | null = null;
+    
+    // Analyze internal thoughts for emotional impact
+    const negativeThoughtIndicators = [
+      'annoyed', 'angry', 'upset', 'frustrated', 'suspicious', 'don\'t trust', 
+      'bothering me', 'irritating', 'hate', 'dislike'
+    ];
+    
+    const positiveThoughtIndicators = [
+      'like', 'trust', 'friend', 'ally', 'happy', 'glad', 'appreciate', 
+      'helpful', 'grateful', 'enjoy'
+    ];
+    
+    // Check if thoughts contain negative indicators
+    const hasNegativeThoughts = negativeThoughtIndicators.some(indicator => 
+      thoughts.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    // Check if thoughts contain positive indicators
+    const hasPositiveThoughts = positiveThoughtIndicators.some(indicator => 
+      thoughts.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    // Determine event type based on thoughts and tone
+    if ((tone === 'friendly' || tone === 'strategic') && hasPositiveThoughts) {
+      eventType = 'positive_interaction';
+    } else if ((tone === 'aggressive' || tone === 'dismissive' || tone === 'deceptive') && hasNegativeThoughts) {
+      eventType = 'negative_interaction';
+    }
+    
+    // Update houseguest mental state if needed
+    if (eventType) {
+      updateHouseguestMentalState(houseguest, eventType);
+      this.logger.info(`Updated ${houseguest.name}'s mental state after dialogue (${eventType})`);
+    }
+    
+    // Store the thought as an internal thought for the houseguest
+    if (!houseguest.internalThoughts) {
+      houseguest.internalThoughts = [];
+    }
+    houseguest.internalThoughts.push(`[About ${context.speakerName}]: ${thoughts}`);
+    
+    // Cap internal thoughts if needed
+    if (houseguest.internalThoughts.length > 10) {
+      houseguest.internalThoughts = houseguest.internalThoughts.slice(-10);
+    }
+  }
+  
+  /**
+   * Fallback dialogue generation when API fails or isn't available
+   */
+  private getFallbackDialogue(
+    context: { speakerName: string; message: string; },
+    game: BigBrotherGame
+  ): { response: string; tone: 'friendly' | 'strategic' | 'cautious' | 'deceptive' | 'aggressive' | 'dismissive' | 'neutral'; thoughts: string; } {
+    this.fallbackCount++;
+    
+    // Generate simple response based on message
+    const message = context.message.toLowerCase();
+    let response = "I'm not sure what to say about that.";
+    let tone: 'friendly' | 'strategic' | 'cautious' | 'deceptive' | 'aggressive' | 'dismissive' | 'neutral' = 'neutral';
+    let thoughts = "I should be careful what I say.";
+    
+    // Very basic message parsing for fallback responses
+    if (message.includes('alliance') || message.includes('work together')) {
+      response = "I think that could be good for both of us. Let's discuss it more later.";
+      tone = 'strategic';
+      thoughts = "An alliance might be useful, but I need to be careful who I trust.";
+    } else if (message.includes('vote') || message.includes('evict')) {
+      response = "I'm still thinking about my vote. I want to make the right decision.";
+      tone = 'cautious';
+      thoughts = "I shouldn't reveal my voting plans so easily.";
+    } else if (message.includes('nominee') || message.includes('block')) {
+      response = "It's a tough situation for anyone on the block. Let's see how things play out.";
+      tone = 'strategic';
+      thoughts = "I need to be careful discussing nominations.";
+    } else if (message.includes('hoh') || message.includes('head of household')) {
+      response = "The HoH has a lot of power this week. It's important to stay on their good side.";
+      tone = 'strategic';
+      thoughts = "HoH discussions are always delicate.";
+    } else if (message.includes('how are you') || message.includes('what\'s up')) {
+      response = "I'm doing alright, just trying to navigate the game day by day.";
+      tone = 'friendly';
+      thoughts = "Basic small talk, but these connections matter.";
+    } else if (message.includes('trust') || message.includes('promise')) {
+      response = "Trust is earned in this game. I try to be straightforward when I can.";
+      tone = 'cautious';
+      thoughts = "Trust discussions are tricky in Big Brother.";
+    } else {
+      // Generic responses for anything else
+      const genericResponses = [
+        "That's an interesting point.",
+        "I've been thinking the same thing.",
+        "We should talk more about this later.",
+        "I see where you're coming from.",
+        "Let me think about that."
+      ];
+      response = genericResponses[Math.floor(Math.random() * genericResponses.length)];
+      tone = 'neutral';
+      thoughts = "Just keeping the conversation going without revealing too much.";
+    }
+    
+    this.printFallbackStats();
+    return { response, tone, thoughts };
   }
 }

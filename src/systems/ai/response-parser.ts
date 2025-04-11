@@ -119,6 +119,23 @@ export class AIResponseParser {
           throw new Error("Jury vote must include voteForWinner");
         }
         break;
+      case 'dialogue':
+        if (!decision.response) {
+          throw new Error("Dialogue decision must include response");
+        }
+        if (!decision.tone) {
+          throw new Error("Dialogue decision must include tone");
+        }
+        if (!decision.thoughts) {
+          throw new Error("Dialogue decision must include thoughts");
+        }
+        // Validate tone is one of the acceptable values
+        const validTones = ['friendly', 'strategic', 'cautious', 'deceptive', 'aggressive', 'dismissive', 'neutral'];
+        if (!validTones.includes(decision.tone)) {
+          this.logger.warn(`Invalid tone '${decision.tone}', defaulting to 'neutral'`);
+          decision.tone = 'neutral';
+        }
+        break;
     }
     
     this.logger.debug(`Decision validation passed for ${decisionType}`);
