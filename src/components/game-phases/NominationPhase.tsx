@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -111,11 +112,14 @@ const NominationPhase: React.FC = () => {
       <CardContent className="p-6 space-y-6">
         {/* HoH Banner */}
         <div className="bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-b">
-          <div>
-            <p className="bg-bb-blue text-white">Head of Household</p>
-            <p className="bg-bb-blue text-white">{hoh?.name || 'No HoH'}</p>
+          <div className="bg-bb-blue text-white p-3 flex justify-center items-center">
+            <p className="text-lg font-semibold">Head of Household</p>
           </div>
-          
+          <div className="bg-bb-blue text-white p-3 flex justify-center items-center gap-3">
+            <Crown className="h-6 w-6 text-amber-400" />
+            <p className="text-xl md:text-2xl font-bold">{hoh?.name || 'No HoH'}</p>
+            <Crown className="h-6 w-6 text-amber-400" />
+          </div>
         </div>
         
         {!ceremonyStarted ? <div className="text-center space-y-6 py-8">
