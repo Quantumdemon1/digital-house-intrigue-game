@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
-import { Houseguest } from '@/models/houseguest';
+import { Houseguest, updateHouseguestMentalState } from '@/models/houseguest';
 import { useGameControl } from '@/contexts/GameControlContext';
 import { handleHouseguestEviction, completeEvictionProcess } from '@/utils/eviction-utils';
 

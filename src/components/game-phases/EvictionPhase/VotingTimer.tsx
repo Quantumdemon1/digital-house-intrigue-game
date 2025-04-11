@@ -1,7 +1,20 @@
 
 import React from 'react';
-import { Progress } from '@/components/ui/progress';
 import { Clock } from 'lucide-react';
+
+// Create a simple custom progress component since the shadcn/ui Progress is not accessible
+const Progress = ({ value, className }: { value: number; className?: string }) => {
+  return (
+    <div 
+      className={`relative h-2 w-full overflow-hidden rounded-full bg-secondary ${className || ''}`}
+    >
+      <div 
+        className="h-full bg-primary transition-all"
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  );
+};
 
 interface VotingTimerProps {
   timeRemaining: number;
