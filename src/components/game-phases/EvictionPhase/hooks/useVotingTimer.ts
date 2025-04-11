@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 export const VOTING_TIME_LIMIT = 30; // 30 seconds for voting
 

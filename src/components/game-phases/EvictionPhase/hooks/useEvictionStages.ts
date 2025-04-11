@@ -1,8 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Houseguest } from '@/models/houseguest';
-import { useGame } from '@/contexts/GameContext';
 
 export type EvictionStage = 'interaction' | 'voting' | 'results';
 

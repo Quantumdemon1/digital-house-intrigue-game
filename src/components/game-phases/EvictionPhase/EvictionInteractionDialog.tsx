@@ -1,15 +1,13 @@
 
 import React, { useState } from 'react';
 import { Houseguest } from '@/models/houseguest';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useGame } from '@/contexts/GameContext';
-import { cn } from '@/lib/utils';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { InteractionOption } from './types/interactions';
 import InteractionResults from './InteractionResults';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface EvictionInteractionDialogProps {
   houseguest: Houseguest;
@@ -49,14 +47,6 @@ const interactionOptions: InteractionOption[] = [
     responseText: 'You shared some juicy information about the other houseguests.',
     relationshipChange: 3,
     successChance: 0.6,
-    icon: null,
-  },
-  {
-    id: 'confront',
-    text: 'Confront',
-    responseText: 'You confronted them about their game moves.',
-    relationshipChange: -5,
-    successChance: 0.4,
     icon: null,
   },
 ];
@@ -125,7 +115,7 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 max-w-md">
-        <Card className="shadow-lg border-bb-yellow">
+        <Card className="shadow-lg border-red-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
@@ -138,7 +128,7 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
             <div className="flex items-center space-x-4 mb-4">
               <div>
                 <CardDescription>
-                  Choose your approach. ({houseguest.traits.join(', ')})
+                  Choose how to interact with {houseguest.name}. ({houseguest.traits.join(', ')})
                 </CardDescription>
               </div>
             </div>
@@ -151,8 +141,9 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
                       key={option.id} 
                       onClick={() => handleOptionSelected(option)}
                       className="justify-start text-left"
+                      variant="outline"
                     >
-                      {option.text}
+                      {option.text} {houseguest.name}
                     </Button>
                   ))}
                 </div>

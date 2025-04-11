@@ -24,13 +24,16 @@ export function useEvictionCompletion() {
     handleHouseguestEviction(
       dispatch, 
       evictedHouseguest, 
-      gameState.week >= 5
+      gameState.week >= 5  // Jury eligibility typically starts around week 5
     );
     
     toast({
       title: "Houseguest Evicted",
       description: `${evictedHouseguest.name} has been evicted from the Big Brother house.`,
     });
+    
+    // Update mental state for evicted houseguest
+    updateHouseguestMentalState(evictedHouseguest, 'negative_interaction');
     
     // Advance to the next week
     setTimeout(() => {

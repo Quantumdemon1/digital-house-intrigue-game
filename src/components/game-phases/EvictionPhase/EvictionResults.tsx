@@ -6,7 +6,7 @@ import { Houseguest } from '@/models/houseguest';
 import confetti from 'canvas-confetti';
 import { useGameControl } from '@/contexts/GameControlContext';
 
-// Create a simple custom progress component since we can't modify the original
+// Create a simple custom progress component
 const Progress = ({ 
   value, 
   className 
@@ -96,9 +96,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
   }, [revealedCount, totalVotes, savedHouseguest]);
   
   const handleCompleteEviction = () => {
-    console.log("Handling eviction completion for:", evictedHouseguest?.name);
     if (evictedHouseguest) {
-      // Make sure this function gets called and executes properly
       onComplete(evictedHouseguest);
     }
   };
@@ -151,9 +149,9 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
         </div>
       ) : (
         <div className="space-y-8">
-          <div className="p-6 bg-bb-red bg-opacity-10 rounded-lg border border-bb-red">
+          <div className="p-6 bg-red-50 bg-opacity-80 rounded-lg border border-red-200">
             <div className="flex items-center justify-center mb-4">
-              <UserX className="h-12 w-12 text-bb-red mr-4" />
+              <UserX className="h-12 w-12 text-red-600 mr-4" />
               <h3 className="text-2xl font-bold">Eviction Result</h3>
             </div>
             
@@ -175,7 +173,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
               <div className="mt-6">
                 <Button 
                   onClick={handleCompleteEviction} 
-                  className="bg-bb-red hover:bg-red-700"
+                  className="bg-red-600 hover:bg-red-700"
                   size="lg"
                   disabled={isProcessing}
                 >

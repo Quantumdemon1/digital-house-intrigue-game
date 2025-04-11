@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useEvictionStages } from './hooks/useEvictionStages';
 import { useVotingTimer } from './hooks/useVotingTimer';
