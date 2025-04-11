@@ -82,7 +82,7 @@ export class PovMeetingState extends GameStateBase {
         const povWinner = povWinnerId ? this.game.getHouseguestById(povWinnerId) : null;
         const currentNominees = this.game.nominees || [];
         
-        if (povWinner && currentNominees.includes(povWinnerId)) {
+        if (povWinner && povWinnerId && currentNominees.includes(povWinnerId)) {
           // PoV holder is nominated, so they save themselves
           this.getLogger().info(`Fast forward - ${povWinner.name} saved themselves with the PoV`);
           
