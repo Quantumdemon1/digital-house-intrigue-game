@@ -39,10 +39,10 @@ export const useVotingLogic = ({
       return;
     }
     
-    // For AI players, start voting process
+    // For AI players, start voting process immediately
     setIsVoting(true);
     
-    // Simulate AI thinking time
+    // Reduced AI thinking time for faster gameplay
     const timer = setTimeout(() => {
       // AI voting logic based on relationships
       let nominee1Relationship = getRelationship(currentVoter.id, nominees[0].id);
@@ -56,13 +56,13 @@ export const useVotingLogic = ({
       onVoteSubmit(currentVoter.id, voteForId);
       setShowVote(true);
       
-      // Show the vote for a moment, then move to next voter
+      // Show the vote briefly, then move to next voter quickly
       setTimeout(() => {
         setShowVote(false);
         setIsVoting(false);
         nextVoter();
-      }, 2000);
-    }, 1500);
+      }, 800); // Reduced from 2000ms to 800ms for faster progression
+    }, 500); // Reduced from 1500ms to 500ms for faster thinking time
     
     return () => clearTimeout(timer);
   }, [currentVoter, isPlayerVoting, isVoting, nominees, votes, getRelationship, onVoteSubmit]);
@@ -81,7 +81,7 @@ export const useVotingLogic = ({
       setShowVote(false);
       setIsVoting(false);
       nextVoter();
-    }, 2000);
+    }, 1000); // Still give player votes a reasonable display time
   };
   
   const nextVoter = () => {

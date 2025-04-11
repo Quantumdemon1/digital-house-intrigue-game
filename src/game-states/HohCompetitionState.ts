@@ -11,7 +11,15 @@ export class HohCompetitionState extends GameStateBase {
     await super.enter();
     this.game.phase = 'HoH';
     
-    // Implementation will come in Phase 2
+    // If HoH is AI-controlled, immediately proceed to nominations
+    const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+    if (hoh && !hoh.isPlayer) {
+      this.getLogger().info(`AI HoH ${hoh.name} automatically proceeding to nominations`);
+      // After a small delay to allow UI to update, advance to nomination phase
+      setTimeout(() => {
+        this.gameController.changeState('NominationState');
+      }, 2000);
+    }
   }
   
   async handleAction(actionId: string, params: any): Promise<boolean> {

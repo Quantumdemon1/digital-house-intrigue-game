@@ -11,7 +11,15 @@ export class PovCompetitionState extends GameStateBase {
     await super.enter();
     this.game.phase = 'PoV';
     
-    // Implementation will come in Phase 2
+    // If PoV winner is AI, automatically proceed to PoV meeting
+    const povWinner = this.game.povWinner ? this.game.getHouseguestById(this.game.povWinner) : null;
+    if (povWinner && !povWinner.isPlayer) {
+      this.getLogger().info(`AI PoV winner ${povWinner.name} automatically proceeding to PoV meeting`);
+      // After a small delay to allow UI to update, advance to PoV meeting phase
+      setTimeout(() => {
+        this.gameController.changeState('PovMeetingState');
+      }, 2000);
+    }
   }
   
   async handleAction(actionId: string, params: any): Promise<boolean> {
@@ -21,7 +29,13 @@ export class PovCompetitionState extends GameStateBase {
       case 'select_pov_winner':
         if (params && params.povId) {
           this.getLogger().info(`Selected PoV winner: ${params.povId}`);
-          // Set PoV winner logic here
+          // After selection, check if it's AI and proceed automatically
+          const povWinner = this.game.getHouseguestById(params.povId);
+          if (povWinner && !povWinner.isPlayer) {
+            setTimeout(() => {
+              this.gameController.changeState('PovMeetingState');
+            }, 2000);
+          }
           return true;
         }
         return false;

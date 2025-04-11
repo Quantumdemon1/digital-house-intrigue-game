@@ -74,8 +74,8 @@ export const useAINomination = ({
             description: "The Head of Household is choosing nominations.",
           });
           
-          // Simulate thinking time
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Reduced thinking time for faster gameplay
+          await new Promise(resolve => setTimeout(resolve, 800)); // Reduced from 2000ms
           
           // Get decision from the AI system
           let decision;
@@ -123,11 +123,11 @@ export const useAINomination = ({
               description: `Nominated ${nominee1.name} and ${nominee2.name} for eviction.`,
             });
             
-            // Delay before confirming to simulate decision making
+            // Reduced delay before confirming for faster gameplay
             setTimeout(() => {
               confirmNominations();
               processingRef.current = false;
-            }, 2500);
+            }, 1000); // Reduced from 2500ms
           } else {
             // Fallback if AI decision is invalid
             aiLogger.error(`❌ AI nomination decision invalid: nominees not found`, { decision });
@@ -150,7 +150,7 @@ export const useAINomination = ({
             setTimeout(() => {
               confirmNominations();
               processingRef.current = false;
-            }, 1500);
+            }, 800); // Reduced from 1500ms
           }
         } catch (error: any) {
           aiLogger.error(`❌ Error in AI nomination process: ${error.message}`);
@@ -173,12 +173,12 @@ export const useAINomination = ({
           setTimeout(() => {
             confirmNominations();
             processingRef.current = false;
-          }, 1000);
+          }, 800); // Reduced from 1000ms
         }
       };
       
-      // Small delay before starting AI decision process
-      setTimeout(makeDecision, 1000);
+      // Reduced delay before starting AI decision process
+      setTimeout(makeDecision, 300); // Reduced from 1000ms
     }
   }, [hoh, isNominating, ceremonyComplete, aiProcessed, potentialNominees, setNominees, confirmNominations, toast, aiSystem, game, getRelationship]);
 

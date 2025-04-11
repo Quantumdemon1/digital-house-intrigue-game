@@ -11,7 +11,12 @@ export class NominationState extends GameStateBase {
     await super.enter();
     this.game.phase = 'Nomination';
     
-    // Implementation will come in Phase 2
+    // If HoH is AI-controlled, trigger automatic nominations
+    const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+    if (hoh && !hoh.isPlayer) {
+      this.getLogger().info(`AI HoH ${hoh.name} will automatically make nominations`);
+      // No need to do anything here - the useAINomination hook will handle this automatically
+    }
   }
   
   async handleAction(actionId: string, params: any): Promise<boolean> {
@@ -23,10 +28,10 @@ export class NominationState extends GameStateBase {
           const nominees = params.nomineeIds.map((id: string) => this.game.getHouseguestById(id));
           this.getLogger().info(`Nominations confirmed: ${nominees.map((n: any) => n?.name).join(', ')}`);
           
-          // Here we would set the nominees in the game state
-          // this.game.nominees = nominees;
-          
-          // Could transition to PovCompetitionState
+          // After nominations are made, automatically advance to PoV competition
+          setTimeout(() => {
+            this.gameController.changeState('PovCompetitionState');
+          }, 2000);
           return true;
         }
         return false;
