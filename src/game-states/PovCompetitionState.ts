@@ -12,7 +12,8 @@ export class PovCompetitionState extends GameStateBase {
     this.game.phase = 'PoV';
     
     // If PoV winner is AI, immediately proceed to PoV meeting
-    const povWinner = this.game.povWinner ? this.game.getHouseguestById(this.game.povWinner) : null;
+    const povWinnerId = this.game.povWinner;
+    const povWinner = povWinnerId ? this.game.getHouseguestById(povWinnerId) : null;
     if (povWinner && !povWinner.isPlayer) {
       this.getLogger().info(`AI PoV winner ${povWinner.name} automatically proceeding to PoV meeting`);
       // Immediately advance to PoV meeting phase - no delay

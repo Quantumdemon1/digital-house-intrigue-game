@@ -14,7 +14,7 @@ export function nominationReducer(state: GameState, action: GameAction): GameSta
       const isNominated = action.payload.some(nominee => nominee.id === guest.id);
       
       // Create a proper nominations object if it doesn't exist yet
-      if (typeof guest.nominations !== 'object') {
+      if (!guest.nominations || typeof guest.nominations !== 'object') {
         guest.nominations = { times: 0, receivedOn: [] };
       }
       

@@ -194,7 +194,7 @@ export function createHouseguest(
     isPovHolder: false,
     isNominated: false,
     competitionsWon: { hoh: 0, pov: 0, other: 0 },
-    nominations: { times: 0, receivedOn: [] }, // Ensure this is an object
+    nominations: { times: 0, receivedOn: [] }, // Ensure this is always an object
     timesVetoed: 0,
     imageUrl,
     avatarUrl: imageUrl, // Set avatarUrl to the same as imageUrl initially

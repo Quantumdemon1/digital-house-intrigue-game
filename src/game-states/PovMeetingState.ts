@@ -14,7 +14,8 @@ export class PovMeetingState extends GameStateBase {
     this.game.phase = 'PoVMeeting';
     
     // If POV holder is an AI player, handle automatic decisions
-    const povHolder = this.game.povWinner ? this.game.getHouseguestById(this.game.povWinner) : null;
+    const povWinnerId = this.game.povWinner;
+    const povHolder = povWinnerId ? this.game.getHouseguestById(povWinnerId) : null;
     
     if (povHolder && !povHolder.isPlayer) {
       this.getLogger().info(`AI POV holder ${povHolder.name} making veto decision automatically`);
@@ -35,8 +36,10 @@ export class PovMeetingState extends GameStateBase {
         
       case 'save_nominee':
         if (params && params.nomineeId) {
-          const nominee = this.game.getHouseguestById(params.nomineeId);
-          const povHolder = this.game.povWinner ? this.game.getHouseguestById(this.game.povWinner) : null;
+          const nomineeId = params.nomineeId;
+          const nominee = this.game.getHouseguestById(nomineeId);
+          const povWinnerId = this.game.povWinner;
+          const povHolder = povWinnerId ? this.game.getHouseguestById(povWinnerId) : null;
           
           if (nominee && povHolder) {
             this.getLogger().info(`Saving nominee: ${nominee.name}`);
@@ -97,8 +100,10 @@ export class PovMeetingState extends GameStateBase {
         
       case 'select_replacement':
         if (params && params.replacementId) {
-          const replacement = this.game.getHouseguestById(params.replacementId);
-          const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+          const replacementId = params.replacementId;
+          const replacement = this.game.getHouseguestById(replacementId);
+          const hohId = this.game.hohWinner;
+          const hoh = hohId ? this.game.getHouseguestById(hohId) : null;
           
           if (replacement && hoh) {
             this.getLogger().info(`Selected replacement nominee: ${replacement.name}`);

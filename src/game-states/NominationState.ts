@@ -25,11 +25,12 @@ export class NominationState extends GameStateBase {
     switch (actionId) {
       case 'make_nominations':
         if (params && params.nomineeIds && params.nomineeIds.length === 2) {
-          const nominees = params.nomineeIds.map((id: string) => this.game.getHouseguestById(id));
+          const nomineeIds = params.nomineeIds;
+          const nominees = nomineeIds.map((id: string) => this.game.getHouseguestById(id));
           this.getLogger().info(`Nominations confirmed: ${nominees.map((n: any) => n?.name).join(', ')}`);
           
           // Set nominees in the game state
-          this.game.nominees = params.nomineeIds;
+          this.game.nominees = nomineeIds;
           
           return true;
         }
@@ -37,12 +38,13 @@ export class NominationState extends GameStateBase {
       
       case 'fast_forward':
         // When fast forwarding, make AI nominations if HoH exists
-        const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+        const hohId = this.game.hohWinner;
+        const hoh = hohId ? this.game.getHouseguestById(hohId) : null;
         
         if (hoh) {
           // Get list of eligible houseguests for nominations (not HoH)
           const eligibleNominees = this.game.getActiveHouseguests()
-            .filter(hg => hg.id !== this.game.hohWinner);
+            .filter(hg => hg.id !== hohId);
           
           if (eligibleNominees.length >= 2) {
             // Choose two random nominees

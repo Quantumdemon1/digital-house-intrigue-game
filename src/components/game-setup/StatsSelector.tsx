@@ -22,8 +22,9 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({
     
     // Only work with number stats
     if (typeof stats[stat] === 'number') {
-      if ((stats[stat] as number) < 10 && remainingPoints > 0) {
-        onStatsChange(stat, (stats[stat] as number) + 1);
+      const currentValue = stats[stat] as number;
+      if (currentValue < 10 && remainingPoints > 0) {
+        onStatsChange(stat, currentValue + 1);
       }
     }
   };
@@ -33,8 +34,9 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({
     
     // Only work with number stats
     if (typeof stats[stat] === 'number') {
-      if ((stats[stat] as number) > 1) {
-        onStatsChange(stat, (stats[stat] as number) - 1);
+      const currentValue = stats[stat] as number;
+      if (currentValue > 1) {
+        onStatsChange(stat, currentValue - 1);
       }
     }
   };
