@@ -41,6 +41,7 @@ export class BigBrotherGame {
   public currentState: any = null;
   public currentLocation: string = 'living-room';
   public openAllianceProposalUI: () => void = () => {};
+  public game: BigBrotherGame = this; // Self-reference for compatibility
 
   // Event log
   public eventLog: GameEvent[] = [];
@@ -183,5 +184,18 @@ export class BigBrotherGame {
     clonedGame.finalTwo = [...(this.finalTwo || [])];
     
     return clonedGame;
+  }
+
+  // Utility method for game settings - used by game states
+  getGameSettings(): { finalWeek: number } {
+    return {
+      finalWeek: 10 // Default final week number
+    };
+  }
+
+  // Method for state transitions - used by game states
+  changeState(stateName: string): void {
+    console.log(`BigBrotherGame: changing state to ${stateName}`);
+    // In a real implementation, this would instantiate the new state
   }
 }

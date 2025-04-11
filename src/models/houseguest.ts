@@ -67,6 +67,10 @@ export interface HouseguestStats {
   competition: number;
   strategic: number;
   loyalty: number;
+  nominations?: {
+    times: number;
+    receivedOn: number[];
+  };
 }
 
 // Houseguest competition stats
@@ -157,6 +161,7 @@ export function createHouseguest(
     competition: Math.floor(Math.random() * 5) + 3, // 3-7
     strategic: Math.floor(Math.random() * 5) + 3, // 3-7
     loyalty: Math.floor(Math.random() * 5) + 3, // 3-7
+    nominations: { times: 0, receivedOn: [] },
   };
   
   // Apply trait boosts to stats

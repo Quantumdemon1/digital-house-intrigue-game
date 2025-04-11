@@ -7,6 +7,7 @@ import PlayerForm from './game-setup/PlayerForm';
 import HouseguestList from './game-setup/HouseguestList';
 import { defaultHouseguests, personalityTraits } from './game-setup/defaultHouseguests';
 import { PlayerFormData } from './game-setup/types';
+import { GamePhase } from '@/models/game-state';
 
 const GameSetup: React.FC = () => {
   const { dispatch } = useGame();

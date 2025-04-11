@@ -20,6 +20,7 @@ export interface IGameControllerFacade {
   gameState: GameState;
   currentLocation: string;
   currentState?: GameStateBase;
+  game: BigBrotherGame;
   
   // Game state getters
   week: number;
@@ -37,7 +38,9 @@ export interface IGameControllerFacade {
   openAllianceProposalUI: () => void;
   getActiveHouseguests: () => Houseguest[];
   getHouseguestById: (id: string) => Houseguest | undefined;
-  transitionToState: (state: typeof GameStateBase) => Promise<void>;
+  transitionTo: (state: typeof GameStateBase) => Promise<void>;
+  changeState: (stateName: string) => void;
+  getGameSettings: () => { finalWeek: number };
 }
 
 // Export GameEvent type from game-state.ts
