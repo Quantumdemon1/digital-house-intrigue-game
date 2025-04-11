@@ -39,7 +39,35 @@ export class EvictionState extends GameStateBase {
           return true;
         }
         return false;
+      case 'evict_houseguest':
+        this.getLogger().info(`Evicting houseguest: ${params.evictedId}`);
+        return true;
+        
+      case 'advance_week':
+        this.getLogger().info("Advancing week after eviction");
+        // After eviction is complete, advance immediately to next week/phase
+        // If we're in finale, go to GameOver, otherwise advance week
+        if (this.game.week >= this.controller.getGameSettings().finalWeek) {
+          this.controller.changeState('GameOverState');
+        } else {
+          this.game.advanceWeek();
+          this.controller.changeState('HohCompetitionState');
+        }
+        return true;
+        
+      case 'fast_forward':
+        this.getLogger().info("Fast-forwarding eviction phase");
+        // If we're in finale, go to GameOver, otherwise advance week
+        if (this.game.week >= this.controller.getGameSettings().finalWeek) {
+          this.controller.changeState('GameOverState');
+        } else {
+          this.game.advanceWeek();
+          this.controller.changeState('HohCompetitionState');
+        }
+        return true;
+        
       case 'eviction_complete':
+        this.getLogger().info("Eviction complete, advancing to next phase");
         // After eviction is complete, advance immediately to next week/phase
         // If we're in finale, go to GameOver, otherwise advance week
         if (this.game.week >= this.controller.getGameSettings().finalWeek) {

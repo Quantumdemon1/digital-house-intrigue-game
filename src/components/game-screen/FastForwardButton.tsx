@@ -12,6 +12,8 @@ export const FastForwardButton: React.FC = () => {
   const { toast } = useToast();
 
   const handleFastForward = () => {
+    console.log("Fast forward button clicked, current phase:", gameState.phase);
+    
     // Use the game control context to trigger fast forward
     fastForward();
     
@@ -23,6 +25,18 @@ export const FastForwardButton: React.FC = () => {
         params: { currentPhase: gameState.phase }
       }
     });
+
+    // If we're in eviction phase, also trigger eviction_complete
+    if (gameState.phase === 'Eviction') {
+      console.log("In Eviction phase, also dispatching eviction_complete");
+      dispatch({
+        type: 'PLAYER_ACTION',
+        payload: {
+          actionId: 'eviction_complete',
+          params: {}
+        }
+      });
+    }
 
     toast({
       title: "Fast forwarding...",

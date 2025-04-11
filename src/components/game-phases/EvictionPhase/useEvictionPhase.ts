@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
 import { Houseguest } from '@/models/houseguest';
+import { useGameControl } from '@/contexts/GameControlContext';
 
 type EvictionStage = 'interaction' | 'voting' | 'results';
 
@@ -11,6 +12,7 @@ const VOTING_TIME_LIMIT = 30; // 30 seconds for voting (changed from 60)
 export function useEvictionPhase() {
   const { gameState, dispatch } = useGame();
   const { toast } = useToast();
+  const { isProcessing } = useGameControl();
   const [stage, setStage] = useState<EvictionStage>('interaction');
   const [votes, setVotes] = useState<Record<string, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(VOTING_TIME_LIMIT);
@@ -147,6 +149,13 @@ export function useEvictionPhase() {
   
   // Handle eviction completion
   const handleEvictionComplete = useCallback((evictedHouseguest: Houseguest) => {
+    console.log("handleEvictionComplete called for", evictedHouseguest.name);
+    
+    if (isProcessing) {
+      console.log("Skipping eviction action - already processing");
+      return;
+    }
+    
     // Process the eviction using PLAYER_ACTION
     dispatch({
       type: 'PLAYER_ACTION',
@@ -159,8 +168,15 @@ export function useEvictionPhase() {
       }
     });
     
+    toast({
+      title: "Houseguest Evicted",
+      description: `${evictedHouseguest.name} has been evicted from the Big Brother house.`,
+    });
+    
     // Advance to the next week
     setTimeout(() => {
+      console.log("Dispatching advance_week action");
+      
       dispatch({ 
         type: 'PLAYER_ACTION',
         payload: {
@@ -169,12 +185,21 @@ export function useEvictionPhase() {
         }
       });
       
+      // Also dispatch eviction_complete action to ensure state transition
+      dispatch({ 
+        type: 'PLAYER_ACTION',
+        payload: {
+          actionId: 'eviction_complete',
+          params: {}
+        }
+      });
+      
       toast({
         title: "New Week Begins",
         description: `Week ${gameState.week + 1} has begun.`,
       });
-    }, 5000);
-  }, [dispatch, gameState.week, toast]);
+    }, 2000);
+  }, [dispatch, gameState.week, toast, isProcessing]);
 
   return {
     stage,

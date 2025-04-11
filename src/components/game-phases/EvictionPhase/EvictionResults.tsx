@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { UserX, DoorOpen } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import confetti from 'canvas-confetti';
+import { useGameControl } from '@/contexts/GameControlContext';
 
 // Create a simple custom progress component since we can't modify the original
 const Progress = ({ 
@@ -40,6 +41,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
   const [showFinalResult, setShowFinalResult] = useState(false);
   const [evictedHouseguest, setEvictedHouseguest] = useState<Houseguest | null>(null);
   const [savedHouseguest, setSavedHouseguest] = useState<Houseguest | null>(null);
+  const { isProcessing } = useGameControl();
   
   // Count votes for each nominee
   const voteCounts = Object.values(votes).reduce((counts, nomineeId) => {
@@ -94,7 +96,9 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
   }, [revealedCount, totalVotes, savedHouseguest]);
   
   const handleCompleteEviction = () => {
+    console.log("Handling eviction completion for:", evictedHouseguest?.name);
     if (evictedHouseguest) {
+      // Make sure this function gets called and executes properly
       onComplete(evictedHouseguest);
     }
   };
@@ -173,6 +177,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
                   onClick={handleCompleteEviction} 
                   className="bg-bb-red hover:bg-red-700"
                   size="lg"
+                  disabled={isProcessing}
                 >
                   <DoorOpen className="mr-2 h-5 w-5" />
                   Continue

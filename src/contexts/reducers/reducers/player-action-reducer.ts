@@ -24,10 +24,23 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         console.log('Fast forwarding from phase:', payload.params.currentPhase);
         
         // For immediate UI feedback while the state machine processes
+        // Always advance to the next phase
         if (payload.params.currentPhase === 'Nomination') {
           return {
             ...state,
             phase: 'PoV'  // Immediately update UI phase
+          };
+        }
+        
+        if (payload.params.currentPhase === 'Eviction') {
+          console.log("Fast forwarding from Eviction - advancing week");
+          // For eviction phase, we advance the week and go to HoH
+          return {
+            ...state,
+            week: state.week + 1,
+            phase: 'HoH',
+            nominees: [],
+            evictionVotes: {}
           };
         }
         break;
@@ -82,6 +95,28 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
       case 'evict_houseguest':
         console.log('Processing eviction for:', payload.params.evictedId);
         break;
+        
+      case 'eviction_complete':
+        console.log('Eviction complete, advancing to next phase');
+        // For immediate UI feedback while the state machine processes
+        return {
+          ...state,
+          week: state.week + 1,
+          phase: 'HoH',
+          nominees: [],
+          evictionVotes: {}
+        };
+        
+      case 'advance_week':
+        console.log('Advancing week to', state.week + 1);
+        // For immediate UI feedback while the state machine processes
+        return {
+          ...state,
+          week: state.week + 1,
+          phase: 'HoH',
+          nominees: [],
+          evictionVotes: {}
+        };
         
       default:
         // No immediate state update needed

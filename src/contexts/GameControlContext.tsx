@@ -14,7 +14,10 @@ export const GameControlProvider: React.FC<{ children: ReactNode }> = ({ childre
   const { toast } = useToast();
   
   const fastForward = useCallback(() => {
-    if (isProcessing) return; // Prevent multiple fast forwards
+    if (isProcessing) {
+      console.log("Already processing, ignoring fast forward request");
+      return;
+    }
     
     setIsProcessing(true);
     console.log("GameControlContext: Fast forward triggered");
@@ -30,7 +33,8 @@ export const GameControlProvider: React.FC<{ children: ReactNode }> = ({ childre
     // Reset processing state after a delay
     setTimeout(() => {
       setIsProcessing(false);
-    }, 1000);
+      console.log("Fast forward processing complete, state reset");
+    }, 2000);
   }, [isProcessing, toast]);
   
   return (
