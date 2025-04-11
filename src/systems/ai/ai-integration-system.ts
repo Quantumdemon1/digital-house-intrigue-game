@@ -624,11 +624,9 @@ export class AIIntegrationSystem {
     enhancedContext.gameContext = {
       week: game.week,
       phase: game.phase,
-      hohName: game.hohWinner ? (typeof game.hohWinner === 'string' ? game.hohWinner : game.hohWinner.name) || "None" : "None",
-      nominees: Array.isArray(game.nominees) ? 
-        game.nominees.map(n => typeof n === 'string' ? n : n.name) : 
-        [],
-      povWinner: game.povWinner ? (typeof game.povWinner === 'string' ? game.povWinner : game.povWinner.name) || "None" : "None"
+      hohName: this.getHouseguestNameSafely(game.hohWinner),
+      nominees: this.getHouseguestNameArraySafely(game.nominees),
+      povWinner: this.getHouseguestNameSafely(game.povWinner)
     };
     
     // Add recent game events for context
@@ -644,6 +642,26 @@ export class AIIntegrationSystem {
     }
     
     return enhancedContext;
+  }
+  
+  /**
+   * Helper method to safely get houseguest name regardless of if it's a string ID or object
+   */
+  private getHouseguestNameSafely(houseguest: string | Houseguest | null): string {
+    if (!houseguest) return "None";
+    if (typeof houseguest === 'string') return houseguest;
+    return houseguest.name || "Unknown";
+  }
+  
+  /**
+   * Helper method to safely get an array of houseguest names
+   */
+  private getHouseguestNameArraySafely(nominees: (string | Houseguest)[] | null | undefined): string[] {
+    if (!nominees || !Array.isArray(nominees)) return [];
+    return nominees.map(nominee => {
+      if (typeof nominee === 'string') return nominee;
+      return nominee.name || "Unknown";
+    });
   }
   
   /**

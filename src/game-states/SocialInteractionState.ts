@@ -1,3 +1,4 @@
+
 /**
  * @file SocialInteractionState.ts
  * @description Social interaction state
@@ -8,6 +9,7 @@ import { NominationState } from './NominationState';
 import type { IGameControllerFacade } from '../types/interfaces';
 import { Houseguest } from '../models/houseguest';
 import { RelationshipEventType } from '../models/relationship-event';
+import { GamePhase } from '../models/game-state';
 
 // Define possible locations
 export const LOCATIONS = ['living-room', 'kitchen', 'bedroom', 'backyard', 'hoh-room', 'diary-room'];
