@@ -79,7 +79,7 @@ const GameSummary: React.FC = () => {
                 </li>
                 <li className="flex justify-between">
                   <span className="text-muted-foreground">Times Nominated:</span>
-                  <span className="font-medium">{winnerNominations}</span>
+                  <span className="font-medium">{typeof winnerNominations === 'number' ? winnerNominations : winnerNominations.times}</span>
                 </li>
               </ul>
             </CardContent>
@@ -101,9 +101,9 @@ const GameSummary: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl overflow-hidden">
-                  {playerHouseguest.imageUrl ? (
+                  {playerHouseguest.avatarUrl ? (
                     <img 
-                      src={playerHouseguest.imageUrl} 
+                      src={playerHouseguest.avatarUrl} 
                       alt={playerHouseguest.name} 
                       className="w-full h-full object-cover" 
                     />
@@ -152,12 +152,14 @@ const GameSummary: React.FC = () => {
                   <span className="font-medium">
                     {playerHouseguest.competitionsWon.hoh + 
                      playerHouseguest.competitionsWon.pov + 
-                     playerHouseguest.competitionsWon.other}
+                     (playerHouseguest.competitionsWon.other || 0)}
                   </span>
                 </li>
                 <li className="flex justify-between">
                   <span className="text-muted-foreground">Times Nominated:</span>
-                  <span className="font-medium">{playerHouseguest.nominations}</span>
+                  <span className="font-medium">
+                    {typeof playerHouseguest.nominations === 'number' ? playerHouseguest.nominations : playerHouseguest.nominations.times}
+                  </span>
                 </li>
                 <li className="flex justify-between">
                   <span className="text-muted-foreground">Final Placement:</span>
@@ -200,8 +202,8 @@ const GameSummary: React.FC = () => {
                 <li key={hg.id} className="flex items-center gap-3">
                   <div className="flex-1 flex items-center gap-2">
                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
-                      {hg.imageUrl ? (
-                        <img src={hg.imageUrl} alt={hg.name} className="w-full h-full object-cover" />
+                      {hg.avatarUrl ? (
+                        <img src={hg.avatarUrl} alt={hg.name} className="w-full h-full object-cover" />
                       ) : (
                         hg.name.charAt(0)
                       )}
@@ -223,8 +225,8 @@ const GameSummary: React.FC = () => {
                 <li key={hg.id} className="flex items-center gap-3">
                   <div className="flex-1 flex items-center gap-2">
                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
-                      {hg.imageUrl ? (
-                        <img src={hg.imageUrl} alt={hg.name} className="w-full h-full object-cover" />
+                      {hg.avatarUrl ? (
+                        <img src={hg.avatarUrl} alt={hg.name} className="w-full h-full object-cover" />
                       ) : (
                         hg.name.charAt(0)
                       )}
@@ -244,8 +246,8 @@ const GameSummary: React.FC = () => {
               <li key={hg.id} className="flex items-center gap-3">
                 <div className="flex-1 flex items-center gap-2">
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
-                    {hg.imageUrl ? (
-                      <img src={hg.imageUrl} alt={hg.name} className="w-full h-full object-cover" />
+                    {hg.avatarUrl ? (
+                      <img src={hg.avatarUrl} alt={hg.name} className="w-full h-full object-cover" />
                     ) : (
                       hg.name.charAt(0)
                     )}
@@ -267,8 +269,8 @@ const GameSummary: React.FC = () => {
                 <li key={hg.id} className="flex items-center gap-3">
                   <div className="flex-1 flex items-center gap-2">
                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
-                      {hg.imageUrl ? (
-                        <img src={hg.imageUrl} alt={hg.name} className="w-full h-full object-cover" />
+                      {hg.avatarUrl ? (
+                        <img src={hg.avatarUrl} alt={hg.name} className="w-full h-full object-cover" />
                       ) : (
                         hg.name.charAt(0)
                       )}

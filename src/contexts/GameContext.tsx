@@ -111,7 +111,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getActiveHouseguests,
         getRandomNominees,
         getGameStatus,
-        showToast, // Add the toast function to the context
+        showToast,
+        loading: isLoading // Add the loading property
     }), [
       gameInstance, 
       gameState, 
@@ -121,7 +122,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getRandomNominees,
       getGameStatus,
       logger,
-      showToast
+      showToast,
+      isLoading
     ]);
 
     return (

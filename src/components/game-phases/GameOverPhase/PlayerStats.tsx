@@ -19,12 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { HouseguestStatus } from '@/models/houseguest';
 
 type SortField = 'name' | 'competitions' | 'nominations' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-const statusOrder: Record<HouseguestStatus, number> = {
+const statusOrder: Record<string, number> = {
   'Winner': 1,
   'Runner-Up': 2,
   'Jury': 3,
@@ -49,12 +48,14 @@ const PlayerStats: React.FC = () => {
         comparison = a.name.localeCompare(b.name);
         break;
       case 'competitions':
-        const aTotal = a.competitionsWon.hoh + a.competitionsWon.pov + a.competitionsWon.other;
-        const bTotal = b.competitionsWon.hoh + b.competitionsWon.pov + b.competitionsWon.other;
+        const aTotal = a.competitionsWon.hoh + a.competitionsWon.pov + (a.competitionsWon.other || 0);
+        const bTotal = b.competitionsWon.hoh + b.competitionsWon.pov + (b.competitionsWon.other || 0);
         comparison = aTotal - bTotal;
         break;
       case 'nominations':
-        comparison = a.nominations - b.nominations;
+        const aNoms = typeof a.nominations === 'number' ? a.nominations : a.nominations.times;
+        const bNoms = typeof b.nominations === 'number' ? b.nominations : b.nominations.times;
+        comparison = Number(aNoms) - Number(bNoms);
         break;
       case 'status':
         comparison = statusOrder[a.status] - statusOrder[b.status];
@@ -88,7 +89,7 @@ const PlayerStats: React.FC = () => {
 
   // Calculate total competitions for a houseguest
   const getTotalCompetitions = (hg: Houseguest): number => {
-    return hg.competitionsWon.hoh + hg.competitionsWon.pov + hg.competitionsWon.other;
+    return hg.competitionsWon.hoh + hg.competitionsWon.pov + (hg.competitionsWon.other || 0);
   };
 
   return (
@@ -161,8 +162,8 @@ const PlayerStats: React.FC = () => {
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm overflow-hidden">
-                      {hg.imageUrl ? (
-                        <img src={hg.imageUrl} alt={hg.name} className="w-full h-full object-cover" />
+                      {hg.avatarUrl ? (
+                        <img src={hg.avatarUrl} alt={hg.name} className="w-full h-full object-cover" />
                       ) : (
                         hg.name.charAt(0)
                       )}
@@ -206,7 +207,9 @@ const PlayerStats: React.FC = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span>{hg.nominations}</span>
+                  <span>
+                    {typeof hg.nominations === 'number' ? hg.nominations : hg.nominations.times}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex flex-col text-xs">
@@ -237,8 +240,8 @@ const PlayerStats: React.FC = () => {
                 return top ? (
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl mb-2 overflow-hidden">
-                      {top.imageUrl ? (
-                        <img src={top.imageUrl} alt={top.name} className="w-full h-full object-cover" />
+                      {top.avatarUrl ? (
+                        <img src={top.avatarUrl} alt={top.name} className="w-full h-full object-cover" />
                       ) : (
                         top.name.charAt(0)
                       )}
@@ -261,20 +264,25 @@ const PlayerStats: React.FC = () => {
               
               {(() => {
                 const sorted = [...gameState.houseguests].sort(
-                  (a, b) => b.nominations - a.nominations
+                  (a, b) => {
+                    const aNoms = typeof a.nominations === 'number' ? a.nominations : a.nominations.times;
+                    const bNoms = typeof b.nominations === 'number' ? b.nominations : b.nominations.times;
+                    return Number(bNoms) - Number(aNoms);
+                  }
                 );
                 const top = sorted[0];
-                return top && top.nominations > 0 ? (
+                const nomCount = typeof top.nominations === 'number' ? top.nominations : top.nominations.times;
+                return top && nomCount > 0 ? (
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl mb-2 overflow-hidden">
-                      {top.imageUrl ? (
-                        <img src={top.imageUrl} alt={top.name} className="w-full h-full object-cover" />
+                      {top.avatarUrl ? (
+                        <img src={top.avatarUrl} alt={top.name} className="w-full h-full object-cover" />
                       ) : (
                         top.name.charAt(0)
                       )}
                     </div>
                     <p className="font-medium">{top.name}</p>
-                    <p className="text-sm">{top.nominations} nominations</p>
+                    <p className="text-sm">{nomCount} nominations</p>
                   </div>
                 ) : (
                   <p className="text-sm italic">No nominations recorded</p>
@@ -299,8 +307,8 @@ const PlayerStats: React.FC = () => {
                 return top && top.competitionsWon.hoh > 0 ? (
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl mb-2 overflow-hidden">
-                      {top.imageUrl ? (
-                        <img src={top.imageUrl} alt={top.name} className="w-full h-full object-cover" />
+                      {top.avatarUrl ? (
+                        <img src={top.avatarUrl} alt={top.name} className="w-full h-full object-cover" />
                       ) : (
                         top.name.charAt(0)
                       )}

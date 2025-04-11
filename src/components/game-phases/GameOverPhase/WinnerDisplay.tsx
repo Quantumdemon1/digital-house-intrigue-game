@@ -48,8 +48,8 @@ const WinnerDisplay: React.FC<WinnerDisplayProps> = ({ winner, runnerUp }) => {
         </div>
         <div className="w-36 h-36 rounded-full bg-gradient-to-r from-yellow-300 to-yellow-600 flex items-center justify-center p-1.5">
           <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-5xl font-bold overflow-hidden">
-            {winner.imageUrl ? (
-              <img src={winner.imageUrl} alt={winner.name} className="w-full h-full object-cover" />
+            {winner?.avatarUrl ? (
+              <img src={winner.avatarUrl} alt={winner.name} className="w-full h-full object-cover" />
             ) : (
               winner.name.charAt(0)
             )}
@@ -83,8 +83,8 @@ const WinnerDisplay: React.FC<WinnerDisplayProps> = ({ winner, runnerUp }) => {
           <h3 className="text-xl font-semibold text-center mb-4">Runner-up</h3>
           <div className="flex flex-col items-center">
             <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-2xl mb-2 overflow-hidden">
-              {runnerUp.imageUrl ? (
-                <img src={runnerUp.imageUrl} alt={runnerUp.name} className="w-full h-full object-cover" />
+              {runnerUp?.avatarUrl ? (
+                <img src={runnerUp.avatarUrl} alt={runnerUp.name} className="w-full h-full object-cover" />
               ) : (
                 runnerUp.name.charAt(0)
               )}

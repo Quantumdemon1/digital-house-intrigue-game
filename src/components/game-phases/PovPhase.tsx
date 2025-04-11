@@ -3,8 +3,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
+import POVCompetition from './POVCompetition';
 
-const PovPhase: React.FC = () => {
+const PovCompetitionPhase: React.FC = () => {
   const { game } = useGame();
   
   return (
@@ -13,20 +14,10 @@ const PovPhase: React.FC = () => {
         <CardTitle>Power of Veto Competition</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>This is a placeholder for the PoV competition phase.</p>
-        <p>Current week: {game?.week}</p>
-        {game?.nominees && game.nominees.length > 0 && (
-          <p>Current nominees: {game.nominees.map(nominee => nominee.name).join(', ')}</p>
-        )}
-        {game?.povWinner && (
-          <p>PoV winner: {game.povWinner.name}</p>
-        )}
-        <div className="mt-4">
-          <Button>Next Phase</Button>
-        </div>
+        <POVCompetition />
       </CardContent>
     </Card>
   );
 };
 
-export default PovPhase;
+export default PovCompetitionPhase;

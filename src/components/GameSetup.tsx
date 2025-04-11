@@ -24,6 +24,9 @@ const GameSetup: React.FC = () => {
       endurance: 5,
       social: 5,
       luck: 5,
+      competition: 5,
+      strategic: 5,
+      loyalty: 5
     },
     remainingPoints: 5, // Starting with 5 points to distribute
     houseguestCount: 8

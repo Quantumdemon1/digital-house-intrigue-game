@@ -1,60 +1,70 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useGame } from '@/contexts/GameContext';
+import HouseguestCard from './HouseguestCard';
 
 const HouseguestList: React.FC = () => {
-  const { game } = useGame();
+  const { gameState } = useGame();
   
-  if (!game) {
-    return <p>No game data available.</p>;
-  }
-  
-  const activeHouseguests = game.getActiveHouseguests();
-  const evictedHouseguests = game.houseguests.filter(hg => hg.status === 'Evicted');
+  // Group houseguests by status
+  const activeHouseguests = gameState.houseguests.filter(hg => hg.status === 'Active');
+  const juryHouseguests = gameState.houseguests.filter(hg => hg.status === 'Jury');
+  const evictedHouseguests = gameState.houseguests.filter(hg => hg.status === 'Evicted');
+  const finalistsHouseguests = gameState.houseguests.filter(
+    hg => hg.status === 'Winner' || hg.status === 'Runner-Up'
+  );
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Houseguests</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <h3 className="font-bold mb-2">Active ({activeHouseguests.length})</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-6">
-          {activeHouseguests.map(houseguest => (
-            <div key={houseguest.id} className="border rounded p-2">
-              <div className="font-semibold">{houseguest.name}</div>
-              <div className="flex gap-1 flex-wrap mt-1">
-                {houseguest.isPlayer && <Badge>Player</Badge>}
-                {houseguest.isHoH && <Badge variant="secondary">HoH</Badge>}
-                {houseguest.isPovHolder && <Badge variant="outline">PoV</Badge>}
-                {houseguest.isNominated && <Badge variant="destructive">Nominated</Badge>}
-              </div>
-            </div>
-          ))}
+    <div className="space-y-6">
+      {/* Active houseguests */}
+      {activeHouseguests.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Active Houseguests</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {activeHouseguests.map(houseguest => (
+              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+            ))}
+          </div>
         </div>
-        
-        {evictedHouseguests.length > 0 && (
-          <>
-            <h3 className="font-bold mb-2">Evicted ({evictedHouseguests.length})</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {evictedHouseguests.map(houseguest => (
-                <div key={houseguest.id} className="border rounded p-2 opacity-60">
-                  <div className="font-semibold">{houseguest.name}</div>
-                  <div className="flex gap-1 flex-wrap mt-1">
-                    <Badge variant="outline">Evicted</Badge>
-                    {game.juryMembers.some(juror => juror.id === houseguest.id) && 
-                      <Badge variant="secondary">Jury</Badge>
-                    }
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+      )}
+      
+      {/* Finalists */}
+      {finalistsHouseguests.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Finalists</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {finalistsHouseguests.map(houseguest => (
+              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Jury members */}
+      {juryHouseguests.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Jury Members</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {juryHouseguests.map(houseguest => (
+              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Evicted houseguests */}
+      {evictedHouseguests.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Evicted Houseguests</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {evictedHouseguests.map(houseguest => (
+              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
