@@ -5,3 +5,4 @@
  */
 
 export { AIIntegrationSystem } from './ai/ai-integration-system';
+export type { AIDecisionResponse } from './ai/response-parser';

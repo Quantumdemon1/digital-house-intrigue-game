@@ -77,7 +77,9 @@ export class AIResponseParser {
         throw lastError || new Error("Failed to parse extracted JSON");
       }
     } catch (error: any) {
-      this.logger.error(`Failed to parse API response: ${error.message}`, { response });
+      this.logger.error(`Failed to parse API response: ${error.message}`, { 
+        response: response.substring(0, 500) + (response.length > 500 ? "..." : "") 
+      });
       throw new Error(`Invalid API response format: ${error.message}`);
     }
   }

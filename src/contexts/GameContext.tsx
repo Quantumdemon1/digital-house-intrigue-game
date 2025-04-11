@@ -12,6 +12,7 @@ import { GameRecapGenerator } from '../utils/recap';
 import { Logger, LogLevel } from '../utils/logger';
 import { GameAction, GameContextType, GameState } from './types/game-context-types';
 import { gameReducer } from './reducers/game-reducer';
+import { config } from '@/config';
 
 // Create the context
 const GameContext = createContext<GameContextType | null>(null);
@@ -40,7 +41,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const systemsRef = useRef({
         relationshipSystem: new RelationshipSystem(logger),
         competitionSystem: new CompetitionSystem(logger),
-        aiSystem: new AIIntegrationSystem(logger),
+        aiSystem: new AIIntegrationSystem(logger, config.GEMINI_API_KEY),
         recapGenerator: new GameRecapGenerator(),
     });
 

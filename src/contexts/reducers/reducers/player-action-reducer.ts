@@ -22,7 +22,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         console.log('Player nominated:', payload.params.nomineeIds);
         break;
         
-      case 'cast_eviction_vote':
+      case 'cast_vote':
         if (payload.params.voterId && payload.params.nomineeId) {
           // Update the eviction votes record
           return {
@@ -54,6 +54,10 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             }
           };
         }
+        break;
+        
+      case 'evict_houseguest':
+        console.log('Processing eviction for:', payload.params.evictedId);
         break;
         
       default:

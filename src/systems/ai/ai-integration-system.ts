@@ -21,14 +21,15 @@ export class AIIntegrationSystem {
   private responseParser: AIResponseParser;
   private fallbackGenerator: AIFallbackGenerator;
   private lastApiCall: number = 0;
-  private readonly minCallInterval: number = 1000; // Minimum time between API calls (1s)
+  private readonly minCallInterval: number = config.AI_REQUEST_INTERVAL || 1000;
 
   constructor(logger: Logger, apiKey: string = '') {
     if (!logger) throw new Error("AIIntegrationSystem requires a logger instance.");
     this.logger = logger;
     this.apiKey = apiKey;
     
-    if (!apiKey) this.logger.warn("No API key provided for AIIntegrationSystem. AI features will be limited.");
+    if (!apiKey) this.logger.warn("No API key provided for AIIntegrationSystem. AI features will use fallback logic.");
+    else this.logger.info("AI system initialized with API key");
     
     this.memoryManager = new AIMemoryManager(logger);
     this.decisionMaker = new AIDecisionMaker(logger, this.apiKey);
@@ -84,11 +85,14 @@ export class AIIntegrationSystem {
       const memories = this.memoryManager.getMemoriesForHouseguest(houseguest.id);
       const prompt = this.decisionMaker.generatePrompt(houseguest, decisionType, context, game, memories);
       
+      this.logger.info(`AI decision request for ${botName} (${decisionType})`);
+      
       // Make the API call
       let response;
       try {
         response = await this.decisionMaker.callLLMAPI(prompt);
-      } catch (error) {
+        this.logger.debug(`Raw API response received: ${response.substring(0, 100)}...`);
+      } catch (error: any) {
         this.logger.error(`AI API call failed: ${error.message}`);
         return this.fallbackGenerator.getFallbackDecision(decisionType, context);
       }
@@ -98,8 +102,8 @@ export class AIIntegrationSystem {
       try {
         decision = this.responseParser.parseAndValidateResponse(response, decisionType);
         this.logger.info(`AI Decision SUCCESS for ${botName} (${decisionType})`);
-      } catch (error) {
-        this.logger.error(`AI Response validation failed: ${error.message}`);
+      } catch (error: any) {
+        this.logger.error(`AI Response validation failed: ${error.message}`, { response });
         return this.fallbackGenerator.getFallbackDecision(decisionType, context);
       }
       

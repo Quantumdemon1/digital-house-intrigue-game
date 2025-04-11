@@ -48,8 +48,10 @@ Instructions:
       case 'nomination':
         prompt += `For nominations, your decision object must include:
 {
-  "nominee1": "[name of first nominee]",
-  "nominee2": "[name of second nominee]",
+  "decision": {
+    "nominee1": "[name of first nominee]",
+    "nominee2": "[name of second nominee]"
+  },
   "reasoning": "[explain your reasoning]"
 }
 Choose from the eligible houseguests: ${context.eligible?.join(', ')}
@@ -59,8 +61,10 @@ Choose from the eligible houseguests: ${context.eligible?.join(', ')}
       case 'veto':
         prompt += `For veto decision, your decision object must include:
 {
-  "useVeto": true/false,
-  "saveNominee": "[name of nominee to save, if using veto]",
+  "decision": {
+    "useVeto": true/false,
+    "saveNominee": "[name of nominee to save, if using veto]"
+  },
   "reasoning": "[explain your reasoning]"
 }`;
         break;
@@ -68,7 +72,9 @@ Choose from the eligible houseguests: ${context.eligible?.join(', ')}
       case 'replacement':
         prompt += `For replacement nominee, your decision object must include:
 {
-  "replacementNominee": "[name of replacement]",
+  "decision": {
+    "replacementNominee": "[name of replacement]"
+  },
   "reasoning": "[explain your reasoning]"
 }
 Choose from the eligible houseguests: ${context.eligible?.join(', ')}`;
@@ -77,7 +83,9 @@ Choose from the eligible houseguests: ${context.eligible?.join(', ')}`;
       case 'eviction_vote':
         prompt += `For eviction vote, your decision object must include:
 {
-  "voteToEvict": "[name of nominee you're voting to evict]",
+  "decision": {
+    "voteToEvict": "[name of nominee you're voting to evict]"
+  },
   "reasoning": "[explain your reasoning]"
 }
 The nominees are: ${context.nominees?.join(', ')}`;
@@ -86,13 +94,16 @@ The nominees are: ${context.nominees?.join(', ')}`;
       case 'jury_vote':
         prompt += `For jury vote, your decision object must include:
 {
-  "voteForWinner": "[name of finalist you're voting for]",
+  "decision": {
+    "voteForWinner": "[name of finalist you're voting for]"
+  },
   "reasoning": "[explain your reasoning]"
 }
 The finalists are: ${context.finalists?.join(', ')}`;
         break;
     }
     
+    this.logger.debug("Generated prompt for AI", { prompt: prompt.substring(0, 200) + "..." });
     return prompt;
   }
   
@@ -123,8 +134,7 @@ The finalists are: ${context.finalists?.join(', ')}`;
       
       // Log request details for debugging
       this.logger.debug("API request payload", {
-        endpoint: endpoint,
-        payload: payload
+        endpoint: endpoint
       });
       
       const response = await fetch(`${endpoint}?key=${this.apiKey}`, {
@@ -136,9 +146,9 @@ The finalists are: ${context.finalists?.join(', ')}`;
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        this.logger.error(`Gemini API Error: ${response.status} ${response.statusText}`, errorData);
-        throw new Error(`API call failed: ${response.statusText}`);
+        const errorText = await response.text();
+        this.logger.error(`Gemini API Error: ${response.status} ${response.statusText}`, { errorText });
+        throw new Error(`API call failed: ${response.statusText} (${response.status})`);
       }
       
       const data = await response.json();
@@ -150,7 +160,7 @@ The finalists are: ${context.finalists?.join(', ')}`;
       }
       
       const textContent = data.candidates[0].content.parts[0].text;
-      this.logger.debug("API response text", { text: textContent });
+      this.logger.debug("API response text", { text: textContent.substring(0, 200) + "..." });
       
       return textContent;
     } catch (error: any) {

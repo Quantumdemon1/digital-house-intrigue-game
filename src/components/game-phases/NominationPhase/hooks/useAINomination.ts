@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
@@ -28,6 +28,7 @@ export const useAINomination = ({
   const [aiProcessed, setAiProcessed] = useState(false);
   const { toast } = useToast();
   const { aiSystem, game, logger: gameLogger } = useGame();
+  const processingRef = useRef(false);
   
   // Create a logger instance for AI operation logs
   const aiLogger = new Logger({
@@ -39,7 +40,17 @@ export const useAINomination = ({
   // AI nomination logic
   useEffect(() => {
     // Only process if HoH exists, HoH is AI, and we haven't already processed or started nominating
-    if (hoh && !hoh.isPlayer && !isNominating && !ceremonyComplete && !aiProcessed) {
+    if (
+      hoh && 
+      !hoh.isPlayer && 
+      !isNominating && 
+      !ceremonyComplete && 
+      !aiProcessed && 
+      !processingRef.current
+    ) {
+      // Set ref to prevent concurrent processing attempts
+      processingRef.current = true;
+      
       // Set the flag to prevent multiple executions
       setAiProcessed(true);
       
@@ -70,13 +81,14 @@ export const useAINomination = ({
           let decision;
           try {
             // Try to use the real AI system first
+            aiLogger.info(`Requesting AI decision for ${hoh.name}`);
             decision = await aiSystem.makeDecision(
               hoh.name,
               'nomination',
               nominationContext,
               game
             );
-            aiLogger.info(`AI decision received from AI system for ${hoh.name}`);
+            aiLogger.info(`AI decision received from AI system for ${hoh.name}: ${JSON.stringify(decision)}`);
           } catch (error) {
             // Fall back to the fallback generator
             aiLogger.warn(`Error getting AI decision, using fallback: ${error}`);
@@ -90,11 +102,14 @@ export const useAINomination = ({
                 getActiveHouseguests: () => potentialNominees
               }
             );
+            aiLogger.info(`Fallback decision generated: ${JSON.stringify(decision)}`);
           }
           
           // Find the nominee objects based on the names returned by the AI
           const nominee1 = potentialNominees.find(h => h.name === decision.nominee1);
           const nominee2 = potentialNominees.find(h => h.name === decision.nominee2);
+          
+          aiLogger.debug(`Found nominees: ${nominee1?.name}, ${nominee2?.name}`);
           
           if (nominee1 && nominee2) {
             // Set AI-chosen nominees
@@ -105,27 +120,38 @@ export const useAINomination = ({
             // Delay before confirming to simulate decision making
             setTimeout(() => {
               confirmNominations();
+              processingRef.current = false;
             }, 2500);
           } else {
             // Fallback if AI decision is invalid
-            aiLogger.error('AI nomination decision invalid: nominees not found');
+            aiLogger.error('AI nomination decision invalid: nominees not found', { decision });
             // Choose random nominees as fallback
             const aiNominees = [...potentialNominees]
               .sort(() => 0.5 - Math.random())
               .slice(0, 2);
               
+            aiLogger.info(`Using fallback random nominees: ${aiNominees.map(n => n.name).join(', ')}`);
             setNominees(aiNominees);
-            setTimeout(() => confirmNominations(), 1500);
+            
+            setTimeout(() => {
+              confirmNominations();
+              processingRef.current = false;
+            }, 1500);
           }
-        } catch (error) {
-          aiLogger.error(`Error in AI nomination: ${error}`);
+        } catch (error: any) {
+          aiLogger.error(`Error in AI nomination: ${error.message}`);
           // Fallback to random nominations
           const randomNominees = [...potentialNominees]
             .sort(() => 0.5 - Math.random())
             .slice(0, 2);
-            
+          
+          aiLogger.info(`Error occurred, using random nominees: ${randomNominees.map(n => n.name).join(', ')}`);  
           setNominees(randomNominees);
-          setTimeout(() => confirmNominations(), 1000);
+          
+          setTimeout(() => {
+            confirmNominations();
+            processingRef.current = false;
+          }, 1000);
         }
       };
       
