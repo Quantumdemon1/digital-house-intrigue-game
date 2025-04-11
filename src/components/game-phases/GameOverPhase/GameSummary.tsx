@@ -1,9 +1,11 @@
+
 import React, { useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useGame } from '@/contexts/GameContext';
 import { NominationCount } from '@/models/houseguest';
 import { GameEvent } from '@/models/game-state';
+import { FileText, Calendar, Trophy, User, Users, Award } from 'lucide-react';
 
 const GameSummary: React.FC = () => {
   const { gameState } = useGame();

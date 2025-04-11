@@ -3,7 +3,7 @@ import { GameState } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { NominationCount } from '../../../models/houseguest';
 
-export { NominationCount }; // Export this type for use elsewhere
+export type { NominationCount }; // Export this type for use elsewhere
 
 export function nominationReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_NOMINEES') {
