@@ -22,7 +22,23 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         // Fast forward is handled by the game state machine
         // Just log it here for debugging
         console.log('Fast forwarding from phase:', payload.params.currentPhase);
+        
+        // For immediate UI feedback while the state machine processes
+        if (payload.params.currentPhase === 'Nomination') {
+          return {
+            ...state,
+            phase: 'PoV'  // Immediately update UI phase
+          };
+        }
         break;
+        
+      case 'continue_to_pov':
+        // For immediate UI feedback while the state machine processes
+        console.log('Continue to PoV - updating UI phase');
+        return {
+          ...state,
+          phase: 'PoV'  // Immediately update UI phase
+        };
         
       case 'make_nominations':
         // This is typically handled in nomination-reducer, just for transparency

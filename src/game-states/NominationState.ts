@@ -61,12 +61,14 @@ export class NominationState extends GameStateBase {
           }
         }
         
-        // If we can't make nominations, just advance
+        this.getLogger().info("Fast forward activated - advancing to PoV Competition");
+        // Always advance to the next state
         this.controller.changeState('PovCompetitionState');
         return true;
         
       case 'continue_to_pov':
         // After nominations are made, immediately advance to PoV competition
+        this.getLogger().info("Continue to PoV - advancing to PoV Competition");
         this.controller.changeState('PovCompetitionState');
         return true;
         

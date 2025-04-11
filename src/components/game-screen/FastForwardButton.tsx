@@ -8,11 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 
 export const FastForwardButton: React.FC = () => {
   const { dispatch, gameState } = useGame();
-  const { isProcessing } = useGameControl();
+  const { isProcessing, fastForward } = useGameControl();
   const { toast } = useToast();
 
   const handleFastForward = () => {
-    // Dispatch the action to the game reducer
+    // Use the game control context to trigger fast forward
+    fastForward();
+    
+    // Also dispatch the action to the game reducer for state handling
     dispatch({
       type: 'PLAYER_ACTION',
       payload: {
