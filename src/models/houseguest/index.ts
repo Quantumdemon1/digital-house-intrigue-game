@@ -11,9 +11,10 @@ export * from './creation';
 export * from './traits';
 export * from './competition';
 export { 
-  MentalState as HouseguestMentalState, 
   createDefaultMentalState,
   updateHouseguestMentalState,
   generateReflectionPrompt
 } from './mental-state';
 
+// Re-export the MentalState as a type to avoid naming conflicts
+export type { MentalState } from './mental-state';
