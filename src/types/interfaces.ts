@@ -14,7 +14,9 @@ import type { Logger } from '../utils/logger';
 export interface IGameControllerFacade {
   game: BigBrotherGame; // Added game property to fix the build error
   transitionTo(StateType: typeof GameStates.GameStateBase): Promise<void>;
+  changeState(stateName: string): Promise<void>; // Add this method
   getGameStatus(): { week: number; phase: string; hoh: string | null; nominees: string; povHolder: string | null; };
+  getGameSettings(): { finalWeek: number }; // Add this method
   handlePlayerAction(actionId: string, params: any): Promise<boolean>;
   saveGame(): Promise<boolean>;
   loadGame(): Promise<boolean>;
