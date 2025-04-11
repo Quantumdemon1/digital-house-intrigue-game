@@ -30,4 +30,11 @@ export type RelationshipEventType =
   | 'deception' // Deceived another player
   | 'confrontation' // Had a confrontation
   | 'positive_connection' // Made a positive connection
-  | 'negative_interaction'; // Had a negative interaction
+  | 'negative_interaction' // Had a negative interaction
+  | 'alliance_exposed' // Alliance was exposed
+  | 'alliance_meeting' // Had an alliance meeting
+  | 'alliance_target_discussion' // Discussed targets with alliance
+  | 'alliance_vote_coordination' // Coordinated votes with alliance
+  | 'eavesdropped' // Overheard a conversation
+  | 'loyalty_proven' // Proved loyalty to alliance/ally
+  | 'loyalty_questioned'; // Had loyalty questioned
