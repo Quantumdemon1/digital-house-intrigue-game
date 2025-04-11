@@ -76,7 +76,7 @@ export const TRAIT_GOALS: Record<PersonalityTrait, string[]> = {
     'Spread misinformation strategically',
     'Create secret alliances and deals',
     'Backstab when advantageous',
-    'Manipulate others' perceptions'
+    'Manipulate others\'s perceptions'
   ],
   'Confrontational': [
     'Call out dishonesty directly',
