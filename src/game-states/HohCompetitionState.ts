@@ -12,7 +12,8 @@ export class HohCompetitionState extends GameStateBase {
     this.game.phase = 'HoH';
     
     // If HoH is AI-controlled, immediately proceed to nominations
-    const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+    const hohId = this.game.hohWinner;
+    const hoh = hohId ? this.game.getHouseguestById(hohId) : null;
     if (hoh && !hoh.isPlayer) {
       this.getLogger().info(`AI HoH ${hoh.name} automatically proceeding to nominations`);
       // Immediately advance to nomination phase - no delay

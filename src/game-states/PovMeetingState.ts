@@ -5,7 +5,6 @@
  */
 
 import { GameStateBase } from './GameStateBase';
-import { Houseguest } from '../models/houseguest';
 import { config } from '../config';
 
 export class PovMeetingState extends GameStateBase {

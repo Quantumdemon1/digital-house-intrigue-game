@@ -5,7 +5,6 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { AllianceSystem } from '../systems/alliance-system';
 
 // Houseguest Status
 export type HouseguestStatus = 'Active' | 'Evicted' | 'Jury' | 'Winner' | 'Runner-Up';
@@ -15,7 +14,7 @@ export type PersonalityTrait =
   | 'Competitive' | 'Strategic' | 'Loyal' | 'Emotional' | 'Funny'
   | 'Charming' | 'Manipulative' | 'Analytical' | 'Impulsive' | 'Deceptive'
   | 'Social' | 'Introverted' | 'Stubborn' | 'Flexible' | 'Intuitive'
-  | 'Sneaky' | 'Confrontational'; // Added missing traits
+  | 'Sneaky' | 'Confrontational';
 
 // Competition types
 export type CompetitionType = 'physical' | 'mental' | 'endurance' | 'social' | 'luck';
@@ -63,7 +62,7 @@ export interface NominationCount {
   receivedOn: number[];
 }
 
-// Houseguest stats
+// Houseguest stats - fixing the nominations property to be optional and correctly typed
 export interface HouseguestStats {
   physical: number;
   mental: number;
@@ -164,15 +163,19 @@ export function createHouseguest(
     competition: Math.floor(Math.random() * 5) + 3, // 3-7
     strategic: Math.floor(Math.random() * 5) + 3, // 3-7
     loyalty: Math.floor(Math.random() * 5) + 3, // 3-7
-    nominations: { times: 0, receivedOn: [] },
   };
   
   // Apply trait boosts to stats
   for (const trait of traits) {
     if (TRAIT_STAT_BOOSTS[trait]) {
       const { primary, secondary } = TRAIT_STAT_BOOSTS[trait];
-      baseStats[primary] = Math.min(10, baseStats[primary] + TRAIT_BOOST_VALUES.primary);
-      baseStats[secondary] = Math.min(10, baseStats[secondary] + TRAIT_BOOST_VALUES.secondary);
+      // Skip if primary/secondary is 'nominations'
+      if (primary !== 'nominations' && typeof baseStats[primary] === 'number') {
+        baseStats[primary] = Math.min(10, (baseStats[primary] as number) + TRAIT_BOOST_VALUES.primary);
+      }
+      if (secondary !== 'nominations' && typeof baseStats[secondary] === 'number') {
+        baseStats[secondary] = Math.min(10, (baseStats[secondary] as number) + TRAIT_BOOST_VALUES.secondary);
+      }
     }
   }
   
@@ -194,7 +197,7 @@ export function createHouseguest(
     isPovHolder: false,
     isNominated: false,
     competitionsWon: { hoh: 0, pov: 0, other: 0 },
-    nominations: { times: 0, receivedOn: [] }, // Ensure this is always an object
+    nominations: { times: 0, receivedOn: [] }, // Always initialize as a proper object
     timesVetoed: 0,
     imageUrl,
     avatarUrl: imageUrl, // Set avatarUrl to the same as imageUrl initially

@@ -28,6 +28,8 @@ export class PovCompetitionState extends GameStateBase {
       case 'select_pov_winner':
         if (params && params.povId) {
           this.getLogger().info(`Selected PoV winner: ${params.povId}`);
+          this.game.povWinner = params.povId;
+          
           // After selection, check if it's AI and proceed immediately
           const povWinner = this.game.getHouseguestById(params.povId);
           if (povWinner && !povWinner.isPlayer) {

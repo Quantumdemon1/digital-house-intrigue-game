@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Houseguest, PersonalityTrait, createHouseguest, HouseguestStats, TRAIT_STAT_BOOSTS, TRAIT_BOOST_VALUES } from '@/models/houseguest';
+import { Houseguest, PersonalityTrait, createHouseguest, HouseguestStats, TRAIT_STAT_BOOSTS, TRAIT_BOOST_VALUES, NominationCount } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 import PlayerForm from './game-setup/PlayerForm';
 import HouseguestList from './game-setup/HouseguestList';
@@ -42,6 +42,9 @@ const GameSetup: React.FC = () => {
   };
 
   const handleStatsChange = (stat: keyof HouseguestStats, value: number) => {
+    // Skip if the stat is nominations which should be handled separately
+    if (stat === 'nominations') return;
+    
     const currentValue = playerFormData.stats[stat] as number;
     const difference = value - currentValue;
     
@@ -74,12 +77,14 @@ const GameSetup: React.FC = () => {
       // Remove the boosts
       const boost = TRAIT_STAT_BOOSTS[trait];
       
-      // Ensure we're dealing with numeric values only
-      const primaryValue = newStats[boost.primary] as number;
-      const secondaryValue = newStats[boost.secondary] as number;
+      // Skip if the stat is nominations which should be handled separately
+      if (boost.primary !== 'nominations' && typeof newStats[boost.primary] === 'number') {
+        newStats[boost.primary] = Math.max(1, (newStats[boost.primary] as number) - TRAIT_BOOST_VALUES.primary);
+      }
       
-      newStats[boost.primary] = Math.max(1, primaryValue - TRAIT_BOOST_VALUES.primary);
-      newStats[boost.secondary] = Math.max(1, secondaryValue - TRAIT_BOOST_VALUES.secondary);
+      if (boost.secondary !== 'nominations' && typeof newStats[boost.secondary] === 'number') {
+        newStats[boost.secondary] = Math.max(1, (newStats[boost.secondary] as number) - TRAIT_BOOST_VALUES.secondary);
+      }
       
       handleFormDataChange('selectedTraits', newTraits);
       handleFormDataChange('stats', newStats);
@@ -91,12 +96,14 @@ const GameSetup: React.FC = () => {
       // Apply the boosts
       const boost = TRAIT_STAT_BOOSTS[trait];
       
-      // Ensure we're dealing with numeric values only
-      const primaryValue = newStats[boost.primary] as number;
-      const secondaryValue = newStats[boost.secondary] as number;
+      // Skip if the stat is nominations which should be handled separately
+      if (boost.primary !== 'nominations' && typeof newStats[boost.primary] === 'number') {
+        newStats[boost.primary] = Math.min(10, (newStats[boost.primary] as number) + TRAIT_BOOST_VALUES.primary);
+      }
       
-      newStats[boost.primary] = Math.min(10, primaryValue + TRAIT_BOOST_VALUES.primary);
-      newStats[boost.secondary] = Math.min(10, secondaryValue + TRAIT_BOOST_VALUES.secondary);
+      if (boost.secondary !== 'nominations' && typeof newStats[boost.secondary] === 'number') {
+        newStats[boost.secondary] = Math.min(10, (newStats[boost.secondary] as number) + TRAIT_BOOST_VALUES.secondary);
+      }
       
       handleFormDataChange('selectedTraits', newTraits);
       handleFormDataChange('stats', newStats);

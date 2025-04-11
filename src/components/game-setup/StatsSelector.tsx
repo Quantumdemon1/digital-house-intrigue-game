@@ -21,8 +21,8 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({
     if (stat === 'nominations') return; // Skip nominations stat
     
     // Only work with number stats
-    if (typeof stats[stat] === 'number') {
-      const currentValue = stats[stat] as number;
+    const currentValue = stats[stat] as number;
+    if (typeof currentValue === 'number') {
       if (currentValue < 10 && remainingPoints > 0) {
         onStatsChange(stat, currentValue + 1);
       }
@@ -33,8 +33,8 @@ const StatsSelector: React.FC<StatsSelectorProps> = ({
     if (stat === 'nominations') return; // Skip nominations stat
     
     // Only work with number stats
-    if (typeof stats[stat] === 'number') {
-      const currentValue = stats[stat] as number;
+    const currentValue = stats[stat] as number;
+    if (typeof currentValue === 'number') {
       if (currentValue > 1) {
         onStatsChange(stat, currentValue - 1);
       }

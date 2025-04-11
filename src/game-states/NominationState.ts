@@ -13,7 +13,8 @@ export class NominationState extends GameStateBase {
     
     // If HoH is AI-controlled, the AI nomination hook will handle this
     // We don't need to do anything special here
-    const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+    const hohId = this.game.hohWinner;
+    const hoh = hohId ? this.game.getHouseguestById(hohId) : null;
     if (hoh && !hoh.isPlayer) {
       this.getLogger().info(`AI HoH ${hoh.name} will make nominations immediately`);
     }

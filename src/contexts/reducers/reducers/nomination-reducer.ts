@@ -1,11 +1,7 @@
 
 import { GameState } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
-
-export interface NominationCount {
-  times: number;
-  receivedOn: number[];
-}
+import { NominationCount } from '../../../models/houseguest';
 
 export function nominationReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_NOMINEES') {
@@ -14,7 +10,7 @@ export function nominationReducer(state: GameState, action: GameAction): GameSta
       const isNominated = action.payload.some(nominee => nominee.id === guest.id);
       
       // Create a proper nominations object if it doesn't exist yet
-      if (!guest.nominations || typeof guest.nominations !== 'object') {
+      if (!guest.nominations) {
         guest.nominations = { times: 0, receivedOn: [] };
       }
       
