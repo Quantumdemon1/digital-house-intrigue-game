@@ -12,7 +12,16 @@ export class EvictionState extends GameStateBase {
     await super.enter();
     this.game.phase = 'Eviction';
     
-    // AI houseguests will automatically vote through the useVotingLogic hook
+    // Check if we're at final 3
+    const activeHouseguests = this.game.getActiveHouseguests();
+    if (activeHouseguests.length <= 3) {
+      this.getLogger().info("Final 3 detected: HoH will solely decide who to evict");
+      // At final 3, there are no votes - the HoH solely decides who to evict
+      // This will be handled in the UI layer
+    } else {
+      // AI houseguests will automatically vote through the useVotingLogic hook
+      this.getLogger().info("Regular eviction ceremony: Houseguests will vote");
+    }
   }
   
   async handleAction(actionId: string, params: any): Promise<boolean> {
@@ -55,6 +64,28 @@ export class EvictionState extends GameStateBase {
             this.getLogger().info(`${evictedHouseguest.name} has been evicted and removed from active houseguests`);
           }
           return true;
+        }
+        return false;
+        
+      case 'final3_hoh_decision':
+        // Special case for final 3 where HOH directly evicts someone
+        if (params && params.evictedId) {
+          const evictedHouseguest = this.game.houseguests.find(hg => hg.id === params.evictedId);
+          if (evictedHouseguest) {
+            this.getLogger().info(`Final 3: HOH directly evicted ${evictedHouseguest.name}`);
+            
+            // Always add to jury at final 3
+            evictedHouseguest.status = 'Jury' as HouseguestStatus;
+            this.game.juryMembers.push(params.evictedId);
+            
+            // The remaining two houseguests become the final two
+            const finalTwo = this.game.getActiveHouseguests().filter(hg => hg.id !== params.evictedId);
+            this.game.finalTwo = finalTwo.map(hg => hg.id);
+            
+            // Advance to Finale phase
+            this.controller.changeState('FinalStageState');
+            return true;
+          }
         }
         return false;
         

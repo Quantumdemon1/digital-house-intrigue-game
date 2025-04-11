@@ -24,6 +24,9 @@ export function useEvictionPhase() {
   );
   const hoh = gameState.hohWinner;
   
+  // Check if we're at final 3
+  const isFinal3 = activeHouseguests.length <= 3;
+  
   // Check if player is one of the nominees
   const playerIsNominee = nominees.some(nominee => nominee.isPlayer);
 
@@ -69,6 +72,7 @@ export function useEvictionPhase() {
     nonNominees,
     hoh,
     playerIsNominee,
+    isFinal3,
     handleProceedToVoting,
     handleVoteSubmit: enhancedVoteSubmit,
     handleEvictionComplete,

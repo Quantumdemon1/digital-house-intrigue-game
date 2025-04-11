@@ -9,6 +9,16 @@ import { GameStateBase } from './GameStateBase';
 export class PovMeetingState extends GameStateBase {
   async enter(): Promise<void> {
     await super.enter();
+    
+    // Check if we're at final 3 (only 3 active houseguests)
+    const activeHouseguests = this.game.getActiveHouseguests();
+    if (activeHouseguests.length <= 3) {
+      // Skip PoV meeting at final 3 and go straight to Eviction
+      this.getLogger().info("Final 3 detected: Skipping PoV Meeting and going to Eviction");
+      this.controller.changeState('EvictionState');
+      return;
+    }
+    
     this.game.phase = 'PoVMeeting';
     
     // If PoV holder is AI-controlled, AI will handle this phase

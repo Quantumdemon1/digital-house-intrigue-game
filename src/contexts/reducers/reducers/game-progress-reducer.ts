@@ -6,14 +6,28 @@ import { HouseguestStatus } from '../../../models/houseguest';
 export function gameProgressReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'SET_PHASE':
-      // Handle the special case for final 3
-      if (action.payload === 'PoV' && state.houseguests.filter(h => h.status === 'Active').length <= 3) {
-        // Skip PoV at final 3 and go straight to finale
-        return {
-          ...state,
-          phase: 'Finale' as GamePhase,
-        };
+      // Count active houseguests
+      const activeHouseguestsCount = state.houseguests.filter(h => h.status === 'Active').length;
+      
+      // Handle the special cases for final 3
+      if (activeHouseguestsCount <= 3) {
+        if (action.payload === 'PoV') {
+          // Skip PoV at final 3 and go straight to finale
+          return {
+            ...state,
+            phase: 'Finale' as GamePhase,
+          };
+        }
+        
+        if (action.payload === 'PoVMeeting') {
+          // Skip PoV Meeting at final 3 and go straight to Eviction
+          return {
+            ...state,
+            phase: 'Eviction' as GamePhase,
+          };
+        }
       }
+      
       return {
         ...state,
         phase: action.payload as GamePhase,
