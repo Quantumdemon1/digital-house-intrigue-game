@@ -1,3 +1,4 @@
+
 /**
  * @file PovMeetingState.ts
  * @description PoV meeting state
@@ -95,17 +96,21 @@ export class PovMeetingState extends GameStateBase {
               hg.id !== povWinnerId && 
               hg.id !== hohId && 
               !currentNominees.includes(hg.id)
-            );
+            )
+            .map(hg => hg.id);
             
           if (eligibleReplacements.length > 0) {
             // Choose random replacement
             const randomIndex = Math.floor(Math.random() * eligibleReplacements.length);
-            const replacement = eligibleReplacements[randomIndex];
+            const replacementId = eligibleReplacements[randomIndex];
+            const replacement = this.game.getHouseguestById(replacementId);
             
-            this.getLogger().info(`Fast forward - ${replacement.name} was chosen as replacement nominee`);
-            
-            // Add the replacement
-            this.game.nominees = [...this.game.nominees, replacement.id];
+            if (replacement) {
+              this.getLogger().info(`Fast forward - ${replacement.name} was chosen as replacement nominee`);
+              
+              // Add the replacement
+              this.game.nominees = [...this.game.nominees, replacementId];
+            }
           }
         } else {
           this.getLogger().info("Fast forward - PoV was not used");
