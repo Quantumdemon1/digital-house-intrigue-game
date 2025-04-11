@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
 
 const EvictionPhase: React.FC = () => {
-  const { game } = useGame();
+  const { game, getHouseguestById } = useGame();
+  
+  // Convert nominee IDs to Houseguest objects
+  const nominees = game?.nominees?.map(nomineeId => 
+    getHouseguestById(nomineeId)
+  ).filter(Boolean) || [];
   
   return (
     <Card>
@@ -15,8 +20,8 @@ const EvictionPhase: React.FC = () => {
       <CardContent>
         <p>This is a placeholder for the eviction phase.</p>
         <p>Current week: {game?.week}</p>
-        {game?.nominees && game.nominees.length > 0 && (
-          <p>Current nominees: {game.nominees.map(nominee => nominee.name).join(', ')}</p>
+        {nominees.length > 0 && (
+          <p>Current nominees: {nominees.map(nominee => nominee?.name).join(', ')}</p>
         )}
         <div className="mt-4">
           <Button>Next Phase</Button>

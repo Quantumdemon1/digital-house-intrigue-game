@@ -5,7 +5,13 @@ import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
 
 const NominationPhase: React.FC = () => {
-  const { game } = useGame();
+  const { game, getHouseguestById } = useGame();
+  
+  // Convert IDs to houseguest objects
+  const hoh = game?.hohWinner ? getHouseguestById(game.hohWinner) : null;
+  const nominees = game?.nominees?.map(nomineeId => 
+    getHouseguestById(nomineeId)
+  ).filter(Boolean) || [];
   
   return (
     <Card>
@@ -15,11 +21,11 @@ const NominationPhase: React.FC = () => {
       <CardContent>
         <p>This is a placeholder for the nomination phase.</p>
         <p>Current week: {game?.week}</p>
-        {game?.hohWinner && (
-          <p>Current HoH: {game.hohWinner.name}</p>
+        {hoh && (
+          <p>Current HoH: {hoh.name}</p>
         )}
-        {game?.nominees && game.nominees.length > 0 && (
-          <p>Nominees: {game.nominees.map(nominee => nominee.name).join(', ')}</p>
+        {nominees.length > 0 && (
+          <p>Nominees: {nominees.map(nominee => nominee.name).join(', ')}</p>
         )}
         <div className="mt-4">
           <Button>Next Phase</Button>

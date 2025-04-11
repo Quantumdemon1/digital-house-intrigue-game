@@ -68,14 +68,19 @@ const Game = () => {
     }
   };
 
+  // Convert string IDs to Houseguest objects for the GamePhaseHeader
+  const hohHouseguest = game.hohWinner ? game.getHouseguestById(game.hohWinner) || null : null;
+  const povHouseguest = game.povWinner ? game.getHouseguestById(game.povWinner) || null : null;
+  const nomineeHouseguests = game.nominees.map(id => game.getHouseguestById(id)).filter(Boolean);
+
   return (
     <div className="container py-4 mx-auto">
       <GamePhaseHeader 
         week={game.week}
         phase={game.phase}
-        hoh={game.hohWinner}
-        pov={game.povWinner}
-        nominees={game.nominees || []}
+        hoh={hohHouseguest}
+        pov={povHouseguest}
+        nominees={nomineeHouseguests}
       />
       
       <div className="flex border-b mb-4">
