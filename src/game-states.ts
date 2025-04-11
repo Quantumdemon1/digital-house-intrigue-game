@@ -1,4 +1,3 @@
-
 /**
  * @file game-states.ts
  * @description Contains the state machine for the Big Brother game
@@ -7,6 +6,15 @@
 import { BigBrotherGame } from './models/BigBrotherGame';
 import { Houseguest } from './models/houseguest';
 import type { IGameControllerFacade } from './types/interfaces';
+
+// Define structure for actions the social state can return
+export interface SocialActionChoice {
+  text: string;
+  actionId: string;
+  disabled?: boolean;
+  disabledReason?: string;
+  parameters?: any;
+}
 
 // Base state that all other states inherit from
 export abstract class GameStateBase {
@@ -183,15 +191,6 @@ export class SocialInteractionState extends GameStateBase {
   }
 }
 
-// Define structure for actions the social state can return
-export interface SocialActionChoice {
-  text: string;
-  actionId: string;
-  disabled?: boolean;
-  disabledReason?: string;
-  parameters?: any;
-}
-
 // PoV competition state
 export class PovCompetitionState extends GameStateBase {
   async enter(): Promise<void> {
@@ -326,7 +325,7 @@ export const states = {
   InitializationState,
   HohCompetitionState,
   NominationState,
-  SocialInteractionState, // Add the new state
+  SocialInteractionState,
   PovCompetitionState,
   PovMeetingState,
   EvictionState,

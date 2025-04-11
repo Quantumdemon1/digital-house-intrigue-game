@@ -71,7 +71,7 @@ const SocialInteractionPhase: React.FC = () => {
           )}
         </div>
 
-        {/* Interactions Counter - would be implemented in full version */}
+        {/* Interactions Counter */}
         <div className="text-center font-medium text-blue-700 dark:text-blue-300">
           Interactions Available
         </div>

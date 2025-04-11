@@ -1,20 +1,10 @@
 
-import { GameStateBase } from '../game-states';
-import { NominationState } from '../game-states';
+import { GameStateBase, SocialActionChoice, NominationState } from '../game-states';
 import type { IGameControllerFacade } from '../types/interfaces';
 import { Houseguest } from '../models/houseguest';
 
 // Define possible locations
 export const LOCATIONS = ['living-room', 'kitchen', 'bedroom', 'backyard', 'hoh-room', 'diary-room'];
-
-// Define structure for actions this state can return
-export interface SocialActionChoice {
-  text: string;
-  actionId: string;
-  disabled?: boolean;
-  disabledReason?: string;
-  parameters?: any; // e.g., { targetId: '...' }
-}
 
 export class SocialInteractionState extends GameStateBase {
   private interactionsRemaining: number = 3; // Allow 3 interactions per state entry
@@ -84,8 +74,18 @@ export class SocialInteractionState extends GameStateBase {
       text: "Check Relationships", 
       actionId: 'check_relationships' 
     });
+    
+    // 4. Propose Alliance (basic version for now)
+    if (presentGuests.length > 0) {
+      actions.push({
+        text: "Propose Alliance",
+        actionId: 'propose_alliance',
+        disabled: this.interactionsRemaining <= 0,
+        disabledReason: this.interactionsRemaining <= 0 ? "No interactions left" : undefined
+      });
+    }
 
-    // 4. Advance Phase Action
+    // 5. Advance Phase Action
     actions.push({
       text: `Proceed to ${this.targetPhase.name.replace('State', '')}`,
       actionId: 'advance_phase'
@@ -121,17 +121,53 @@ export class SocialInteractionState extends GameStateBase {
           this.getLogger().info(`You approach ${targetName} to talk...`);
           // Simple placeholder for now
           // In a complete implementation, this would trigger AI conversation
+          
+          // Simulate a response for now
+          setTimeout(() => {
+            this.getLogger().info(`${targetName} says: "Hey there! What's up?"`);
+            
+            // Update relationship slightly
+            const playerGuest = this.game.houseguests[0]; // Assuming player is first houseguest
+            this.controller.relationshipSystem.updateRelationship(playerGuest.id, targetId, 2);
+            
+            this.getLogger().info(`Your relationship with ${targetName} has improved slightly.`);
+          }, 500);
+        }
+        break;
+        
+      case 'propose_alliance':
+        // Basic implementation for now
+        this.getLogger().info("You suggest forming an alliance...");
+        
+        // Simulate responses
+        const activeGuests = this.game.getActiveHouseguests();
+        const otherGuests = activeGuests.filter(g => g.id !== this.game.houseguests[0].id);
+        const randomGuest = otherGuests[Math.floor(Math.random() * otherGuests.length)];
+        
+        if (randomGuest) {
+          setTimeout(() => {
+            // 70% chance of acceptance
+            const accepted = Math.random() > 0.3;
+            if (accepted) {
+              this.getLogger().info(`${randomGuest.name} whispers: "I'm in. Let's work together."`);
+              // Create alliance (in a full implementation)
+              this.getLogger().info(`You've formed an alliance with ${randomGuest.name}!`);
+            } else {
+              this.getLogger().info(`${randomGuest.name} says: "I need to think about it..."`);
+            }
+          }, 1000);
         }
         break;
 
       case 'check_relationships':
         // Simple logging of relationships
         this.getLogger().info("--- Your Relationships ---");
+        const playerGuest = this.game.houseguests[0]; // Assuming player is first houseguest
         this.game.houseguests.forEach(guest => {
-          if (guest.id !== this.game.houseguests[0].id) {
-            // Just placeholder data - real implementation would use relationshipSystem
-            const score = Math.floor(Math.random() * 100) - 50;
-            this.getLogger().info(`${guest.name}: ${score}`);
+          if (guest.id !== playerGuest.id) {
+            const score = this.controller.relationshipSystem.getRelationship(playerGuest.id, guest.id);
+            const description = this.describeRelationship(score);
+            this.getLogger().info(`${guest.name}: ${description} (${score})`);
           }
         });
         break;
@@ -149,6 +185,19 @@ export class SocialInteractionState extends GameStateBase {
     // After handling an action, re-prompt the player with updated choices
     this.controller.promptNextAction();
     return true; // Action was handled
+  }
+
+  // Helper to describe relationship scores in words
+  private describeRelationship(score: number): string {
+    if (score >= 80) return "Best Friends";
+    if (score >= 60) return "Close Allies";
+    if (score >= 40) return "Friends";
+    if (score >= 20) return "Friendly";
+    if (score >= 0) return "Neutral";
+    if (score >= -20) return "Wary";
+    if (score >= -40) return "Distrustful";
+    if (score >= -60) return "Enemies";
+    return "Bitter Rivals";
   }
 
   async exit(): Promise<void> {
