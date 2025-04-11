@@ -80,7 +80,8 @@ export const useNominationCeremony = () => {
     const handleTimeExpired = useCallback(() => {
         if (ceremonyComplete || !isNominating) return;
         
-        const { getRandomNominees } = useGame();
+        // Get the function from outside the component
+        const getRandomNominees = useGame().getRandomNominees;
         const randomNominees = getRandomNominees(2, [hoh?.id || '']);
         
         logger.info('Nomination timer expired, selecting random nominees');
