@@ -2,6 +2,7 @@
 import { useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useGameControl } from '@/contexts/GameControlContext';
+import { handleHouseguestEviction, completeEvictionProcess } from '@/utils/eviction-utils';
 
 export function useFastForward() {
   const { dispatch, gameState } = useGame();
@@ -29,44 +30,18 @@ export function useFastForward() {
       if (gameState.nominees && gameState.nominees.length > 0) {
         const evictedNominee = gameState.nominees[0];
         
-        // Evict the first nominee
-        dispatch({
-          type: 'PLAYER_ACTION',
-          payload: {
-            actionId: 'evict_houseguest',
-            params: {
-              evictedId: evictedNominee.id,
-              toJury: gameState.week >= 5
-            }
-          }
-        });
-        
-        // Dispatch EVICT_HOUSEGUEST directly
-        dispatch({
-          type: 'EVICT_HOUSEGUEST',
-          payload: {
-            evicted: evictedNominee,
-            toJury: gameState.week >= 5
-          }
-        });
+        // Use the shared utility to handle eviction
+        handleHouseguestEviction(
+          dispatch, 
+          evictedNominee, 
+          gameState.week >= 5
+        );
         
         // Complete the eviction process
-        dispatch({
-          type: 'PLAYER_ACTION',
-          payload: {
-            actionId: 'eviction_complete',
-            params: {}
-          }
-        });
+        completeEvictionProcess(dispatch);
       } else {
         // Complete the eviction if no nominees are available
-        dispatch({
-          type: 'PLAYER_ACTION',
-          payload: {
-            actionId: 'eviction_complete',
-            params: {}
-          }
-        });
+        completeEvictionProcess(dispatch);
       }
     }
   }, [gameState.phase, gameState.nominees, gameState.week, dispatch, fastForward]);

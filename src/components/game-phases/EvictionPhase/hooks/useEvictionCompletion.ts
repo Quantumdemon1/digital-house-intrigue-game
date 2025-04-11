@@ -4,6 +4,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
 import { Houseguest } from '@/models/houseguest';
 import { useGameControl } from '@/contexts/GameControlContext';
+import { handleHouseguestEviction, completeEvictionProcess } from '@/utils/eviction-utils';
 
 export function useEvictionCompletion() {
   const { dispatch, gameState } = useGame();
@@ -19,26 +20,12 @@ export function useEvictionCompletion() {
       return;
     }
     
-    // Process the eviction using PLAYER_ACTION
-    dispatch({
-      type: 'PLAYER_ACTION',
-      payload: {
-        actionId: 'evict_houseguest',
-        params: {
-          evictedId: evictedHouseguest.id,
-          toJury: gameState.week >= 5
-        }
-      }
-    });
-    
-    // Also dispatch direct EVICT_HOUSEGUEST action to ensure the reducer processes it
-    dispatch({
-      type: 'EVICT_HOUSEGUEST',
-      payload: {
-        evicted: evictedHouseguest,
-        toJury: gameState.week >= 5
-      }
-    });
+    // Use the shared utility to handle eviction
+    handleHouseguestEviction(
+      dispatch, 
+      evictedHouseguest, 
+      gameState.week >= 5
+    );
     
     toast({
       title: "Houseguest Evicted",
@@ -57,14 +44,8 @@ export function useEvictionCompletion() {
         }
       });
       
-      // Also dispatch eviction_complete action to ensure state transition
-      dispatch({ 
-        type: 'PLAYER_ACTION',
-        payload: {
-          actionId: 'eviction_complete',
-          params: {}
-        }
-      });
+      // Complete the eviction process
+      completeEvictionProcess(dispatch);
       
       toast({
         title: "New Week Begins",
