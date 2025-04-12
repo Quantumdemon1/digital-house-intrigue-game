@@ -1135,3 +1135,5 @@ import {
 } from '../utils/SelfAcceptingUtils';
 
 export class SocialInteractionState {
+
+}
