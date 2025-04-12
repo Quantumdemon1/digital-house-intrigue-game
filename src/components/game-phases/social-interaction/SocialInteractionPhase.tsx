@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGame } from '@/contexts/GameContext';
+import { Users } from 'lucide-react'; // Add the missing import
 import LocationDisplay from './LocationDisplay';
 import InteractionsCounter from './InteractionsCounter';
 import ActionSections from './ActionSections';
