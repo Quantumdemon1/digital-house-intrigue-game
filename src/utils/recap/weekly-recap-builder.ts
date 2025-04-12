@@ -61,6 +61,33 @@ export class WeeklyRecapBuilder {
       recap += `- **Evicted**: ${evicted}\n`;
     }
     
+    // Add relationship changes
+    const relationshipChanges = this.findSignificantRelationshipChanges(events);
+    if (relationshipChanges.length > 0) {
+      recap += "\n**Relationship Changes:**\n";
+      relationshipChanges.forEach(change => {
+        recap += `- ${change}\n`;
+      });
+    }
+    
+    // Add alliance activities
+    const allianceEvents = this.findAllianceEvents(events);
+    if (allianceEvents.length > 0) {
+      recap += "\n**Alliance Activities:**\n";
+      allianceEvents.forEach(event => {
+        recap += `- ${event}\n`;
+      });
+    }
+    
+    // Add major game moments
+    const keyMoments = this.findKeyMoments(events);
+    if (keyMoments.length > 0) {
+      recap += "\n**Key Moments:**\n";
+      keyMoments.forEach(moment => {
+        recap += `- ${moment}\n`;
+      });
+    }
+    
     recap += "\n";
     return recap;
   }
@@ -129,5 +156,102 @@ export class WeeklyRecapBuilder {
       return evictionEvent.data.evicted;
     }
     return null;
+  }
+  
+  private findSignificantRelationshipChanges(events: GameEvent[]): string[] {
+    if (!this.game) return [];
+    
+    const changes: string[] = [];
+    
+    // Look for status changes
+    events.filter(e => e.type === 'RELATIONSHIP_THRESHOLD').forEach(event => {
+      if (event.involvedHouseguests.length !== 2) return;
+      
+      const guest1 = this.game?.getHouseguestById(event.involvedHouseguests[0]);
+      const guest2 = this.game?.getHouseguestById(event.involvedHouseguests[1]);
+      
+      if (guest1 && guest2 && event.data?.relationshipStatus) {
+        changes.push(`${guest1.name} and ${guest2.name} became ${event.data.relationshipStatus}`);
+      }
+    });
+    
+    // Look for major relationship changes
+    events.filter(e => e.data?.relationships).forEach(event => {
+      if (!event.data?.relationships) return;
+      
+      event.data.relationships.forEach((rel: any) => {
+        if (Math.abs(rel.change) >= 20) { // Only include significant changes
+          const guest1 = this.game?.getHouseguestById(rel.from);
+          const guest2 = this.game?.getHouseguestById(rel.to);
+          
+          if (guest1 && guest2) {
+            const direction = rel.change > 0 ? 'improved' : 'worsened';
+            changes.push(`${guest1.name}'s relationship with ${guest2.name} ${direction} significantly`);
+          }
+        }
+      });
+    });
+    
+    return changes;
+  }
+  
+  private findAllianceEvents(events: GameEvent[]): string[] {
+    if (!this.game) return [];
+    
+    const allianceEvents: string[] = [];
+    
+    events.filter(e => e.type.includes('ALLIANCE_')).forEach(event => {
+      const alliance = this.game?.alliances?.find(a => a.id === event.data?.allianceId);
+      
+      if (alliance) {
+        switch (event.type) {
+          case 'ALLIANCE_FORMED':
+            allianceEvents.push(`The "${alliance.name}" alliance was formed`);
+            break;
+          case 'ALLIANCE_BROKEN':
+            allianceEvents.push(`The "${alliance.name}" alliance was broken`);
+            break;
+          case 'ALLIANCE_BETRAYED':
+            if (event.data?.betrayerId && event.data?.betrayedId) {
+              const betrayer = this.game.getHouseguestById(event.data.betrayerId);
+              const betrayed = this.game.getHouseguestById(event.data.betrayedId);
+              if (betrayer && betrayed) {
+                allianceEvents.push(`${betrayer.name} betrayed ${betrayed.name} in the "${alliance.name}" alliance`);
+              }
+            } else {
+              allianceEvents.push(`Betrayal occurred in the "${alliance.name}" alliance`);
+            }
+            break;
+          case 'ALLIANCE_EXPOSED':
+            allianceEvents.push(`The "${alliance.name}" alliance was exposed to the house`);
+            break;
+        }
+      }
+    });
+    
+    return allianceEvents;
+  }
+  
+  private findKeyMoments(events: GameEvent[]): string[] {
+    const keyMoments: string[] = [];
+    
+    // Look for blindsides and major game events
+    events.filter(e => 
+      (e.type === 'EVICTION' && e.data?.blindside) || 
+      e.type.includes('GAME_MOMENT_') ||
+      e.data?.significance === 'major'
+    ).forEach(event => {
+      keyMoments.push(event.description);
+    });
+    
+    // Add AI decisions with reasoning that affected the game
+    events.filter(e => e.type === 'AI_DECISION' && e.data?.reasoning).forEach(event => {
+      const hg = this.game?.getHouseguestById(event.data.decisionMaker);
+      if (hg) {
+        keyMoments.push(`${hg.name}'s decision: ${event.description} (${event.data.reasoning})`);
+      }
+    });
+    
+    return keyMoments;
   }
 }

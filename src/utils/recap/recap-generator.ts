@@ -30,6 +30,9 @@ export class GameRecapGenerator {
     this.weeklyRecapBuilder.setGame(game);
     this.finaleRecapBuilder.setGame(game);
     this.eventFormatter.setGame(game);
+    
+    // Connect the event formatter to the finale recap builder
+    this.finaleRecapBuilder.setEventFormatter(this.eventFormatter);
   }
 
   setLogger(logger: Logger): void {
@@ -50,6 +53,18 @@ export class GameRecapGenerator {
     // Add winner information if available
     if (this.game.winner) {
       markdown += this.finaleRecapBuilder.buildWinnerSection();
+    }
+    
+    // Add player's journey section
+    const playerJourney = this.finaleRecapBuilder.buildPlayerJourneySection();
+    if (playerJourney) {
+      markdown += playerJourney;
+    }
+    
+    // Add season highlights section
+    const highlights = this.finaleRecapBuilder.buildSeasonHighlightsSection();
+    if (highlights) {
+      markdown += highlights;
     }
     
     // Generate weekly summaries

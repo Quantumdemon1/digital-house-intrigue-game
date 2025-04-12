@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGame } from '@/contexts/GameContext';
 import { Users } from 'lucide-react'; // Add the missing import
@@ -8,9 +8,11 @@ import InteractionsCounter from './InteractionsCounter';
 import ActionSections from './ActionSections';
 import StrategicDiscussionDialog from '../social/StrategicDiscussionDialog';
 import MakePromiseDialog from '../social/MakePromiseDialog';
+import { EnhancedGameLogger } from '@/utils/game-log';
 
 const SocialInteractionPhase: React.FC = () => {
   const { game, logger, dispatch } = useGame();
+  const [enhancedLogger, setEnhancedLogger] = useState<EnhancedGameLogger | null>(null);
   const [dialogAction, setDialogAction] = useState<{
     type: string;
     params?: any;
@@ -19,6 +21,13 @@ const SocialInteractionPhase: React.FC = () => {
     type: '',
     isOpen: false
   });
+
+  // Initialize enhanced logger when game is available
+  useEffect(() => {
+    if (game) {
+      setEnhancedLogger(new EnhancedGameLogger(game, logger));
+    }
+  }, [game, logger]);
 
   if (!game || !game.currentState || !(game.currentState.constructor.name === 'SocialInteractionState')) {
     return <Card><CardContent className="pt-6">Loading Social Phase...</CardContent></Card>;
@@ -47,6 +56,16 @@ const SocialInteractionPhase: React.FC = () => {
         isOpen: true
       });
       return;
+    }
+    
+    // Log the action with enhanced details
+    if (enhancedLogger) {
+      enhancedLogger.logEvent({
+        type: 'SOCIAL_ACTION',
+        description: `Player initiated ${actionId.replace(/_/g, ' ')}`,
+        involvedHouseguests: params?.targetId ? [game.player?.id || '', params.targetId] : [game.player?.id || ''],
+        data: { actionId, params }
+      });
     }
     
     // Standard action dispatch
