@@ -49,7 +49,7 @@ export class DecisionContextBuilder {
       // Only process non-null values
       if (typeof nom === 'object' && nom !== null && 'id' in nom) {
         // Make sure we're getting the full houseguest object
-        return game.houseguests.find(hg => hg.id === nom.id) || null;
+        return game.houseguests.find(hg => hg.id === (nom as {id: string}).id) || null;
       }
       else if (typeof nom === 'string') {
         // If nom is a string (an ID), find the corresponding houseguest
