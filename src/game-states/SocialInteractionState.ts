@@ -3,12 +3,14 @@ import { GameState, GamePhase } from '../models/game-state';
 import { Houseguest } from '../models/houseguest';
 import { BigBrotherGame } from '../models/game/BigBrotherGame';
 import { GameStateBase, SocialActionChoice } from './GameStateBase';
+import { IGameControllerFacade } from '../types/interfaces';
+import { RelationshipSystem } from '../systems/relationship-system';
 
 export class SocialInteractionState extends GameStateBase {
   interactionsRemaining: number = 3;
   
-  constructor(game: BigBrotherGame) {
-    super(game);
+  constructor(controller: IGameControllerFacade) {
+    super(controller);
     this.initializeState();
   }
   
@@ -110,7 +112,7 @@ export class SocialInteractionState extends GameStateBase {
     return actions;
   }
   
-  processAction(actionId: string, parameters: any): void {
+  async handleAction(actionId: string, parameters: any): Promise<boolean> {
     switch (actionId) {
       case 'move_location':
         this.handleMoveLocation(parameters.locationId);
@@ -143,7 +145,12 @@ export class SocialInteractionState extends GameStateBase {
       case 'advance_phase':
         this.handleAdvancePhase();
         break;
+        
+      default:
+        return false;
     }
+    
+    return true;
   }
   
   private handleMoveLocation(locationId: string): void {
@@ -159,13 +166,13 @@ export class SocialInteractionState extends GameStateBase {
     
     if (player && target) {
       // Get current relationship or create if not exists
-      let relationship = this.game.getOrCreateRelationship(player.id, target.id);
+      let relationship = this.getOrCreateRelationship(player.id, target.id);
       
       // Base relationship improvement
       const improvement = Math.floor(Math.random() * 5) + 3; // 3-7 points
       
       // Update relationship
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'UPDATE_RELATIONSHIPS',
         payload: {
           guestId1: player.id,
@@ -176,7 +183,7 @@ export class SocialInteractionState extends GameStateBase {
       });
       
       // Log event
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'LOG_EVENT',
         payload: {
           week: this.game.week,
@@ -235,7 +242,7 @@ export class SocialInteractionState extends GameStateBase {
       }
       
       // Update relationship
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'UPDATE_RELATIONSHIPS',
         payload: {
           guestId1: player.id,
@@ -246,7 +253,7 @@ export class SocialInteractionState extends GameStateBase {
       });
       
       // Log event
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'LOG_EVENT',
         payload: {
           week: this.game.week,
@@ -272,7 +279,7 @@ export class SocialInteractionState extends GameStateBase {
       const improvement = Math.floor(Math.random() * 8) + 5; // 5-12 points
       
       // Update relationship
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'UPDATE_RELATIONSHIPS',
         payload: {
           guestId1: player.id,
@@ -283,7 +290,7 @@ export class SocialInteractionState extends GameStateBase {
       });
       
       // Log event
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'LOG_EVENT',
         payload: {
           week: this.game.week,
@@ -312,7 +319,7 @@ export class SocialInteractionState extends GameStateBase {
       const improvement = Math.floor(Math.random() * 6) + 7; // 7-12 points
       
       // Update relationship
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'UPDATE_RELATIONSHIPS',
         payload: {
           guestId1: player.id,
@@ -323,7 +330,7 @@ export class SocialInteractionState extends GameStateBase {
       });
       
       // Log the promise event
-      this.game.dispatch({
+      this.controller.dispatch({
         type: 'LOG_EVENT',
         payload: {
           week: this.game.week,
@@ -344,9 +351,24 @@ export class SocialInteractionState extends GameStateBase {
   
   private handleAdvancePhase(): void {
     // Advance to POV Competition
-    this.game.dispatch({
+    this.controller.dispatch({
       type: 'SET_PHASE', 
       payload: 'POVCompetition'
     });
+  }
+  
+  // Helper method to get or create a relationship between two houseguests
+  private getOrCreateRelationship(
+    guest1Id: string, 
+    guest2Id: string
+  ): { 
+    score: number; 
+    alliance: string | null; 
+    notes: string[];
+    events: any[];
+    lastInteractionWeek: number;
+  } {
+    const relationshipSystem = this.controller.relationshipSystem;
+    return relationshipSystem.getOrCreateRelationship(guest1Id, guest2Id);
   }
 }
