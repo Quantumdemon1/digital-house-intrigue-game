@@ -1,4 +1,3 @@
-
 import type { GamePhase } from '../../models/game-state';
 import type { BigBrotherGame } from '../../models/game/BigBrotherGame'; 
 import type { Houseguest } from '../../models/houseguest';
@@ -7,7 +6,7 @@ import type { IGameControllerFacade } from '../../types/interfaces';
 import type { RelationshipSystem } from '../../systems/relationship-system';
 import type { CompetitionSystem } from '../../systems/competition-system';
 import type { AIIntegrationSystem } from '../../systems/ai/ai-integration-system';
-import type { PromiseSystem } from '../../systems/promise-system'; // Add import for PromiseSystem
+import { PromiseSystem } from '../../systems/promise-system'; // Import as a regular class, not a type
 import type { GameRecapGenerator } from '../../utils/recap';
 import type { Logger } from '../../utils/logger';
 import type { RelationshipEvent, RelationshipEventType } from '../../models/relationship-event';
@@ -94,7 +93,7 @@ export type GameContextType = {
     relationshipSystem: RelationshipSystem | null;
     competitionSystem: CompetitionSystem | null;
     aiSystem: AIIntegrationSystem | null;
-    promiseSystem: PromiseSystem | null; // Add promiseSystem property
+    promiseSystem: PromiseSystem | null; // Use PromiseSystem class
     recapGenerator: GameRecapGenerator | null;
     logger: Logger;
     dispatch: React.Dispatch<GameAction>;

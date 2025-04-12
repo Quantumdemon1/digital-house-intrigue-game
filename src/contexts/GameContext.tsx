@@ -7,7 +7,7 @@ import { Houseguest } from '../models/houseguest';
 import { RelationshipSystem } from '../systems/relationship-system';
 import { CompetitionSystem } from '../systems/competition-system';
 import { AIIntegrationSystem } from '../systems/ai-integration';
-import { PromiseSystem } from '../systems/promise-system'; // Add import for PromiseSystem
+import { PromiseSystem } from '../systems/promise-system'; // Import PromiseSystem class
 import { GameRecapGenerator } from '../utils/recap';
 import { Logger, LogLevel } from '../utils/logger';
 import { GameAction, GameContextType } from './types/game-context-types';
@@ -26,7 +26,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         relationshipSystem: new RelationshipSystem(logger),
         competitionSystem: new CompetitionSystem(logger),
         aiSystem: new AIIntegrationSystem(logger, config.GEMINI_API_KEY),
-        promiseSystem: new PromiseSystem(logger), // Add PromiseSystem instantiation
+        promiseSystem: new PromiseSystem(logger), // Use PromiseSystem as a class
         recapGenerator: new GameRecapGenerator(),
     });
 
