@@ -1,4 +1,3 @@
-
 /**
  * @file src/systems/ai/ai-integration-system.ts
  * @description Core AI integration system with enhanced error handling and fallbacks
@@ -12,6 +11,7 @@ import { AIResponseParser, AIDecisionResponse } from './response-parser';
 import { AIFallbackGenerator } from './fallback-generator';
 import { EnhancedGameLogger } from '@/utils/game-log';
 import { toast } from '@/hooks/use-toast';
+import { AIMemoryManager } from './memory-manager';
 
 export class AIIntegrationSystem {
   private logger: Logger;
@@ -24,6 +24,7 @@ export class AIIntegrationSystem {
   private lastApiErrorTime: number = 0;
   private readonly ERROR_RESET_TIME = 300000; // 5 minutes
   private enhancedLogger: EnhancedGameLogger | null = null;
+  private memoryManager: AIMemoryManager | null = null;
 
   constructor(logger: Logger, apiKey: string) {
     this.logger = logger;
@@ -31,6 +32,7 @@ export class AIIntegrationSystem {
     this.decisionMaker = new AIDecisionMaker(logger, apiKey);
     this.responseParser = new AIResponseParser(logger);
     this.fallbackGenerator = new AIFallbackGenerator(logger);
+    this.memoryManager = new AIMemoryManager(logger);
   }
 
   /**
@@ -73,9 +75,15 @@ export class AIIntegrationSystem {
         throw new Error(`Houseguest "${houseguestName}" not found`);
       }
 
-      // Get memories for this houseguest
-      const memories = game.memorySystem?.getRecentMemories(houseguest.id, 5) || [];
-      const memoryTexts = memories.map(m => m.content);
+      // Get memories for this houseguest - using our memory manager instead of game.memorySystem
+      let memoryTexts: string[] = [];
+      if (this.memoryManager) {
+        // Initialize memories if needed
+        if (game.houseguests.length > 0) {
+          this.memoryManager.initializeMemories(game.houseguests);
+        }
+        memoryTexts = this.memoryManager.getMemoriesForHouseguest(houseguest.id) || [];
+      }
 
       // Generate prompt for the decision
       const prompt = this.decisionMaker.generatePrompt(
@@ -279,4 +287,3 @@ export class AIIntegrationSystem {
     }
   }
 }
-
