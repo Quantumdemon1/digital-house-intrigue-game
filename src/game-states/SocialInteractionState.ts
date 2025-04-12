@@ -1133,4 +1133,5 @@ import {
     getSelfAcceptingModifier as getSelfAffirmingModifier,
     getSelfAcceptingDescription as getSelfAffirmingDescription,
 } from '../utils/SelfAcceptingUtils';
-import {
+
+export class SocialInteractionState {
