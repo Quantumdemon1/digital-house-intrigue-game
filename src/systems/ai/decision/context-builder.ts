@@ -44,6 +44,8 @@ export class DecisionContextBuilder {
   buildVetoContext(vetoHolder: Houseguest, game: BigBrotherGame): any {
     // Ensure nominees is an array of Houseguest objects, not strings
     const nominees = game.nominees?.map(nom => {
+      if (nom === null) return null;
+      
       // If nom is already a Houseguest object with an id property
       if (typeof nom === 'object' && nom !== null && 'id' in nom) {
         // Make sure we're getting the full houseguest object

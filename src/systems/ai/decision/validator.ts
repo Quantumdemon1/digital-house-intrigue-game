@@ -58,6 +58,8 @@ export class DecisionValidator {
     if (decision.useVeto) {
       // Convert nominees from IDs to Houseguests, handling both object and string types
       const nominees = game.nominees?.map(nom => {
+        if (nom === null) return null;
+        
         // If nom is already a Houseguest object with an id property
         if (typeof nom === 'object' && nom !== null && 'id' in nom) {
           // Make sure we're getting the full houseguest object
