@@ -1,9 +1,18 @@
-import { GameState, GamePhase } from '../models/game-state';
+
+import { GamePhase } from '../models/game-state';
 import { Houseguest } from '../models/houseguest';
-import { BigBrotherGame } from '../models/game/BigBrotherGame';
 import { GameStateBase, SocialActionChoice } from './GameStateBase';
 import { IGameControllerFacade } from '../types/interfaces';
-import { RelationshipSystem } from '../systems/relationship-system';
+
+// Import action handlers
+import {
+  handleMoveLocation,
+  handleTalkTo,
+  handleStrategicDiscussion,
+  handleRelationshipBuilding,
+  handleMakePromise,
+  handleAdvancePhase
+} from './social/handlers';
 
 export class SocialInteractionState extends GameStateBase {
   interactionsRemaining: number = 3;
@@ -112,37 +121,54 @@ export class SocialInteractionState extends GameStateBase {
   }
   
   async handleAction(actionId: string, parameters: any): Promise<boolean> {
+    // Decrement interactions for actions that consume them
+    const consumesInteraction = ['talk_to', 'strategic_discussion', 'relationship_building', 'make_promise'].includes(actionId);
+    
+    if (consumesInteraction && this.interactionsRemaining <= 0) return false;
+    
     switch (actionId) {
       case 'move_location':
-        this.handleMoveLocation(parameters.locationId);
+        handleMoveLocation({ controller: this.controller, locationId: parameters.locationId });
         break;
         
       case 'talk_to':
-        this.handleTalkTo(parameters.targetId);
+        handleTalkTo({ controller: this.controller, targetId: parameters.targetId });
+        if (consumesInteraction) this.interactionsRemaining--;
         break;
         
       case 'strategic_discussion':
-        this.handleStrategicDiscussion(parameters);
+        handleStrategicDiscussion({ 
+          controller: this.controller, 
+          targetId: parameters.targetId,
+          targetName: parameters.targetName,
+          discussionType: parameters.discussionType,
+          rumorTargetName: parameters.rumorTargetName
+        });
+        if (consumesInteraction) this.interactionsRemaining--;
         break;
         
       case 'relationship_building':
-        this.handleRelationshipBuilding(parameters.targetId);
+        handleRelationshipBuilding({ controller: this.controller, targetId: parameters.targetId });
+        if (consumesInteraction) this.interactionsRemaining--;
         break;
         
       case 'make_promise':
-        this.handleMakePromise(parameters);
+        handleMakePromise({ 
+          controller: this.controller, 
+          targetId: parameters.targetId,
+          promiseType: parameters.promiseType,
+          promiseDescription: parameters.promiseDescription 
+        });
+        if (consumesInteraction) this.interactionsRemaining--;
         break;
         
       case 'check_relationships':
-        // Just view relationships, no state change
-        break;
-        
       case 'check_promises':
-        // Just view promises, no state change
+        // Just view relationships or promises, no state change
         break;
         
       case 'advance_phase':
-        this.handleAdvancePhase();
+        handleAdvancePhase({ controller: this.controller });
         break;
         
       default:
@@ -150,224 +176,5 @@ export class SocialInteractionState extends GameStateBase {
     }
     
     return true;
-  }
-  
-  private handleMoveLocation(locationId: string): void {
-    this.game.currentLocation = locationId;
-    // No interaction cost for movement
-  }
-  
-  private handleTalkTo(targetId: string): void {
-    if (this.interactionsRemaining <= 0) return;
-    
-    const player = this.game.getActiveHouseguests().find(hg => hg.isPlayer);
-    const target = this.game.getHouseguestById(targetId);
-    
-    if (player && target) {
-      // Get current relationship or create if not exists
-      let relationship = this.getOrCreateRelationship(player.id, target.id);
-      
-      // Base relationship improvement
-      const improvement = Math.floor(Math.random() * 5) + 3; // 3-7 points
-      
-      // Update relationship
-      this.controller.dispatch({
-        type: 'UPDATE_RELATIONSHIPS',
-        payload: {
-          guestId1: player.id,
-          guestId2: target.id,
-          change: improvement,
-          note: `${player.name} had a conversation with ${target.name}`
-        }
-      });
-      
-      // Log event
-      this.controller.dispatch({
-        type: 'LOG_EVENT',
-        payload: {
-          week: this.game.week,
-          phase: 'SocialInteraction',
-          type: 'CONVERSATION',
-          description: `${player.name} had a conversation with ${target.name}.`,
-          involvedHouseguests: [player.id, target.id],
-        }
-      });
-      
-      this.interactionsRemaining--;
-    }
-  }
-  
-  private handleStrategicDiscussion(parameters: any): void {
-    if (this.interactionsRemaining <= 0) return;
-    
-    const player = this.game.getActiveHouseguests().find(hg => hg.isPlayer);
-    const target = this.game.getHouseguestById(parameters.targetId);
-    
-    if (player && target) {
-      const discussionType = parameters.discussionType || 'general_strategy';
-      let relationshipChange = 0;
-      let eventType = 'STRATEGIC_DISCUSSION';
-      let description = '';
-      
-      // Different outcomes based on discussion type
-      switch (discussionType) {
-        case 'suggest_target':
-          relationshipChange = Math.floor(Math.random() * 8) - 2; // -2 to +5
-          description = `${player.name} and ${target.name} discussed potential targets in the game.`;
-          break;
-          
-        case 'general_strategy':
-          relationshipChange = Math.floor(Math.random() * 7) + 1; // +1 to +7
-          description = `${player.name} and ${target.name} had a general strategy talk.`;
-          break;
-          
-        case 'vote_intentions':
-          relationshipChange = Math.floor(Math.random() * 10) - 3; // -3 to +6
-          description = `${player.name} asked ${target.name} about their voting intentions.`;
-          break;
-          
-        case 'final_two_deal':
-          relationshipChange = Math.floor(Math.random() * 15) - 5; // -5 to +9
-          eventType = 'FINAL_TWO_DEAL';
-          description = `${player.name} proposed a final 2 deal with ${target.name}.`;
-          break;
-          
-        case 'spread_rumor':
-          const rumorTarget = parameters.rumorTargetName || "another houseguest";
-          relationshipChange = Math.floor(Math.random() * 12) - 8; // -8 to +3
-          eventType = 'SPREAD_RUMOR';
-          description = `${player.name} spread a rumor about ${rumorTarget} to ${target.name}.`;
-          break;
-      }
-      
-      // Update relationship
-      this.controller.dispatch({
-        type: 'UPDATE_RELATIONSHIPS',
-        payload: {
-          guestId1: player.id,
-          guestId2: target.id,
-          change: relationshipChange,
-          note: description
-        }
-      });
-      
-      // Log event
-      this.controller.dispatch({
-        type: 'LOG_EVENT',
-        payload: {
-          week: this.game.week,
-          phase: 'SocialInteraction',
-          type: eventType,
-          description: description,
-          involvedHouseguests: [player.id, target.id],
-        }
-      });
-      
-      this.interactionsRemaining--;
-    }
-  }
-  
-  private handleRelationshipBuilding(targetId: string): void {
-    if (this.interactionsRemaining <= 0) return;
-    
-    const player = this.game.getActiveHouseguests().find(hg => hg.isPlayer);
-    const target = this.game.getHouseguestById(targetId);
-    
-    if (player && target) {
-      // Enhanced relationship improvement
-      const improvement = Math.floor(Math.random() * 8) + 5; // 5-12 points
-      
-      // Update relationship
-      this.controller.dispatch({
-        type: 'UPDATE_RELATIONSHIPS',
-        payload: {
-          guestId1: player.id,
-          guestId2: target.id,
-          change: improvement,
-          note: `${player.name} spent quality time with ${target.name}`
-        }
-      });
-      
-      // Log event
-      this.controller.dispatch({
-        type: 'LOG_EVENT',
-        payload: {
-          week: this.game.week,
-          phase: 'SocialInteraction',
-          type: 'RELATIONSHIP_BUILDING',
-          description: `${player.name} spent quality time with ${target.name}, building a stronger bond.`,
-          involvedHouseguests: [player.id, target.id],
-        }
-      });
-      
-      this.interactionsRemaining--;
-    }
-  }
-  
-  private handleMakePromise(parameters: any): void {
-    if (this.interactionsRemaining <= 0) return;
-    
-    const player = this.game.getActiveHouseguests().find(hg => hg.isPlayer);
-    const target = this.game.getHouseguestById(parameters.targetId);
-    
-    if (player && target) {
-      const promiseType = parameters.promiseType || 'safety';
-      const promiseDescription = parameters.promiseDescription || 'a gameplay promise';
-      
-      // Making a promise has a positive effect on relationship
-      const improvement = Math.floor(Math.random() * 6) + 7; // 7-12 points
-      
-      // Update relationship
-      this.controller.dispatch({
-        type: 'UPDATE_RELATIONSHIPS',
-        payload: {
-          guestId1: player.id,
-          guestId2: target.id,
-          change: improvement,
-          note: `${player.name} promised ${target.name}: ${promiseDescription}`
-        }
-      });
-      
-      // Log the promise event
-      this.controller.dispatch({
-        type: 'LOG_EVENT',
-        payload: {
-          week: this.game.week,
-          phase: 'SocialInteraction',
-          type: 'MAKE_PROMISE',
-          description: `${player.name} made a promise to ${target.name}: ${promiseDescription}`,
-          involvedHouseguests: [player.id, target.id],
-          metadata: {
-            promiseType,
-            promiseDescription
-          }
-        }
-      });
-      
-      this.interactionsRemaining--;
-    }
-  }
-  
-  private handleAdvancePhase(): void {
-    // Advance to POV Competition
-    this.controller.dispatch({
-      type: 'SET_PHASE', 
-      payload: 'POVCompetition'
-    });
-  }
-  
-  // Helper method to get or create a relationship between two houseguests
-  private getOrCreateRelationship(
-    guest1Id: string, 
-    guest2Id: string
-  ): { 
-    score: number; 
-    alliance: string | null; 
-    notes: string[];
-    events: any[];
-    lastInteractionWeek: number;
-  } {
-    const relationshipSystem = this.controller.relationshipSystem;
-    return relationshipSystem.getOrCreateRelationship(guest1Id, guest2Id);
   }
 }
