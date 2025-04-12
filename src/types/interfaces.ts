@@ -32,6 +32,7 @@ export interface IGameControllerFacade {
   gameLog: any[];
   
   // Methods
+  dispatch: (action: any) => void;  // Add the dispatch method
   promptNextAction: () => void;
   saveGame: () => void;
   loadGame: () => void;

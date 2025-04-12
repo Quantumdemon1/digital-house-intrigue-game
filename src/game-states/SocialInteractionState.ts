@@ -1,4 +1,3 @@
-
 import { GameState, GamePhase } from '../models/game-state';
 import { Houseguest } from '../models/houseguest';
 import { BigBrotherGame } from '../models/game/BigBrotherGame';
