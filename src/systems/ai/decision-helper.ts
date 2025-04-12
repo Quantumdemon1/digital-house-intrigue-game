@@ -1,76 +1,101 @@
 
 /**
  * @file src/systems/ai/decision-helper.ts
- * @description Helper functions for AI decision making
+ * @description Enhanced helper for AI decision making
  */
 
-import { Logger } from '@/utils/logger';
-import { BigBrotherGame } from '@/models/game/BigBrotherGame';
-import { EnhancedGameLogger } from '@/utils/game-log';
-import { AIDecisionResponse } from './response-parser';
-import { Houseguest } from '@/models/houseguest';
+import type { Houseguest } from '@/models/houseguest';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
+import type { Logger } from '@/utils/logger';
+import { DecisionContextBuilder } from './decision/context-builder';
+import { DecisionValidator } from './decision/validator';
+import { ReplacementContextBuilder } from './decision/replacement-context-builder';
+import { ReplacementValidator } from './decision/replacement-validator';
+import { AIResponseParser } from './response-parser';
 
 export class AIDecisionHelper {
   private logger: Logger;
-  private enhancedLogger: EnhancedGameLogger | null = null;
-
+  private contextBuilder: DecisionContextBuilder;
+  private validator: DecisionValidator;
+  private replacementContextBuilder: ReplacementContextBuilder;
+  private replacementValidator: ReplacementValidator;
+  
   constructor(logger: Logger) {
     this.logger = logger;
+    this.contextBuilder = new DecisionContextBuilder(logger);
+    this.validator = new DecisionValidator(logger);
+    this.replacementContextBuilder = new ReplacementContextBuilder(logger);
+    this.replacementValidator = new ReplacementValidator(logger);
   }
 
   /**
-   * Setup enhanced logger if available
+   * Builds appropriate context based on decision type
    */
-  setupEnhancedLogger(game: BigBrotherGame): void {
-    if (!this.enhancedLogger && game) {
-      this.enhancedLogger = new EnhancedGameLogger(game, this.logger);
-    }
-  }
-
-  /**
-   * Extract affected houseguests from a decision
-   */
-  getAffectedHouseguests(decision: any, decisionType: string): string[] {
-    const affected: string[] = [];
-    
+  buildContext(
+    decisionType: string, 
+    houseguest: Houseguest, 
+    game: BigBrotherGame,
+    additionalParams?: Record<string, any>
+  ): any {
     switch (decisionType) {
       case 'nomination':
-        if (decision.nominee1) affected.push(decision.nominee1);
-        if (decision.nominee2) affected.push(decision.nominee2);
-        break;
+        return this.contextBuilder.buildNominationContext(houseguest, game);
       case 'veto':
-        if (decision.saveNominee) affected.push(decision.saveNominee);
-        break;
+        return this.contextBuilder.buildVetoContext(houseguest, game);
       case 'replacement':
-        if (decision.replacementNominee) affected.push(decision.replacementNominee);
-        break;
-      case 'eviction_vote':
-        if (decision.voteToEvict) affected.push(decision.voteToEvict);
-        break;
+        if (!additionalParams?.savedNominee) {
+          this.logger.error('Missing savedNominee for replacement context');
+          return {};
+        }
+        return this.replacementContextBuilder.buildReplacementContext(
+          houseguest, 
+          additionalParams.savedNominee, 
+          game
+        );
+      default:
+        this.logger.warn(`Unknown decision type: ${decisionType}`);
+        return {};
     }
-    
-    return affected;
   }
 
   /**
-   * Log AI decision with reasoning
+   * Validates decision based on type
    */
-  logAIDecision(
-    houseguest: Houseguest, 
-    decisionType: string,
-    parsedResponse: AIDecisionResponse,
-    game: BigBrotherGame
-  ): void {
-    // Log AI decision with reasoning if available
-    if (parsedResponse.reasoning && this.enhancedLogger) {
-      const affectedHouseguests = this.getAffectedHouseguests(parsedResponse.decision, decisionType);
-      
-      this.enhancedLogger.logAIDecision(
-        houseguest, 
-        `make ${decisionType} decision`, 
-        parsedResponse.reasoning,
-        affectedHouseguests
-      );
+  validateDecision(
+    decisionType: string, 
+    decision: any, 
+    game: BigBrotherGame,
+    additionalParams?: Record<string, any>
+  ): boolean {
+    switch (decisionType) {
+      case 'nomination':
+        return this.validator.validateNominationDecision(decision, game);
+      case 'veto':
+        return this.validator.validateVetoDecision(decision, game);
+      case 'replacement':
+        if (!additionalParams?.savedNomineeId) {
+          this.logger.error('Missing savedNomineeId for replacement validation');
+          return false;
+        }
+        return this.replacementValidator.validateReplacementDecision(
+          decision, 
+          game, 
+          additionalParams.savedNomineeId
+        );
+      default:
+        this.logger.warn(`Unknown decision type: ${decisionType}`);
+        return false;
     }
+  }
+
+  /**
+   * Process the AI response into a structured decision
+   */
+  parseDecision(
+    decisionType: string, 
+    responseText: string
+  ): any {
+    const parser = new AIResponseParser(this.logger);
+    return parser.parseDecision(responseText, decisionType);
   }
 }

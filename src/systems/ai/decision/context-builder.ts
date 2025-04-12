@@ -42,21 +42,23 @@ export class DecisionContextBuilder {
    * Builds veto decision context
    */
   buildVetoContext(vetoHolder: Houseguest, game: BigBrotherGame): any {
-    // Ensure nominees is an array of Houseguest objects, not strings
-    const nominees = game.nominees?.map(nom => {
-      if (nom === null) return null;
-      
-      // Process non-null values
-      if (typeof nom === 'object' && nom !== null && 'id' in nom) {
-        // Make sure we're getting the full houseguest object
-        return game.houseguests.find(hg => hg.id === (nom as {id: string}).id) || null;
-      }
-      else if (typeof nom === 'string') {
-        // If nom is a string (an ID), find the corresponding houseguest
-        return game.houseguests.find(hg => hg.id === nom) || null;
-      }
-      return null;
-    }).filter(Boolean) as Houseguest[]; // Filter out null values and assert type
+    // Process nominees array, filtering out null values before processing
+    const nominees = game.nominees
+      ?.map(nom => {
+        if (nom === null) return null;
+        
+        // Process non-null values
+        if (typeof nom === 'object' && nom !== null && 'id' in nom) {
+          // Make sure we're getting the full houseguest object
+          return game.houseguests.find(hg => hg.id === (nom as {id: string}).id) || null;
+        }
+        else if (typeof nom === 'string') {
+          // If nom is a string (an ID), find the corresponding houseguest
+          return game.houseguests.find(hg => hg.id === nom) || null;
+        }
+        return null;
+      })
+      .filter((nom): nom is Houseguest => nom !== null); // Type guard to filter out nulls
     
     // Build relationships object
     const relationships: Record<string, number> = {};

@@ -6,6 +6,7 @@
 
 import type { Logger } from '@/utils/logger';
 import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
+import type { Houseguest } from '@/models/houseguest';
 
 export class DecisionValidator {
   private logger: Logger;
@@ -56,21 +57,23 @@ export class DecisionValidator {
     
     // If using veto, check if nominee exists
     if (decision.useVeto) {
-      // Convert nominees from IDs to Houseguests, handling both object and string types
-      const nominees = game.nominees?.map(nom => {
-        if (nom === null) return null;
-        
-        // Process non-null values
-        if (typeof nom === 'object' && nom !== null && 'id' in nom) {
-          // Make sure we're getting the full houseguest object
-          return game.houseguests.find(hg => hg.id === (nom as {id: string}).id) || null;
-        }
-        else if (typeof nom === 'string') {
-          // If nom is a string (an ID), find the corresponding houseguest
-          return game.houseguests.find(hg => hg.id === nom) || null;
-        }
-        return null;
-      }).filter(Boolean) as Houseguest[]; // Filter out null values and assert type
+      // Process nominees array, filtering out null values before processing
+      const nominees = game.nominees
+        ?.map(nom => {
+          if (nom === null) return null;
+          
+          // Process non-null values
+          if (typeof nom === 'object' && nom !== null && 'id' in nom) {
+            // Make sure we're getting the full houseguest object
+            return game.houseguests.find(hg => hg.id === (nom as {id: string}).id) || null;
+          }
+          else if (typeof nom === 'string') {
+            // If nom is a string (an ID), find the corresponding houseguest
+            return game.houseguests.find(hg => hg.id === nom) || null;
+          }
+          return null;
+        })
+        .filter((nom): nom is Houseguest => nom !== null); // Type guard to filter out nulls
       
       const nomineeNames = nominees.map(nominee => nominee.name);
       const saveNomineeExists = nomineeNames.includes(decision.saveNominee);
@@ -86,11 +89,4 @@ export class DecisionValidator {
     
     return true;
   }
-}
-
-// Add the Houseguest type import to fix the type assertion
-interface Houseguest {
-  id: string;
-  name: string;
-  [key: string]: any;
 }
