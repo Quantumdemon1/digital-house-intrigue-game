@@ -46,7 +46,7 @@ export class DecisionContextBuilder {
     const nominees = game.nominees?.map(nom => {
       if (nom === null) return null;
       
-      // Only process non-null values
+      // Process non-null values
       if (typeof nom === 'object' && nom !== null && 'id' in nom) {
         // Make sure we're getting the full houseguest object
         return game.houseguests.find(hg => hg.id === (nom as {id: string}).id) || null;
