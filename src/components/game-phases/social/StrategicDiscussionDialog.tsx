@@ -13,6 +13,8 @@ interface StrategicDiscussionDialogProps {
     targetId: string;
     targetName: string;
     discussionType?: string;
+    rumorTargetId?: string;  // Added this property
+    rumorTargetName?: string; // Added this property
   };
 }
 

@@ -1,3 +1,4 @@
+
 /**
  * @file SocialInteractionState.ts
  * @description Social interaction state with enhanced player actions
@@ -797,4 +798,1174 @@ export class SocialInteractionState extends GameStateBase {
         break;
         
       case 'offer_help':
-        message = "If you ever need someone to have your back in this game, I'm here
+        message = "If you ever need someone to have your back in this game, I'm here for you.";
+        situationContext = `You offered to help ${targetName}.`;
+        baseRelationshipChange = 4;
+        break;
+    }
+    
+    // Log the action
+    this.getLogger().info(`${situationContext}`);
+    
+    // Create dialogue context for AI response
+    const dialogueContext = {
+      speakerId: player.id,
+      speakerName: player.name,
+      message: message,
+      situation: situationContext,
+      phase: this.game.phase as GamePhase,
+      week: this.game.week
+    };
+    
+    // Process the relationship building action
+    setTimeout(async () => {
+      try {
+        if (this.controller.aiSystem) {
+          // Generate AI response
+          const response = await this.controller.aiSystem.generateDialogueResponse(
+            targetId,
+            dialogueContext,
+            this.game
+          );
+          
+          // Display the response
+          this.getLogger().info(`${targetName} says: "${response.response}"`);
+          
+          // Calculate effect based on AI response and relationship
+          let multiplier = 1.0;
+          
+          if (response.thoughts && response.thoughts.includes('suspicious')) {
+            multiplier = 0.5; // They're suspicious of your motives
+          } else if (response.thoughts && response.thoughts.includes('appreciative')) {
+            multiplier = 1.5; // They really appreciate it
+          }
+          
+          // Apply relationship change with appropriate multiplier
+          const finalChange = baseRelationshipChange * multiplier;
+          this.controller.relationshipSystem.updateRelationship(
+            player.id,
+            targetId,
+            finalChange,
+            situationContext
+          );
+          
+          // Reciprocal effect is smaller
+          this.controller.relationshipSystem.updateRelationship(
+            targetId,
+            player.id,
+            finalChange * 0.7,
+            `${targetName} felt ${finalChange > 3 ? 'good' : 'okay'} about your interaction.`
+          );
+          
+        } else {
+          // Fallback responses
+          const responses = [
+            "Thanks, I appreciate that.",
+            "That's nice of you to say.",
+            "Thanks for telling me."
+          ];
+          const response = responses[Math.floor(Math.random() * responses.length)];
+          this.getLogger().info(`${targetName} says: "${response}"`);
+          
+          // Apply standard relationship changes without AI 
+          this.controller.relationshipSystem.updateRelationship(
+            player.id,
+            targetId,
+            baseRelationshipChange,
+            situationContext
+          );
+          
+          // Reciprocal effect
+          this.controller.relationshipSystem.updateRelationship(
+            targetId,
+            player.id,
+            baseRelationshipChange * 0.7,
+            `${targetName} reacted to your ${actionType}.`
+          );
+        }
+      } catch (error) {
+        this.getLogger().error(`Error generating response for ${actionType}: ${error}`);
+        this.getLogger().info(`${targetName} nods in response.`);
+        
+        // Apply minimal effect on error
+        this.controller.relationshipSystem.updateRelationship(
+          player.id,
+          targetId,
+          baseRelationshipChange * 0.5,
+          situationContext
+        );
+      }
+    }, 500);
+  }
+  
+  /**
+   * Handle making a promise to another houseguest
+   */
+  private async handleMakePromise(player: Houseguest, params: any): Promise<void> {
+    // Implementation for promise handling would go here
+    // We'll use the game.promises array to track promises
+    
+    const { targetId, targetName } = params;
+    if (!targetId || !targetName) return;
+    
+    const targetGuest = this.game.getHouseguestById(targetId);
+    if (!targetGuest) return;
+    
+    const promiseType = params.promiseType || 'safety';
+    const promiseDescription = params.promiseDescription || `You promised ${targetName} some form of ${promiseType}.`;
+    
+    // Create the promise object
+    const newPromise: GamePromise = {
+      id: `promise-${Date.now()}`,
+      fromId: player.id,
+      toId: targetId,
+      type: promiseType as PromiseType,
+      description: promiseDescription,
+      madeOnWeek: this.game.week,
+      status: 'pending',
+      context: {
+        initiallyBelieved: Math.random() > 0.3 // 70% chance they believe you initially
+      }
+    };
+    
+    // Add to promises array if it exists
+    if (this.game.promises) {
+      this.game.promises.push(newPromise);
+      this.getLogger().info(`You made a promise to ${targetName}: ${promiseDescription}`);
+      
+      // Log the promise creation
+      this.game.logEvent(
+        'promise_made',
+        `${player.name} made a promise to ${targetName}.`,
+        [player.id, targetId],
+        { promiseId: newPromise.id, promiseType }
+      );
+      
+      // Create dialogue context
+      const dialogueContext = {
+        speakerId: player.id,
+        speakerName: player.name,
+        message: `I promise you that ${promiseDescription.toLowerCase()}`,
+        situation: `You made a promise to ${targetName}.`,
+        phase: this.game.phase as GamePhase,
+        week: this.game.week
+      };
+      
+      // Generate target response
+      setTimeout(async () => {
+        try {
+          if (this.controller.aiSystem) {
+            // Use AI for response
+            const response = await this.controller.aiSystem.generateDialogueResponse(
+              targetId,
+              dialogueContext,
+              this.game
+            );
+            
+            this.getLogger().info(`${targetName} says: "${response.response}"`);
+            
+            // Update whether they believe you based on response
+            if (response.thoughts) {
+              const believesPromise = !response.thoughts.includes('distrust') && 
+                                     !response.thoughts.includes('skeptical');
+              
+              newPromise.context.initiallyBelieved = believesPromise;
+              
+              // Apply appropriate relationship effect
+              const relationshipChange = believesPromise ? 8 : 2;
+              this.controller.relationshipSystem.updateRelationship(
+                player.id,
+                targetId,
+                relationshipChange,
+                `You made a promise to ${targetName}.`
+              );
+            }
+          } else {
+            // Fallback response
+            const responses = [
+              "I'll remember that promise.",
+              "We'll see if you keep your word.",
+              "I appreciate the promise."
+            ];
+            const response = responses[Math.floor(Math.random() * responses.length)];
+            this.getLogger().info(`${targetName} says: "${response}"`);
+            
+            // Apply standard relationship change
+            this.controller.relationshipSystem.updateRelationship(
+              player.id,
+              targetId,
+              5,
+              `You made a promise to ${targetName}.`
+            );
+          }
+        } catch (error) {
+          this.getLogger().error(`Error generating response for promise: ${error}`);
+          this.getLogger().info(`${targetName} nods, acknowledging your promise.`);
+        }
+      }, 500);
+    } else {
+      this.getLogger().warn("Promises system not initialized.");
+    }
+  }
+  
+  /**
+   * Handle eavesdropping on other houseguests
+   */
+  private async handleEavesdrop(player: Houseguest): Promise<void> {
+    // Get active houseguests in the current location who aren't the player
+    const otherGuests = this.game.getActiveHouseguests().filter(hg => !hg.isPlayer);
+    
+    if (otherGuests.length < 2) {
+      this.getLogger().info("There aren't enough houseguests around to eavesdrop on.");
+      return;
+    }
+    
+    // Determine success chance based on player stats and traits
+    let successChance = 0.7; // Base 70% success chance
+    
+    // Adjust based on player stats if available
+    if (player.stats && player.stats.social) {
+      // Social skill improves chance
+      successChance += (player.stats.social - 5) * 0.03; // Each point above/below 5 adds/subtracts 3%
+    }
+    
+    // Further adjust based on traits - if we could check for "Sneaky" trait
+    // Unfortunately we can't check for "Paranoid" trait as it doesn't exist in PersonalityTrait type
+    if (player.personalityTraits && player.personalityTraits.includes("Sneaky")) {
+      successChance += 0.1; // +10% for sneaky players
+    }
+    
+    // Cap the chance
+    successChance = Math.min(Math.max(successChance, 0.3), 0.9); // Between 30% and 90%
+    
+    // Determine if successful
+    const isSuccessful = Math.random() < successChance;
+    
+    this.getLogger().info("You attempt to eavesdrop on a conversation...");
+    
+    // Process the result after a short delay
+    setTimeout(() => {
+      if (isSuccessful) {
+        // Choose two random houseguests
+        const shuffled = [...otherGuests].sort(() => 0.5 - Math.random());
+        const [guest1, guest2] = shuffled.slice(0, 2);
+        
+        // Generate a plausible conversation
+        this.generateEavesdroppedConversation(guest1, guest2);
+        
+        // Small risk of being caught
+        const caughtChance = 0.15; // 15% chance of being caught
+        if (Math.random() < caughtChance) {
+          this.getLogger().info(`${guest1.name} suddenly notices you listening in!`);
+          this.controller.relationshipSystem.updateRelationship(
+            guest1.id, 
+            player.id, 
+            -10, 
+            `${guest1.name} caught you eavesdropping.`
+          );
+          
+          // They might tell the other person too
+          if (Math.random() < 0.7) {
+            this.controller.relationshipSystem.updateRelationship(
+              guest2.id, 
+              player.id, 
+              -5, 
+              `${guest1.name} told ${guest2.name} that you were eavesdropping.`
+            );
+          }
+        }
+        
+        // Record the eavesdrop event
+        this.controller.relationshipSystem.addRelationshipEvent(
+          player.id,
+          guest1.id,
+          'eavesdropped',
+          `You eavesdropped on ${guest1.name}'s conversation.`,
+          0, // No direct relationship impact
+          true // This event decays quickly
+        );
+      } else {
+        // Failed attempt
+        this.getLogger().info("You couldn't get close enough to hear anything useful.");
+      }
+    }, 800);
+  }
+  
+  /**
+   * Generate a plausible conversation between two houseguests for eavesdropping
+   */
+  private generateEavesdroppedConversation(guest1: Houseguest, guest2: Houseguest): void {
+    // Get game context for relevant conversation topics
+    const hoh = this.game.hohWinner ? this.game.getHouseguestById(this.game.hohWinner) : null;
+    const nominees = this.game.nominees.map(id => this.game.getHouseguestById(id)).filter(Boolean);
+    const povHolder = this.game.povWinner ? this.game.getHouseguestById(this.game.povWinner) : null;
+    const player = this.game.houseguests.find(h => h.isPlayer);
+    
+    if (!player) return;
+    
+    // Choose a conversation type based on game phase
+    const conversationTypes = [
+      'targetDiscussion', // Discussing who to target
+      'allianceCheck',   // Checking in on their alliance
+      'gameAnalysis',    // Analyzing the current game state
+      'playerEvaluation' // Evaluating a specific player
+    ];
+    
+    const conversationType = conversationTypes[Math.floor(Math.random() * conversationTypes.length)];
+    
+    // Generate the conversation
+    this.getLogger().info(`You overhear ${guest1.name} and ${guest2.name} talking...`);
+    
+    switch (conversationType) {
+      case 'targetDiscussion': {
+        // Choose a potential target - either player or another houseguest
+        let targetPool = this.game.getActiveHouseguests().filter(hg => 
+          hg.id !== guest1.id && hg.id !== guest2.id
+        );
+        
+        // Increase chance it's about the player
+        const usePlayerAsTarget = Math.random() < 0.4; // 40% chance
+        const target = usePlayerAsTarget && player ? player : 
+                     targetPool[Math.floor(Math.random() * targetPool.length)];
+        
+        if (!target) return;
+        
+        // Determine sentiment (positive or negative)
+        const relationshipToTarget1 = this.controller.relationshipSystem.getEffectiveRelationship(guest1.id, target.id);
+        const relationshipToTarget2 = this.controller.relationshipSystem.getEffectiveRelationship(guest2.id, target.id);
+        const averageRelationship = (relationshipToTarget1 + relationshipToTarget2) / 2;
+        
+        const isPositive = averageRelationship > 15; // Positive if relationship is good
+        
+        // Generate conversation
+        if (isPositive) {
+          this.getLogger().info(`${guest1.name}: "I think we should keep ${target.name} safe this week."`);
+          this.getLogger().info(`${guest2.name}: "Yeah, they've been good to us. We need to make sure they stay."`);
+          
+          if (target.id === player.id) {
+            // This is valuable info for the player - they're safe with these two
+            this.game.logEvent(
+              'eavesdrop_intel',
+              `${player.name} learned that ${guest1.name} and ${guest2.name} want to keep them safe.`,
+              [player.id, guest1.id, guest2.id]
+            );
+          }
+        } else {
+          this.getLogger().info(`${guest1.name}: "I'm thinking ${target.name} needs to go soon."`);
+          this.getLogger().info(`${guest2.name}: "I wouldn't be upset if they left. They're a threat to our game."`);
+          
+          if (target.id === player.id) {
+            // This is valuable intel - they're targeting the player
+            this.game.logEvent(
+              'eavesdrop_intel',
+              `${player.name} learned that ${guest1.name} and ${guest2.name} are considering targeting them.`,
+              [player.id, guest1.id, guest2.id]
+            );
+          }
+        }
+        break;
+      }
+      
+      case 'allianceCheck': {
+        // Check if these two are in an alliance
+        const areInAlliance = this.controller.allianceSystem && 
+                             this.controller.allianceSystem.areInSameAlliance(guest1.id, guest2.id);
+        
+        if (areInAlliance) {
+          // They're discussing their alliance
+          this.getLogger().info(`${guest1.name}: "How are you feeling about our alliance right now?"`);
+          this.getLogger().info(`${guest2.name}: "I think we're in a good position, but we need to be careful about who we trust."`);
+          
+          // Potentially reveal another alliance member
+          if (this.controller.allianceSystem) {
+            const alliances = this.controller.allianceSystem.getAlliancesWithBothMembers(guest1.id, guest2.id);
+            
+            if (alliances.length > 0 && Math.random() < 0.5) {
+              const alliance = alliances[0];
+              const otherMembers = alliance.members.filter(m => 
+                m.id !== guest1.id && m.id !== guest2.id && !m.isPlayer
+              );
+              
+              if (otherMembers.length > 0) {
+                const randomMember = otherMembers[Math.floor(Math.random() * otherMembers.length)];
+                this.getLogger().info(`${guest1.name}: "I spoke with ${randomMember.name} earlier, they're still with us."`);
+                
+                // Log this intelligence
+                this.game.logEvent(
+                  'eavesdrop_intel',
+                  `${player.name} learned that ${guest1.name}, ${guest2.name}, and ${randomMember.name} may be in an alliance.`,
+                  [player.id, guest1.id, guest2.id, randomMember.id]
+                );
+              }
+            }
+          }
+        } else {
+          // They're discussing forming an alliance
+          this.getLogger().info(`${guest1.name}: "I've been thinking... we should work together more closely."`);
+          this.getLogger().info(`${guest2.name}: "Like an alliance? I'd be interested in that."`);
+          
+          // Potentially discuss including/excluding the player
+          if (Math.random() < 0.3) {
+            const includePlayer = Math.random() < 0.4; // 40% chance they want to include player
+            
+            if (includePlayer) {
+              this.getLogger().info(`${guest1.name}: "I was thinking we could bring in ${player.name} too."`);
+            } else {
+              this.getLogger().info(`${guest1.name}: "But I don't think we should include ${player.name}."`);
+            }
+            
+            // Log this intelligence
+            this.game.logEvent(
+              'eavesdrop_intel',
+              `${player.name} learned that ${guest1.name} and ${guest2.name} are discussing forming an alliance` + 
+              (includePlayer ? " and might want to include them." : " but don't want to include them."),
+              [player.id, guest1.id, guest2.id]
+            );
+          }
+        }
+        break;
+      }
+      
+      case 'gameAnalysis': {
+        // Discussion about the current game state
+        if (hoh) {
+          this.getLogger().info(`${guest1.name}: "With ${hoh.name} as HOH, we need to be careful."`);
+          
+          const hohRelationship1 = this.controller.relationshipSystem.getEffectiveRelationship(guest1.id, hoh.id);
+          const hohRelationship2 = this.controller.relationshipSystem.getEffectiveRelationship(guest2.id, hoh.id);
+          
+          if (hohRelationship1 < 0 || hohRelationship2 < 0) {
+            // They're worried about the HoH
+            this.getLogger().info(`${guest2.name}: "I'm worried. I don't think we're safe this week."`);
+          } else {
+            // They're confident about the HoH
+            this.getLogger().info(`${guest2.name}: "I think we're good. ${hoh.name} and I had a good talk earlier."`);
+          }
+        } else if (nominees.length > 0) {
+          // Discussion about the nominees
+          const nominee = nominees[0];
+          this.getLogger().info(`${guest1.name}: "Do you think ${nominee.name} is going home?"`);
+          
+          if (Math.random() < 0.5) {
+            this.getLogger().info(`${guest2.name}: "Most likely. The house seems pretty decided."`);
+          } else {
+            this.getLogger().info(`${guest2.name}: "I'm not sure. There might be enough votes to keep them."`);
+          }
+        } else {
+          // General game discussion
+          this.getLogger().info(`${guest1.name}: "The game is getting intense now."`);
+          this.getLogger().info(`${guest2.name}: "Yeah, we need to start thinking about our end game."`);
+        }
+        break;
+      }
+      
+      case 'playerEvaluation': {
+        // Choose a player to evaluate
+        let targetPool = this.game.getActiveHouseguests().filter(hg => 
+          hg.id !== guest1.id && hg.id !== guest2.id
+        );
+        
+        // 50% chance they're talking about the player
+        const evaluatePlayer = Math.random() < 0.5;
+        const target = evaluatePlayer && player ? player : 
+                     targetPool[Math.floor(Math.random() * targetPool.length)];
+        
+        if (!target) return;
+        
+        // Determine sentiment based on relationship
+        const relationshipToTarget1 = this.controller.relationshipSystem.getEffectiveRelationship(guest1.id, target.id);
+        const relationshipToTarget2 = this.controller.relationshipSystem.getEffectiveRelationship(guest2.id, target.id);
+        
+        // Choose first speaker based on stronger feelings
+        const firstSpeaker = Math.abs(relationshipToTarget1) > Math.abs(relationshipToTarget2) ? guest1 : guest2;
+        const secondSpeaker = firstSpeaker === guest1 ? guest2 : guest1;
+        
+        const relationship = firstSpeaker === guest1 ? relationshipToTarget1 : relationshipToTarget2;
+        
+        if (relationship > 20) {
+          // Very positive view
+          this.getLogger().info(`${firstSpeaker.name}: "I really trust ${target.name}. They've been loyal."`);
+          this.getLogger().info(`${secondSpeaker.name}: "Yeah, they're playing a good game."`);
+        } else if (relationship > 0) {
+          // Somewhat positive
+          this.getLogger().info(`${firstSpeaker.name}: "What do you think about ${target.name}?"`);
+          this.getLogger().info(`${secondSpeaker.name}: "They're okay. I don't have any issues with them right now."`);
+        } else if (relationship > -20) {
+          // Somewhat negative
+          this.getLogger().info(`${firstSpeaker.name}: "I don't know if I can trust ${target.name}."`);
+          this.getLogger().info(`${secondSpeaker.name}: "Be careful what you tell them."`);
+        } else {
+          // Very negative
+          this.getLogger().info(`${firstSpeaker.name}: "I can't stand ${target.name}. They're playing everyone."`);
+          this.getLogger().info(`${secondSpeaker.name}: "I know. We need to be strategic about this."`);
+        }
+        
+        // Log this intelligence if it's about the player
+        if (target.id === player.id) {
+          this.game.logEvent(
+            'eavesdrop_intel',
+            `${player.name} overheard ${firstSpeaker.name} and ${secondSpeaker.name} discussing them.`,
+            [player.id, firstSpeaker.id, secondSpeaker.id],
+            { sentiment: relationship > 0 ? 'positive' : 'negative' }
+          );
+        }
+        break;
+      }
+    }
+  }
+  
+  /**
+   * Apply relationship effects based on dialogue response
+   */
+  private applyDialogueRelationshipEffects(playerId: string, targetId: string, response: any): void {
+    // Check if response has the necessary fields
+    if (!response || !this.controller.relationshipSystem) return;
+    
+    // Default values
+    let relationshipChange = 1; // Small positive effect by default
+    
+    // If we have AI-generated thoughts, use them for better effects
+    if (response.thoughts) {
+      if (response.thoughts.includes('hostile') || response.thoughts.includes('angry')) {
+        relationshipChange = -5; // Strong negative
+      } else if (response.thoughts.includes('suspicious') || response.thoughts.includes('distrustful')) {
+        relationshipChange = -2; // Mild negative
+      } else if (response.thoughts.includes('neutral')) {
+        relationshipChange = 0; // No change
+      } else if (response.thoughts.includes('friendly') || response.thoughts.includes('appreciative')) {
+        relationshipChange = 3; // Positive
+      } else if (response.thoughts.includes('very friendly') || response.thoughts.includes('trusted ally')) {
+        relationshipChange = 5; // Strong positive
+      }
+    }
+    
+    // Apply the relationship change
+    if (relationshipChange !== 0) {
+      this.controller.relationshipSystem.updateRelationship(
+        playerId,
+        targetId,
+        relationshipChange,
+        `You had a conversation with ${this.game.getHouseguestById(targetId)?.name || 'someone'}.`
+      );
+      
+      // Reciprocal effect - they also update relationship with player
+      // Usually slightly less impactful to avoid rapid relationship build
+      this.controller.relationshipSystem.updateRelationship(
+        targetId,
+        playerId,
+        relationshipChange * 0.8,
+        `Had a conversation with ${this.game.getHouseguestById(playerId)?.name || 'someone'}.`
+      );
+    }
+  }
+  
+  /**
+   * Handle post-discussion effects based on discussion type
+   */
+  private handlePostDiscussionEffects(
+    playerId: string, 
+    targetId: string, 
+    discussionType: StrategicDiscussionType, 
+    response: any
+  ): void {
+    if (!this.controller.relationshipSystem) return;
+    
+    // Get player and target
+    const player = this.game.getHouseguestById(playerId);
+    const target = this.game.getHouseguestById(targetId);
+    if (!player || !target) return;
+    
+    switch (discussionType) {
+      case 'final_two_deal': {
+        // Check if they seemed to accept the deal
+        const accepted = response.thoughts && 
+                       (response.thoughts.includes('interested') || 
+                        response.thoughts.includes('agree') || 
+                        response.thoughts.includes('accept'));
+        
+        if (accepted) {
+          // They accepted - create a promise for a final 2 deal
+          if (this.game.promises) {
+            const newPromise: GamePromise = {
+              id: `promise-f2-${Date.now()}`,
+              fromId: playerId,
+              toId: targetId,
+              type: 'final_2',
+              description: `Take ${target.name} to final 2 if possible`,
+              madeOnWeek: this.game.week,
+              status: 'pending',
+              context: {
+                reciprocal: true, // Both players made the promise
+                initiallyBelieved: true
+              }
+            };
+            
+            // Create the reciprocal promise
+            const reciprocalPromise: GamePromise = {
+              id: `promise-f2-recip-${Date.now()}`,
+              fromId: targetId,
+              toId: playerId,
+              type: 'final_2',
+              description: `Take ${player.name} to final 2 if possible`,
+              madeOnWeek: this.game.week,
+              status: 'pending',
+              context: {
+                reciprocal: true,
+                relatedPromiseId: newPromise.id,
+                initiallyBelieved: true
+              }
+            };
+            
+            // Link the promises
+            newPromise.context.relatedPromiseId = reciprocalPromise.id;
+            
+            // Add both promises
+            this.game.promises.push(newPromise, reciprocalPromise);
+            
+            // Log the alliance formation
+            this.game.logEvent(
+              'final_2_deal',
+              `${player.name} and ${target.name} made a final 2 deal.`,
+              [playerId, targetId],
+              { promiseIds: [newPromise.id, reciprocalPromise.id] }
+            );
+            
+            // Major relationship boost
+            this.controller.relationshipSystem.addRelationshipEvent(
+              playerId,
+              targetId,
+              'alliance_formed',
+              `You made a final 2 deal with ${target.name}.`,
+              15,
+              false // This is a significant event that shouldn't decay
+            );
+            
+            // Reciprocal effect
+            this.controller.relationshipSystem.addRelationshipEvent(
+              targetId,
+              playerId,
+              'alliance_formed',
+              `${player.name} made a final 2 deal with you.`,
+              15,
+              false
+            );
+          }
+        } else {
+          // They rejected or were noncommittal
+          this.controller.relationshipSystem.updateRelationship(
+            playerId,
+            targetId,
+            -2,
+            `${target.name} wasn't enthusiastic about your final 2 proposal.`
+          );
+        }
+        break;
+      }
+      
+      case 'suggest_target': {
+        // Check if they agree with the target
+        const agreed = response.thoughts && 
+                     (response.thoughts.includes('agree') || 
+                      response.thoughts.includes('good target'));
+        
+        if (agreed) {
+          // Record alignment on targeting
+          this.controller.relationshipSystem.addRelationshipEvent(
+            playerId,
+            targetId,
+            'strategy_discussion',
+            `${target.name} agreed with your targeting suggestion.`,
+            5,
+            true
+          );
+        }
+        break;
+      }
+      
+      case 'spread_rumor': {
+        // Get the rumor target
+        const rumorTargetId = response.params?.rumorTargetId;
+        const rumorTarget = rumorTargetId ? this.game.getHouseguestById(rumorTargetId) : null;
+        
+        if (!rumorTarget) break;
+        
+        // Check if they believed the rumor
+        const believedRumor = !response.thoughts || 
+                            (!response.thoughts.includes('skeptical') && 
+                             !response.thoughts.includes('doubt'));
+        
+        if (believedRumor) {
+          // They believed it - damage relationship with rumor target
+          this.controller.relationshipSystem.updateRelationship(
+            targetId,
+            rumorTargetId,
+            -7,
+            `${target.name} heard negative rumors about ${rumorTarget.name} from ${player.name}.`
+          );
+          
+          // Log the rumor spread success
+          this.game.logEvent(
+            'rumor_spread',
+            `${player.name} successfully spread a rumor about ${rumorTarget.name} to ${target.name}.`,
+            [playerId, targetId, rumorTargetId],
+            { success: true }
+          );
+          
+          // 30% chance the rumor target finds out
+          if (Math.random() < 0.3) {
+            setTimeout(() => {
+              this.getLogger().info(`${rumorTarget.name} found out you spread rumors about them to ${target.name}!`);
+              this.controller.relationshipSystem.recordBetrayal(
+                playerId,
+                rumorTargetId,
+                `${player.name} spread harmful rumors about ${rumorTarget.name}.`
+              );
+            }, 1000); // Delay this revelation
+          }
+        } else {
+          // They didn't believe it - slight negative impact
+          this.controller.relationshipSystem.updateRelationship(
+            targetId,
+            playerId,
+            -3,
+            `${target.name} was skeptical of rumors you spread.`
+          );
+          
+          // Log the failed rumor
+          this.game.logEvent(
+            'rumor_spread',
+            `${player.name} tried to spread a rumor about ${rumorTarget.name} but ${target.name} didn't believe it.`,
+            [playerId, targetId, rumorTargetId],
+            { success: false }
+          );
+        }
+        break;
+      }
+    }
+  }
+  
+  /**
+   * Show dialogue options for player to respond
+   * (Would be expanded in UI implementation)
+   */
+  private showDialogueOptions(playerId: string, targetId: string, response: any): void {
+    // This is a stub for future implementation
+    // In a complete implementation, this would show UI options for the player to respond
+  }
+  
+  /**
+   * Handle alliance meeting discussion
+   */
+  private handleAllianceMeetingDiscussion(alliance: any, members: Houseguest[]): void {
+    if (members.length === 0) {
+      this.getLogger().info("No other alliance members are present.");
+      return;
+    }
+    
+    // Choose a discussion topic for the alliance meeting
+    const discussionTopics = [
+      'target_discussion',   // Who to target
+      'vote_coordination',   // How to vote
+      'loyalty_check',       // Check for loyalty issues
+      'competition_strategy' // Strategy for winning comps
+    ];
+    
+    const topic = discussionTopics[Math.floor(Math.random() * discussionTopics.length)];
+    const player = this.game.houseguests.find(h => h.isPlayer);
+    if (!player) return;
+    
+    // Have alliance members discuss the topic
+    this.getLogger().info(`The alliance discusses ${topic.replace('_', ' ')}.`);
+    
+    switch (topic) {
+      case 'target_discussion': {
+        // Choose a potential target
+        const potentialTargets = this.game.getActiveHouseguests().filter(hg => 
+          !alliance.members.some((m: any) => m.id === hg.id)
+        );
+        
+        if (potentialTargets.length > 0) {
+          const target = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
+          
+          // First alliance member suggests the target
+          const firstMember = members[0];
+          this.getLogger().info(`${firstMember.name} says: "I think we should target ${target.name} next week."`);
+          
+          // Get consensus from others
+          const consensusMessages = [
+            `"I agree, they're dangerous."`,
+            `"That's a good target."`,
+            `"They're a threat to our alliance."`
+          ];
+          
+          members.slice(1).forEach(member => {
+            const message = consensusMessages[Math.floor(Math.random() * consensusMessages.length)];
+            this.getLogger().info(`${member.name} says: ${message}`);
+          });
+          
+          // Update relationship between target and alliance members
+          // This represents the alliance's intention to target them
+          alliance.members.forEach((member: any) => {
+            if (!member.isPlayer) {
+              this.controller.relationshipSystem.updateRelationship(
+                member.id,
+                target.id,
+                -3,
+                `Alliance targeting intention.`
+              );
+            }
+          });
+          
+          // Log the alliance targeting
+          this.game.logEvent(
+            'alliance_targeting',
+            `${alliance.name} alliance plans to target ${target.name}.`,
+            [...alliance.members.map((m: any) => m.id), target.id]
+          );
+        }
+        break;
+      }
+      
+      case 'vote_coordination': {
+        if (this.game.nominees.length > 0) {
+          // Discuss current nominees and voting plans
+          const nominee1Id = this.game.nominees[0];
+          const nominee2Id = this.game.nominees.length > 1 ? this.game.nominees[1] : null;
+          
+          const nominee1 = nominee1Id ? this.game.getHouseguestById(nominee1Id) : null;
+          const nominee2 = nominee2Id ? this.game.getHouseguestById(nominee2Id) : null;
+          
+          if (nominee1) {
+            // Check if either nominee is in alliance
+            const nominee1InAlliance = alliance.members.some((m: any) => m.id === nominee1Id);
+            const nominee2InAlliance = nominee2 && alliance.members.some((m: any) => m.id === nominee2Id);
+            
+            if (nominee1InAlliance || nominee2InAlliance) {
+              // Alliance member nominated - discuss saving them
+              const nominatedMember = nominee1InAlliance ? nominee1 : nominee2;
+              const otherNominee = nominee1InAlliance ? nominee2 : nominee1;
+              
+              this.getLogger().info(`${members[0].name} says: "We need to save ${nominatedMember.name}. Everyone votes to evict ${otherNominee?.name}."`);
+              members.slice(1).forEach(member => {
+                this.getLogger().info(`${member.name} agrees.`);
+              });
+              
+              // Log the vote coordination
+              this.game.logEvent(
+                'alliance_vote_coordination',
+                `${alliance.name} alliance plans to save ${nominatedMember.name}.`,
+                [...alliance.members.map((m: any) => m.id), nominatedMember.id]
+              );
+            } else {
+              // Neither nominee in alliance - pick one to target
+              const target = Math.random() < 0.5 ? nominee1 : (nominee2 || nominee1);
+              
+              this.getLogger().info(`${members[0].name} says: "I think we should all vote to evict ${target.name}."`);
+              members.slice(1).forEach(member => {
+                this.getLogger().info(`${member.name} nods in agreement.`);
+              });
+              
+              // Log the vote coordination
+              this.game.logEvent(
+                'alliance_vote_coordination',
+                `${alliance.name} alliance plans to evict ${target.name}.`,
+                [...alliance.members.map((m: any) => m.id), target.id]
+              );
+            }
+          }
+        } else {
+          // No nominees yet, general voting strategy
+          this.getLogger().info(`${members[0].name} says: "We need to make sure we all vote together this week."`);
+          members.slice(1).forEach(member => {
+            this.getLogger().info(`${member.name} agrees.`);
+          });
+        }
+        break;
+      }
+      
+      case 'loyalty_check': {
+        // Check if anyone in the alliance seems less loyal
+        let leastLoyalMember = null;
+        let lowestLoyalty = Infinity;
+        
+        // Calculate average relationship within alliance
+        alliance.members.forEach((member: any) => {
+          if (!member.isPlayer) {
+            let totalRelationship = 0;
+            let count = 0;
+            
+            alliance.members.forEach((otherMember: any) => {
+              if (member.id !== otherMember.id) {
+                const relationship = this.controller.relationshipSystem.getEffectiveRelationship(
+                  member.id, 
+                  otherMember.id
+                );
+                totalRelationship += relationship;
+                count++;
+              }
+            });
+            
+            const averageRelationship = count > 0 ? totalRelationship / count : 0;
+            
+            // Find member with lowest average relationship to others
+            if (averageRelationship < lowestLoyalty) {
+              lowestLoyalty = averageRelationship;
+              leastLoyalMember = member;
+            }
+          }
+        });
+        
+        // Generate discussion based on loyalty check
+        if (leastLoyalMember && lowestLoyalty < 15) { // If someone seems disloyal
+          const firstSpeaker = members.find(m => m.id !== leastLoyalMember.id) || members[0];
+          
+          if (leastLoyalMember.isPlayer) {
+            // If player seems least loyal, discuss behind their back
+            this.getLogger().info(`${firstSpeaker.name} seems to be watching you carefully during the meeting.`);
+            this.getLogger().info(`You notice ${members[0].name} and ${members[1]?.name || 'others'} whispering at one point.`);
+            
+            // Log suspicion
+            this.game.logEvent(
+              'alliance_loyalty_questioned',
+              `${player.name}'s loyalty to ${alliance.name} seems to be in question.`,
+              [player.id, ...members.map(m => m.id)]
+            );
+          } else if (!members.some(m => m.id === leastLoyalMember.id)) {
+            // If least loyal member isn't present, discuss them
+            this.getLogger().info(`${firstSpeaker.name} says: "Is everyone sure about ${leastLoyalMember.name}'s loyalty to us?"`);
+            this.getLogger().info(`${members[0].name} says: "I've noticed they've been spending time with ${this.getRandomNonAllianceName(alliance)}."`);
+            
+            // Log suspicion
+            this.game.logEvent(
+              'alliance_loyalty_questioned',
+              `${leastLoyalMember.name}'s loyalty to ${alliance.name} is being questioned.`,
+              [leastLoyalMember.id, ...members.map(m => m.id)]
+            );
+          } else {
+            // General loyalty discussion
+            this.getLogger().info(`${firstSpeaker.name} says: "We need to stay loyal to each other. The other side is trying to split us up."`);
+            members.forEach(member => {
+              if (member.id !== firstSpeaker.id) {
+                this.getLogger().info(`${member.name} says: "Absolutely, I'm with this alliance 100%."`);
+              }
+            });
+          }
+        } else {
+          // Alliance seems solid
+          this.getLogger().info(`${members[0].name} says: "Our alliance is strong. We need to keep it that way."`);
+          members.slice(1).forEach(member => {
+            this.getLogger().info(`${member.name} says: "I'm loyal to this group all the way."`);
+          });
+          
+          // Log alliance strength
+          this.game.logEvent(
+            'alliance_loyalty_proven',
+            `${alliance.name} alliance reaffirms their loyalty to each other.`,
+            [...alliance.members.map((m: any) => m.id)]
+          );
+          
+          // Slight boost to alliance stability
+          if (typeof alliance.stability === 'number') {
+            alliance.stability = Math.min(100, alliance.stability + 5);
+          }
+        }
+        break;
+      }
+      
+      case 'competition_strategy': {
+        // Discuss competition strategy
+        const nextCompType = this.game.phase === 'SocialInteraction' ? 'HOH' : 'POV';
+        
+        // Find strongest competitor in alliance for this comp type
+        let strongestMember = members[0];
+        let highestStat = 0;
+        
+        members.forEach(member => {
+          const stat = member.stats ? 
+            (nextCompType === 'HOH' ? 
+              (member.stats.physical + member.stats.mental + member.stats.endurance) / 3 : 
+              member.stats.competition) : 
+            5; // Default if no stats
+          
+          if (stat > highestStat) {
+            highestStat = stat;
+            strongestMember = member;
+          }
+        });
+        
+        // Discuss who should win
+        this.getLogger().info(`${members[0].name} says: "For the next ${nextCompType} competition, we need to make sure one of us wins."`);
+        
+        if (strongestMember.isPlayer) {
+          // Player is strongest
+          this.getLogger().info(`${members[0].name} looks at you and says: "You're good at competitions. We're counting on you."`);
+        } else {
+          // AI houseguest is strongest
+          this.getLogger().info(`${members[0].name} says: "${strongestMember.name} has the best chance. If you win, use it to help the alliance."`);
+        }
+        
+        // Discuss throwing competitions
+        if (alliance.members.length > 3) {
+          const shouldThrow = Math.random() < 0.4; // 40% chance of suggesting throwing
+          
+          if (shouldThrow) {
+            const targetToAvoidHoH = alliance.members.find((m: any) => !m.isPlayer);
+            
+            if (targetToAvoidHoH) {
+              this.getLogger().info(`${members[0].name} says: "It might be smart for ${targetToAvoidHoH.name} to lay low and not win this one."`);
+            }
+          }
+        }
+        
+        // Log the strategy discussion
+        this.game.logEvent(
+          'alliance_competition_strategy',
+          `${alliance.name} alliance discusses competition strategy.`,
+          [...alliance.members.map((m: any) => m.id)]
+        );
+        break;
+      }
+    }
+    
+    // Strengthen alliance relationships after meeting
+    alliance.members.forEach((member1: any) => {
+      alliance.members.forEach((member2: any) => {
+        if (member1.id !== member2.id) {
+          this.controller.relationshipSystem.updateRelationship(
+            member1.id,
+            member2.id,
+            2,
+            `Alliance meeting strengthened relationship.`
+          );
+        }
+      });
+    });
+    
+    // Add strategic event for alliance members
+    alliance.members.forEach((member: any) => {
+      this.controller.relationshipSystem.addRelationshipEvent(
+        player.id,
+        member.id,
+        'alliance_meeting',
+        `You held an alliance meeting with ${alliance.name}.`,
+        3,
+        true
+      );
+    });
+  }
+  
+  /**
+   * Get promises between two houseguests (in either direction)
+   */
+  private getPromisesBetween(guest1Id: string, guest2Id: string): GamePromise[] {
+    if (!this.game.promises) return [];
+    
+    return this.game.promises.filter(p => 
+      (p.fromId === guest1Id && p.toId === guest2Id) ||
+      (p.fromId === guest2Id && p.toId === guest1Id)
+    );
+  }
+  
+  /**
+   * Display all promises related to a player
+   */
+  private displayPlayerPromises(playerId: string): void {
+    if (!this.game.promises) {
+      this.getLogger().info("No promises have been made yet.");
+      return;
+    }
+    
+    // Get promises made by the player
+    const promisesMade = this.game.promises.filter(p => p.fromId === playerId);
+    
+    // Get promises made to the player
+    const promisesReceived = this.game.promises.filter(p => p.toId === playerId);
+    
+    this.getLogger().info("--- Your Promises ---");
+    
+    if (promisesMade.length === 0) {
+      this.getLogger().info("You haven't made any promises yet.");
+    } else {
+      this.getLogger().info("Promises you've made:");
+      promisesMade.forEach(promise => {
+        const targetName = this.game.getHouseguestById(promise.toId)?.name || 'Unknown';
+        const status = promise.status === 'pending' ? 'Active' : 
+                      promise.status === 'kept' ? 'Kept' : 'Broken';
+                      
+        this.getLogger().info(`- To ${targetName}: ${promise.description} (${status})`);
+      });
+    }
+    
+    if (promisesReceived.length === 0) {
+      this.getLogger().info("\nNo one has made promises to you yet.");
+    } else {
+      this.getLogger().info("\nPromises made to you:");
+      promisesReceived.forEach(promise => {
+        const fromName = this.game.getHouseguestById(promise.fromId)?.name || 'Unknown';
+        const status = promise.status === 'pending' ? 'Active' : 
+                      promise.status === 'kept' ? 'Kept' : 'Broken';
+                      
+        this.getLogger().info(`- From ${fromName}: ${promise.description} (${status})`);
+      });
+    }
+  }
+  
+  /**
+   * Get a random name that's not in the alliance for narrative purposes
+   */
+  private getRandomNonAllianceName(alliance: any): string {
+    const nonAllianceHouseguests = this.game.getActiveHouseguests().filter(
+      houseguest => !alliance.members.some((m: any) => m.id === houseguest.id)
+    );
+    
+    if (nonAllianceHouseguests.length > 0) {
+      return nonAllianceHouseguests[Math.floor(Math.random() * nonAllianceHouseguests.length)].name;
+    }
+    
+    return "someone else";
+  }
+  
+  /**
+   * Convert relationship score to a descriptive string
+   */
+  private describeRelationship(score: number): string {
+    if (score >= 50) return "Close Ally";
+    if (score >= 30) return "Trusted Friend";
+    if (score >= 15) return "Friend";
+    if (score >= 5) return "Friendly";
+    if (score > -5) return "Neutral";
+    if (score > -15) return "Wary";
+    if (score > -30) return "Distrustful";
+    if (score > -50) return "Enemy";
+    return "Bitter Enemy";
+  }
+  
+  /**
+   * Helper for logging
+   */
+  private getHohName(): string {
+    if (!this.game.hohWinner) return "Nobody";
+    const hoh = this.game.getHouseguestById(this.game.hohWinner);
+    return hoh ? hoh.name : "Unknown";
+  }
+  
+  /**
+   * Helper for logging
+   */
+  private getNomineeNames(): string[] {
+    return this.game.nominees
+      .map(id => {
+        const houseguest = this.game.getHouseguestById(id);
+        return houseguest ? houseguest.name : "Unknown";
+      });
+  }
+  
+  /**
+   * Helper for logging
+   */
+  private getPovHolderName(): string {
+    if (!this.game.povWinner) return "Nobody";
+    const pov = this.game.getHouseguestById(this.game.povWinner);
+    return pov ? pov.name : "Unknown";
+  }
+}
