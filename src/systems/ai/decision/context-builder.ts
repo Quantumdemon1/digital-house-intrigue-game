@@ -43,6 +43,7 @@ export class DecisionContextBuilder {
    */
   buildVetoContext(vetoHolder: Houseguest, game: BigBrotherGame): any {
     const nominees = game.nominees?.map(nom => {
+      // Make sure we're getting the full houseguest object
       const nominee = game.houseguests.find(hg => hg.id === nom.id);
       return nominee;
     }).filter(Boolean) as Houseguest[];
