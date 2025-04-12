@@ -7,7 +7,7 @@
 import { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import { Houseguest } from '@/models/houseguest';
 import { Logger } from '@/utils/logger';
-import { AIDecisionMaker } from './decision-maker';
+import { DecisionMaker } from './decision/decision-maker';
 import { AIResponseParser, AIDecisionResponse } from './response-parser';
 import { AIMemoryManager } from './memory-manager';
 import { AIErrorHandler } from './error-handler';
@@ -16,7 +16,7 @@ import { FallbackCoordinator } from './fallback-coordinator';
 
 export class AIIntegrationSystem {
   private logger: Logger;
-  private decisionMaker: AIDecisionMaker;
+  private decisionMaker: DecisionMaker;
   private responseParser: AIResponseParser;
   private apiKey: string;
   private errorHandler: AIErrorHandler;
@@ -27,7 +27,7 @@ export class AIIntegrationSystem {
   constructor(logger: Logger, apiKey: string) {
     this.logger = logger;
     this.apiKey = apiKey;
-    this.decisionMaker = new AIDecisionMaker(logger, apiKey);
+    this.decisionMaker = new DecisionMaker(logger, apiKey);
     this.responseParser = new AIResponseParser(logger);
     this.errorHandler = new AIErrorHandler(logger);
     this.decisionHelper = new AIDecisionHelper(logger);
