@@ -7,6 +7,7 @@ import type { AllianceSystem } from "../systems/alliance-system";
 import type { GameState } from "../models/game-state";
 import type { Houseguest } from "../models/houseguest";
 import type { GameStateBase } from "../game-states/GameStateBase";
+import type { PromiseSystem } from "../systems/promise-system"; // Add import for PromiseSystem
 
 /**
  * Interface for the game controller facade
@@ -17,6 +18,7 @@ export interface IGameControllerFacade {
   relationshipSystem: RelationshipSystem;
   aiSystem?: AIIntegrationSystem;
   allianceSystem?: AllianceSystem;
+  promiseSystem?: PromiseSystem; // Add promiseSystem property
   gameState: GameState;
   currentLocation: string;
   currentState?: GameStateBase;

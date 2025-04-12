@@ -7,6 +7,7 @@ import { Houseguest } from '../models/houseguest';
 import { RelationshipSystem } from '../systems/relationship-system';
 import { CompetitionSystem } from '../systems/competition-system';
 import { AIIntegrationSystem } from '../systems/ai-integration';
+import { PromiseSystem } from '../systems/promise-system'; // Add import for PromiseSystem
 import { GameRecapGenerator } from '../utils/recap';
 import { Logger, LogLevel } from '../utils/logger';
 import { GameAction, GameContextType } from './types/game-context-types';
@@ -25,6 +26,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         relationshipSystem: new RelationshipSystem(logger),
         competitionSystem: new CompetitionSystem(logger),
         aiSystem: new AIIntegrationSystem(logger, config.GEMINI_API_KEY),
+        promiseSystem: new PromiseSystem(logger), // Add PromiseSystem instantiation
         recapGenerator: new GameRecapGenerator(),
     });
 
@@ -34,6 +36,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isPaused, setIsPaused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
+    // Initialize game instance with systems
+    useEffect(() => {
+        if (gameInstance) {
+            // Assign systems to game instance
+            gameInstance.relationshipSystem = systemsRef.current.relationshipSystem;
+            gameInstance.competitionSystem = systemsRef.current.competitionSystem;
+            gameInstance.aiSystem = systemsRef.current.aiSystem;
+            gameInstance.promiseSystem = systemsRef.current.promiseSystem; // Assign promiseSystem to game instance
+        }
+    }, [gameInstance]);
+
     // Log initial game state for debugging
     useEffect(() => {
         logger.info(`Game initialized with phase: ${gameState.phase}`);
@@ -107,6 +120,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         relationshipSystem: systemsRef.current.relationshipSystem,
         competitionSystem: systemsRef.current.competitionSystem,
         aiSystem: systemsRef.current.aiSystem,
+        promiseSystem: systemsRef.current.promiseSystem, // Add promiseSystem to context value
         recapGenerator: systemsRef.current.recapGenerator,
         logger,
         dispatch,

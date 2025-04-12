@@ -1,4 +1,3 @@
-
 /**
  * @file systems/promise-system.ts
  * @description System to handle promises between houseguests
@@ -207,3 +206,6 @@ export class PromiseSystem {
     }
   }
 }
+
+// Export the PromiseSystem type
+export type { PromiseSystem };

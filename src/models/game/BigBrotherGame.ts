@@ -8,6 +8,7 @@ import { Houseguest, HouseguestStatus } from '../houseguest';
 import { Alliance } from '../alliance';
 import { GamePhase, GameEvent } from '../game-state';
 import { Promise } from '../promise'; // Add import for Promise type
+import { PromiseSystem } from '../../systems/promise-system'; // Add import for PromiseSystem
 import { 
   logGameEvent, 
   advancePhase, 
@@ -49,6 +50,7 @@ export class BigBrotherGame implements GameStateInterface {
   public competitionSystem: any = null;
   public aiSystem: any = null;
   public allianceSystem: any = null;
+  public promiseSystem: PromiseSystem | null = null; // Add promiseSystem property
   
   // Game state management
   public currentState: any = null;
