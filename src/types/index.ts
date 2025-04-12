@@ -1,4 +1,3 @@
-
 /**
  * @file src/types/index.ts
  * @description Central export for all type definitions
@@ -10,7 +9,7 @@ export * from './interfaces'; // Export facades
 export type { RelationshipSystem } from '../systems/relationship-system';
 export type { CompetitionSystem } from '../systems/competition-system';
 export type { AIIntegrationSystem } from '../systems/ai-integration';
-export { PromiseSystem } from '../systems/promise-system'; // Export the PromiseSystem class directly
+export { PromiseSystem } from '../systems/promise/index'; // Updated export path
 export type { GameRecapGenerator } from '../utils/recap';
 export type { Logger } from '../utils/logger';
 

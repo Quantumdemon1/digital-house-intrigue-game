@@ -6,7 +6,7 @@ import type { IGameControllerFacade } from '../../types/interfaces';
 import type { RelationshipSystem } from '../../systems/relationship-system';
 import type { CompetitionSystem } from '../../systems/competition-system';
 import type { AIIntegrationSystem } from '../../systems/ai/ai-integration-system';
-import { PromiseSystem } from '../../systems/promise-system'; // Import as a regular class, not a type
+import { PromiseSystem } from '../../systems/promise/index'; // Updated import path
 import type { GameRecapGenerator } from '../../utils/recap';
 import type { Logger } from '../../utils/logger';
 import type { RelationshipEvent, RelationshipEventType } from '../../models/relationship-event';

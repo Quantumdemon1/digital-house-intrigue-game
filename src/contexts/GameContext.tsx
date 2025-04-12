@@ -7,7 +7,7 @@ import { Houseguest } from '../models/houseguest';
 import { RelationshipSystem } from '../systems/relationship-system';
 import { CompetitionSystem } from '../systems/competition-system';
 import { AIIntegrationSystem } from '../systems/ai-integration';
-import { PromiseSystem } from '../systems/promise-system'; // Import PromiseSystem class
+import { PromiseSystem } from '../systems/promise/index'; // Updated import path
 import { GameRecapGenerator } from '../utils/recap';
 import { Logger, LogLevel } from '../utils/logger';
 import { GameAction, GameContextType } from './types/game-context-types';
