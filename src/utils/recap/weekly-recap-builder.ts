@@ -1,3 +1,4 @@
+
 /**
  * @file src/utils/recap/weekly-recap-builder.ts
  * @description Builds recaps for individual game weeks
@@ -200,8 +201,9 @@ export class WeeklyRecapBuilder {
     const allianceEvents: string[] = [];
     
     events.filter(e => e.type.includes('ALLIANCE_')).forEach(event => {
-      const alliances = this.game?.alliances || [];
-      const alliance = alliances.find(a => a.id === event.data?.allianceId);
+      // Get alliances from the game model
+      const gameAlliances = this.game?.allianceSystem?.getAllAlliances() || [];
+      const alliance = gameAlliances.find(a => a.id === event.data?.allianceId);
       
       if (alliance) {
         switch (event.type) {
