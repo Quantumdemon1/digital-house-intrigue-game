@@ -1,3 +1,4 @@
+
 import type { GamePhase } from '../../models/game-state';
 import type { BigBrotherGame } from '../../models/game/BigBrotherGame'; 
 import type { Houseguest } from '../../models/houseguest';
@@ -50,7 +51,7 @@ type GameStateAction =
   | { type: 'SET_PHASE'; payload: GamePhase }
   | { type: 'ADVANCE_WEEK' }
   | { type: 'END_GAME'; payload: { winner: Houseguest; runnerUp: Houseguest } }
-  | { type: 'LOG_EVENT'; payload: { week: number; phase: GamePhase; type: string; description: string; involvedHouseguests: string[] } };
+  | { type: 'LOG_EVENT'; payload: { week: number; phase: GamePhase; type: string; description: string; involvedHouseguests: string[]; data?: Record<string, any> } };
 
 // Combined action type
 export type GameAction = SystemAction | PlayerAction | UIUpdateAction | GameStateAction;

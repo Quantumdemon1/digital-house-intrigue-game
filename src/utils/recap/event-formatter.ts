@@ -123,7 +123,9 @@ export class EventFormatter {
       const { allianceId } = event.data;
       
       if (!allianceMap[allianceId]) {
-        const alliance = this.game?.alliances?.find(a => a.id === allianceId);
+        // Safely check if game.alliances exists before using it
+        const alliances = this.game?.alliances || [];
+        const alliance = alliances.find(a => a.id === allianceId);
         if (!alliance) return;
         
         allianceMap[allianceId] = {

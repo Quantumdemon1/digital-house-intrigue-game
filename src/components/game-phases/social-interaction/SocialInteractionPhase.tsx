@@ -60,10 +60,11 @@ const SocialInteractionPhase: React.FC = () => {
     
     // Log the action with enhanced details
     if (enhancedLogger) {
+      const playerHG = game.getHouseguestById(game.houseguests.find(h => h.isPlayer)?.id || '');
       enhancedLogger.logEvent({
         type: 'SOCIAL_ACTION',
         description: `Player initiated ${actionId.replace(/_/g, ' ')}`,
-        involvedHouseguests: params?.targetId ? [game.player?.id || '', params.targetId] : [game.player?.id || ''],
+        involvedHouseguests: params?.targetId ? [(playerHG?.id || ''), params.targetId] : [(playerHG?.id || '')],
         data: { actionId, params }
       });
     }

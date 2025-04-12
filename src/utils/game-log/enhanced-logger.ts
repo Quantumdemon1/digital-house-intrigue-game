@@ -41,17 +41,12 @@ export class EnhancedGameLogger {
     };
 
     // Log to game event log
-    this.game.dispatch({
-      type: 'LOG_EVENT',
-      payload: {
-        week: this.game.week,
-        phase: this.game.phase as GamePhase,
-        type,
-        description,
-        involvedHouseguests,
-        data: enhancedData
-      }
-    });
+    this.game.logEvent(
+      type,
+      description,
+      involvedHouseguests,
+      enhancedData
+    );
 
     // Output to console log as well for debugging
     this.logger.info(`[${type}] ${description}`, enhancedData);
@@ -74,20 +69,15 @@ export class EnhancedGameLogger {
         if (fromGuest && toGuest) {
           const statusChangeMsg = `${fromGuest.name} and ${toGuest.name} are now ${rel.newStatus}`;
           
-          this.game.dispatch({
-            type: 'LOG_EVENT',
-            payload: {
-              week: this.game.week,
-              phase: this.game.phase as GamePhase,
-              type: 'RELATIONSHIP_THRESHOLD',
-              description: statusChangeMsg,
-              involvedHouseguests: [rel.from, rel.to],
-              data: { 
-                relationshipStatus: rel.newStatus,
-                change: rel.change
-              }
+          this.game.logEvent(
+            'RELATIONSHIP_THRESHOLD',
+            statusChangeMsg,
+            [rel.from, rel.to],
+            { 
+              relationshipStatus: rel.newStatus,
+              change: rel.change
             }
-          });
+          );
           
           this.logger.info(`[RELATIONSHIP] ${statusChangeMsg}`, { change: rel.change });
         }
