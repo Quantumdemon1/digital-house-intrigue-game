@@ -85,6 +85,20 @@ export class AIResponseParser {
   }
   
   /**
+   * Parses the API response into a structured decision
+   */
+  parseDecision(responseText: string, decisionType: string): any {
+    try {
+      const parsedResponse = this.parseAndValidateResponse(responseText, decisionType);
+      return parsedResponse.decision;
+    } catch (error) {
+      this.logger.error(`Failed to parse decision: ${error}`);
+      // Return a default empty decision object
+      return {};
+    }
+  }
+  
+  /**
    * Validates the structure of the decision based on type
    */
   private validateDecisionStructure(decision: any, decisionType: string): void {

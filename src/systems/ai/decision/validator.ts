@@ -58,9 +58,11 @@ export class DecisionValidator {
     // If using veto, check if nominee exists
     if (decision.useVeto) {
       // Process nominees array, filtering out null values before processing
-      const nominees = game.nominees
-        ?.map(nom => {
-          if (nom === null) return null;
+      const nominees = (game.nominees || [])
+        .filter((nom): nom is (Houseguest | {id: string}) => nom !== null) // Filter out null values
+        .map(nom => {
+          // If nom is already a Houseguest object, return it
+          if ('name' in nom) return nom as Houseguest;
           
           // Process non-null values
           if (typeof nom === 'object' && nom !== null && 'id' in nom) {
@@ -73,7 +75,7 @@ export class DecisionValidator {
           }
           return null;
         })
-        .filter((nom): nom is Houseguest => nom !== null); // Type guard to filter out nulls
+        .filter((nom): nom is Houseguest => nom !== null); // Final filter to ensure all nominees are valid Houseguests
       
       const nomineeNames = nominees.map(nominee => nominee.name);
       const saveNomineeExists = nomineeNames.includes(decision.saveNominee);

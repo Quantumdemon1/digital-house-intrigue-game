@@ -11,7 +11,7 @@ import { DecisionContextBuilder } from './decision/context-builder';
 import { DecisionValidator } from './decision/validator';
 import { ReplacementContextBuilder } from './decision/replacement-context-builder';
 import { ReplacementValidator } from './decision/replacement-validator';
-import { AIResponseParser } from './response-parser';
+import { AIResponseParser, AIDecisionResponse } from './response-parser';
 
 export class AIDecisionHelper {
   private logger: Logger;
@@ -96,6 +96,32 @@ export class AIDecisionHelper {
     responseText: string
   ): any {
     const parser = new AIResponseParser(this.logger);
-    return parser.parseDecision(responseText, decisionType);
+    return parser.parseAndValidateResponse(responseText, decisionType).decision;
+  }
+  
+  /**
+   * Sets up enhanced logging for AI decisions
+   */
+  setupEnhancedLogger(game: BigBrotherGame): void {
+    // Configure any enhanced logging needed for the game instance
+    this.logger.debug("Enhanced AI decision logging configured");
+  }
+  
+  /**
+   * Log AI decision with detailed information
+   */
+  logAIDecision(
+    houseguest: Houseguest, 
+    decisionType: string, 
+    parsedResponse: AIDecisionResponse,
+    game: BigBrotherGame
+  ): void {
+    this.logger.info(`AI Decision by ${houseguest.name}`, {
+      type: decisionType,
+      decision: parsedResponse.decision,
+      reasoning: parsedResponse.reasoning ? parsedResponse.reasoning.substring(0, 100) + "..." : "No reasoning provided"
+    });
+    
+    // Additional logging could be added here based on decision type
   }
 }

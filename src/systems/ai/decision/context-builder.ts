@@ -43,28 +43,32 @@ export class DecisionContextBuilder {
    */
   buildVetoContext(vetoHolder: Houseguest, game: BigBrotherGame): any {
     // Process nominees array, filtering out null values before processing
-    const nominees = game.nominees
-      ?.map(nom => {
-        if (nom === null) return null;
+    const nominees = (game.nominees || [])
+      .filter((nom): nom is (Houseguest | {id: string}) => nom !== null) // Filter out null values
+      .map(nom => {
+        // If nom is already a Houseguest object, return it
+        if ('name' in nom) return nom as Houseguest;
         
-        // Process non-null values
+        // If nom is an object with an id property (but not a full Houseguest)
         if (typeof nom === 'object' && nom !== null && 'id' in nom) {
           // Make sure we're getting the full houseguest object
           return game.houseguests.find(hg => hg.id === (nom as {id: string}).id) || null;
         }
+        // If nom is a string (an ID), find the corresponding houseguest
         else if (typeof nom === 'string') {
-          // If nom is a string (an ID), find the corresponding houseguest
           return game.houseguests.find(hg => hg.id === nom) || null;
         }
         return null;
       })
-      .filter((nom): nom is Houseguest => nom !== null); // Type guard to filter out nulls
+      .filter((nom): nom is Houseguest => nom !== null); // Final filter to ensure all nominees are valid Houseguests
     
     // Build relationships object
     const relationships: Record<string, number> = {};
     nominees.forEach(nominee => {
-      const relationshipValue = this.getRelationshipValue(vetoHolder.id, nominee.id, game);
-      relationships[nominee.name] = relationshipValue;
+      if (nominee) { // Extra null check for safety
+        const relationshipValue = this.getRelationshipValue(vetoHolder.id, nominee.id, game);
+        relationships[nominee.name] = relationshipValue;
+      }
     });
     
     return {
