@@ -1,6 +1,7 @@
 
 import { SocialActionHandlerParams } from '../types';
 import { findPlayerHouseguest, logSocialEvent, updateRelationship } from '../utils';
+import { PromiseType } from '../../../models/promise';
 
 /**
  * Handle making promises to other houseguests
@@ -17,6 +18,17 @@ export function handleMakePromise({
   if (player && target) {
     const type = promiseType || 'safety';
     const description = promiseDescription || 'a gameplay promise';
+    
+    // Create a promise in the game state
+    if (controller.promiseSystem) {
+      controller.promiseSystem.createPromise(
+        player.id,
+        target.id,
+        type as PromiseType,
+        description,
+        { madeThrough: 'social_interaction' }
+      );
+    }
     
     // Making a promise has a positive effect on relationship
     const improvement = Math.floor(Math.random() * 6) + 7; // 7-12 points

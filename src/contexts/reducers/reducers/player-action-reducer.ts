@@ -130,7 +130,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             type: payload.params.promiseType as PromiseType,
             description: payload.params.promiseDescription || `Made a promise to ${payload.params.targetName}`,
             madeOnWeek: state.week,
-            status: 'pending',
+            status: 'pending' as const, // Type assertion to ensure TypeScript recognizes this as a valid PromiseStatus
             context: {}
           };
           

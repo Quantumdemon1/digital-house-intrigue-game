@@ -17,7 +17,9 @@ export type RelationshipEventType =
   | 'alliance_meeting'
   | 'lied'
   | 'deception'
-  | 'supported';
+  | 'supported'
+  | 'kept_promise'       // Added for promise system
+  | 'heard_about_betrayal'; // Added for betrayal spreading
 
 export interface RelationshipEvent {
   timestamp: number;
