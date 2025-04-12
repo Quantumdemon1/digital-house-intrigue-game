@@ -1,82 +1,38 @@
 
 import React from 'react';
-import { CardContent } from '@/components/ui/card';
+import { Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CardContent } from '@/components/ui/card';
 import { Houseguest } from '@/models/houseguest';
-import TimerDisplay from '../TimerDisplay';
-import NomineeSelector from '../NomineeSelector';
-import AIDecisionIndicator from '../AIDecisionIndicator';
 
-interface NominationContentProps {
-  hoh: Houseguest | null;
-  nominees: Houseguest[];
-  potentialNominees: Houseguest[];
-  timeRemaining: number;
-  onTimeExpired: () => void;
-  onToggleNominee: (houseguest: Houseguest) => void;
-  onConfirmNominations: () => void;
-  isNominating: boolean;
-  totalTime: number;
+export interface NominationContentProps {
+  hoh: Houseguest;
+  isPlayerHoH: boolean;
+  startCeremony: () => void;
 }
 
-const NominationContent: React.FC<NominationContentProps> = ({
-  hoh,
-  nominees,
-  potentialNominees,
-  timeRemaining,
-  onTimeExpired,
-  onToggleNominee,
-  onConfirmNominations,
-  isNominating,
-  totalTime
+const NominationContent: React.FC<NominationContentProps> = ({ 
+  hoh, 
+  isPlayerHoH,
+  startCeremony 
 }) => {
   return (
-    <CardContent className="pt-6">
-      <div className="mb-6">
-        <h3 className="text-lg font-medium mb-2">
-          {hoh?.isPlayer ? "Choose Two Houseguests to Nominate" : `${hoh?.name} must nominate two houseguests`}
-        </h3>
-        {hoh?.isPlayer ? (
-          <p>
-            As Head of Household, you must nominate two houseguests for eviction. 
-            Select two houseguests below.
-          </p>
-        ) : (
-          <p>
-            {hoh?.name} is the Head of Household and must nominate two houseguests for eviction.
-          </p>
-        )}
+    <CardContent className="p-6 space-y-6">
+      <div className="text-center space-y-6 py-8">
+        <h3 className="text-xl font-semibold">Nomination Ceremony</h3>
+        <p className="text-muted-foreground">
+          {isPlayerHoH 
+            ? "As Head of Household, you must nominate two houseguests for eviction."
+            : `${hoh.name} must nominate two houseguests for eviction.`}
+          These houseguests will have a chance to save themselves in the Power of Veto competition.
+        </p>
+        <Button 
+          onClick={startCeremony} 
+          className="bg-red-600 hover:bg-red-700 text-white font-medium px-6"
+        >
+          Start Nomination Ceremony
+        </Button>
       </div>
-      
-      {/* Timer Display */}
-      <TimerDisplay 
-        timeRemaining={timeRemaining} 
-        onTimeExpired={onTimeExpired}
-        totalTime={totalTime}
-      />
-      
-      {hoh?.isPlayer ? (
-        <NomineeSelector 
-          potentialNominees={potentialNominees}
-          nominees={nominees}
-          onToggleNominee={onToggleNominee}
-        />
-      ) : (
-        <AIDecisionIndicator hohName={hoh?.name} />
-      )}
-      
-      {hoh?.isPlayer && (
-        <div className="flex justify-center mt-6">
-          <Button 
-            variant="destructive" 
-            disabled={nominees.length !== 2 || isNominating}
-            onClick={onConfirmNominations}
-            className="bg-bb-red hover:bg-bb-red/90"
-          >
-            Confirm Nominations
-          </Button>
-        </div>
-      )}
     </CardContent>
   );
 };

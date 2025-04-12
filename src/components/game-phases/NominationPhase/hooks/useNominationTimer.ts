@@ -1,55 +1,79 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
-interface UseNominationTimerProps {
-  initialTime: number;
-  isPlayer: boolean; 
-  onTimeExpired: () => void;
-  isComplete: boolean;
+interface UseNominationTimerReturn {
+  timeRemaining: number;
+  totalTime: number;
+  hasTimeExpired: boolean;
+  startTimer: (seconds?: number) => void;
+  resetTimer: () => void;
 }
 
-export const useNominationTimer = ({ 
-  initialTime, 
-  isPlayer,
-  onTimeExpired,
-  isComplete
-}: UseNominationTimerProps) => {
-  const [timeRemaining, setTimeRemaining] = useState(initialTime);
-  
-  // Reset timer when initialTime or isComplete changes
-  useEffect(() => {
-    setTimeRemaining(initialTime);
-  }, [initialTime, isComplete]);
+/**
+ * Hook to manage nomination timer
+ */
+export const useNominationTimer = (defaultSeconds: number = 60): UseNominationTimerReturn => {
+  const [timeRemaining, setTimeRemaining] = useState<number>(defaultSeconds);
+  const [isActive, setIsActive] = useState<boolean>(false);
+  const [hasTimeExpired, setHasTimeExpired] = useState<boolean>(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const totalTimeRef = useRef<number>(defaultSeconds);
 
-  // Timer countdown effect
+  // Clean up interval on unmount
   useEffect(() => {
-    // Only run timer if player is active, ceremony isn't complete, and time is remaining
-    if (!isPlayer || isComplete || timeRemaining <= 0) return;
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  // Start the timer with optional custom duration
+  const startTimer = useCallback((seconds?: number) => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
     
-    console.log("Starting nomination timer countdown from", timeRemaining);
+    // Set the time if provided
+    if (seconds) {
+      setTimeRemaining(seconds);
+      totalTimeRef.current = seconds;
+    }
     
-    const timer = setInterval(() => {
-      setTimeRemaining(prevTime => {
-        const newTime = prevTime - 1;
-        if (newTime <= 0) {
-          clearInterval(timer); // Clear interval when we reach zero
+    setIsActive(true);
+    setHasTimeExpired(false);
+    
+    // Start new interval
+    intervalRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!);
+          setIsActive(false);
+          setHasTimeExpired(true);
           return 0;
         }
-        return newTime;
+        return prev - 1;
       });
     }, 1000);
-    
-    // Clean up interval on unmount or when dependencies change
-    return () => clearInterval(timer);
-  }, [isPlayer, isComplete, timeRemaining]);
-  
-  // Handle timer expiration
-  useEffect(() => {
-    if (timeRemaining === 0 && isPlayer && !isComplete) {
-      console.log("Nomination timer expired, calling onTimeExpired");
-      onTimeExpired();
+  }, []);
+
+  // Reset the timer to original state
+  const resetTimer = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
     }
-  }, [timeRemaining, isPlayer, isComplete, onTimeExpired]);
-  
-  return { timeRemaining };
+    
+    setTimeRemaining(totalTimeRef.current);
+    setIsActive(false);
+    setHasTimeExpired(false);
+  }, []);
+
+  return {
+    timeRemaining,
+    totalTime: totalTimeRef.current,
+    hasTimeExpired,
+    startTimer,
+    resetTimer
+  };
 };
