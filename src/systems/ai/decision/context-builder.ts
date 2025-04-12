@@ -56,7 +56,7 @@ export class DecisionContextBuilder {
         return game.houseguests.find(hg => hg.id === nom) || null;
       }
       return null;
-    }).filter(Boolean) as Houseguest[]; // Filter out null values
+    }).filter(Boolean) as Houseguest[]; // Filter out null values and assert type
     
     // Build relationships object
     const relationships: Record<string, number> = {};
