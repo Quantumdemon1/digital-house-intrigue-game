@@ -42,18 +42,31 @@ const StrategicDiscussionDialog: React.FC<StrategicDiscussionDialogProps> = ({
     
     // Add target for rumors if needed
     if (isRumorSpread && selectedTargetId) {
-      discussionParams.rumorTargetId = selectedTargetId;
-      discussionParams.rumorTargetName = game?.getHouseguestById(selectedTargetId)?.name;
+      // Use spread operator to add these properties properly
+      const enhancedParams = {
+        ...discussionParams,
+        rumorTargetId: selectedTargetId,
+        rumorTargetName: game?.getHouseguestById(selectedTargetId)?.name
+      };
+      
+      // Dispatch the action with enhanced params
+      dispatch({
+        type: 'PLAYER_ACTION',
+        payload: {
+          actionId: 'strategic_discussion',
+          params: enhancedParams
+        }
+      });
+    } else {
+      // Regular dispatch for non-rumor discussions
+      dispatch({
+        type: 'PLAYER_ACTION',
+        payload: {
+          actionId: 'strategic_discussion',
+          params: discussionParams
+        }
+      });
     }
-    
-    // Dispatch the action
-    dispatch({
-      type: 'PLAYER_ACTION',
-      payload: {
-        actionId: 'strategic_discussion',
-        params: discussionParams
-      }
-    });
     
     // Close the dialog after a short delay
     setTimeout(() => {
