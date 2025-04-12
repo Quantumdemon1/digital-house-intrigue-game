@@ -7,11 +7,14 @@ import { Crown } from 'lucide-react';
 interface NominationHeaderProps {
   hoh: Houseguest | null;
   ceremonyComplete?: boolean;
+  // Adding missing week property to fix the type error
+  week?: number;
 }
 
 const NominationHeader: React.FC<NominationHeaderProps> = ({ 
   hoh,
-  ceremonyComplete
+  ceremonyComplete,
+  week
 }) => {
   return (
     <CardHeader>
@@ -22,6 +25,7 @@ const NominationHeader: React.FC<NominationHeaderProps> = ({
             Nomination Ceremony
           </CardTitle>
           <CardDescription>
+            {week && `Week ${week} • `}
             {hoh ? `Head of Household: ${hoh.name}` : 'No HOH Selected'}
             {ceremonyComplete && ' • Nominations Complete'}
           </CardDescription>

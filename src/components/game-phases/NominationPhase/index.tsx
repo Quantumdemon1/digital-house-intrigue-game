@@ -94,8 +94,9 @@ const NominationPhase: React.FC = () => {
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
       <NominationHeader 
-        week={gameState.week} 
-        hoh={hoh} 
+        hoh={hoh}
+        ceremonyComplete={ceremonyComplete}
+        week={gameState.week}
       />
       
       {!ceremonyComplete ? (
