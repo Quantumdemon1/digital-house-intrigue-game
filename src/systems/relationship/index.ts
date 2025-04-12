@@ -1,3 +1,4 @@
+
 /**
  * @file src/systems/relationship/index.ts
  * @description Main relationship system that integrates all functionality
@@ -12,7 +13,7 @@ import { RelationshipDecay } from './decay';
 import { RelationshipInitialization } from './initialization';
 import { RelationshipMap } from './types';
 
-export { RelationshipMap, Relationship } from './types';
+export type { RelationshipMap, Relationship } from './types';
 
 /**
  * Integrated relationship system that combines all relationship functionality
