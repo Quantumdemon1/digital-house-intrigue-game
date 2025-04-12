@@ -15,6 +15,11 @@ interface UseAINominationProps {
   setNominees: (nominees: Houseguest[]) => void;
 }
 
+interface AIDecision {
+  nominees: Houseguest[];
+  reasoning: string;
+}
+
 export const useAINomination = ({
   hoh,
   potentialNominees,
@@ -25,6 +30,8 @@ export const useAINomination = ({
   setNominees,
 }: UseAINominationProps) => {
   const [aiProcessed, setAiProcessed] = useState(false);
+  const [showAIDecision, setShowAIDecision] = useState(false);
+  const [aiDecision, setAIDecision] = useState<AIDecision | null>(null);
   const { toast } = useToast();
   const { aiSystem, game, logger: gameLogger } = useGame();
   const processingRef = useRef(false);
@@ -92,7 +99,7 @@ export const useAINomination = ({
       });
       
       // Set timeout to ensure the process doesn't hang indefinitely
-      const timeoutPromise = new Promise<{nominee1: string, nominee2: string}>((_, reject) => {
+      const timeoutPromise = new Promise<{nominee1: string, nominee2: string, reasoning: string}>((_, reject) => {
         aiTimeoutRef.current = setTimeout(() => {
           reject(new Error("AI decision timed out"));
         }, 15000); // 15 second timeout
@@ -131,7 +138,21 @@ export const useAINomination = ({
       // Find nominees and set them
       const nominees = findNomineeObjects(decision);
       if (nominees) {
+        // Set nominees but don't confirm yet - show the AI decision card first
         setNominees(nominees);
+        
+        // Extract reasoning if available, or create a generic one
+        const reasoning = decision.reasoning || 
+          `Based on relationships and strategic position in the game, ${nominees[0].name} and ${nominees[1].name} are my targets this week.`;
+        
+        // Store AI decision data for display
+        setAIDecision({
+          nominees,
+          reasoning
+        });
+        
+        // Show AI decision card
+        setShowAIDecision(true);
         
         aiLogger.info(`AI HoH ${hoh.name} nominated ${nominees[0].name} and ${nominees[1].name}`);
         
@@ -139,9 +160,6 @@ export const useAINomination = ({
           title: `${hoh.name} has decided`,
           description: `Nominated ${nominees[0].name} and ${nominees[1].name} for eviction.`,
         });
-        
-        // Immediately confirm nominations
-        confirmNominations();
       }
     } catch (error: any) {
       aiLogger.error(`❌ Critical error in AI nomination process: ${error.message}`);
@@ -175,6 +193,13 @@ export const useAINomination = ({
     aiLogger
   ]);
 
+  // Handle closing the AI decision display
+  const handleCloseAIDecision = useCallback(() => {
+    setShowAIDecision(false);
+    // After showing the AI decision and user closes the dialog, confirm nominations
+    confirmNominations();
+  }, [confirmNominations]);
+
   // AI nomination logic - immediate execution with cleanup
   useEffect(() => {
     // Only process if HoH exists, HoH is AI, and we haven't already processed
@@ -200,6 +225,10 @@ export const useAINomination = ({
     };
   }, [hoh, isNominating, ceremonyComplete, aiProcessed, processAIDecision]);
 
-  return { aiProcessed };
+  return { 
+    aiProcessed,
+    showAIDecision,
+    aiDecision,
+    handleCloseAIDecision
+  };
 };
-
