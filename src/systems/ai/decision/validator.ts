@@ -56,11 +56,20 @@ export class DecisionValidator {
     
     // If using veto, check if nominee exists
     if (decision.useVeto) {
-      // Convert nominees from IDs to Houseguests
+      // Convert nominees from IDs to Houseguests, handling both object and string types
       const nominees = game.nominees?.map(nom => {
-        // Make sure we're getting the full houseguest object
-        const nominee = game.houseguests.find(hg => hg.id === nom.id);
-        return nominee;
+        // If nom is already a Houseguest object with an id property
+        if (typeof nom === 'object' && nom !== null && 'id' in nom) {
+          // Make sure we're getting the full houseguest object
+          const nominee = game.houseguests.find(hg => hg.id === nom.id);
+          return nominee;
+        } 
+        // If nom is a string (an ID), find the corresponding houseguest
+        else if (typeof nom === 'string') {
+          const nominee = game.houseguests.find(hg => hg.id === nom);
+          return nominee;
+        }
+        return null;
       }).filter(Boolean) as any[];
       
       const saveNomineeExists = nominees.some(n => n.name === decision.saveNominee);

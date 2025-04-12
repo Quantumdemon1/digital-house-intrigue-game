@@ -42,10 +42,20 @@ export class DecisionContextBuilder {
    * Builds veto decision context
    */
   buildVetoContext(vetoHolder: Houseguest, game: BigBrotherGame): any {
+    // Ensure nominees is an array of Houseguest objects, not strings
     const nominees = game.nominees?.map(nom => {
-      // Make sure we're getting the full houseguest object
-      const nominee = game.houseguests.find(hg => hg.id === nom.id);
-      return nominee;
+      // If nom is already a Houseguest object with an id property
+      if (typeof nom === 'object' && nom !== null && 'id' in nom) {
+        // Make sure we're getting the full houseguest object
+        const nominee = game.houseguests.find(hg => hg.id === nom.id);
+        return nominee;
+      }
+      // If nom is a string (an ID), find the corresponding houseguest
+      else if (typeof nom === 'string') {
+        const nominee = game.houseguests.find(hg => hg.id === nom);
+        return nominee;
+      }
+      return null;
     }).filter(Boolean) as Houseguest[];
     
     // Build relationships object
