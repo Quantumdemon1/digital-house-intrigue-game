@@ -10,7 +10,7 @@ import NominationPhase from './game-phases/NominationPhase';
 import PovCompetitionPhase from './game-phases/PovPhase';
 import PovMeetingPhase from './game-phases/POVMeeting/PovMeetingPhase';
 import EvictionPhase from './game-phases/EvictionPhase';
-import SocialInteractionPhase from './game-phases/SocialInteractionPhase';
+import SocialInteractionPhase from './game-phases/social-interaction';
 import FinalePhase from './game-phases/FinalePhase';
 import GameOverPhase from './game-phases/GameOverPhase';
 import HouseguestListComponent from './HouseguestList';

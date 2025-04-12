@@ -8,7 +8,7 @@ import POVMeeting from '../game-phases/POVMeeting';
 import EvictionPhase from '../game-phases/EvictionPhase';
 import FinalePhase from '../game-phases/FinalePhase';
 import GameOverPhase from '../game-phases/GameOverPhase';
-import SocialInteractionPhase from '../game-phases/SocialInteractionPhase';
+import SocialInteractionPhase from '../game-phases/social-interaction';
 
 interface PhaseContentProps {
   phase: GamePhase;
