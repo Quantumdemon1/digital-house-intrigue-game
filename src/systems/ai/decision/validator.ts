@@ -70,9 +70,9 @@ export class DecisionValidator {
           return game.houseguests.find(hg => hg.id === nom) || null;
         }
         return null;
-      }).filter(Boolean) as any[]; // Filter out null values
+      }).filter(Boolean) as Houseguest[]; // Filter out null values and assert type
       
-      const nomineeNames = nominees.map(n => n ? n.name : null).filter(Boolean); // Added null check here
+      const nomineeNames = nominees.map(nominee => nominee.name);
       const saveNomineeExists = nomineeNames.includes(decision.saveNominee);
       
       if (!saveNomineeExists) {
@@ -86,4 +86,11 @@ export class DecisionValidator {
     
     return true;
   }
+}
+
+// Add the Houseguest type import to fix the type assertion
+interface Houseguest {
+  id: string;
+  name: string;
+  [key: string]: any;
 }

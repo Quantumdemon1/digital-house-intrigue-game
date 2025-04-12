@@ -61,14 +61,12 @@ export class DecisionContextBuilder {
     // Build relationships object
     const relationships: Record<string, number> = {};
     nominees.forEach(nominee => {
-      if (nominee) {  // Add null check here
-        const relationshipValue = this.getRelationshipValue(vetoHolder.id, nominee.id, game);
-        relationships[nominee.name] = relationshipValue;
-      }
+      const relationshipValue = this.getRelationshipValue(vetoHolder.id, nominee.id, game);
+      relationships[nominee.name] = relationshipValue;
     });
     
     return {
-      nominees: nominees.map(n => n ? n.name : null).filter(Boolean), // Added null check here
+      nominees: nominees.map(n => n.name),
       relationships,
       situation: 'You have won the Power of Veto and must decide whether to use it to save a nominee.'
     };
