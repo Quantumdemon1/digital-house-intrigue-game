@@ -68,7 +68,7 @@ export class DecisionContextBuilder {
     });
     
     return {
-      nominees: nominees.map(n => n?.name).filter(Boolean),
+      nominees: nominees.map(n => n ? n.name : null).filter(Boolean), // Added null check here
       relationships,
       situation: 'You have won the Power of Veto and must decide whether to use it to save a nominee.'
     };
