@@ -60,19 +60,17 @@ export class DecisionValidator {
       const nominees = game.nominees?.map(nom => {
         if (nom === null) return null;
         
-        // If nom is already a Houseguest object with an id property
+        // Only process non-null values
         if (typeof nom === 'object' && nom !== null && 'id' in nom) {
           // Make sure we're getting the full houseguest object
-          const nominee = game.houseguests.find(hg => hg.id === nom.id);
-          return nominee;
-        } 
-        // If nom is a string (an ID), find the corresponding houseguest
+          return game.houseguests.find(hg => hg.id === nom.id) || null;
+        }
         else if (typeof nom === 'string') {
-          const nominee = game.houseguests.find(hg => hg.id === nom);
-          return nominee;
+          // If nom is a string (an ID), find the corresponding houseguest
+          return game.houseguests.find(hg => hg.id === nom) || null;
         }
         return null;
-      }).filter(Boolean) as any[];
+      }).filter(Boolean) as any[]; // Filter out null values
       
       const saveNomineeExists = nominees.some(n => n.name === decision.saveNominee);
       if (!saveNomineeExists) {

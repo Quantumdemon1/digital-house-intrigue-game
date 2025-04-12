@@ -46,19 +46,17 @@ export class DecisionContextBuilder {
     const nominees = game.nominees?.map(nom => {
       if (nom === null) return null;
       
-      // If nom is already a Houseguest object with an id property
+      // Only process non-null values
       if (typeof nom === 'object' && nom !== null && 'id' in nom) {
         // Make sure we're getting the full houseguest object
-        const nominee = game.houseguests.find(hg => hg.id === nom.id);
-        return nominee;
+        return game.houseguests.find(hg => hg.id === nom.id) || null;
       }
-      // If nom is a string (an ID), find the corresponding houseguest
       else if (typeof nom === 'string') {
-        const nominee = game.houseguests.find(hg => hg.id === nom);
-        return nominee;
+        // If nom is a string (an ID), find the corresponding houseguest
+        return game.houseguests.find(hg => hg.id === nom) || null;
       }
       return null;
-    }).filter(Boolean) as Houseguest[];
+    }).filter(Boolean) as Houseguest[]; // Filter out null values
     
     // Build relationships object
     const relationships: Record<string, number> = {};
