@@ -1,6 +1,5 @@
 
 import { useCallback } from 'react';
-import { AIDecision } from './types';
 
 interface UseAIDecisionDisplayProps {
   setShowAIDecision: (show: boolean) => void;

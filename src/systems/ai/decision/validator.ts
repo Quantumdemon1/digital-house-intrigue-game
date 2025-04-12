@@ -72,11 +72,11 @@ export class DecisionValidator {
         return null;
       }).filter(Boolean) as any[]; // Filter out null values
       
-      const saveNomineeExists = nominees.some(n => n.name === decision.saveNominee);
+      const saveNomineeExists = nominees.some(n => n && n.name === decision.saveNominee); // Add null check
       if (!saveNomineeExists) {
         this.logger.error("Invalid save nominee: not in current nominees", {
           saveNominee: decision.saveNominee,
-          validNominees: nominees.map(n => n.name)
+          validNominees: nominees.map(n => n && n.name).filter(Boolean) // Add null check
         });
         return false;
       }
