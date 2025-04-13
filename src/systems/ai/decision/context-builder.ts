@@ -67,7 +67,6 @@ export class DecisionContextBuilder {
     // Build relationships object
     const relationships: Record<string, number> = {};
     nominees.forEach(nominee => {
-      // Extra null check for safety
       const relationshipValue = this.getRelationshipValue(vetoHolder.id, nominee.id, game);
       relationships[nominee.name] = relationshipValue;
     });
