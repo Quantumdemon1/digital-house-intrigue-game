@@ -67,7 +67,7 @@ export class DecisionValidator {
       if (Array.isArray(game.nominees)) {
         // Process each nominee entry
         for (const nom of game.nominees) {
-          // Skip null entries
+          // Skip null entries immediately
           if (nom === null) continue;
           
           let houseguest: Houseguest | undefined | null = null;
@@ -76,9 +76,8 @@ export class DecisionValidator {
           if (isValidHouseguest(nom)) {
             houseguest = nom;
           } else if (typeof nom === 'object' && nom !== null) {
-            // Check if 'id' property exists in nom
-            if ('id' in nom) {
-              // Safely access the id property
+            // Use in operator to check for id property and safely access it
+            if (nom && 'id' in nom) {
               const nomId = nom['id'];
               if (typeof nomId === 'string') {
                 houseguest = game.houseguests.find(hg => hg.id === nomId);

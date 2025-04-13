@@ -61,9 +61,8 @@ export class DecisionContextBuilder {
         if (isValidHouseguest(nom)) {
           houseguest = nom;
         } else if (typeof nom === 'object' && nom !== null) {
-          // Check if 'id' property exists in nom
-          if ('id' in nom) {
-            // Safely access the id property
+          // Use in operator to check for id property and safely access it
+          if (nom && 'id' in nom) {
             const nomId = nom['id'];
             if (typeof nomId === 'string') {
               houseguest = game.houseguests.find(hg => hg.id === nomId);
