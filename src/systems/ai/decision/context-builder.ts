@@ -61,8 +61,11 @@ export class DecisionContextBuilder {
         if (isValidHouseguest(nom)) {
           houseguest = nom;
         } else if (typeof nom === 'object' && nom !== null && 'id' in nom) {
-          const nomId = (nom as {id: string}).id;
-          houseguest = game.houseguests.find(hg => hg.id === nomId);
+          // Fixed here: Using safe navigation for property access
+          const nomId = nom?.id;
+          if (typeof nomId === 'string') {
+            houseguest = game.houseguests.find(hg => hg.id === nomId);
+          }
         } else if (typeof nom === 'string') {
           houseguest = game.houseguests.find(hg => hg.id === nom);
         }
