@@ -42,31 +42,37 @@ export class DecisionContextBuilder {
    * Builds veto decision context
    */
   buildVetoContext(vetoHolder: Houseguest, game: BigBrotherGame): any {
-    // Process nominees array, filtering out null values before processing
-    const nominees = (game.nominees || [])
-      .filter((nom): nom is NonNullable<typeof nom> => nom !== null) // Filter out null values
-      .map(nom => {
-        // If nom is already a Houseguest object with name property, return it
-        if (typeof nom === 'object' && nom !== null && 'name' in nom) {
-          return nom as Houseguest;
+    // Type guard function to ensure we have valid Houseguest objects
+    const isValidHouseguest = (hg: any): hg is Houseguest => 
+      hg !== null && typeof hg === 'object' && 'name' in hg && 'id' in hg;
+    
+    // Get nominees safely
+    const nominees: Houseguest[] = [];
+    
+    if (Array.isArray(game.nominees)) {
+      // Process each nominee entry
+      for (const nom of game.nominees) {
+        // Skip null entries
+        if (nom === null) continue;
+        
+        let houseguest: Houseguest | undefined | null = null;
+        
+        // Handle different nominee representations
+        if (isValidHouseguest(nom)) {
+          houseguest = nom;
+        } else if (typeof nom === 'object' && 'id' in nom) {
+          const nomId = (nom as {id: string}).id;
+          houseguest = game.houseguests.find(hg => hg.id === nomId);
+        } else if (typeof nom === 'string') {
+          houseguest = game.houseguests.find(hg => hg.id === nom);
         }
         
-        // If nom is an object with an id property (but not a full Houseguest)
-        if (typeof nom === 'object' && nom !== null && 'id' in nom) {
-          const nomId = (nom as {id: string}).id;
-          // Make sure we're getting the full houseguest object
-          const houseguest = game.houseguests.find(hg => hg.id === nomId);
-          return houseguest || null;
+        // Only add valid houseguests to the nominees array
+        if (houseguest && isValidHouseguest(houseguest)) {
+          nominees.push(houseguest);
         }
-        // If nom is a string (an ID), find the corresponding houseguest
-        else if (typeof nom === 'string') {
-          const nomId = nom;
-          const houseguest = game.houseguests.find(hg => hg.id === nomId);
-          return houseguest || null;
-        }
-        return null;
-      })
-      .filter((nominee): nominee is Houseguest => nominee !== null); // Filter out any nulls after mapping
+      }
+    }
     
     // Build relationships object
     const relationships: Record<string, number> = {};
