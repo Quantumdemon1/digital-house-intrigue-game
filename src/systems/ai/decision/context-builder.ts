@@ -53,13 +53,15 @@ export class DecisionContextBuilder {
         
         // If nom is an object with an id property (but not a full Houseguest)
         if (typeof nom === 'object' && nom !== null && 'id' in nom) {
+          const nomId = (nom as {id: string}).id;
           // Make sure we're getting the full houseguest object
-          const houseguest = game.houseguests.find(hg => hg.id === (nom as {id: string}).id);
+          const houseguest = game.houseguests.find(hg => hg.id === nomId);
           return houseguest || null;
         }
         // If nom is a string (an ID), find the corresponding houseguest
         else if (typeof nom === 'string') {
-          const houseguest = game.houseguests.find(hg => hg.id === nom);
+          const nomId = nom;
+          const houseguest = game.houseguests.find(hg => hg.id === nomId);
           return houseguest || null;
         }
         return null;

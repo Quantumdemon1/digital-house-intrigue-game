@@ -68,13 +68,15 @@ export class DecisionValidator {
           
           // Process non-null values
           if (typeof nom === 'object' && nom !== null && 'id' in nom) {
+            const nomId = (nom as {id: string}).id;
             // Make sure we're getting the full houseguest object
-            const houseguest = game.houseguests.find(hg => hg.id === (nom as {id: string}).id);
+            const houseguest = game.houseguests.find(hg => hg.id === nomId);
             return houseguest || null;
           }
           else if (typeof nom === 'string') {
+            const nomId = nom;
             // If nom is a string (an ID), find the corresponding houseguest
-            const houseguest = game.houseguests.find(hg => hg.id === nom);
+            const houseguest = game.houseguests.find(hg => hg.id === nomId);
             return houseguest || null;
           }
           return null;
