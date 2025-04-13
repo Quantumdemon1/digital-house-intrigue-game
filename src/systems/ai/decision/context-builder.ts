@@ -62,7 +62,7 @@ export class DecisionContextBuilder {
         }
         return null;
       })
-      .filter((nom): nom is Houseguest => nom !== null); // Final filter to ensure all nominees are valid Houseguests
+      .filter((nominee): nominee is Houseguest => nominee !== null); // Filter out any nulls after mapping
     
     // Build relationships object
     const relationships: Record<string, number> = {};

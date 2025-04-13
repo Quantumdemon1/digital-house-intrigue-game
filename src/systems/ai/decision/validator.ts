@@ -77,7 +77,7 @@ export class DecisionValidator {
           }
           return null;
         })
-        .filter((nom): nom is Houseguest => nom !== null); // Final filter to ensure all nominees are valid Houseguests
+        .filter((nominee): nominee is Houseguest => nominee !== null); // Filter out any nulls after mapping
       
       const nomineeNames = nominees.map(nominee => nominee.name);
       const saveNomineeExists = nomineeNames.includes(decision.saveNominee);
