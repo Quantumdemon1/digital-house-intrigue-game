@@ -76,8 +76,9 @@ export class DecisionValidator {
           if (isValidHouseguest(nom)) {
             houseguest = nom;
           } else if (typeof nom === 'object' && nom !== null && 'id' in nom) {
-            // Fixed here: Using safe navigation for property access
-            const nomId = nom?.id;
+            // Use non-null assertion since we already checked nom is not null
+            // and contains 'id' property above in the condition
+            const nomId = nom.id;
             if (typeof nomId === 'string') {
               houseguest = game.houseguests.find(hg => hg.id === nomId);
             }
