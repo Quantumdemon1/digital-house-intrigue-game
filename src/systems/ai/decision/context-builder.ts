@@ -60,12 +60,14 @@ export class DecisionContextBuilder {
         // Handle different nominee representations
         if (isValidHouseguest(nom)) {
           houseguest = nom;
-        } else if (typeof nom === 'object' && nom !== null && 'id' in nom) {
-          // Use non-null assertion since we already checked nom is not null
-          // and contains 'id' property above in the condition
-          const nomId = nom.id;
-          if (typeof nomId === 'string') {
-            houseguest = game.houseguests.find(hg => hg.id === nomId);
+        } else if (typeof nom === 'object' && nom !== null) {
+          // Check if 'id' property exists in nom
+          if ('id' in nom) {
+            // Safely access the id property
+            const nomId = nom['id'];
+            if (typeof nomId === 'string') {
+              houseguest = game.houseguests.find(hg => hg.id === nomId);
+            }
           }
         } else if (typeof nom === 'string') {
           houseguest = game.houseguests.find(hg => hg.id === nom);
