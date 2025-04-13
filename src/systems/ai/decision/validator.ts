@@ -75,7 +75,7 @@ export class DecisionValidator {
           // Handle different nominee representations
           if (isValidHouseguest(nom)) {
             houseguest = nom;
-          } else if (typeof nom === 'object' && 'id' in nom) {
+          } else if (typeof nom === 'object' && nom !== null && 'id' in nom) {
             const nomId = (nom as {id: string}).id;
             houseguest = game.houseguests.find(hg => hg.id === nomId);
           } else if (typeof nom === 'string') {
