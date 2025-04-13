@@ -44,7 +44,7 @@ export class DecisionContextBuilder {
   buildVetoContext(vetoHolder: Houseguest, game: BigBrotherGame): any {
     // Process nominees array, filtering out null values before processing
     const nominees = (game.nominees || [])
-      .filter((nom): nom is Houseguest | {id: string} => nom !== null) // Filter out null values
+      .filter((nom): nom is NonNullable<typeof nom> => nom !== null) // Filter out null values
       .map(nom => {
         // If nom is already a Houseguest object with name property, return it
         if (typeof nom === 'object' && nom !== null && 'name' in nom) {
