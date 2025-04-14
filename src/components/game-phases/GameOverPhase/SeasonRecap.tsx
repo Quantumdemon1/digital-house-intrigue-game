@@ -16,11 +16,20 @@ import {
   TimelineBody 
 } from './Timeline';
 
-interface SeasonRecapProps {
-  recap: any;  // Ideally, this should be properly typed
+interface RecapSeason {
+  winner: string;
+  runnerUp: string;
+  weeks: number;
+  events: any[];
 }
 
-const SeasonRecap: React.FC<SeasonRecapProps> = ({ recap }) => {
+interface RecapProps {
+  recap: {
+    season: RecapSeason;
+  };
+}
+
+const SeasonRecap: React.FC<RecapProps> = ({ recap }) => {
   const { gameState } = useGame();
   
   // Group events by week

@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -10,11 +11,21 @@ interface GameSummaryProps {
   gameState: GameState;
 }
 
-const GameSummary: React.FC<GameSummaryProps> = ({ gameState }) => {
-  const { totalHouseguests, totalWeeks, totalEvictions, jurySize } = gameState;
-  const playerHouseguest = gameState.houseguests.find(hg => hg.isPlayer);
-  const winnerHoHWins = gameState.winner?.competitionsWon.hoh || 0;
-  const winnerPovWins = gameState.winner?.competitionsWon.pov || 0;
+const GameSummary: React.FC<GameSummaryProps> = ({ gameState: propGameState }) => {
+  const { gameState } = useGame();
+  
+  // Use propGameState instead of gameState from useGame() to respect the component API
+  const stateToUse = propGameState || gameState;
+  
+  // Calculate derived values that might not be directly on the gameState
+  const totalHouseguests = stateToUse.houseguests?.length || 0;
+  const totalWeeks = stateToUse.week || 0;
+  const totalEvictions = stateToUse.houseguests?.filter(h => h.status === 'Evicted' || h.status === 'Jury').length || 0;
+  const jurySize = stateToUse.juryMembers?.length || 0;
+  
+  const playerHouseguest = stateToUse.houseguests.find(hg => hg.isPlayer);
+  const winnerHoHWins = stateToUse.winner?.competitionsWon.hoh || 0;
+  const winnerPovWins = stateToUse.winner?.competitionsWon.pov || 0;
 
   const getNominationsCount = (nominations: NominationCount | number | undefined): number => {
     if (typeof nominations === 'object' && nominations !== null) {
@@ -23,7 +34,7 @@ const GameSummary: React.FC<GameSummaryProps> = ({ gameState }) => {
     return typeof nominations === 'number' ? nominations : 0;
   };
 
-  const winnerNominations = getNominationsCount(gameState.winner?.nominations);
+  const winnerNominations = getNominationsCount(stateToUse.winner?.nominations);
 
   return (
     <div className="space-y-6">

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { ChartBar, Trophy, Award, User, UserX } from 'lucide-react';
@@ -44,16 +45,19 @@ const getNominationsCount = (nominations: NominationCount | number | undefined):
   return typeof nominations === 'number' ? nominations : 0;
 };
 
-const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState }) => {
-  const { gameState: gameState } = useGame();
+const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState: propGameState }) => {
+  // Rename the prop to avoid conflict
+  const { gameState } = useGame();
   const [sortField, setSortField] = useState<SortField>('status');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [playerFilter, setPlayerFilter] = useState<string>('all');
   
-  const totalWeeks = gameState.week;
+  // Use propGameState instead of gameState from useGame() to respect the component API
+  const stateToUse = propGameState || gameState;
+  const totalWeeks = stateToUse.week;
   
   // Sort houseguests based on current sort field and direction
-  const sortedHouseguests = [...gameState.houseguests].sort((a, b) => {
+  const sortedHouseguests = [...stateToUse.houseguests].sort((a, b) => {
     let comparison = 0;
     
     switch (sortField) {

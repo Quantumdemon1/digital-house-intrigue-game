@@ -17,8 +17,24 @@ const GameOverPhase: React.FC = () => {
   const { toast } = useToast();
   
   // Get available actions from the controller
-  const availableActions = gameState.phase === 'GameOver' && gameState.gameController ? 
-    gameState.gameController.currentState?.getAvailableActions() || [] : [];
+  const availableActions = gameState.phase === 'GameOver' ? 
+    [
+      {
+        actionId: 'new_game',
+        text: 'Start New Game',
+        category: 'game_flow'
+      },
+      {
+        actionId: 'view_stats',
+        text: 'View Game Statistics',
+        category: 'information'
+      },
+      {
+        actionId: 'exit_game',
+        text: 'Exit to Main Menu',
+        category: 'game_flow'
+      }
+    ] : [];
   
   useEffect(() => {
     // When component mounts, make sure we're in the right game state
@@ -63,6 +79,18 @@ const GameOverPhase: React.FC = () => {
         navigate('/');
         break;
     }
+  };
+  
+  // Create a recap object if recapGenerator is not available
+  const generateRecap = () => {
+    return {
+      season: {
+        winner: winner?.name || "Unknown",
+        runnerUp: runnerUp?.name || "Unknown",
+        weeks: gameState.week,
+        events: gameState.gameLog || []
+      }
+    };
   };
   
   return (
@@ -123,7 +151,7 @@ const GameOverPhase: React.FC = () => {
         <PlayerStats gameState={gameState} />
       </div>
       
-      <SeasonRecap recap={gameState.recapGenerator?.generateSeasonRecap(gameState)} />
+      <SeasonRecap recap={generateRecap()} />
     </div>
   );
 };
