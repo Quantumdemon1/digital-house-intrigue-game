@@ -5,7 +5,8 @@ import { CheckCircle, XCircle, Circle, HelpCircle, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-export type PromiseStatus = 'kept' | 'broken' | 'pending' | 'expired';
+// Update this type to include 'active' to match the model definition
+export type PromiseStatus = 'kept' | 'fulfilled' | 'broken' | 'pending' | 'active' | 'expired';
 
 interface PromiseDisplayProps {
   promiser: string;
@@ -39,6 +40,13 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
       borderColor: 'border-green-200',
       label: 'Kept'
     },
+    fulfilled: {
+      icon: <CheckCircle size={16} />,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      label: 'Fulfilled'
+    },
     broken: {
       icon: <XCircle size={16} />,
       color: 'text-red-600',
@@ -47,6 +55,13 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
       label: 'Broken'
     },
     pending: {
+      icon: <Circle size={16} />,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      label: 'Pending'
+    },
+    active: {
       icon: <Circle size={16} />,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
@@ -62,6 +77,7 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
     }
   };
   
+  // Use active config for active status, or get other configs
   const config = statusConfig[status];
   
   return (
