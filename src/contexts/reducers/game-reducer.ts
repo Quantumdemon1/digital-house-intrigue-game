@@ -1,20 +1,11 @@
+import { GameState, RelationshipMap } from '../../models/game-state';
 
-import { GameState } from '../../models/game-state';
-import { GameAction } from '../types/game-context-types';
-import { setupReducer } from './reducers/setup-reducer';
-import { competitionReducer } from './reducers/competition-reducer';
-import { nominationReducer } from './reducers/nomination-reducer';
-import { relationshipReducer } from './reducers/relationship-reducer';
-import { evictionReducer } from './reducers/eviction-reducer';
-import { gameProgressReducer } from './reducers/game-progress-reducer';
-import { logReducer } from './reducers/log-reducer';
-import { playerActionReducer } from './reducers/player-action-reducer';
+// Add the new RELATIONSHIP_IMPACT action to the union type
+type GameAction =
+  // ... keep existing code (action types)
+  | { type: 'RELATIONSHIP_IMPACT'; payload: { targetId: string; targetName: string; value: number } };
 
-// Game reducer function that delegates to specific reducers based on action type
-export function gameReducer(state: GameState, action: GameAction): GameState {
-  // Log all actions for debugging
-  console.log('Game Reducer:', action.type, action.type === 'PLAYER_ACTION' ? action.payload : '');
-  
+export const gameReducer = (state: GameState, action: GameAction): GameState => {
   switch (action.type) {
     // Game setup actions
     case 'START_GAME':
@@ -66,7 +57,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       // Just return state unchanged in the reducer
       return state;
       
+    case 'RELATIONSHIP_IMPACT':
+      // This doesn't actually modify the state, but is used by the RelationshipImpactProvider
+      return state;
+    
     default:
       return state;
   }
-}
+};

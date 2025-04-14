@@ -1,32 +1,30 @@
-
 import React from 'react';
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import { ThemeProvider } from "next-themes";
-import { GameControlProvider } from "./contexts/GameControlContext";
+import { Route, Routes } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { GameProvider } from './contexts/GameContext';
+import { AIThoughtsProvider } from './components/ai-feedback';
+import { RelationshipImpactProvider } from './contexts/RelationshipImpactContext';
+import { RelationshipImpactDisplay } from './components/relationship';
+import GameScreen from './components/game-screen/GameScreen';
+import GameSetup from './components/game-setup/GameSetup';
 
-const queryClient = new QueryClient();
-
-const App: React.FC = () => (
-  <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-    <QueryClientProvider client={queryClient}>
-      <GameControlProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </GameControlProvider>
-    </QueryClientProvider>
-  </ThemeProvider>
-);
+function App() {
+  return (
+    <div className="app min-h-screen bg-background">
+      <GameProvider>
+        <AIThoughtsProvider>
+          <RelationshipImpactProvider>
+            <Routes>
+              <Route path="/" element={<GameSetup />} />
+              <Route path="/game" element={<GameScreen />} />
+            </Routes>
+            <RelationshipImpactDisplay />
+            <Toaster position="top-center" richColors />
+          </RelationshipImpactProvider>
+        </AIThoughtsProvider>
+      </GameProvider>
+    </div>
+  );
+}
 
 export default App;

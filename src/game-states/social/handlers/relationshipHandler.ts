@@ -27,7 +27,18 @@ export function handleRelationshipBuilding({ controller, targetId }: SocialActio
       controller,
       'RELATIONSHIP_BUILDING',
       `${player.name} spent quality time with ${target.name}, building a stronger bond.`,
-      [player.id, target.id]
+      [player.id, target.id],
+      { relationshipChange: improvement }  // Add relationship change to event data
     );
+    
+    // Dispatch UI event for relationship impact visualization
+    controller.dispatch({
+      type: 'RELATIONSHIP_IMPACT',
+      payload: {
+        targetId: target.id,
+        targetName: target.name,
+        value: improvement
+      }
+    });
   }
 }

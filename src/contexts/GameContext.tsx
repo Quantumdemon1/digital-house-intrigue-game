@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from "sonner"; // Import sonner toast
+import { useRelationshipImpact } from './RelationshipImpactContext';
 
 // Import Core Classes & Types
 import { BigBrotherGame } from '../models/game/BigBrotherGame';
@@ -35,6 +36,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [gameState, dispatch] = useReducer(gameReducer, createInitialGameState());
     const [isPaused, setIsPaused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // Get the relationship impact context
+    const relationshipImpact = useRelationshipImpact?.();
+    
+    // Handle relationship impact actions
+    const interceptedDispatch = useCallback((action: GameAction) => {
+        // If this is a relationship impact action, handle it
+        if (action.type === 'RELATIONSHIP_IMPACT' && relationshipImpact) {
+            const { targetId, targetName, value } = action.payload;
+            relationshipImpact.addImpact(targetId, targetName, value);
+        }
+        
+        // Forward the action to the normal reducer
+        return dispatch(action);
+    }, [relationshipImpact]);
     
     // Initialize game instance with systems
     useEffect(() => {
@@ -123,7 +139,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         promiseSystem: systemsRef.current.promiseSystem, // Add promiseSystem to context value
         recapGenerator: systemsRef.current.recapGenerator,
         logger,
-        dispatch,
+        dispatch: interceptedDispatch, // Use interceptedDispatch instead of dispatch directly
         getHouseguestById,
         getRelationship,
         getActiveHouseguests,

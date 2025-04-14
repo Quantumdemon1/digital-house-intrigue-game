@@ -66,7 +66,18 @@ export function handleStrategicDiscussion({
       controller,
       eventType,
       description,
-      [player.id, target.id]
+      [player.id, target.id],
+      { relationshipChange }  // Add relationship change to event data
     );
+    
+    // Dispatch UI event for relationship impact visualization
+    controller.dispatch({
+      type: 'RELATIONSHIP_IMPACT',
+      payload: {
+        targetId: target.id,
+        targetName: target.name,
+        value: relationshipChange
+      }
+    });
   }
 }

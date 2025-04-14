@@ -48,7 +48,21 @@ export function handleMakePromise({
       'MAKE_PROMISE',
       `${player.name} made a promise to ${target.name}: ${description}`,
       [player.id, target.id],
-      { promiseType: type, promiseDescription: description }
+      { 
+        promiseType: type, 
+        promiseDescription: description,
+        relationshipChange: improvement 
+      }
     );
+    
+    // Dispatch UI event for relationship impact visualization
+    controller.dispatch({
+      type: 'RELATIONSHIP_IMPACT',
+      payload: {
+        targetId: target.id,
+        targetName: target.name,
+        value: improvement
+      }
+    });
   }
 }

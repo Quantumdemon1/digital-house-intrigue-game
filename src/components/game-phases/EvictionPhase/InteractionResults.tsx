@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, HeartOff, Minus } from 'lucide-react';
 import { InteractionOption } from './types/interactions';
 import { Houseguest } from '@/models/houseguest';
+import { useRelationshipImpact } from '@/contexts/RelationshipImpactContext';
 
 interface InteractionResultsProps {
   selectedOption: InteractionOption;
@@ -16,9 +17,15 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({
   houseguest,
   onComplete
 }) => {
-  // Since we're already updating the relationship in the parent component,
-  // we just need to display the outcome here
   const relationshipChange = selectedOption.relationshipChange;
+  const { addImpact } = useRelationshipImpact();
+  
+  // Show relationship impact when component mounts
+  useEffect(() => {
+    if (relationshipChange !== 0) {
+      addImpact(houseguest.id, houseguest.name, relationshipChange);
+    }
+  }, [houseguest.id, houseguest.name, relationshipChange, addImpact]);
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">

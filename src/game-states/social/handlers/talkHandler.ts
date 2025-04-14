@@ -27,7 +27,18 @@ export function handleTalkTo({ controller, targetId }: SocialActionHandlerParams
       controller,
       'CONVERSATION',
       `${player.name} had a conversation with ${target.name}.`,
-      [player.id, target.id]
+      [player.id, target.id],
+      { relationshipChange: improvement }  // Add relationship change to event data
     );
+    
+    // Dispatch UI event for relationship impact visualization
+    controller.dispatch({
+      type: 'RELATIONSHIP_IMPACT',
+      payload: {
+        targetId: target.id,
+        targetName: target.name,
+        value: improvement
+      }
+    });
   }
 }
