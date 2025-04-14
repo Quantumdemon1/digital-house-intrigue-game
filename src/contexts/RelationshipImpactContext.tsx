@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { useGame } from './GameContext';
 
 export interface RelationshipImpact {
   id: string;
@@ -28,7 +27,6 @@ export const useRelationshipImpact = () => {
 
 export const RelationshipImpactProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [impacts, setImpacts] = useState<RelationshipImpact[]>([]);
-  const { gameState } = useGame();
   
   // Remove impacts after they've been displayed for a while
   useEffect(() => {
@@ -42,11 +40,12 @@ export const RelationshipImpactProvider: React.FC<{ children: React.ReactNode }>
     return () => clearInterval(timer);
   }, []);
   
-  // Clear impacts on phase change
-  useEffect(() => {
-    clearImpacts();
-  }, [gameState.phase]);
-  
+  // Clear impacts function that can be called manually or from a parent component
+  const clearImpacts = useCallback(() => {
+    setImpacts([]);
+  }, []);
+
+  // Add a new impact to the list
   const addImpact = useCallback((houseguestId: string, houseguestName: string, impactValue: number) => {
     // Don't show impacts of 0
     if (impactValue === 0) return;
@@ -60,10 +59,6 @@ export const RelationshipImpactProvider: React.FC<{ children: React.ReactNode }>
     };
     
     setImpacts(prev => [...prev, newImpact]);
-  }, []);
-  
-  const clearImpacts = useCallback(() => {
-    setImpacts([]);
   }, []);
   
   return (
