@@ -16,6 +16,7 @@ import GameOverPhase from './game-phases/GameOverPhase';
 import HouseguestListComponent from './HouseguestList';
 import { AllianceManager } from './alliance/AllianceManager';
 import { Separator } from './ui/separator';
+import { AIThoughtsProvider } from './ai-feedback';
 
 const Game = () => {
   const { game, loading, gameState } = useGame();
@@ -74,53 +75,55 @@ const Game = () => {
   const nomineeHouseguests = game.nominees.map(id => game.getHouseguestById(id)).filter(Boolean);
 
   return (
-    <div className="container py-4 mx-auto">
-      <GamePhaseHeader 
-        week={game.week}
-        phase={game.phase}
-        hoh={hohHouseguest}
-        pov={povHouseguest}
-        nominees={nomineeHouseguests}
-      />
-      
-      <div className="flex border-b mb-4">
-        <button
-          className={`px-4 py-2 ${activeTab === 'phase' 
-            ? 'border-b-2 border-primary font-medium text-primary' 
-            : 'text-muted-foreground'
-          }`}
-          onClick={() => setActiveTab('phase')}
-        >
-          Game Phase
-        </button>
-        <button
-          className={`px-4 py-2 ${activeTab === 'house' 
-            ? 'border-b-2 border-primary font-medium text-primary' 
-            : 'text-muted-foreground'
-          }`}
-          onClick={() => setActiveTab('house')}
-        >
-          Houseguests
-        </button>
-        <button
-          className={`px-4 py-2 ${activeTab === 'log' 
-            ? 'border-b-2 border-primary font-medium text-primary' 
-            : 'text-muted-foreground'
-          }`}
-          onClick={() => setActiveTab('log')}
-        >
-          Game Log
-        </button>
+    <AIThoughtsProvider>
+      <div className="container py-4 mx-auto">
+        <GamePhaseHeader 
+          week={game.week}
+          phase={game.phase}
+          hoh={hohHouseguest}
+          pov={povHouseguest}
+          nominees={nomineeHouseguests}
+        />
+        
+        <div className="flex border-b mb-4">
+          <button
+            className={`px-4 py-2 ${activeTab === 'phase' 
+              ? 'border-b-2 border-primary font-medium text-primary' 
+              : 'text-muted-foreground'
+            }`}
+            onClick={() => setActiveTab('phase')}
+          >
+            Game Phase
+          </button>
+          <button
+            className={`px-4 py-2 ${activeTab === 'house' 
+              ? 'border-b-2 border-primary font-medium text-primary' 
+              : 'text-muted-foreground'
+            }`}
+            onClick={() => setActiveTab('house')}
+          >
+            Houseguests
+          </button>
+          <button
+            className={`px-4 py-2 ${activeTab === 'log' 
+              ? 'border-b-2 border-primary font-medium text-primary' 
+              : 'text-muted-foreground'
+            }`}
+            onClick={() => setActiveTab('log')}
+          >
+            Game Log
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {activeTab === 'phase' && renderGamePhase()}
+          {activeTab === 'house' && <HouseguestListComponent />}
+          {activeTab === 'log' && <GameLog />}
+        </div>
+        
+        <AllianceManager />
       </div>
-      
-      <div className="space-y-4">
-        {activeTab === 'phase' && renderGamePhase()}
-        {activeTab === 'house' && <HouseguestListComponent />}
-        {activeTab === 'log' && <GameLog />}
-      </div>
-      
-      <AllianceManager />
-    </div>
+    </AIThoughtsProvider>
   );
 };
 

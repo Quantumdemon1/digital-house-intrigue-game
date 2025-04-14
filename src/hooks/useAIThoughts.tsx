@@ -6,6 +6,7 @@ interface AIThought {
   houseguestId: string;
   thought: string;
   timestamp: number;
+  type: 'thought' | 'decision' | 'strategy';
 }
 
 export function useAIThoughts() {
@@ -13,15 +14,26 @@ export function useAIThoughts() {
   const [isVisible, setIsVisible] = useState<boolean>(true);
 
   // Add a new thought for a houseguest
-  const addThought = (houseguest: Houseguest, thought: string) => {
+  const addThought = (houseguest: Houseguest, thought: string, type: 'thought' | 'decision' | 'strategy' = 'thought') => {
     setThoughts(prev => ({
       ...prev,
       [houseguest.id]: {
         houseguestId: houseguest.id,
         thought,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        type
       }
     }));
+  };
+
+  // Add a decision thought
+  const addDecision = (houseguest: Houseguest, thought: string) => {
+    addThought(houseguest, thought, 'decision');
+  };
+
+  // Add a strategy thought
+  const addStrategy = (houseguest: Houseguest, thought: string) => {
+    addThought(houseguest, thought, 'strategy');
   };
 
   // Remove thought for a specific houseguest
@@ -47,6 +59,8 @@ export function useAIThoughts() {
     thoughts,
     isVisible,
     addThought,
+    addDecision,
+    addStrategy,
     removeThought,
     clearThoughts,
     toggleVisibility
