@@ -1,10 +1,15 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Shield, CheckCircle2, XCircle, ArrowRight, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Houseguest } from '@/models/houseguest';
-import { UserMinus, UserPlus } from 'lucide-react';
+import { useGame } from '@/contexts/GameContext';
+import { Separator } from '@/components/ui/separator';
+import { AIDecisionCard } from '@/components/ai-feedback';
 
 interface CompletedStageProps {
-  useVeto: boolean | null;
+  useVeto: boolean;
   povHolder: Houseguest | null;
   savedNominee: Houseguest | null;
   replacementNominee: Houseguest | null;
@@ -20,83 +25,136 @@ const CompletedStage: React.FC<CompletedStageProps> = ({
   hoh,
   nominees
 }) => {
+  const { dispatch } = useGame();
+  const [showDecisionSummary, setShowDecisionSummary] = useState(false);
+  
+  // Continue to Eviction Phase
+  const handleContinue = () => {
+    dispatch({
+      type: 'PLAYER_ACTION',
+      payload: {
+        actionId: 'continue_to_eviction',
+        params: {}
+      }
+    });
+  };
+
+  // Get current nominees after the meeting
+  const currentNominees = useVeto
+    ? nominees.map(nominee => (nominee.id === savedNominee?.id ? replacementNominee : nominee))
+    : nominees;
+
+  const filteredNominees = currentNominees.filter(Boolean);
+  
   return (
-    <div className="text-center">
-      <h3 className="text-xl font-bold mb-4">Veto Meeting Results</h3>
-      
-      {useVeto ? (
-        <>
-          <div className="mb-6">
-            <p className="mb-2">
-              <span className="font-semibold">{povHolder?.name}</span> used the Power of Veto on{' '}
-              <span className="font-semibold">{savedNominee?.name}</span>
-            </p>
-            
-            <p>
-              <span className="font-semibold">{hoh?.name}</span> named{' '}
-              <span className="font-semibold">{replacementNominee?.name}</span> as the replacement nominee
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-8 max-w-md mx-auto mb-6">
-            <div>
-              <h4 className="font-semibold mb-2">Current Nominees</h4>
-              <div className="flex flex-col items-center gap-4">
-                {nominees.filter(nom => nom.id !== savedNominee?.id).map(nominee => (
-                  <div key={nominee.id} className="text-center">
-                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-lg mb-1">
-                      {nominee.name.charAt(0)}
-                    </div>
-                    <div>{nominee.name}</div>
-                  </div>
-                ))}
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-lg mb-1">
-                    {replacementNominee?.name.charAt(0)}
-                  </div>
-                  <div>{replacementNominee?.name}</div>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-2">Saved</h4>
-              <div className="flex flex-col items-center">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-lg mb-1">
-                    {savedNominee?.name.charAt(0)}
-                  </div>
-                  <div>{savedNominee?.name}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div>
-          <p className="mb-6">
-            <span className="font-semibold">{povHolder?.name}</span> decided not to use the Power of Veto.
-            The nominations remain the same.
-          </p>
-          
-          <div className="mb-6">
-            <h4 className="font-semibold mb-2">Current Nominees:</h4>
-            <div className="flex justify-center gap-4">
-              {nominees.map(nominee => (
-                <div key={nominee.id} className="text-center">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-lg mb-1">
-                    {nominee.name.charAt(0)}
-                  </div>
-                  <div>{nominee.name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="text-center space-y-4">
+        <div className="flex justify-center items-center">
+          <Shield className="h-10 w-10 text-green-600" />
+          <h3 className="text-xl font-semibold mx-2">Meeting Results</h3>
+          <Shield className="h-10 w-10 text-green-600" />
         </div>
-      )}
+        
+        <Card className="border-green-200 mb-6">
+          <CardContent className="py-6">
+            <h4 className="font-semibold text-lg text-center mb-4">
+              {povHolder?.name}'s Decision:
+            </h4>
+            
+            <div className="flex justify-center items-center">
+              {useVeto ? (
+                <div className="flex items-center justify-center bg-green-100 text-green-700 px-4 py-2 rounded-lg">
+                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                  <span className="font-semibold">Used the Power of Veto</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center bg-gray-100 text-gray-700 px-4 py-2 rounded-lg">
+                  <XCircle className="h-5 w-5 mr-2" />
+                  <span className="font-semibold">Did Not Use the Power of Veto</span>
+                </div>
+              )}
+            </div>
+            
+            {useVeto && savedNominee && (
+              <div className="mt-4 text-center">
+                <p className="mb-2">Removed from the block:</p>
+                <div className="inline-block bg-green-50 text-green-700 px-3 py-1 rounded-lg">
+                  {savedNominee.name}
+                </div>
+              </div>
+            )}
+            
+            {useVeto && replacementNominee && (
+              <div className="mt-4 text-center">
+                <p className="mb-2">Replacement nominee:</p>
+                <div className="inline-block bg-red-50 text-red-700 px-3 py-1 rounded-lg">
+                  {replacementNominee.name}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {!showDecisionSummary && (
+          <Button 
+            onClick={() => setShowDecisionSummary(true)} 
+            variant="outline"
+            className="border-blue-500 text-blue-700 hover:bg-blue-50"
+          >
+            Show Decision Process
+          </Button>
+        )}
+        
+        {showDecisionSummary && (
+          <div className="max-w-lg mx-auto mt-4 space-y-4">
+            <AIDecisionCard
+              houseguest={povHolder}
+              decision={useVeto ? "Use the Power of Veto" : "Not Use the Power of Veto"}
+              reasoning={
+                useVeto 
+                  ? savedNominee?.isPlayer 
+                    ? "I need to save the player since they're an important ally." 
+                    : `I decided to save ${savedNominee?.name} to build trust and create a stronger alliance.`
+                  : "I chose not to use the veto to avoid making waves and keep myself safe for the week."
+              }
+              onClose={() => {}}
+              closeable={false}
+            />
+            
+            {useVeto && replacementNominee && (
+              <AIDecisionCard
+                houseguest={hoh}
+                decision={`Nominate ${replacementNominee.name}`}
+                reasoning={`${replacementNominee.name} is the best strategic choice for a replacement nominee because they pose a threat to my game.`}
+                onClose={() => {}}
+                closeable={false}
+              />
+            )}
+          </div>
+        )}
+      </div>
       
-      <div className="text-muted-foreground mt-6">
-        <p>Moving to the Eviction Phase...</p>
+      <Separator />
+      
+      <div className="bg-red-50 p-4 rounded-md">
+        <h4 className="font-semibold text-center mb-3">Current Nominees</h4>
+        <div className="flex justify-center gap-4">
+          {filteredNominees.map(nominee => nominee && (
+            <div key={nominee.id} className="bg-red-100 px-3 py-2 rounded-md flex items-center">
+              <User className="h-4 w-4 mr-2 text-red-600" />
+              <span>{nominee.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div className="flex justify-center mt-6">
+        <Button 
+          onClick={handleContinue} 
+          className="bg-bb-blue hover:bg-blue-700 text-white"
+        >
+          Continue to Eviction <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
