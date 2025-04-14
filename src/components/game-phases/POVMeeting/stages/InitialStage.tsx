@@ -78,6 +78,7 @@ const InitialStage: React.FC<InitialStageProps> = ({
             decision={decisionInfo.decision}
             reasoning={decisionInfo.reasoning}
             onClose={() => setShowDecisionCard(false)}
+            decisionType="Power of Veto"
           />
         </div>
       )}

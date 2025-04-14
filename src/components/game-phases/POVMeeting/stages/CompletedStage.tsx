@@ -117,8 +117,8 @@ const CompletedStage: React.FC<CompletedStageProps> = ({
                     : `I decided to save ${savedNominee?.name} to build trust and create a stronger alliance.`
                   : "I chose not to use the veto to avoid making waves and keep myself safe for the week."
               }
-              onClose={() => {}}
               closeable={false}
+              decisionType="Power of Veto"
             />
             
             {useVeto && replacementNominee && (
@@ -126,8 +126,8 @@ const CompletedStage: React.FC<CompletedStageProps> = ({
                 houseguest={hoh}
                 decision={`Nominate ${replacementNominee.name}`}
                 reasoning={`${replacementNominee.name} is the best strategic choice for a replacement nominee because they pose a threat to my game.`}
-                onClose={() => {}}
                 closeable={false}
+                decisionType="Replacement Nomination"
               />
             )}
           </div>

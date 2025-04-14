@@ -93,7 +93,7 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
         </div>
       </div>
       
-      <VotingStatus votes={votes} votersCount={voters.length} hoh={hoh} />
+      <VotingStatus voters={voters} votes={votes} hoh={hoh} />
     </div>
   );
 };

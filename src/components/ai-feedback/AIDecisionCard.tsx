@@ -5,17 +5,25 @@ import { Brain, ThumbsUp, ThumbsDown, Scale, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Houseguest } from '@/models/houseguest';
 
 interface AIDecisionCardProps {
-  decisionMaker: string;
-  decisionType: string;
+  // Original props
+  decisionMaker?: string;
+  decisionType?: string;
   reasoning: string;
-  outcome: string;
+  outcome?: string;
   relationshipImpacts?: Array<{
     name: string;
     change: number;
   }>;
   className?: string;
+  
+  // Added props for compatibility
+  houseguest?: Houseguest | null;
+  decision?: string;
+  onClose?: () => void;
+  closeable?: boolean;
 }
 
 const AIDecisionCard: React.FC<AIDecisionCardProps> = ({
@@ -25,7 +33,19 @@ const AIDecisionCard: React.FC<AIDecisionCardProps> = ({
   outcome,
   relationshipImpacts,
   className,
+  // Handle new props
+  houseguest,
+  decision,
+  onClose,
+  closeable = true,
 }) => {
+  // Use either houseguest name or decisionMaker
+  const displayName = houseguest?.name || decisionMaker || 'Unknown';
+  // Use either decision or outcome
+  const displayOutcome = decision || outcome || '';
+  // Use either decisionType or derive from decision
+  const displayType = decisionType || (decision ? 'Game Decision' : 'Thought Process');
+  
   return (
     <Card className={cn("shadow-md border-blue-200 max-w-md w-full", className)}>
       <CardHeader className="bg-blue-50/50 dark:bg-blue-900/20 pb-2">
@@ -35,11 +55,11 @@ const AIDecisionCard: React.FC<AIDecisionCardProps> = ({
             AI Decision Process
           </CardTitle>
           <Badge variant="outline" className="font-normal">
-            {decisionType}
+            {displayType}
           </Badge>
         </div>
         <CardDescription>
-          {decisionMaker}'s thought process
+          {displayName}'s thought process
         </CardDescription>
       </CardHeader>
       
@@ -51,7 +71,7 @@ const AIDecisionCard: React.FC<AIDecisionCardProps> = ({
         
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground mb-1">DECISION</h4>
-          <p className="font-medium">{outcome}</p>
+          <p className="font-medium">{displayOutcome}</p>
         </div>
         
         {relationshipImpacts && relationshipImpacts.length > 0 && (
@@ -84,8 +104,18 @@ const AIDecisionCard: React.FC<AIDecisionCardProps> = ({
         )}
       </CardContent>
       
-      <CardFooter className="pt-2 pb-3 text-xs text-muted-foreground">
-        <Scale size={12} className="mr-1" /> AI decisions are based on personality, relationships, and game state
+      <CardFooter className="pt-2 pb-3 flex justify-between items-center text-xs text-muted-foreground">
+        <div className="flex items-center">
+          <Scale size={12} className="mr-1" /> AI decisions are based on personality, relationships, and game state
+        </div>
+        {closeable && onClose && (
+          <button 
+            onClick={onClose} 
+            className="text-xs text-blue-500 hover:text-blue-700"
+          >
+            Close
+          </button>
+        )}
       </CardFooter>
     </Card>
   );

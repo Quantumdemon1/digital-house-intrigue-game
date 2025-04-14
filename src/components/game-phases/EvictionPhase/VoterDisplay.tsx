@@ -1,43 +1,74 @@
+
 import React from 'react';
-import { Clock, User } from 'lucide-react';
+import { Clock, User, Brain, Check } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
+
 interface VoterDisplayProps {
-  currentVoter: Houseguest;
+  voter: Houseguest;  // Added to match what's being passed
   nominees: Houseguest[];
-  isPlayerVoting: boolean;
-  isVoting: boolean;
-  showVote: boolean;
-  onVote: (nomineeId: string) => void;
+  votes: Record<string, string>;  // Added to match what's being passed
+  onVoteSubmit: (voterId: string, nomineeId: string) => void;  // Added to match what's being passed
+  onShowDecision?: () => void;  // Made optional to match what's being passed
 }
+
 const VoterDisplay: React.FC<VoterDisplayProps> = ({
-  currentVoter,
+  voter,
   nominees,
-  isPlayerVoting,
-  isVoting,
-  showVote,
-  onVote
+  votes,
+  onVoteSubmit,
+  onShowDecision
 }) => {
-  return <div className="bg-bb-blue text-white">
-      <p className="font-medium mb-2">
-        <span className="text-bb-red">Current Voter:</span> {currentVoter.name}
-        {currentVoter.isPlayer ? " (You)" : ""}
-      </p>
-      
-      {isVoting && <div className="flex items-center justify-center">
-          <Clock className="animate-pulse mr-2" />
-          <span>{showVote ? "Vote cast!" : "Thinking..."}</span>
-        </div>}
-      
-      {isPlayerVoting && !isVoting && <div className="mt-4 space-y-2">
-          <p>Vote to evict:</p>
-          <div className="flex justify-center gap-4">
-            {nominees.map(nominee => <Button key={nominee.id} variant="destructive" className="flex items-center" onClick={() => onVote(nominee.id)}>
-                <User className="mr-1 h-4 w-4" />
-                {nominee.name}
-              </Button>)}
+  const hasVoted = Object.keys(votes).includes(voter.id);
+  const isPlayer = voter.isPlayer;
+
+  return (
+    <div className="p-3 border rounded-md shadow-sm bg-white">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+            {voter.name.charAt(0)}
           </div>
-        </div>}
-    </div>;
+          <div>
+            <p className="font-medium">{voter.name}</p>
+            <p className="text-xs text-muted-foreground">{voter.occupation}</p>
+          </div>
+        </div>
+        
+        {hasVoted ? (
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+            <Check className="h-3 w-3 mr-1" /> Voted
+          </span>
+        ) : isPlayer ? (
+          <div className="space-x-1">
+            {nominees.map(nominee => (
+              <Button 
+                key={nominee.id}
+                size="sm" 
+                variant="destructive"
+                onClick={() => onVoteSubmit(voter.id, nominee.id)}
+              >
+                Evict {nominee.name}
+              </Button>
+            ))}
+          </div>
+        ) : onShowDecision ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1"
+            onClick={onShowDecision}
+          >
+            <Brain className="h-3 w-3" /> Show thoughts
+          </Button>
+        ) : (
+          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
+            <Clock className="h-3 w-3 mr-1" /> Thinking...
+          </span>
+        )}
+      </div>
+    </div>
+  );
 };
+
 export default VoterDisplay;

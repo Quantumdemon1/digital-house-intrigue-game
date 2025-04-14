@@ -56,6 +56,7 @@ const VoterDecisionDisplay: React.FC<VoterDecisionDisplayProps> = ({
               setShowDecision(false);
               onDecisionComplete();
             }}
+            decisionType="Eviction Vote"
           />
         </div>
       )}

@@ -80,6 +80,7 @@ const SelectReplacementStage: React.FC<SelectReplacementStageProps> = ({
               setShowDecisionCard(false);
               onSelectReplacement(selectedReplacement);
             }}
+            decisionType="Replacement Nomination"
           />
         </div>
       )}
