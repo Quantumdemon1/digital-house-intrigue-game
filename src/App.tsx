@@ -12,8 +12,8 @@ import GameSetup from './components/GameSetup';
 function App() {
   return (
     <div className="app min-h-screen bg-background">
-      <GameProvider>
-        <RelationshipImpactProvider>
+      <RelationshipImpactProvider>
+        <GameProvider>
           <AIThoughtsProvider>
             <Routes>
               <Route path="/" element={<GameSetup />} />
@@ -22,8 +22,8 @@ function App() {
             <RelationshipImpactDisplay />
             <Toaster position="top-center" richColors />
           </AIThoughtsProvider>
-        </RelationshipImpactProvider>
-      </GameProvider>
+        </GameProvider>
+      </RelationshipImpactProvider>
     </div>
   );
 }
