@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { useGame } from '@/contexts/GameContext';
 import { SocialActionChoice } from '@/game-states/GameStateBase';
 import StrategicDiscussionDialog from './social/StrategicDiscussionDialog';
 import MakePromiseDialog from './social/MakePromiseDialog';
+import { PromiseDialog } from '@/components/promise';
 
 const SocialInteractionPhase: React.FC = () => {
   const { game, logger, dispatch } = useGame();
@@ -29,17 +29,13 @@ const SocialInteractionPhase: React.FC = () => {
   const currentLocation = game.currentLocation;
   const activeGuests = game.getActiveHouseguests();
   
-  // Get available actions from the state
   const availableActions = currentState.getAvailableActions();
 
-  // Determine who is 'present'
   const presentGuests = useMemo(() => activeGuests.filter(hg => {
-    // Simple random presence for now - in a full implementation, this would be deterministic
     return Math.random() > 0.3; // ~70% chance present
   }), [activeGuests]);
 
   const handleActionClick = (actionId: string, params?: any) => {
-    // Special handling for certain actions that need dialogs
     if (actionId === 'strategic_discussion') {
       setDialogAction({
         type: 'strategic_discussion',
@@ -58,7 +54,15 @@ const SocialInteractionPhase: React.FC = () => {
       return;
     }
     
-    // Standard action dispatch
+    if (actionId === 'check_promises') {
+      setDialogAction({
+        type: 'check_promises',
+        params,
+        isOpen: true
+      });
+      return;
+    }
+    
     logger.info(`Player triggering social action: ${actionId}`);
     dispatch({ 
       type: 'PLAYER_ACTION', 
@@ -66,7 +70,6 @@ const SocialInteractionPhase: React.FC = () => {
     });
   };
 
-  // Group actions by category for better organization
   const groupedActions = useMemo(() => {
     const groups: {[key: string]: SocialActionChoice[]} = {
       movement: [],
@@ -102,7 +105,6 @@ const SocialInteractionPhase: React.FC = () => {
     return groups;
   }, [availableActions]);
 
-  // Handle dialog closures
   const handleCloseDialog = () => {
     setDialogAction(prev => ({ ...prev, isOpen: false }));
   };
@@ -119,7 +121,6 @@ const SocialInteractionPhase: React.FC = () => {
       </CardHeader>
       
       <CardContent className="pt-6 space-y-6">
-        {/* Location and Present Guests */}
         <div className="mb-4 p-3 bg-card border rounded-lg">
           <div className="flex justify-between items-center mb-2">
             <h4 className="font-semibold flex items-center gap-1">
@@ -142,14 +143,11 @@ const SocialInteractionPhase: React.FC = () => {
           )}
         </div>
 
-        {/* Interactions Counter */}
         <div className="text-center font-medium text-blue-700 dark:text-blue-300">
           Interactions Available: {currentState.interactionsRemaining}
         </div>
 
-        {/* Action Sections */}
         <div className="space-y-5">
-          {/* Movement Section */}
           {groupedActions.movement.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
@@ -174,7 +172,6 @@ const SocialInteractionPhase: React.FC = () => {
             </div>
           )}
           
-          {/* Conversations Section */}
           {groupedActions.conversations.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
@@ -199,7 +196,6 @@ const SocialInteractionPhase: React.FC = () => {
             </div>
           )}
           
-          {/* Strategic Actions */}
           {groupedActions.strategic.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
@@ -225,7 +221,6 @@ const SocialInteractionPhase: React.FC = () => {
             </div>
           )}
           
-          {/* Relationship Building */}
           {groupedActions.relationship.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
@@ -250,7 +245,6 @@ const SocialInteractionPhase: React.FC = () => {
             </div>
           )}
           
-          {/* Information Sharing */}
           {groupedActions.information.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
@@ -278,7 +272,6 @@ const SocialInteractionPhase: React.FC = () => {
             </div>
           )}
           
-          {/* Alliance Management */}
           {groupedActions.alliance.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
@@ -303,7 +296,6 @@ const SocialInteractionPhase: React.FC = () => {
             </div>
           )}
           
-          {/* Status Checks */}
           {groupedActions.status.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
@@ -329,7 +321,6 @@ const SocialInteractionPhase: React.FC = () => {
             </div>
           )}
           
-          {/* Advance Phase Button */}
           {groupedActions.advance.length > 0 && (
             <div className="pt-3">
               <Button
@@ -345,7 +336,6 @@ const SocialInteractionPhase: React.FC = () => {
         </div>
       </CardContent>
       
-      {/* Dialog components */}
       {dialogAction.type === 'strategic_discussion' && (
         <StrategicDiscussionDialog 
           open={dialogAction.isOpen}
@@ -359,6 +349,13 @@ const SocialInteractionPhase: React.FC = () => {
           open={dialogAction.isOpen}
           onOpenChange={handleCloseDialog}
           params={dialogAction.params}
+        />
+      )}
+      
+      {dialogAction.type === 'check_promises' && (
+        <PromiseDialog
+          open={dialogAction.isOpen}
+          onOpenChange={handleCloseDialog}
         />
       )}
     </Card>

@@ -10,6 +10,7 @@ import StrategicSection from './sections/StrategicSection';
 import InformationSection from './sections/InformationSection';
 import AdvanceSection from './sections/AdvanceSection';
 import AllianceSection from './sections/AllianceSection';
+import PromiseSection from './sections/PromiseSection';
 
 interface ActionSectionsProps {
   availableActions: {
@@ -22,13 +23,23 @@ const ActionSections: React.FC<ActionSectionsProps> = ({
   availableActions,
   onActionClick
 }) => {
+  // Divide promise-related actions into their own group
+  const promiseActions = [
+    ...(availableActions.relationship?.filter(a => a.actionId === 'make_promise') || []),
+    ...(availableActions.status?.filter(a => a.actionId === 'check_promises') || [])
+  ];
+  
+  // Remove promise actions from their original categories
+  const relationshipActions = availableActions.relationship?.filter(a => a.actionId !== 'make_promise') || [];
+  const statusActions = availableActions.status?.filter(a => a.actionId !== 'check_promises') || [];
+  
   return (
     <div className="space-y-6">
       {/* Status Actions */}
-      {availableActions.status?.length > 0 && (
+      {statusActions.length > 0 && (
         <>
           <StatusSection
-            actions={availableActions.status}
+            actions={statusActions}
             onActionClick={onActionClick}
           />
           <Separator />
@@ -57,11 +68,22 @@ const ActionSections: React.FC<ActionSectionsProps> = ({
         </>
       )}
       
+      {/* Promise Actions */}
+      {promiseActions.length > 0 && (
+        <>
+          <PromiseSection
+            actions={promiseActions}
+            onActionClick={onActionClick}
+          />
+          <Separator />
+        </>
+      )}
+      
       {/* Relationship Actions */}
-      {availableActions.relationship?.length > 0 && (
+      {relationshipActions.length > 0 && (
         <>
           <RelationshipSection
-            actions={availableActions.relationship}
+            actions={relationshipActions}
             onActionClick={onActionClick}
           />
           <Separator />
