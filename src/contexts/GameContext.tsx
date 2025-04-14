@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from "sonner"; // Import sonner toast
 import { useRelationshipImpact } from './RelationshipImpactContext';
@@ -38,7 +39,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(false);
     
     // Get the relationship impact context
-    const relationshipImpact = useRelationshipImpact?.();
+    const relationshipImpact = useRelationshipImpact();
     
     // Handle relationship impact actions
     const interceptedDispatch = useCallback((action: GameAction) => {
@@ -157,7 +158,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getGameStatus,
       logger,
       showToast,
-      isLoading
+      isLoading,
+      interceptedDispatch
     ]);
 
     return (
