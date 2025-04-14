@@ -130,6 +130,161 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [logger]);
 
+    // Save game state to localStorage
+    const saveGame = useCallback((saveName: string) => {
+        try {
+            // Serialize relationships map to a plain object
+            const serializedRelationships = Array.from(gameState.relationships.entries()).reduce((acc, [guestId1, relationships]) => {
+                acc[guestId1] = Array.from(relationships.entries()).reduce((rel, [guestId2, relationship]) => {
+                    rel[guestId2] = relationship;
+                    return rel;
+                }, {} as Record<string, any>);
+                return acc;
+            }, {} as Record<string, Record<string, any>>);
+            
+            // Create a serializable version of the game state
+            const serializableState = {
+                ...gameState,
+                relationships: serializedRelationships,
+                // Ensure any circular references are removed
+                gameInstance: null,
+            };
+            
+            // Create save data object
+            const saveData = {
+                gameState: serializableState,
+                savedAt: new Date().toISOString(),
+                name: saveName,
+                version: '1.0'
+            };
+            
+            // Save to localStorage
+            const existingSaves = JSON.parse(localStorage.getItem('bigBrotherSaves') || '{}');
+            existingSaves[saveName] = saveData;
+            localStorage.setItem('bigBrotherSaves', JSON.stringify(existingSaves));
+            
+            showToast("Game saved successfully", { 
+                variant: "success",
+                description: `Saved as "${saveName}"`
+            });
+            
+            return true;
+        } catch (error) {
+            logger.error("Failed to save game:", error);
+            showToast("Save failed", { 
+                variant: "error",
+                description: "There was an error saving your game"
+            });
+            return false;
+        }
+    }, [gameState, logger, showToast]);
+
+    // Load game state from localStorage
+    const loadGame = useCallback((saveName: string) => {
+        try {
+            setIsLoading(true);
+            const saves = JSON.parse(localStorage.getItem('bigBrotherSaves') || '{}');
+            const saveData = saves[saveName];
+            
+            if (!saveData) {
+                showToast("Load failed", { 
+                    variant: "error",
+                    description: "Save file not found"
+                });
+                setIsLoading(false);
+                return false;
+            }
+            
+            // Convert serialized relationships back to Map
+            const loadedState = saveData.gameState;
+            const relationshipsMap = new Map();
+            
+            if (loadedState.relationships) {
+                Object.entries(loadedState.relationships).forEach(([guestId1, relationships]: [string, any]) => {
+                    const innerMap = new Map();
+                    Object.entries(relationships).forEach(([guestId2, relationship]: [string, any]) => {
+                        innerMap.set(guestId2, relationship);
+                    });
+                    relationshipsMap.set(guestId1, innerMap);
+                });
+            }
+            
+            // Create restored game state
+            const restoredState = {
+                ...loadedState,
+                relationships: relationshipsMap
+            };
+            
+            // Update state with restored data
+            dispatch({ type: 'LOAD_GAME', payload: restoredState });
+            
+            // Create a new game instance if needed
+            if (!gameInstance) {
+                const newGame = new BigBrotherGame(
+                    loadedState.houseguests,
+                    loadedState.week,
+                    loadedState.phase
+                );
+                setGameInstance(newGame);
+            }
+            
+            showToast("Game loaded", { 
+                variant: "success",
+                description: `Loaded "${saveName}"`
+            });
+            
+            setTimeout(() => setIsLoading(false), 500);
+            return true;
+        } catch (error) {
+            logger.error("Failed to load game:", error);
+            showToast("Load failed", { 
+                variant: "error",
+                description: "There was an error loading your game"
+            });
+            setIsLoading(false);
+            return false;
+        }
+    }, [gameInstance, dispatch, showToast, logger]);
+
+    // Delete a saved game
+    const deleteSavedGame = useCallback((saveName: string) => {
+        try {
+            const saves = JSON.parse(localStorage.getItem('bigBrotherSaves') || '{}');
+            if (saves[saveName]) {
+                delete saves[saveName];
+                localStorage.setItem('bigBrotherSaves', JSON.stringify(saves));
+                
+                showToast("Save deleted", { 
+                    variant: "success",
+                    description: `Deleted "${saveName}"`
+                });
+                return true;
+            }
+            return false;
+        } catch (error) {
+            logger.error("Failed to delete save:", error);
+            showToast("Delete failed", { 
+                variant: "error",
+                description: "There was an error deleting the save"
+            });
+            return false;
+        }
+    }, [showToast, logger]);
+
+    // Get list of saved games
+    const getSavedGames = useCallback(() => {
+        try {
+            const saves = JSON.parse(localStorage.getItem('bigBrotherSaves') || '{}');
+            return Object.keys(saves).map(key => ({
+                name: key,
+                date: new Date(saves[key].savedAt).toLocaleString(),
+                data: saves[key]
+            }));
+        } catch {
+            return [];
+        }
+    }, []);
+
     // --- Context Value ---
     const contextValue = useMemo<GameContextType>(() => ({
         game: gameInstance,
@@ -147,7 +302,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getRandomNominees,
         getGameStatus,
         showToast,
-        loading: isLoading // Add the loading property
+        loading: isLoading,
+        saveGame,
+        loadGame,
+        deleteSavedGame,
+        getSavedGames
     }), [
       gameInstance, 
       gameState, 
@@ -159,7 +318,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logger,
       showToast,
       isLoading,
-      interceptedDispatch
+      interceptedDispatch,
+      saveGame,
+      loadGame,
+      deleteSavedGame,
+      getSavedGames
     ]);
 
     return (

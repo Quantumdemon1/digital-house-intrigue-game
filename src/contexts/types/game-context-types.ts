@@ -1,10 +1,8 @@
-
 import { Dispatch } from 'react';
 import { BigBrotherGame } from '../../models/game/BigBrotherGame';
 import { GameState } from '../../models/game-state';
 import { Logger } from '../../utils/logger';
 
-// Define the action types including the new RELATIONSHIP_IMPACT action
 export type GameAction = 
   | { type: 'START_GAME'; payload: any }
   | { type: 'SET_PHASE'; payload: string }
@@ -29,25 +27,28 @@ export type GameAction =
   | { type: 'SHOW_NARRATOR_MESSAGE'; payload?: any }
   | { type: 'SHOW_DIALOGUE'; payload?: any };
 
-// Export the GameState type to fix issues with imports
 export type { GameState } from '../../models/game-state';
 
-// Export the GameContextType interface
 export interface GameContextType {
   game: BigBrotherGame | null;
   gameState: GameState;
-  relationshipSystem: any;
-  competitionSystem: any;
-  aiSystem: any;
+  relationshipSystem: RelationshipSystem;
+  competitionSystem: CompetitionSystem;
+  aiSystem: AIIntegrationSystem;
   promiseSystem: any;
   recapGenerator: any;
   logger: Logger;
-  dispatch: Dispatch<GameAction>;
-  getHouseguestById: (id: string) => any;
+  dispatch: (action: GameAction) => void;
+  getHouseguestById: (id: string) => Houseguest | undefined;
   getRelationship: (guest1Id: string, guest2Id: string) => number;
-  getActiveHouseguests: () => any[];
-  getRandomNominees: (count?: number, excludeIds?: string[]) => any[];
+  getActiveHouseguests: () => Houseguest[];
+  getRandomNominees: (count?: number, excludeIds?: string[]) => Houseguest[];
   getGameStatus: () => { week: number; phase: string; hoh: string | null; nominees: string; povHolder: string | null };
   showToast: (title: string, options?: { description?: string; variant?: 'success' | 'error' | 'info' | 'warning'; duration?: number }) => void;
-  loading?: boolean;
+  loading: boolean;
+  
+  saveGame: (saveName: string) => boolean;
+  loadGame: (saveName: string) => boolean;
+  deleteSavedGame: (saveName: string) => boolean;
+  getSavedGames: () => Array<{ name: string; date: string; data: any }>;
 }

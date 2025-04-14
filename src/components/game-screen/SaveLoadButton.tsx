@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Save, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -9,7 +9,9 @@ import {
 import { useGame } from '@/contexts/GameContext';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, 
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter, 
+  AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface SaveLoadButtonProps {
   variant?: "default" | "outline" | "secondary";
@@ -23,8 +25,21 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
   className = ""
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [saveName, setSaveName] = useState("");
-  const { gameState, showToast } = useGame();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { saveGame, loadGame, deleteSavedGame, getSavedGames, showToast } = useGame();
+  
+  // State to store saved games list
+  const [savedGames, setSavedGames] = useState<Array<{ name: string; date: string; data: any }>>([]);
+  
+  // Load saved games list when dialog opens or refresh key changes
+  useEffect(() => {
+    if (dialogOpen) {
+      setSavedGames(getSavedGames());
+    }
+  }, [dialogOpen, getSavedGames, refreshKey]);
   
   const handleSaveGame = () => {
     if (!saveName.trim()) {
@@ -35,72 +50,38 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
       return;
     }
     
-    try {
-      // Create save data object
-      const saveData = {
-        gameState,
-        savedAt: new Date().toISOString(),
-        name: saveName,
-      };
-      
-      // Save to localStorage
-      const existingSaves = JSON.parse(localStorage.getItem('bigBrotherSaves') || '{}');
-      existingSaves[saveName] = saveData;
-      localStorage.setItem('bigBrotherSaves', JSON.stringify(existingSaves));
-      
-      // Show success message
-      showToast("Game saved successfully", { 
-        variant: "success",
-        description: `Saved as "${saveName}"`
-      });
-      
-      // Close dialog
-      setDialogOpen(false);
-    } catch (error) {
-      console.error("Failed to save game:", error);
-      showToast("Save failed", { 
-        variant: "error",
-        description: "There was an error saving your game"
-      });
+    const success = saveGame(saveName);
+    if (success) {
+      // Refresh saved games list
+      setRefreshKey(prev => prev + 1);
+      setSaveName("");
     }
   };
   
   const handleLoadGame = (saveName: string) => {
-    try {
-      const saves = JSON.parse(localStorage.getItem('bigBrotherSaves') || '{}');
-      const saveData = saves[saveName];
-      
-      if (saveData) {
-        // Here we would implement the actual loading logic
-        // which would require dispatching to the game reducer
-        showToast("Game loaded", { 
-          variant: "success",
-          description: `Loaded "${saveName}"`
-        });
-        setDialogOpen(false);
-      }
-    } catch (error) {
-      console.error("Failed to load game:", error);
-      showToast("Load failed", { 
-        variant: "error",
-        description: "There was an error loading your game"
-      });
+    const success = loadGame(saveName);
+    if (success) {
+      setDialogOpen(false);
     }
   };
   
-  // Get saved games from localStorage
-  const savedGames = React.useMemo(() => {
-    try {
-      const saves = JSON.parse(localStorage.getItem('bigBrotherSaves') || '{}');
-      return Object.keys(saves).map(key => ({
-        name: key,
-        date: new Date(saves[key].savedAt).toLocaleString(),
-        data: saves[key]
-      }));
-    } catch {
-      return [];
+  const handleOpenDeleteDialog = (saveName: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setDeleteTarget(saveName);
+    setDeleteDialogOpen(true);
+  };
+  
+  const handleDeleteSave = () => {
+    if (deleteTarget) {
+      const success = deleteSavedGame(deleteTarget);
+      if (success) {
+        // Refresh saved games list
+        setRefreshKey(prev => prev + 1);
+      }
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
     }
-  }, [dialogOpen]);
+  };
   
   return (
     <>
@@ -163,9 +144,19 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
                         <p className="font-medium">{save.name}</p>
                         <p className="text-xs text-muted-foreground">{save.date}</p>
                       </div>
-                      <Button size="sm" variant="ghost">
-                        <Upload className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost">
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={(e) => handleOpenDeleteDialog(save.name, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -178,6 +169,23 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
           </Tabs>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Save</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteTarget}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSave} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
