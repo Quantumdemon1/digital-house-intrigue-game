@@ -1,12 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
-import { Crown, Target, Clock } from 'lucide-react';
+import { Crown, Target, Clock, BrainCircuit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { updateHouseguestMentalState } from '@/models/houseguest';
+import AIThoughtDisplay from './NominationPhase/AIThoughtDisplay';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+
 const NominationPhase: React.FC = () => {
   const {
     gameState,
@@ -20,6 +23,7 @@ const NominationPhase: React.FC = () => {
   const [showingResults, setShowingResults] = useState(false);
   const [ceremonyStarted, setCeremonyStarted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showThoughts, setShowThoughts] = useState(true);
 
   // Convert HoH ID to Houseguest object
   const hoh = gameState?.hohWinner ? getHouseguestById(gameState.hohWinner.id) : null;
@@ -94,6 +98,7 @@ const NominationPhase: React.FC = () => {
       }
     });
   };
+  
   return <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
       <CardHeader className="bg-bb-blue text-white">
         <div className="flex items-center justify-between">
@@ -122,7 +127,32 @@ const NominationPhase: React.FC = () => {
           </div>
         </div>
         
-        {!ceremonyStarted ? <div className="text-center space-y-6 py-8">
+        {/* AI Thoughts Toggle */}
+        {(ceremonyStarted && showingResults) && (
+          <div className="flex items-center justify-end space-x-2">
+            <Switch 
+              id="show-thoughts" 
+              checked={showThoughts} 
+              onCheckedChange={(checked) => setShowThoughts(checked)} 
+            />
+            <Label htmlFor="show-thoughts" className="flex items-center cursor-pointer">
+              <BrainCircuit className="w-4 h-4 mr-1 text-blue-500" />
+              <span className="text-sm">Show AI Thoughts</span>
+            </Label>
+          </div>
+        )}
+        
+        {/* AI Thoughts Display */}
+        {(ceremonyStarted && showingResults && nominees.length === 2) && (
+          <AIThoughtDisplay
+            hoh={hoh}
+            nominees={nominees}
+            showThoughts={showThoughts}
+          />
+        )}
+        
+        {!ceremonyStarted ? (
+          <div className="text-center space-y-6 py-8">
             <h3 className="text-xl font-semibold">Nomination Ceremony</h3>
             <p className="text-muted-foreground">
               The Head of Household must nominate two houseguests for eviction.
@@ -131,12 +161,16 @@ const NominationPhase: React.FC = () => {
             <Button onClick={startCeremony} className="bg-red-600 hover:bg-red-700 text-white font-medium px-6">
               Start Nomination Ceremony
             </Button>
-          </div> : isAnimating ? <div className="text-center space-y-6 py-12">
+          </div>
+        ) : isAnimating ? (
+          <div className="text-center space-y-6 py-12">
             <div className="animate-pulse">
               <Target className="h-16 w-16 mx-auto text-red-500 mb-4" />
               <h3 className="text-xl font-semibold">Making Nominations...</h3>
             </div>
-          </div> : showingResults ? <div className="space-y-6">
+          </div>
+        ) : showingResults ? (
+          <div className="space-y-6">
             <div className="text-center mb-6">
               <Target className="h-10 w-10 mx-auto text-red-500 mb-2" />
               <h3 className="text-xl font-semibold mb-1">Nominations Complete</h3>
@@ -146,11 +180,13 @@ const NominationPhase: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-              {nominees.map(nominee => <div key={nominee?.id} className="bg-bb-blue text-white">
+              {nominees.map(nominee => (
+                <div key={nominee?.id} className="bg-bb-blue text-white p-3 rounded-md">
                   <Target className="h-5 w-5 mx-auto text-red-500 mb-2" />
                   <h4 className="font-semibold text-lg text-center">{nominee?.name}</h4>
-                  <p className="text-sm font-bold text-center text-zinc-950">{nominee?.occupation}</p>
-                </div>)}
+                  <p className="text-sm text-center text-white/70">{nominee?.occupation}</p>
+                </div>
+              ))}
             </div>
             
             <Separator className="my-6" />
@@ -163,8 +199,10 @@ const NominationPhase: React.FC = () => {
                 Continue to Power of Veto
               </Button>
             </div>
-          </div> : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>;
 };
+
 export default NominationPhase;
