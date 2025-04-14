@@ -4,7 +4,7 @@
  * @description Nomination state
  */
 
-import { GameStateBase } from './GameStateBase';
+import { GameStateBase, SocialActionChoice } from './GameStateBase';
 
 export class NominationState extends GameStateBase {
   async enter(): Promise<void> {
@@ -20,9 +20,25 @@ export class NominationState extends GameStateBase {
     }
   }
   
+  getAvailableActions(): SocialActionChoice[] {
+    return [
+      {
+        actionId: 'make_nominations',
+        text: 'Make Nominations',
+        parameters: { nomineeIds: [] }
+      },
+      {
+        actionId: 'continue_to_pov',
+        text: 'Continue to Power of Veto'
+      },
+      {
+        actionId: 'fast_forward',
+        text: 'Fast Forward'
+      }
+    ];
+  }
+  
   async handleAction(actionId: string, params: any): Promise<boolean> {
-    await super.handleAction(actionId, params);
-    
     switch (actionId) {
       case 'make_nominations':
         if (params && params.nomineeIds && params.nomineeIds.length === 2) {

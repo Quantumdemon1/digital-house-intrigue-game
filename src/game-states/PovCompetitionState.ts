@@ -4,7 +4,7 @@
  * @description PoV competition state
  */
 
-import { GameStateBase } from './GameStateBase';
+import { GameStateBase, SocialActionChoice } from './GameStateBase';
 
 export class PovCompetitionState extends GameStateBase {
   async enter(): Promise<void> {
@@ -21,9 +21,21 @@ export class PovCompetitionState extends GameStateBase {
     }
   }
   
+  getAvailableActions(): SocialActionChoice[] {
+    return [
+      {
+        actionId: 'select_pov_winner',
+        text: 'Select PoV Winner',
+        parameters: { povId: '' }
+      },
+      {
+        actionId: 'continue_to_pov_meeting',
+        text: 'Continue to PoV Meeting'
+      }
+    ];
+  }
+  
   async handleAction(actionId: string, params: any): Promise<boolean> {
-    await super.handleAction(actionId, params);
-    
     switch (actionId) {
       case 'select_pov_winner':
         if (params && params.povId) {

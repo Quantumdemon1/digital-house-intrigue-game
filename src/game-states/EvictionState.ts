@@ -4,7 +4,7 @@
  * @description Eviction state
  */
 
-import { GameStateBase } from './GameStateBase';
+import { GameStateBase, SocialActionChoice } from './GameStateBase';
 import { HouseguestStatus } from '../models/houseguest';
 
 export class EvictionState extends GameStateBase {
@@ -24,9 +24,22 @@ export class EvictionState extends GameStateBase {
     }
   }
   
+  getAvailableActions(): SocialActionChoice[] {
+    // Return available actions for this state
+    return [
+      {
+        actionId: 'cast_eviction_vote',
+        text: 'Cast Eviction Vote',
+        parameters: { nomineeId: '' }
+      },
+      {
+        actionId: 'eviction_complete',
+        text: 'Complete Eviction',
+      }
+    ];
+  }
+  
   async handleAction(actionId: string, params: any): Promise<boolean> {
-    await super.handleAction(actionId, params);
-    
     switch (actionId) {
       case 'cast_eviction_vote':
         if (params && params.voterId && params.nomineeId) {

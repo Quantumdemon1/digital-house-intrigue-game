@@ -4,7 +4,7 @@
  * @description Game initialization state
  */
 
-import { GameStateBase } from './GameStateBase';
+import { GameStateBase, SocialActionChoice } from './GameStateBase';
 
 export class InitializationState extends GameStateBase {
   async enter(): Promise<void> {
@@ -20,9 +20,20 @@ export class InitializationState extends GameStateBase {
     this.getLogger().info("InitializationState complete");
   }
 
+  getAvailableActions(): SocialActionChoice[] {
+    return [
+      {
+        actionId: 'start_game',
+        text: 'Start Game'
+      },
+      {
+        actionId: 'setup_game',
+        text: 'Setup Game Parameters'
+      }
+    ];
+  }
+
   async handleAction(actionId: string, params: any): Promise<boolean> {
-    await super.handleAction(actionId, params);
-    
     switch (actionId) {
       case 'start_game':
         this.getLogger().info("Game start action received");

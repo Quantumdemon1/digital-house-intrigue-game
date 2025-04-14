@@ -4,7 +4,7 @@
  * @description PoV meeting state
  */
 
-import { GameStateBase } from './GameStateBase';
+import { GameStateBase, SocialActionChoice } from './GameStateBase';
 
 export class PovMeetingState extends GameStateBase {
   async enter(): Promise<void> {
@@ -30,9 +30,30 @@ export class PovMeetingState extends GameStateBase {
     }
   }
   
+  getAvailableActions(): SocialActionChoice[] {
+    return [
+      {
+        actionId: 'use_veto',
+        text: 'Use Power of Veto',
+        parameters: { savedNomineeId: '' }
+      },
+      {
+        actionId: 'dont_use_veto',
+        text: 'Do Not Use Power of Veto'
+      },
+      {
+        actionId: 'replacement_nominee',
+        text: 'Select Replacement Nominee',
+        parameters: { replacementNomineeId: '' }
+      },
+      {
+        actionId: 'fast_forward',
+        text: 'Fast Forward'
+      }
+    ];
+  }
+  
   async handleAction(actionId: string, params: any): Promise<boolean> {
-    await super.handleAction(actionId, params);
-    
     switch (actionId) {
       case 'use_veto':
         // PoV holder decides to use the veto on a nominee

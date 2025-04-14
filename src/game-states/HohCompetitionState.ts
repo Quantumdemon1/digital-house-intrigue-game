@@ -4,7 +4,7 @@
  * @description HoH competition state
  */
 
-import { GameStateBase } from './GameStateBase';
+import { GameStateBase, SocialActionChoice } from './GameStateBase';
 
 export class HohCompetitionState extends GameStateBase {
   async enter(): Promise<void> {
@@ -21,9 +21,21 @@ export class HohCompetitionState extends GameStateBase {
     }
   }
   
+  getAvailableActions(): SocialActionChoice[] {
+    return [
+      {
+        actionId: 'select_hoh',
+        text: 'Select Head of Household',
+        parameters: { hohId: '' }
+      },
+      {
+        actionId: 'continue_to_nominations',
+        text: 'Continue to Nominations'
+      }
+    ];
+  }
+  
   async handleAction(actionId: string, params: any): Promise<boolean> {
-    await super.handleAction(actionId, params);
-    
     switch (actionId) {
       case 'select_hoh':
         if (params && params.hohId) {
