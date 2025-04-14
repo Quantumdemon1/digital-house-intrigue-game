@@ -13,6 +13,6 @@ export const LOAD_GAME = 'LOAD_GAME';
  * Reducer for loading a saved game
  * Simply replaces the entire state with the loaded game state
  */
-export const loadGameReducer = (state: GameState, payload: any): GameState => {
-  return payload as GameState;
+export const loadGameReducer = (state: GameState, payload: GameState): GameState => {
+  return payload;
 };

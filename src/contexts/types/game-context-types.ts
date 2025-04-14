@@ -1,7 +1,12 @@
+
 import { Dispatch } from 'react';
 import { BigBrotherGame } from '../../models/game/BigBrotherGame';
 import { GameState } from '../../models/game-state';
 import { Logger } from '../../utils/logger';
+import { RelationshipSystem } from '../../systems/relationship';
+import { CompetitionSystem } from '../../systems/competition-system';
+import { AIIntegrationSystem } from '../../systems/ai-integration';
+import { Houseguest } from '../../models/houseguest';
 
 export type GameAction = 
   | { type: 'START_GAME'; payload: any }
@@ -25,7 +30,8 @@ export type GameAction =
   | { type: 'TOGGLE_PAUSE'; payload?: any }
   | { type: 'FORCE_REFRESH'; payload?: any }
   | { type: 'SHOW_NARRATOR_MESSAGE'; payload?: any }
-  | { type: 'SHOW_DIALOGUE'; payload?: any };
+  | { type: 'SHOW_DIALOGUE'; payload?: any }
+  | { type: 'LOAD_GAME'; payload: GameState };
 
 export type { GameState } from '../../models/game-state';
 
