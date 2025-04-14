@@ -1,20 +1,20 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
-import { Trophy, BarChart, Home, RefreshCw } from 'lucide-react';
+import { Trophy, BarChart, Home, RefreshCw, History } from 'lucide-react';
 import GameSummary from './GameOverPhase/GameSummary';
 import PlayerStats from './GameOverPhase/PlayerStats';
 import WinnerDisplay from './GameOverPhase/WinnerDisplay';
 import SeasonRecap from './GameOverPhase/SeasonRecap';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 const GameOverPhase: React.FC = () => {
   const { gameState, dispatch } = useGame();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [showRecap, setShowRecap] = useState(false);
   
   // Get available actions from the controller
   const availableActions = gameState.phase === 'GameOver' ? 
@@ -27,6 +27,11 @@ const GameOverPhase: React.FC = () => {
       {
         actionId: 'view_stats',
         text: 'View Game Statistics',
+        category: 'information'
+      },
+      {
+        actionId: 'season_recap',
+        text: 'Season Timeline',
         category: 'information'
       },
       {
@@ -52,8 +57,7 @@ const GameOverPhase: React.FC = () => {
   const handleAction = (actionId: string) => {
     switch (actionId) {
       case 'new_game':
-        toast({
-          title: "Starting New Game",
+        toast.success("Starting New Game", {
           description: "Setting up a new game with new houseguests"
         });
         dispatch({
@@ -63,19 +67,19 @@ const GameOverPhase: React.FC = () => {
         break;
         
       case 'view_stats':
-        toast({
-          description: "Viewing game statistics"
-        });
+        toast.info("Viewing game statistics");
         dispatch({
           type: 'PLAYER_ACTION',
           payload: { actionId: 'view_stats' }
         });
         break;
         
+      case 'season_recap':
+        setShowRecap(true);
+        break;
+        
       case 'exit_game':
-        toast({
-          description: "Returning to main menu"
-        });
+        toast.info("Returning to main menu");
         navigate('/');
         break;
     }
@@ -92,6 +96,20 @@ const GameOverPhase: React.FC = () => {
       }
     };
   };
+  
+  if (showRecap) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Season Timeline</h2>
+          <Button variant="outline" onClick={() => setShowRecap(false)}>
+            Back to Results
+          </Button>
+        </div>
+        <SeasonRecap recap={generateRecap()} />
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-8">
@@ -125,6 +143,7 @@ const GameOverPhase: React.FC = () => {
               switch (action.actionId) {
                 case 'new_game': icon = <RefreshCw className="mr-2 h-4 w-4" />; break;
                 case 'view_stats': icon = <BarChart className="mr-2 h-4 w-4" />; break;
+                case 'season_recap': icon = <History className="mr-2 h-4 w-4" />; break;
                 case 'exit_game': icon = <Home className="mr-2 h-4 w-4" />; break;
                 default: icon = null;
               }
@@ -150,8 +169,6 @@ const GameOverPhase: React.FC = () => {
         <GameSummary gameState={gameState} />
         <PlayerStats gameState={gameState} />
       </div>
-      
-      <SeasonRecap recap={generateRecap()} />
     </div>
   );
 };

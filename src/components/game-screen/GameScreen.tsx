@@ -5,6 +5,9 @@ import GameHeader from './GameHeader';
 import GameSidebar from './GameSidebar';
 import PhaseContent from './PhaseContent';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useGameDialogs } from '@/hooks/useGameDialogs';
+import RelationshipDialog from '@/components/relationship/RelationshipDialog';
+import { PromiseDialog } from '@/components/promise';
 
 const GameScreen: React.FC = () => {
   const {
@@ -16,12 +19,20 @@ const GameScreen: React.FC = () => {
     phase
   } = gameState;
   
+  const {
+    isRelationshipDialogOpen,
+    setIsRelationshipDialogOpen,
+    isPromiseDialogOpen,
+    setIsPromiseDialogOpen
+  } = useGameDialogs();
+  
   // Log phase changes for debugging
   useEffect(() => {
     logger.info(`Current game phase: ${phase}`);
   }, [phase, logger]);
   
-  return <div className="container mx-auto p-4 flex flex-col h-full surveillance-bg">
+  return (
+    <div className="container mx-auto p-4 flex flex-col h-full surveillance-bg">
       <GameHeader />
       
       <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-lg overflow-hidden">
@@ -39,7 +50,20 @@ const GameScreen: React.FC = () => {
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
-    </div>;
+      
+      {/* Relationship Dialog */}
+      <RelationshipDialog 
+        open={isRelationshipDialogOpen} 
+        onOpenChange={setIsRelationshipDialogOpen} 
+      />
+      
+      {/* Promise Dialog */}
+      <PromiseDialog 
+        open={isPromiseDialogOpen} 
+        onOpenChange={setIsPromiseDialogOpen} 
+      />
+    </div>
+  );
 };
 
 export default GameScreen;
