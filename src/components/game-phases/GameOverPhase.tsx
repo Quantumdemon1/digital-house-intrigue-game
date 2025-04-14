@@ -1,61 +1,126 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
-import WinnerDisplay from './GameOverPhase/WinnerDisplay';
+import { Trophy, BarChart, Home, RefreshCw } from 'lucide-react';
 import GameSummary from './GameOverPhase/GameSummary';
 import PlayerStats from './GameOverPhase/PlayerStats';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import WinnerDisplay from './GameOverPhase/WinnerDisplay';
+import SeasonRecap from './GameOverPhase/SeasonRecap';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const GameOverPhase: React.FC = () => {
-  const { game } = useGame();
+  const { gameState, dispatch, recapGenerator } = useGame();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   
-  if (!game || !game.winner) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Game Over</CardTitle>
+  // Get available actions from the game state
+  const availableActions = gameState.currentState?.getAvailableActions() || [];
+  
+  useEffect(() => {
+    // When component mounts, make sure we're in the right game state
+    if (gameState.phase !== 'GameOver') {
+      // If somehow we're viewing this component but not in game over state
+      console.warn("GameOverPhase component loaded but game is not in GameOver phase");
+    }
+  }, [gameState.phase]);
+  
+  // Get winner information
+  const winner = gameState.houseguests.find(hg => hg.isWinner);
+  
+  const handleAction = (actionId: string) => {
+    switch (actionId) {
+      case 'new_game':
+        toast({
+          title: "Starting New Game",
+          description: "Setting up a new game with new houseguests"
+        });
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: { actionId: 'new_game' }
+        });
+        break;
+        
+      case 'view_stats':
+        toast({
+          description: "Viewing game statistics"
+        });
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: { actionId: 'view_stats' }
+        });
+        break;
+        
+      case 'exit_game':
+        toast({
+          description: "Returning to main menu"
+        });
+        navigate('/');
+        break;
+    }
+  };
+  
+  return (
+    <div className="space-y-8">
+      <Card className="border-2 border-amber-100">
+        <CardHeader className="bg-gradient-to-r from-amber-400 to-amber-300 text-black">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-6 w-6 text-amber-800" />
+              <div>
+                <CardTitle className="text-2xl">Game Over</CardTitle>
+                <CardDescription className="text-black/70">The season has concluded!</CardDescription>
+              </div>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <p>Game data is not available.</p>
-          <div className="mt-4">
-            <Button>New Game</Button>
+        
+        <CardContent className="p-6">
+          {/* Winner Display */}
+          {winner ? (
+            <WinnerDisplay winner={winner} />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No winner determined.
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-4 justify-center mt-8">
+            {availableActions.map(action => {
+              let icon;
+              switch (action.actionId) {
+                case 'new_game': icon = <RefreshCw className="mr-2 h-4 w-4" />; break;
+                case 'view_stats': icon = <BarChart className="mr-2 h-4 w-4" />; break;
+                case 'exit_game': icon = <Home className="mr-2 h-4 w-4" />; break;
+                default: icon = null;
+              }
+              
+              return (
+                <Button 
+                  key={action.actionId}
+                  className="min-w-[180px]"
+                  onClick={() => handleAction(action.actionId)}
+                  variant={action.actionId === 'new_game' ? 'default' : 'outline'}
+                >
+                  {icon}
+                  {action.text}
+                </Button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <Card className="overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white">
-          <CardTitle className="text-center text-2xl md:text-3xl">Game Complete</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <WinnerDisplay winner={game.winner} runnerUp={game.runnerUp} />
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="summary">Game Summary</TabsTrigger>
-          <TabsTrigger value="stats">Player Stats</TabsTrigger>
-        </TabsList>
-        <TabsContent value="summary" className="mt-4">
-          <GameSummary />
-        </TabsContent>
-        <TabsContent value="stats" className="mt-4">
-          <PlayerStats />
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex justify-center pt-4">
-        <Button size="lg" className="bg-green-600 hover:bg-green-700">
-          Start New Game
-        </Button>
+      
+      {/* Game Recap */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <GameSummary gameState={gameState} />
+        <PlayerStats gameState={gameState} />
       </div>
+      
+      <SeasonRecap recap={recapGenerator.generateSeasonRecap(gameState)} />
     </div>
   );
 };

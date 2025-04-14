@@ -1,70 +1,91 @@
 
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Shield } from 'lucide-react';
-import { PromiseList } from '../promise';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Info, Trophy, Users } from "lucide-react";
+import HouseguestListComponent from '../HouseguestList';
+import GameLog from "../GameEventLog";
+import PromiseManager from '../promise/PromiseManager';
 
 const GameSidebar: React.FC = () => {
-  const { gameState, game } = useGame();
-  
-  // Check if there are any promises
-  const hasActivePromises = game?.promises?.some(p => p.status === 'pending' || p.status === 'active');
+  const { gameState } = useGame();
   
   return (
     <div className="space-y-4">
-      <Card className="bg-slate-800 text-slate-100 border-slate-700">
+      {/* Game Status Section */}
+      <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium">Game Info</CardTitle>
+          <CardTitle className="text-md flex items-center">
+            <Info className="h-4 w-4 mr-2 text-blue-500" />
+            Game Status
+          </CardTitle>
+          <CardDescription>Week {gameState.week}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <div>
-            <p className="text-slate-400">Week</p>
-            <p className="font-medium">{gameState.week}</p>
-          </div>
-          <Separator className="bg-slate-700" />
-          <div>
-            <p className="text-slate-400">Phase</p>
-            <p className="font-medium">{gameState.phase}</p>
-          </div>
-          <Separator className="bg-slate-700" />
-          <div>
-            <p className="text-slate-400">Head of Household</p>
-            <p className="font-medium">{gameState.hohWinner?.name || 'None'}</p>
-          </div>
-          <Separator className="bg-slate-700" />
-          <div>
-            <p className="text-slate-400">Power of Veto</p>
-            <p className="font-medium">{gameState.povWinner?.name || 'Not played yet'}</p>
-          </div>
-          <Separator className="bg-slate-700" />
-          <div>
-            <p className="text-slate-400">Nominees</p>
-            <p className="font-medium">
-              {gameState.nominees.length > 0
-                ? gameState.nominees.map(nom => nom.name).join(', ')
-                : 'None yet'}
-            </p>
-          </div>
+        <CardContent className="pt-0 space-y-2">
+          {gameState.hohWinner && (
+            <div className="flex items-center justify-between border-b pb-1">
+              <div className="flex items-center">
+                <Trophy className="h-4 w-4 mr-2 text-amber-500" />
+                <span className="text-sm">Head of Household</span>
+              </div>
+              <span className="text-sm font-medium">{gameState.hohWinner.name}</span>
+            </div>
+          )}
+          
+          {gameState.povWinner && (
+            <div className="flex items-center justify-between border-b pb-1">
+              <div className="flex items-center">
+                <Trophy className="h-4 w-4 mr-2 text-emerald-500" />
+                <span className="text-sm">Power of Veto</span>
+              </div>
+              <span className="text-sm font-medium">{gameState.povWinner.name}</span>
+            </div>
+          )}
+          
+          {gameState.nominees.length > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-2 text-red-500" />
+                <span className="text-sm">Nominees</span>
+              </div>
+              <div className="text-sm font-medium text-right">
+                {gameState.nominees.map(n => n.name).join(', ')}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       
-      {/* Promises Section */}
-      {hasActivePromises && (
-        <Card className="bg-slate-800 text-slate-100 border-slate-700">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium flex items-center">
-              <Shield className="h-4 w-4 mr-2 text-green-400" />
-              Active Promises
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PromiseList className="bg-transparent border-none shadow-none" />
-          </CardContent>
-        </Card>
-      )}
+      {/* Promise Manager */}
+      <PromiseManager />
+      
+      {/* Tabs for Houseguests and Game Log */}
+      <Tabs defaultValue="houseguests" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="houseguests">Houseguests</TabsTrigger>
+          <TabsTrigger value="log">Game Log</TabsTrigger>
+        </TabsList>
+        <TabsContent value="houseguests" className="mt-2">
+          <Card>
+            <ScrollArea className="h-[400px]">
+              <CardContent className="p-2">
+                <HouseguestListComponent />
+              </CardContent>
+            </ScrollArea>
+          </Card>
+        </TabsContent>
+        <TabsContent value="log" className="mt-2">
+          <Card>
+            <ScrollArea className="h-[400px]">
+              <CardContent className="p-2">
+                <GameLog />
+              </CardContent>
+            </ScrollArea>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
