@@ -1,9 +1,13 @@
 import { GameState, RelationshipMap } from '../../models/game-state';
-
-// Add the new RELATIONSHIP_IMPACT action to the union type
-type GameAction =
-  // ... keep existing code (action types)
-  | { type: 'RELATIONSHIP_IMPACT'; payload: { targetId: string; targetName: string; value: number } };
+import { setupReducer } from './reducers/setup-reducer';
+import { competitionReducer } from './reducers/competition-reducer';
+import { nominationReducer } from './reducers/nomination-reducer';
+import { relationshipReducer } from './reducers/relationship-reducer';
+import { evictionReducer } from './reducers/eviction-reducer';
+import { gameProgressReducer } from './reducers/game-progress-reducer';
+import { logReducer } from './reducers/log-reducer';
+import { playerActionReducer } from './reducers/player-action-reducer';
+import { GameAction } from '../types/game-context-types';
 
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
   switch (action.type) {

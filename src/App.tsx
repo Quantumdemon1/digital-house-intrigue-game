@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -6,7 +7,7 @@ import { AIThoughtsProvider } from './components/ai-feedback';
 import { RelationshipImpactProvider } from './contexts/RelationshipImpactContext';
 import { RelationshipImpactDisplay } from './components/relationship';
 import GameScreen from './components/game-screen/GameScreen';
-import GameSetup from './components/game-setup/GameSetup';
+import GameSetup from './components/GameSetup';
 
 function App() {
   return (
