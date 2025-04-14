@@ -38,7 +38,8 @@ const PromiseList: React.FC<PromiseListProps> = ({
   
   // Get names for display
   const getHouseguestName = (id: string): string => {
-    return gameState.getHouseguestById?.(id)?.name || 'Unknown';
+    const houseguest = gameState.houseguests.find(h => h.id === id);
+    return houseguest ? houseguest.name : 'Unknown';
   };
   
   // Render a section of promises
