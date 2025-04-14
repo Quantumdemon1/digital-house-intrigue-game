@@ -1,95 +1,102 @@
-
 /**
  * @file systems/promise/promise-effects.ts
- * @description Functions for determining the relationship effects of promises
+ * @description Functions for determining the impact of promises and their effects on the game
  */
 
-import { Promise, PromiseStatus, PromiseType } from '../../models/promise';
-import type { BigBrotherGame } from '../../models/game/BigBrotherGame';
-import type { Logger } from '../../utils/logger';
+import { Promise, PromiseType } from '../../models/promise';
+import { BigBrotherGame } from '../../models/game/BigBrotherGame';
+import { Logger } from '../../utils/logger';
 
 /**
- * Calculate the relationship impact of a promise being kept or broken
+ * Calculate the relationship impact of a promise based on its type and status
+ * @param promise The promise to calculate impact for
+ * @returns A numeric value representing relationship impact (positive or negative)
  */
 export function getPromiseImpact(promise: Promise): number {
-  const baseImpact = 10; // Default impact
+  // Base values
+  const basePositive = 15;  // Base value for kept promises
+  const baseNegative = -25; // Base value for broken promises
   
+  // Impact multipliers by promise type (higher = more impactful)
+  const impactMultiplier: Record<PromiseType, number> = {
+    'safety': 1.5,       // Safety promises are very important
+    'final_2': 2.0,      // Final 2 deals are the most impactful
+    'vote': 1.0,         // Vote promises have standard impact
+    'alliance_loyalty': 1.8, // Alliance loyalty is quite important
+    'information': 0.7   // Information sharing is less impactful
+  };
+  
+  // Calculate impact based on status and type
   if (promise.status === 'fulfilled') {
-    // Positive impact for kept promises
-    switch (promise.type) {
-      case 'final_2':
-        return baseImpact * 2.5; // Very high impact
-      case 'safety':
-        return baseImpact * 2; // High impact
-      case 'alliance_loyalty':
-        return baseImpact * 1.5; // Medium-high impact
-      default:
-        return baseImpact;
-    }
+    return Math.round(basePositive * impactMultiplier[promise.type]);
   } else if (promise.status === 'broken') {
-    // Negative impact for broken promises
-    switch (promise.type) {
-      case 'final_2':
-        return baseImpact * -3; // Severe negative impact
-      case 'safety':
-        return baseImpact * -2.5; // Very high negative impact
-      case 'alliance_loyalty':
-        return baseImpact * -2; // High negative impact
-      default:
-        return baseImpact * -1.5; // Standard negative impact
-    }
+    return Math.round(baseNegative * impactMultiplier[promise.type]);
   }
   
-  // No impact for other statuses
+  // For pending/active/expired promises, no impact yet
   return 0;
 }
 
 /**
- * Spread information about a betrayal to other houseguests
+ * When a promise is broken, determine who should learn about it and how it affects relationships
+ * @param game Current game instance
+ * @param promise The broken promise
+ * @param logger Logger instance for recording events
  */
-export function spreadBetrayalInformation(
-  game: BigBrotherGame,
-  brokenPromise: Promise,
-  logger: Logger
-): void {
-  if (!game) return;
+export function spreadBetrayalInformation(game: BigBrotherGame, promise: Promise, logger: Logger): void {
+  if (promise.status !== 'broken') return;
   
-  // There's a chance other houseguests find out about the betrayal
-  const promisee = game.getHouseguestById(brokenPromise.toId);
-  if (!promisee) return;
+  const promiser = game.getHouseguestById(promise.fromId);
+  const promisee = game.getHouseguestById(promise.toId);
   
-  // Promisee will tell their allies about the betrayal
-  const alliances = game.allianceSystem?.getAllAlliances() || [];
-  const promiseeAlliances = alliances.filter((a: any) => 
-    a.members.some((m: any) => m.id === brokenPromise.toId)
-  );
+  if (!promiser || !promisee) return;
   
-  if (promiseeAlliances.length > 0) {
-    // Collect allies from all alliances
-    const allies = new Set<string>();
-    promiseeAlliances.forEach((alliance: any) => {
-      alliance.members.forEach((m: any) => {
-        if (m.id !== brokenPromise.toId && m.id !== brokenPromise.fromId) {
-          allies.add(m.id);
-        }
-      });
-    });
+  // The person who was betrayed always knows
+  logger.info(`${promisee.name} knows that ${promiser.name} broke their promise.`);
+  
+  // Others who find out depend on various factors
+  const chanceToFind = {
+    // Base chance for someone to find out about the betrayal
+    'base': 0.2,
+    // When houseguests are close to the betrayed person
+    'closeToBetrayed': 0.6,
+    // When houseguests are close to the betrayer
+    'closeToBetrayer': 0.3,
+    // When houseguests are in same alliance
+    'sameAlliance': 0.8
+  };
+  
+  // Check each active houseguest to see if they find out
+  game.getActiveHouseguests().forEach(hg => {
+    // Skip the parties directly involved
+    if (hg.id === promiser.id || hg.id === promisee.id) return;
     
-    // Tell allies about the betrayal
-    allies.forEach(allyId => {
-      const promiser = game.getHouseguestById(brokenPromise.fromId)?.name || "Someone";
-      const promiseeName = promisee.name;
+    let findOutChance = chanceToFind.base;
+    
+    // Adjust chance based on relationships
+    const relationToBetrayed = game.relationshipSystem.getRelationship(hg.id, promisee.id);
+    const relationToBetrayer = game.relationshipSystem.getRelationship(hg.id, promiser.id);
+    
+    if (relationToBetrayed > 50) findOutChance = Math.max(findOutChance, chanceToFind.closeToBetrayed);
+    if (relationToBetrayer > 50) findOutChance = Math.max(findOutChance, chanceToFind.closeToBetrayer);
+    
+    // Check if they're in the same alliance
+    const inSameAlliance = game.allianceSystem?.areInSameAlliance(hg.id, promisee.id) || false;
+    if (inSameAlliance) findOutChance = Math.max(findOutChance, chanceToFind.sameAlliance);
+    
+    // Determine if they find out
+    if (Math.random() < findOutChance) {
+      logger.info(`${hg.name} found out about ${promiser.name}'s betrayal of ${promisee.name}.`);
       
+      // Create a mild negative relationship impact
       game.relationshipSystem.addRelationshipEvent(
-        allyId,
-        brokenPromise.fromId,
-        'heard_about_betrayal',
-        `Heard that ${promiser} broke their promise to ${promiseeName}`,
-        -10,
-        true // This can decay over time
+        hg.id,
+        promiser.id,
+        'discovered_betrayal',
+        `${hg.name} learned that ${promiser.name} broke a promise to ${promisee.name}`,
+        Math.round(getPromiseImpact(promise) * 0.4), // 40% of the original impact
+        false // These impressions tend to stick
       );
-    });
-    
-    logger.info(`${promisee.name} told their allies about ${game.getHouseguestById(brokenPromise.fromId)?.name}'s betrayal`);
-  }
+    }
+  });
 }

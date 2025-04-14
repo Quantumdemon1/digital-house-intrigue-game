@@ -6,32 +6,22 @@ import { Badge } from '@/components/ui/badge';
 import { useGame } from '@/contexts/GameContext';
 import { PromiseDialog } from '@/components/promise';
 
-interface PromiseButtonProps {
-  variant?: "default" | "outline" | "secondary";
-  size?: "default" | "sm" | "lg" | "icon";
-  className?: string;
-}
-
-const PromiseButton: React.FC<PromiseButtonProps> = ({ 
-  variant = "outline",
-  size = "sm",
-  className = ""
-}) => {
+const PromiseButton: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { gameState } = useGame();
   
-  // Get active promises count
-  const activePromiseCount = gameState.promises?.filter(
+  // Get active promises count (if game is available)
+  const activePromiseCount = gameState?.promises?.filter(
     p => p.status === 'pending' || p.status === 'active'
   ).length || 0;
   
   return (
     <>
       <Button 
-        variant={variant} 
-        size={size}
+        variant="outline" 
+        size="sm"
         onClick={() => setDialogOpen(true)}
-        className={`relative flex items-center gap-1.5 ${className}`}
+        className="relative flex items-center gap-1.5"
       >
         <Shield className="h-4 w-4 text-green-500" />
         <span>Promises</span>

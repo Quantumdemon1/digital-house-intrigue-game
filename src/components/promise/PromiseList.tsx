@@ -10,22 +10,24 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface PromiseListProps {
   showAll?: boolean;
   className?: string;
+  onPromiseClick?: (promise: Promise) => void;
 }
 
 const PromiseList: React.FC<PromiseListProps> = ({
   showAll = false,
-  className
+  className,
+  onPromiseClick
 }) => {
-  const { game, gameState } = useGame();
+  const { gameState } = useGame();
   const playerHouseguest = gameState.houseguests.find(hg => hg.isPlayer);
   
-  if (!game?.promises || !playerHouseguest) {
+  if (!gameState?.promises || !playerHouseguest) {
     return <div className="text-center text-muted-foreground">No promises found</div>;
   }
   
   // Filter promises related to the player
-  const playerPromises = game.promises.filter(p => 
-    p.fromId === playerHouseguest.id || p.toId === playerHouseguest.id
+  const playerPromises = gameState.promises.filter(p => 
+    showAll || p.fromId === playerHouseguest.id || p.toId === playerHouseguest.id
   );
   
   // Filter promises by their status
@@ -36,7 +38,7 @@ const PromiseList: React.FC<PromiseListProps> = ({
   
   // Get names for display
   const getHouseguestName = (id: string): string => {
-    return game.getHouseguestById(id)?.name || 'Unknown';
+    return gameState.getHouseguestById?.(id)?.name || 'Unknown';
   };
   
   // Render a section of promises
@@ -57,8 +59,9 @@ const PromiseList: React.FC<PromiseListProps> = ({
               promiseType={promise.type}
               status={promise.status}
               week={promise.week}
-              currentWeek={game.week}
+              currentWeek={gameState.week}
               className="hover:shadow-md transition-shadow"
+              onClick={onPromiseClick ? () => onPromiseClick(promise) : undefined}
             />
           ))}
         </div>

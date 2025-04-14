@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, Circle, HelpCircle, Shield, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Shield, AlertTriangle, HelpCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -57,7 +57,7 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
       description: 'This promise is waiting to be fulfilled'
     },
     active: {
-      icon: <Circle size={16} />,
+      icon: <Clock size={16} />,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
@@ -77,6 +77,15 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
   // Use active config for active status, or get other configs
   const config = statusConfig[status] || statusConfig.pending;
   
+  // Get type-specific descriptions
+  const typeLabels: Record<string, string> = {
+    'safety': 'Safety Promise',
+    'vote': 'Vote Promise',
+    'final_2': 'Final 2 Deal',
+    'alliance_loyalty': 'Alliance Loyalty',
+    'information': 'Information Sharing'
+  };
+  
   return (
     <TooltipProvider>
       <Tooltip>
@@ -95,7 +104,7 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium flex items-center">
                   <Shield className="mr-1.5 h-4 w-4" />
-                  Promise
+                  {typeLabels[promiseType] || "Promise"}
                 </CardTitle>
                 <Badge 
                   variant="outline" 
