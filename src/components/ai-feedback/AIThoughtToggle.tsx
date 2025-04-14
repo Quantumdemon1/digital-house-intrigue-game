@@ -68,4 +68,8 @@ const AIThoughtToggle: React.FC<AIThoughtToggleProps> = ({
   );
 };
 
+// Default export
 export default AIThoughtToggle;
+
+// Named export
+export { AIThoughtToggle };
