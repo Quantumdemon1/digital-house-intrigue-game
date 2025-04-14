@@ -104,7 +104,7 @@ const ActionSections: React.FC<ActionSectionsProps> = ({
       {/* Advance Actions */}
       {availableActions.advance?.length > 0 && (
         <AdvanceSection
-          actions={availableActions.advance}
+          action={availableActions.advance[0]}
           onActionClick={onActionClick}
         />
       )}
