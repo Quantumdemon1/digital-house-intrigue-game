@@ -43,7 +43,10 @@ export class GameOverState extends GameStateBase {
     switch (actionId) {
       case 'new_game':
         this.logger.info("Starting new game");
-        this.controller.resetGame();
+        // Dispatch an action to reset the game
+        this.controller.dispatch({
+          type: 'RESET_GAME'
+        });
         return true;
       
       case 'view_stats':
@@ -53,7 +56,10 @@ export class GameOverState extends GameStateBase {
       
       case 'exit_game':
         this.logger.info("Exiting to main menu");
-        this.controller.exitToMainMenu();
+        // Navigate to main menu
+        this.controller.dispatch({
+          type: 'EXIT_TO_MAIN_MENU'
+        });
         return true;
         
       default:

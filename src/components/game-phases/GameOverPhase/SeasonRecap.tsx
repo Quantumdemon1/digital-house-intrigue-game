@@ -16,7 +16,11 @@ import {
   TimelineBody 
 } from './Timeline';
 
-const SeasonRecap: React.FC = () => {
+interface SeasonRecapProps {
+  recap: any;  // Ideally, this should be properly typed
+}
+
+const SeasonRecap: React.FC<SeasonRecapProps> = ({ recap }) => {
   const { gameState } = useGame();
   
   // Group events by week

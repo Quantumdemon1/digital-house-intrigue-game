@@ -12,12 +12,13 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 const GameOverPhase: React.FC = () => {
-  const { gameState, dispatch, recapGenerator } = useGame();
+  const { gameState, dispatch } = useGame();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Get available actions from the game state
-  const availableActions = gameState.currentState?.getAvailableActions() || [];
+  // Get available actions from the controller
+  const availableActions = gameState.phase === 'GameOver' && gameState.gameController ? 
+    gameState.gameController.currentState?.getAvailableActions() || [] : [];
   
   useEffect(() => {
     // When component mounts, make sure we're in the right game state
@@ -29,6 +30,8 @@ const GameOverPhase: React.FC = () => {
   
   // Get winner information
   const winner = gameState.houseguests.find(hg => hg.isWinner);
+  // Get runner-up
+  const runnerUp = gameState.houseguests.find(hg => hg.status === 'Runner-Up');
   
   const handleAction = (actionId: string) => {
     switch (actionId) {
@@ -80,7 +83,7 @@ const GameOverPhase: React.FC = () => {
         <CardContent className="p-6">
           {/* Winner Display */}
           {winner ? (
-            <WinnerDisplay winner={winner} />
+            <WinnerDisplay winner={winner} runnerUp={runnerUp} />
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               No winner determined.
@@ -120,7 +123,7 @@ const GameOverPhase: React.FC = () => {
         <PlayerStats gameState={gameState} />
       </div>
       
-      <SeasonRecap recap={recapGenerator.generateSeasonRecap(gameState)} />
+      <SeasonRecap recap={gameState.recapGenerator?.generateSeasonRecap(gameState)} />
     </div>
   );
 };

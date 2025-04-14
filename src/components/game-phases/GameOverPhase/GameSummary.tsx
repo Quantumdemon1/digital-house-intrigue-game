@@ -1,38 +1,28 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useGame } from '@/contexts/GameContext';
 import { NominationCount } from '@/models/houseguest';
-import { GameEvent } from '@/models/game-state';
+import { GameEvent, GameState } from '@/models/game-state';
 import { FileText, Calendar, Trophy, User, Users, Award } from 'lucide-react';
 
-const GameSummary: React.FC = () => {
-  const { gameState } = useGame();
-  
-  // Calculate game stats
-  const totalHouseguests = gameState.houseguests.length;
-  const totalWeeks = gameState.week;
-  const totalEvictions = gameState.houseguests.filter(hg => 
-    hg.status === 'Evicted' || hg.status === 'Jury'
-  ).length;
-  const jurySize = gameState.juryMembers.length;
-  
-  // Find player info if they exist
+interface GameSummaryProps {
+  gameState: GameState;
+}
+
+const GameSummary: React.FC<GameSummaryProps> = ({ gameState }) => {
+  const { totalHouseguests, totalWeeks, totalEvictions, jurySize } = gameState;
   const playerHouseguest = gameState.houseguests.find(hg => hg.isPlayer);
-  
-  // Find winner's journey highlights
   const winnerHoHWins = gameState.winner?.competitionsWon.hoh || 0;
   const winnerPovWins = gameState.winner?.competitionsWon.pov || 0;
-  
-  // Helper function to safely get nominations count
+
   const getNominationsCount = (nominations: NominationCount | number | undefined): number => {
     if (typeof nominations === 'object' && nominations !== null) {
       return nominations.times;
     }
     return typeof nominations === 'number' ? nominations : 0;
   };
-  
+
   const winnerNominations = getNominationsCount(gameState.winner?.nominations);
 
   return (

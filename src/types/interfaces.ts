@@ -7,7 +7,7 @@ import type { AllianceSystem } from "../systems/alliance-system";
 import type { GameState } from "../models/game-state";
 import type { Houseguest } from "../models/houseguest";
 import type { GameStateBase } from "../game-states/GameStateBase";
-import type { PromiseSystem } from "../systems/promise-system"; // Add import for PromiseSystem
+import type { PromiseSystem } from "../systems/promise-system"; 
 
 /**
  * Interface for the game controller facade
@@ -18,7 +18,7 @@ export interface IGameControllerFacade {
   relationshipSystem: RelationshipSystem;
   aiSystem?: AIIntegrationSystem;
   allianceSystem?: AllianceSystem;
-  promiseSystem?: PromiseSystem; // Add promiseSystem property
+  promiseSystem?: PromiseSystem;
   gameState: GameState;
   currentLocation: string;
   currentState?: GameStateBase;
@@ -34,7 +34,7 @@ export interface IGameControllerFacade {
   gameLog: any[];
   
   // Methods
-  dispatch: (action: any) => void;  // Add the dispatch method
+  dispatch: (action: any) => void;
   promptNextAction: () => void;
   saveGame: () => void;
   loadGame: () => void;
@@ -44,6 +44,8 @@ export interface IGameControllerFacade {
   transitionTo: (state: typeof GameStateBase) => Promise<void>;
   changeState: (stateName: string) => void;
   getGameSettings: () => { finalWeek: number };
+  resetGame: () => void;  // Add method for resetting game
+  exitToMainMenu: () => void;  // Add method for exiting to main menu
 }
 
 // Export GameEvent type from game-state.ts

@@ -19,6 +19,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { NominationCount } from '@/models/houseguest';
+import { GameState } from '@/models/game-state';
+
+interface PlayerStatsProps {
+  gameState: GameState;
+}
 
 type SortField = 'name' | 'competitions' | 'nominations' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -39,8 +44,8 @@ const getNominationsCount = (nominations: NominationCount | number | undefined):
   return typeof nominations === 'number' ? nominations : 0;
 };
 
-const PlayerStats: React.FC = () => {
-  const { gameState } = useGame();
+const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState }) => {
+  const { gameState: gameState } = useGame();
   const [sortField, setSortField] = useState<SortField>('status');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [playerFilter, setPlayerFilter] = useState<string>('all');

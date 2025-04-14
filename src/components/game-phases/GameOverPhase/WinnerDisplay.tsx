@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 
 interface WinnerDisplayProps {
   winner: Houseguest;
-  runnerUp: Houseguest | null;
+  runnerUp?: Houseguest | null;  // Make runnerUp optional
 }
 
 const WinnerDisplay: React.FC<WinnerDisplayProps> = ({ winner, runnerUp }) => {
