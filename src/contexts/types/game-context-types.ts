@@ -30,7 +30,7 @@ export type GameAction =
   | { type: 'SHOW_DIALOGUE'; payload?: any };
 
 // Export the GameState type to fix issues with imports
-export { GameState } from '../../models/game-state';
+export type { GameState } from '../../models/game-state';
 
 // Export the GameContextType interface
 export interface GameContextType {
