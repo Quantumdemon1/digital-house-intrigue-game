@@ -22,6 +22,7 @@ export interface Promise {
   expiresAt?: number;
   conditionMet?: boolean;
   impactLevel: 'low' | 'medium' | 'high';
+  context?: Record<string, any>; // Adding context for additional data
 }
 
 export interface PromiseDisplayData extends Promise {

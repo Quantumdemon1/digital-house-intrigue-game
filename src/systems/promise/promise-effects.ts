@@ -14,16 +14,13 @@ import type { Logger } from '../../utils/logger';
 export function getPromiseImpact(promise: Promise): number {
   const baseImpact = 10; // Default impact
   
-  if (promise.status === 'kept' || promise.status === 'fulfilled') {
+  if (promise.status === 'fulfilled') {
     // Positive impact for kept promises
     switch (promise.type) {
-      case 'final_two_deal':
       case 'final_2':
         return baseImpact * 2.5; // Very high impact
-      case 'nomination_protection':
       case 'safety':
         return baseImpact * 2; // High impact
-      case 'alliance_commitment':
       case 'alliance_loyalty':
         return baseImpact * 1.5; // Medium-high impact
       default:
@@ -32,13 +29,10 @@ export function getPromiseImpact(promise: Promise): number {
   } else if (promise.status === 'broken') {
     // Negative impact for broken promises
     switch (promise.type) {
-      case 'final_two_deal':
       case 'final_2':
         return baseImpact * -3; // Severe negative impact
-      case 'nomination_protection':
       case 'safety':
         return baseImpact * -2.5; // Very high negative impact
-      case 'alliance_commitment':
       case 'alliance_loyalty':
         return baseImpact * -2; // High negative impact
       default:

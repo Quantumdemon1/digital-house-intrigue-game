@@ -25,8 +25,7 @@ export function handleMakePromise({
         player.id,
         target.id,
         type as PromiseType,
-        description,
-        { madeThrough: 'social_interaction' }
+        description
       );
     }
     

@@ -4,7 +4,7 @@
  * @description Core PromiseSystem class implementation
  */
 
-import { Promise, PromiseStatus } from '../../models/promise';
+import { Promise, PromiseStatus, PromiseType } from '../../models/promise';
 import type { BigBrotherGame } from '../../models/game/BigBrotherGame';
 import type { Logger } from '../../utils/logger';
 import { evaluatePromise } from './promise-utils';
@@ -48,10 +48,13 @@ export class PromiseSystem {
       id: `promise-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       fromId,
       toId,
-      type: type as any, // Type assertion since we're passing string
+      type: type as PromiseType,
       description,
-      madeOnWeek: this.game.week,
+      week: this.game.week,
       status: 'pending',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      impactLevel: 'medium',
       context
     };
     
@@ -113,7 +116,11 @@ export class PromiseSystem {
       if (newStatus !== 'pending' && newStatus !== promise.status) {
         // Update the promise status
         promise.status = newStatus;
-        promise.context.evaluatedOnWeek = this.game.week;
+        if (promise.context) {
+          promise.context.evaluatedOnWeek = this.game.week;
+        } else {
+          promise.context = { evaluatedOnWeek: this.game.week };
+        }
         
         // Calculate relationship impact
         const relationshipImpact = getPromiseImpact(promise);
@@ -122,9 +129,9 @@ export class PromiseSystem {
         const promiser = this.game.getHouseguestById(promise.fromId)?.name || promise.fromId;
         const promisee = this.game.getHouseguestById(promise.toId)?.name || promise.toId;
         
-        // Apply effects for kept promises
-        if (newStatus === 'kept') {
-          this.logger.info(`Promise KEPT: ${promiser} kept their promise to ${promisee}`, {
+        // Apply effects for fulfilled promises
+        if (newStatus === 'fulfilled') {
+          this.logger.info(`Promise FULFILLED: ${promiser} kept their promise to ${promisee}`, {
             promiseId: promise.id,
             description: promise.description
           });

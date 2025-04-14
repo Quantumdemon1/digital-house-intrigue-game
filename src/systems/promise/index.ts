@@ -252,7 +252,7 @@ export class PromiseSystem {
         'high': 25
       };
       
-      const impact = impactValues[promise.impactValue || 'low'];
+      const impact = impactValues[promise.impactLevel];
       relationshipSystem.updateRelationship(promise.toId, promise.fromId, impact, "kept_promise");
     }
   }

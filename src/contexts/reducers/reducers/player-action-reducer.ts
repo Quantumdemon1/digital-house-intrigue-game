@@ -129,8 +129,11 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             toId: payload.params.targetId,
             type: payload.params.promiseType as PromiseType,
             description: payload.params.promiseDescription || `Made a promise to ${payload.params.targetName}`,
-            madeOnWeek: state.week,
-            status: 'pending' as const, // Type assertion to ensure TypeScript recognizes this as a valid PromiseStatus
+            week: state.week,
+            status: 'pending',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            impactLevel: 'medium',
             context: {}
           };
           

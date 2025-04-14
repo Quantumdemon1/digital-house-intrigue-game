@@ -6,11 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Shield, AlertCircle, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import PromiseDisplay from './PromiseDisplay';
 import { Promise } from '@/models/promise';
 
 const PromiseManager: React.FC = () => {
-  const { game, promiseSystem } = useGame();
+  const { game } = useGame();
   const [activePromises, setActivePromises] = useState<Promise[]>([]);
   const [expiredPromises, setExpiredPromises] = useState<Promise[]>([]);
   const [showExpiredPromises, setShowExpiredPromises] = useState(false);
@@ -24,7 +23,7 @@ const PromiseManager: React.FC = () => {
     );
     
     setExpiredPromises(
-      game.promises.filter(p => p.status === 'expired' || p.status === 'broken' || p.status === 'fulfilled' || p.status === 'kept')
+      game.promises.filter(p => p.status === 'expired' || p.status === 'broken' || p.status === 'fulfilled')
     );
   }, [game?.promises]);
   
@@ -123,7 +122,7 @@ const PromiseManager: React.FC = () => {
                       key={promise.id}
                       className={cn(
                         "border rounded-md p-2 text-sm",
-                        promise.status === 'kept' || promise.status === 'fulfilled' ? 
+                        promise.status === 'fulfilled' ? 
                           "bg-green-50/30 border-green-100" : 
                           "bg-red-50/30 border-red-100"
                       )}
@@ -136,7 +135,7 @@ const PromiseManager: React.FC = () => {
                           variant="outline" 
                           className={cn(
                             "text-xs",
-                            promise.status === 'kept' || promise.status === 'fulfilled' ? 
+                            promise.status === 'fulfilled' ? 
                               "bg-green-50 text-green-700" : 
                               promise.status === 'broken' ? 
                                 "bg-red-50 text-red-700" : 

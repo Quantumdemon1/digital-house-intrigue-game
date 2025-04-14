@@ -3,7 +3,7 @@ import React from 'react';
 import { PromiseDisplay } from './index';
 import { useGame } from '@/contexts/GameContext';
 import { Card } from '@/components/ui/card';
-import { Promise } from '@/models/promise';
+import { Promise, PromiseStatus } from '@/models/promise';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -30,7 +30,7 @@ const PromiseList: React.FC<PromiseListProps> = ({
   
   // Filter promises by their status
   const pendingPromises = playerPromises.filter(p => p.status === 'pending' || p.status === 'active');
-  const keptPromises = playerPromises.filter(p => p.status === 'kept' || p.status === 'fulfilled');
+  const fulfilledPromises = playerPromises.filter(p => p.status === 'fulfilled');
   const brokenPromises = playerPromises.filter(p => p.status === 'broken');
   const expiredPromises = playerPromises.filter(p => p.status === 'expired');
   
@@ -56,7 +56,7 @@ const PromiseList: React.FC<PromiseListProps> = ({
               description={promise.description}
               promiseType={promise.type}
               status={promise.status}
-              week={promise.madeOnWeek}
+              week={promise.week}
               currentWeek={game.week}
               className="hover:shadow-md transition-shadow"
             />
@@ -71,15 +71,15 @@ const PromiseList: React.FC<PromiseListProps> = ({
       <Tabs defaultValue="active">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="active">Active ({pendingPromises.length})</TabsTrigger>
-          <TabsTrigger value="kept">Kept ({keptPromises.length})</TabsTrigger>
+          <TabsTrigger value="fulfilled">Fulfilled ({fulfilledPromises.length})</TabsTrigger>
           <TabsTrigger value="broken">Broken ({brokenPromises.length})</TabsTrigger>
           <TabsTrigger value="expired">Expired ({expiredPromises.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="p-4">
           {renderPromisesList(pendingPromises)}
         </TabsContent>
-        <TabsContent value="kept" className="p-4">
-          {renderPromisesList(keptPromises)}
+        <TabsContent value="fulfilled" className="p-4">
+          {renderPromisesList(fulfilledPromises)}
         </TabsContent>
         <TabsContent value="broken" className="p-4">
           {renderPromisesList(brokenPromises)}

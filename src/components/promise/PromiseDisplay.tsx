@@ -5,9 +5,7 @@ import { CheckCircle, XCircle, Circle, HelpCircle, Shield, Clock } from 'lucide-
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
-// Update this type to include 'active' to match the model definition
-export type PromiseStatus = 'kept' | 'fulfilled' | 'broken' | 'pending' | 'active' | 'expired';
+import { PromiseStatus } from '@/models/promise';
 
 interface PromiseDisplayProps {
   promiser: string;
@@ -34,14 +32,6 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
 }) => {
   // Get status-specific styles and icons
   const statusConfig = {
-    kept: {
-      icon: <CheckCircle size={16} />,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
-      label: 'Kept',
-      description: 'This promise was successfully kept'
-    },
     fulfilled: {
       icon: <CheckCircle size={16} />,
       color: 'text-green-600',
@@ -85,7 +75,7 @@ const PromiseDisplay: React.FC<PromiseDisplayProps> = ({
   };
   
   // Use active config for active status, or get other configs
-  const config = statusConfig[status];
+  const config = statusConfig[status] || statusConfig.pending;
   
   return (
     <TooltipProvider>

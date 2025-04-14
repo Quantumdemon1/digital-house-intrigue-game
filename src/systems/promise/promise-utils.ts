@@ -22,7 +22,6 @@ export function evaluatePromise(
   }
   
   switch (promise.type) {
-    case 'nomination_protection':
     case 'safety':
       // If the promiser nominated the promisee, the promise is broken
       if (actionType === 'make_nominations' && 
@@ -32,21 +31,19 @@ export function evaluatePromise(
       }
       break;
       
-    case 'vote_pledge':
     case 'vote':
       // Check if the promiser voted as they said they would
       if (actionType === 'cast_vote' && 
           params.voterId === promise.fromId) {
         // If context specifies who to vote for, check if the promise was kept
-        if (promise.context.voteFor === params.voteFor) {
-          newStatus = 'kept';
-        } else if (promise.context.voteFor && promise.context.voteFor !== params.voteFor) {
+        if (promise.context?.voteFor === params.voteFor) {
+          newStatus = 'fulfilled';
+        } else if (promise.context?.voteFor && promise.context.voteFor !== params.voteFor) {
           newStatus = 'broken';
         }
       }
       break;
       
-    case 'alliance_commitment':
     case 'alliance_loyalty':
       // Check for alliance betrayals
       if (actionType === 'nominate_ally' && 
