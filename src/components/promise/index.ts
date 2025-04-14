@@ -1,11 +1,15 @@
 
-/**
- * @file components/promise/index.ts
- * @description Export all promise-related components
- */
+// Export all promise-related components
+import PromiseDialog from './PromiseDialog';
+import PromiseDisplay from './PromiseDisplay';
+import PromiseList from './PromiseList';
+import PromiseManager from './PromiseManager';
+import PromiseButton from './PromiseButton';
 
-export { default as PromiseDisplay } from './PromiseDisplay';
-export { default as PromiseList } from './PromiseList';
-export { default as PromiseDialog } from './PromiseDialog';
-export { default as PromiseManager } from './PromiseManager';
-
+export {
+  PromiseDialog,
+  PromiseDisplay,
+  PromiseList,
+  PromiseManager,
+  PromiseButton
+};

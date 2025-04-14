@@ -1,13 +1,17 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { AIThoughtToggle } from '@/components/ai-feedback/AIThoughtToggle';
+import { AIThoughtToggle } from '@/components/ai-feedback';
 import { FastForwardButton } from './FastForwardButton';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Home, BarChart, Shield } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { Separator } from '@/components/ui/separator';
+import { RelationshipButton } from '@/components/relationship';
+import { PromiseButton } from '@/components/promise';
+import GameRecapButton from './GameRecapButton';
+import SaveLoadButton from './SaveLoadButton';
 
 const GameHeader: React.FC = () => {
   const { gameState } = useGame();
@@ -33,26 +37,16 @@ const GameHeader: React.FC = () => {
           <FastForwardButton />
           
           {/* Relationship Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => document.dispatchEvent(new CustomEvent('game:showRelationships'))}
-          >
-            <BarChart className="h-4 w-4" />
-            <span className="hidden md:inline">Relationships</span>
-          </Button>
+          <RelationshipButton />
           
           {/* Promises Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => document.dispatchEvent(new CustomEvent('game:showPromises'))}
-          >
-            <Shield className="h-4 w-4" />
-            <span className="hidden md:inline">Promises</span>
-          </Button>
+          <PromiseButton />
+          
+          {/* Game History Button */}
+          <GameRecapButton />
+          
+          {/* Save/Load Button */}
+          <SaveLoadButton />
           
           <Separator orientation="vertical" className="h-6" />
           
