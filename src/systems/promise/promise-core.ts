@@ -36,7 +36,7 @@ export class PromiseSystem {
   createPromise(
     fromId: string, 
     toId: string, 
-    type: string, 
+    type: PromiseType, 
     description: string, 
     context: Record<string, any> = {}
   ): Promise {
@@ -48,7 +48,7 @@ export class PromiseSystem {
       id: `promise-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       fromId,
       toId,
-      type: type as PromiseType,
+      type,
       description,
       week: this.game.week,
       status: 'pending',
@@ -116,11 +116,12 @@ export class PromiseSystem {
       if (newStatus !== 'pending' && newStatus !== promise.status) {
         // Update the promise status
         promise.status = newStatus;
-        if (promise.context) {
-          promise.context.evaluatedOnWeek = this.game.week;
-        } else {
-          promise.context = { evaluatedOnWeek: this.game.week };
+        promise.updatedAt = Date.now();
+        
+        if (!promise.context) {
+          promise.context = {};
         }
+        promise.context.evaluatedOnWeek = this.game.week;
         
         // Calculate relationship impact
         const relationshipImpact = getPromiseImpact(promise);
@@ -138,8 +139,8 @@ export class PromiseSystem {
           
           // Increase relationship
           this.game.relationshipSystem.addRelationshipEvent(
-            promise.fromId,
             promise.toId,
+            promise.fromId,
             'kept_promise',
             `${promiser} kept their promise: ${promise.description}`,
             relationshipImpact,
@@ -155,8 +156,8 @@ export class PromiseSystem {
           
           // Major negative relationship impact
           this.game.relationshipSystem.addRelationshipEvent(
-            promise.fromId,
             promise.toId,
+            promise.fromId,
             'betrayal',
             `${promiser} broke their promise: ${promise.description}`,
             relationshipImpact, // This will be negative

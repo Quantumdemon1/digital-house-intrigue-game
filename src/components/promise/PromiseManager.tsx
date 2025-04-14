@@ -19,7 +19,7 @@ const PromiseManager: React.FC = () => {
     
     // Filter promises based on status
     setActivePromises(
-      game.promises.filter(p => p.status === 'active' || p.status === 'pending')
+      game.promises.filter(p => p.status === 'pending' || p.status === 'active')
     );
     
     setExpiredPromises(
