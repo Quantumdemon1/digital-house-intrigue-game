@@ -1,132 +1,120 @@
 
 import React from 'react';
-import { Separator } from '@/components/ui/separator';
 import { SocialActionChoice } from '@/game-states/GameStateBase';
-import StatusSection from './sections/StatusSection';
-import MovementSection from './sections/MovementSection';
 import ConversationsSection from './sections/ConversationsSection';
 import RelationshipSection from './sections/RelationshipSection';
 import StrategicSection from './sections/StrategicSection';
-import InformationSection from './sections/InformationSection';
+import StatusSection from './sections/StatusSection';
+import MovementSection from './sections/MovementSection';
 import AdvanceSection from './sections/AdvanceSection';
 import AllianceSection from './sections/AllianceSection';
+import InformationSection from './sections/InformationSection';
 import PromiseSection from './sections/PromiseSection';
 
 interface ActionSectionsProps {
-  availableActions: {
-    [key: string]: SocialActionChoice[];
-  };
+  availableActions: SocialActionChoice[];
   onActionClick: (actionId: string, params?: any) => void;
 }
 
-const ActionSections: React.FC<ActionSectionsProps> = ({
-  availableActions,
-  onActionClick
-}) => {
-  // Divide promise-related actions into their own group
-  const promiseActions = [
-    ...(availableActions.relationship?.filter(a => a.actionId === 'make_promise') || []),
-    ...(availableActions.status?.filter(a => a.actionId === 'check_promises') || [])
-  ];
+const ActionSections: React.FC<ActionSectionsProps> = ({ availableActions, onActionClick }) => {
+  // Filter actions by category
+  const conversationActions = availableActions.filter(action => 
+    action.category === 'conversation'
+  );
   
-  // Remove promise actions from their original categories
-  const relationshipActions = availableActions.relationship?.filter(a => a.actionId !== 'make_promise') || [];
-  const statusActions = availableActions.status?.filter(a => a.actionId !== 'check_promises') || [];
+  const relationshipActions = availableActions.filter(action => 
+    action.category === 'relationship'
+  );
   
+  const strategicActions = availableActions.filter(action => 
+    action.category === 'strategic'
+  );
+  
+  const statusActions = availableActions.filter(action => 
+    action.category === 'status'
+  );
+  
+  const movementActions = availableActions.filter(action => 
+    action.category === 'movement'
+  );
+  
+  const allianceActions = availableActions.filter(action => 
+    action.category === 'alliance'
+  );
+  
+  const promiseActions = availableActions.filter(action => 
+    action.category === 'promise' || action.actionId === 'make_promise' || action.actionId === 'check_promises'
+  );
+  
+  const informationActions = availableActions.filter(action => 
+    action.category === 'information'
+  );
+  
+  const phaseActions = availableActions.filter(action => 
+    action.category === 'phase'
+  );
+
   return (
     <div className="space-y-6">
-      {/* Status Actions */}
-      {statusActions.length > 0 && (
-        <>
-          <StatusSection
-            actions={statusActions}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
+      {conversationActions.length > 0 && (
+        <ConversationsSection
+          actions={conversationActions}
+          onActionClick={onActionClick}
+        />
       )}
       
-      {/* Movement Actions */}
-      {availableActions.movement?.length > 0 && (
-        <>
-          <MovementSection
-            actions={availableActions.movement}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
-      )}
-      
-      {/* Conversation Actions */}
-      {availableActions.conversations?.length > 0 && (
-        <>
-          <ConversationsSection
-            actions={availableActions.conversations}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
-      )}
-      
-      {/* Promise Actions */}
-      {promiseActions.length > 0 && (
-        <>
-          <PromiseSection
-            actions={promiseActions}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
-      )}
-      
-      {/* Relationship Actions */}
       {relationshipActions.length > 0 && (
-        <>
-          <RelationshipSection
-            actions={relationshipActions}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
+        <RelationshipSection
+          actions={relationshipActions}
+          onActionClick={onActionClick}
+        />
       )}
       
-      {/* Strategic Actions */}
-      {availableActions.strategic?.length > 0 && (
-        <>
-          <StrategicSection
-            actions={availableActions.strategic}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
+      {strategicActions.length > 0 && (
+        <StrategicSection
+          actions={strategicActions}
+          onActionClick={onActionClick}
+        />
       )}
       
-      {/* Alliance Actions */}
-      {availableActions.alliance?.length > 0 && (
-        <>
-          <AllianceSection
-            actions={availableActions.alliance}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
+      {promiseActions.length > 0 && (
+        <PromiseSection
+          actions={promiseActions}
+          onActionClick={onActionClick}
+        />
       )}
       
-      {/* Information Actions */}
-      {availableActions.information?.length > 0 && (
-        <>
-          <InformationSection
-            actions={availableActions.information}
-            onActionClick={onActionClick}
-          />
-          <Separator />
-        </>
+      {allianceActions.length > 0 && (
+        <AllianceSection
+          actions={allianceActions}
+          onActionClick={onActionClick}
+        />
       )}
       
-      {/* Advance Actions */}
-      {availableActions.advance?.length > 0 && (
+      {informationActions.length > 0 && (
+        <InformationSection
+          actions={informationActions}
+          onActionClick={onActionClick}
+        />
+      )}
+      
+      {statusActions.length > 0 && (
+        <StatusSection
+          actions={statusActions}
+          onActionClick={onActionClick}
+        />
+      )}
+      
+      {movementActions.length > 0 && (
+        <MovementSection
+          actions={movementActions}
+          onActionClick={onActionClick}
+        />
+      )}
+      
+      {phaseActions.length > 0 && (
         <AdvanceSection
-          action={availableActions.advance[0]}
+          actions={phaseActions}
           onActionClick={onActionClick}
         />
       )}

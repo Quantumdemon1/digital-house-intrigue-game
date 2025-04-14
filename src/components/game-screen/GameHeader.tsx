@@ -1,40 +1,41 @@
 
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { FastForwardButton } from './FastForwardButton';
+import { Users, Calendar, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { AIThoughtToggle } from '@/components/ai-feedback';
+import PromiseButton from './PromiseButton';
 
 const GameHeader: React.FC = () => {
-  const { game, getActiveHouseguests, gameState } = useGame();
+  const { gameState } = useGame();
   
-  if (!game) {
-    return <div className="flex justify-between items-center py-2 mb-4">Loading...</div>;
-  }
-  
-  const activeHouseguests = getActiveHouseguests();
-  const weekDisplay = `Week ${game.week}`;
-  const phaseDisplay = game.phase;
+  const activeHouseguests = gameState.houseguests.filter(hg => hg.status === 'Active');
   
   return (
-    <div className="flex justify-between items-center py-2 mb-4">
-      <div className="flex items-center gap-3">
-        <Badge variant="outline" className="font-mono text-xs">
-          {weekDisplay}
-        </Badge>
-        <Badge variant="outline" className="font-mono text-xs">
-          {phaseDisplay}
-        </Badge>
-        <Badge variant="outline" className="font-mono text-xs">
-          {activeHouseguests.length} Houseguests
-        </Badge>
+    <header className="bg-slate-800 text-white p-3 rounded-lg mb-4 flex justify-between items-center">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-4 w-4 text-amber-400" />
+          <span>Week {gameState.week}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Users className="h-4 w-4 text-blue-400" />
+          <span>{activeHouseguests.length} Players</span>
+        </div>
+        {gameState.hohWinner && (
+          <div className="hidden sm:flex items-center gap-1.5">
+            <Trophy className="h-4 w-4 text-yellow-400" />
+            <span>HoH: {gameState.hohWinner.name}</span>
+          </div>
+        )}
       </div>
       
       <div className="flex items-center gap-2">
-        <AIThoughtToggle variant="small" />
-        <FastForwardButton />
+        <PromiseButton />
+        <Badge variant="outline" className="bg-slate-700">
+          {gameState.phase}
+        </Badge>
       </div>
-    </div>
+    </header>
   );
 };
 
