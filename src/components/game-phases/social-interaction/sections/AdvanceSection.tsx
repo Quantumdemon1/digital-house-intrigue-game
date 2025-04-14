@@ -5,11 +5,14 @@ import { ArrowRight } from 'lucide-react';
 import { SocialActionChoice } from '@/game-states/GameStateBase';
 
 interface AdvanceSectionProps {
-  action: SocialActionChoice;
+  actions: SocialActionChoice[]; // Changed from single action to actions array
   onActionClick: (actionId: string, params?: any) => void;
 }
 
-const AdvanceSection: React.FC<AdvanceSectionProps> = ({ action, onActionClick }) => {
+const AdvanceSection: React.FC<AdvanceSectionProps> = ({ actions, onActionClick }) => {
+  // Use the first action in the array (assuming there will always be at least one)
+  const action = actions[0];
+  
   return (
     <div className="pt-3">
       <Button

@@ -34,19 +34,22 @@ export class SocialInteractionState extends GameStateBase {
     actions.push({
       actionId: 'move_location',
       text: 'Move to Living Room',
-      parameters: { locationId: 'living-room' }
+      parameters: { locationId: 'living-room' },
+      category: 'movement'
     });
     
     actions.push({
       actionId: 'move_location',
       text: 'Move to Kitchen',
-      parameters: { locationId: 'kitchen' }
+      parameters: { locationId: 'kitchen' },
+      category: 'movement'
     });
     
     actions.push({
       actionId: 'move_location',
       text: 'Move to Bedroom',
-      parameters: { locationId: 'bedroom' }
+      parameters: { locationId: 'bedroom' },
+      category: 'movement'
     });
     
     // Add talk actions for each present houseguest
@@ -58,7 +61,8 @@ export class SocialInteractionState extends GameStateBase {
         actions.push({
           actionId: 'talk_to',
           text: `Talk to ${houseguest.name}`,
-          parameters: { targetId: houseguest.id }
+          parameters: { targetId: houseguest.id },
+          category: 'conversation'
         });
       }
     });
@@ -69,7 +73,8 @@ export class SocialInteractionState extends GameStateBase {
         actions.push({
           actionId: 'strategic_discussion',
           text: `Discuss strategy with ${houseguest.name}`,
-          parameters: { targetId: houseguest.id, targetName: houseguest.name }
+          parameters: { targetId: houseguest.id, targetName: houseguest.name },
+          category: 'strategic'
         });
       }
     });
@@ -80,7 +85,8 @@ export class SocialInteractionState extends GameStateBase {
         actions.push({
           actionId: 'relationship_building',
           text: `Build relationship with ${houseguest.name}`,
-          parameters: { targetId: houseguest.id }
+          parameters: { targetId: houseguest.id },
+          category: 'relationship'
         });
       }
     });
@@ -91,7 +97,8 @@ export class SocialInteractionState extends GameStateBase {
         actions.push({
           actionId: 'make_promise',
           text: `Make a promise to ${houseguest.name}`,
-          parameters: { targetId: houseguest.id, targetName: houseguest.name }
+          parameters: { targetId: houseguest.id, targetName: houseguest.name },
+          category: 'promise'
         });
       }
     });
@@ -100,21 +107,24 @@ export class SocialInteractionState extends GameStateBase {
     actions.push({
       actionId: 'check_relationships',
       text: 'Check your relationships',
-      parameters: { }
+      parameters: { },
+      category: 'status'
     });
     
     // Add check promises action
     actions.push({
       actionId: 'check_promises',
       text: 'Check active promises',
-      parameters: { }
+      parameters: { },
+      category: 'status'
     });
     
     // Add advance phase action
     actions.push({
       actionId: 'advance_phase',
       text: 'End social phase',
-      parameters: { }
+      parameters: { },
+      category: 'phase'
     });
     
     return actions;
