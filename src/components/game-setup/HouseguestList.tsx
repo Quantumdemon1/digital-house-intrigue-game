@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Houseguest } from '@/models/houseguest';
@@ -16,6 +17,16 @@ const HouseguestList: React.FC<HouseguestListProps> = ({
   onBack,
   onStartGame
 }) => {
+  const navigate = useNavigate();
+  
+  const handleStartGame = () => {
+    // Call the original onStartGame function to set up the game
+    onStartGame();
+    
+    // Then explicitly navigate to the game route
+    navigate('/game');
+  };
+  
   return (
     <Card className="border-2 border-bb-blue shadow-lg">
       <CardHeader className="bg-bb-blue text-white">
@@ -52,7 +63,7 @@ const HouseguestList: React.FC<HouseguestListProps> = ({
           Back
         </Button>
         <Button 
-          onClick={onStartGame} 
+          onClick={handleStartGame} 
           className="bg-bb-green hover:bg-bb-green/90 text-bb-dark"
         >
           Enter the House
