@@ -17,8 +17,10 @@ export class HohCompetitionState extends GameStateBase {
     const hoh = hohId ? this.game.getHouseguestById(hohId) : null;
     if (hoh && !hoh.isPlayer) {
       this.getLogger().info(`AI HoH ${hoh.name} automatically proceeding to nominations`);
-      // Immediately advance to nomination phase - no delay
-      this.controller.changeState('NominationState');
+      // Add a slight delay to ensure state changes properly
+      setTimeout(() => {
+        this.controller.changeState('NominationState');
+      }, 500);
     }
   }
   

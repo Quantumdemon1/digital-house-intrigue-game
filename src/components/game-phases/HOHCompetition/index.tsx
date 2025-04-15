@@ -28,13 +28,18 @@ const HOHCompetition: React.FC = () => {
   
   // Start the competition with a random type when component mounts
   useEffect(() => {
-    // Only start automatically if we haven't started already and there's no winner yet
-    if (!isCompeting && !winner && activeHouseguests.length > 0) {
-      console.log("Starting HOH competition...");
-      const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
-      startCompetition(randomType);
-    }
-  }, [activeHouseguests]);
+    const startInitialCompetition = () => {
+      if (!isCompeting && !winner && activeHouseguests.length > 0) {
+        console.log("Starting HOH competition automatically...");
+        const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
+        startCompetition(randomType);
+      }
+    };
+    
+    // Small delay to ensure everything is mounted properly
+    const timer = setTimeout(startInitialCompetition, 500);
+    return () => clearTimeout(timer);
+  }, []);
   
   const startCompetition = (type: CompetitionType) => {
     console.log(`Starting ${type} competition...`);
@@ -116,7 +121,7 @@ const HOHCompetition: React.FC = () => {
           type: 'SET_PHASE',
           payload: 'Nomination'
         });
-      }, 5000);
+      }, 5000); // 5 second delay before moving to nominations
     }, 3000); // Show the competition in progress for 3 seconds
   };
 
