@@ -9,6 +9,9 @@ import EvictionPhase from '../game-phases/EvictionPhase';
 import FinalePhase from '../game-phases/FinalePhase';
 import GameOverPhase from '../game-phases/GameOverPhase';
 import SocialInteractionPhase from '../game-phases/social-interaction';
+import POVPlayerSelection from '../game-phases/POVPlayerSelection'; // We'll create this file next
+import FinalHoHPhase from '../game-phases/FinalHoHPhase'; // We'll create this file next
+import JuryQuestioningPhase from '../game-phases/JuryQuestioningPhase'; // We'll create this file next
 
 interface PhaseContentProps {
   phase: GamePhase;
@@ -21,6 +24,9 @@ const PhaseContent: React.FC<PhaseContentProps> = ({ phase }) => {
       return <HOHCompetition />;
     case 'Nomination':
       return <NominationPhase />;
+    case 'PoVPlayerSelection':
+    case 'POV Player Selection':
+      return <POVPlayerSelection />;
     case 'PoV':
       return <POVCompetition />;
     case 'PoVMeeting':
@@ -29,6 +35,14 @@ const PhaseContent: React.FC<PhaseContentProps> = ({ phase }) => {
       return <EvictionPhase />;
     case 'SocialInteraction':
       return <SocialInteractionPhase />;
+    case 'FinalHoH':
+    case 'Final HOH Part1':
+    case 'Final HOH Part2':
+    case 'Final HOH Part3':
+      return <FinalHoHPhase />;
+    case 'JuryQuestioning':
+    case 'Jury Questioning':
+      return <JuryQuestioningPhase />;
     case 'Finale':
       return <FinalePhase />;
     case 'GameOver':

@@ -10,24 +10,52 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       const activeHouseguestsCount = state.houseguests.filter(h => h.status === 'Active').length;
       
       // Handle the special cases for final 3
-      if (activeHouseguestsCount <= 3) {
+      if (activeHouseguestsCount <= 3 && !state.isFinalStage) {
+        // When reaching final 3, transition to final stage
         if (action.payload === 'PoV') {
-          // Skip PoV at final 3 and go straight to finale
           return {
             ...state,
-            phase: 'Finale' as GamePhase,
+            phase: 'FinalHoH' as GamePhase,
+            isFinalStage: true
           };
         }
         
         if (action.payload === 'PoVMeeting') {
-          // Skip PoV Meeting at final 3 and go straight to Eviction
+          // Skip PoV Meeting at final 3 and go straight to special Final HoH
           return {
             ...state,
-            phase: 'Eviction' as GamePhase,
+            phase: 'FinalHoH' as GamePhase,
+            isFinalStage: true
           };
         }
       }
       
+      // If we're already in the final stages, manage the proper flow
+      if (state.isFinalStage) {
+        if (action.payload === 'FinalHoH' || action.payload === 'Final HOH Part1') {
+          return {
+            ...state,
+            phase: 'Final HOH Part1' as GamePhase,
+          };
+        } else if (action.payload === 'Final HOH Part2') {
+          return {
+            ...state,
+            phase: 'Final HOH Part2' as GamePhase,
+          };
+        } else if (action.payload === 'Final HOH Part3') {
+          return {
+            ...state,
+            phase: 'Final HOH Part3' as GamePhase,
+          };
+        } else if (action.payload === 'JuryQuestioning' || action.payload === 'Jury Questioning') {
+          return {
+            ...state,
+            phase: 'Jury Questioning' as GamePhase,
+          };
+        }
+      }
+      
+      // For regular phases
       return {
         ...state,
         phase: action.payload as GamePhase,
@@ -42,9 +70,15 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
         isNominated: false,
       }));
       
-      // Check if we're at final 3 - if so, skip to finale
+      // Check if we're at final 3 - if so, transition to final stage
       const activeHouseguests = resetHouseguests.filter(h => h.status === 'Active').length;
-      const nextPhase = activeHouseguests <= 3 ? ('Finale' as GamePhase) : ('HoH' as GamePhase);
+      let nextPhase: GamePhase = 'HoH';
+      let isFinalStage = state.isFinalStage;
+      
+      if (activeHouseguests <= 3 && !state.isFinalStage) {
+        nextPhase = 'FinalHoH';
+        isFinalStage = true;
+      }
       
       return {
         ...state,
@@ -52,9 +86,11 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
         phase: nextPhase,
         hohWinner: null,
         povWinner: null,
+        povPlayers: [], // Reset PoV players
         nominees: [],
         houseguests: resetHouseguests,
         evictionVotes: {},
+        isFinalStage
       };
       
     case 'END_GAME': {

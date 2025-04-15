@@ -9,15 +9,23 @@ export type GamePhase =
   | 'Initialization' 
   | 'HOH Competition' 
   | 'Nomination' 
+  | 'POV Player Selection' // Added new phase for selecting PoV players
   | 'POV Competition' 
   | 'POV Meeting' 
   | 'Eviction'
+  | 'Final HOH Part1' // Added for final HoH competition
+  | 'Final HOH Part2'
+  | 'Final HOH Part3'
+  | 'Jury Questioning' // Added for jury questioning final 2
   | 'Finale'
   | 'Setup'
   | 'HoH'
   | 'PoV'
+  | 'PoVPlayerSelection' // Added alias for the selection phase
   | 'PoVMeeting'
   | 'SocialInteraction'
+  | 'FinalHoH'
+  | 'JuryQuestioning'
   | 'GameOver';
 
 // Game event interface
@@ -71,6 +79,7 @@ export interface GameState {
   alliances: any[];
   hohWinner: any | null;
   povWinner: any | null;
+  povPlayers: any[]; // Added to track the 6 PoV competition players
   nominees: any[];
   juryMembers: any[];
   winner: any | null;
@@ -87,6 +96,8 @@ export interface GameState {
   evictionVotes: Record<string, string>;
   gameLog: GameEvent[];
   promises?: Promise[];
+  finalHoHWinners?: {part1: string | null, part2: string | null, part3: string | null}; // Added to track final HoH winners
+  isFinalStage: boolean; // Added to track when we're in the final stages
 }
 
 // Create initial game state
@@ -96,6 +107,7 @@ export function createInitialGameState(): GameState {
     alliances: [],
     hohWinner: null,
     povWinner: null,
+    povPlayers: [], // Initialize empty array for PoV players
     nominees: [],
     juryMembers: [],
     winner: null,
@@ -105,7 +117,9 @@ export function createInitialGameState(): GameState {
     relationships: new Map(),
     evictionVotes: {},
     gameLog: [],
-    promises: [] // Initialize empty promises array
+    promises: [], // Initialize empty promises array
+    finalHoHWinners: {part1: null, part2: null, part3: null},
+    isFinalStage: false
   };
 }
 

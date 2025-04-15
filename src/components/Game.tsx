@@ -5,14 +5,7 @@ import { Card } from '@/components/ui/card';
 import GameSetup from './GameSetup';
 import GamePhaseHeader from './GamePhaseHeader';
 import GameLog from './GameEventLog';
-import HohCompetitionPhase from './game-phases/HohPhase';
-import NominationPhase from './game-phases/NominationPhase';
-import PovCompetitionPhase from './game-phases/PovPhase';
-import PovMeetingPhase from './game-phases/POVMeeting/PovMeetingPhase';
-import EvictionPhase from './game-phases/EvictionPhase';
-import SocialInteractionPhase from './game-phases/social-interaction';
-import FinalePhase from './game-phases/FinalePhase';
-import GameOverPhase from './game-phases/GameOverPhase';
+import GameScreen from './game-screen/GameScreen';
 import HouseguestListComponent from './HouseguestList';
 import { AllianceManager } from './alliance/AllianceManager';
 import { Separator } from './ui/separator';
@@ -46,43 +39,15 @@ const Game = () => {
     return <GameSetup />;
   }
 
-  const renderGamePhase = () => {
-    switch (game.phase) {
-      case 'HoH':
-        return <HohCompetitionPhase />;
-      case 'Nomination':
-        return <NominationPhase />;
-      case 'PoV':
-        return <PovCompetitionPhase />;
-      case 'PoVMeeting':
-        return <PovMeetingPhase />;
-      case 'Eviction':
-        return <EvictionPhase />;
-      case 'SocialInteraction':
-        return <SocialInteractionPhase />;
-      case 'Finale':
-        return <FinalePhase />;
-      case 'GameOver':
-        return <GameOverPhase />;
-      default:
-        return <div>Unknown game phase: {game.phase}</div>;
-    }
-  };
-
-  // Convert string IDs to Houseguest objects for the GamePhaseHeader
-  const hohHouseguest = game.hohWinner ? game.getHouseguestById(game.hohWinner) || null : null;
-  const povHouseguest = game.povWinner ? game.getHouseguestById(game.povWinner) || null : null;
-  const nomineeHouseguests = game.nominees.map(id => game.getHouseguestById(id)).filter(Boolean);
-
   return (
     <AIThoughtsProvider>
       <div className="container py-4 mx-auto">
         <GamePhaseHeader 
           week={game.week}
           phase={game.phase}
-          hoh={hohHouseguest}
-          pov={povHouseguest}
-          nominees={nomineeHouseguests}
+          hoh={game.hohWinner ? game.getHouseguestById(game.hohWinner) : null}
+          pov={game.povWinner ? game.getHouseguestById(game.povWinner) : null}
+          nominees={game.nominees.map(id => game.getHouseguestById(id)).filter(Boolean)}
         />
         
         <div className="flex border-b mb-4">
@@ -116,7 +81,7 @@ const Game = () => {
         </div>
         
         <div className="space-y-4">
-          {activeTab === 'phase' && renderGamePhase()}
+          {activeTab === 'phase' && <GameScreen />}
           {activeTab === 'house' && <HouseguestListComponent />}
           {activeTab === 'log' && <GameLog />}
         </div>

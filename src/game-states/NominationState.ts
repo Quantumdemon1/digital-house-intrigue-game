@@ -28,8 +28,8 @@ export class NominationState extends GameStateBase {
         parameters: { nomineeIds: [] }
       },
       {
-        actionId: 'continue_to_pov',
-        text: 'Continue to Power of Veto'
+        actionId: 'continue_to_pov_selection', // Updated to go to PoV player selection
+        text: 'Continue to Power of Veto Player Selection'
       },
       {
         actionId: 'fast_forward',
@@ -76,20 +76,20 @@ export class NominationState extends GameStateBase {
             
             // Set nominees and advance
             this.game.nominees = randomNominees;
-            this.controller.changeState('PovCompetitionState');
+            this.controller.changeState('PovPlayerSelectionState'); // Updated to go to PoV player selection
             return true;
           }
         }
         
-        this.getLogger().info("Fast forward activated - advancing to PoV Competition");
+        this.getLogger().info("Fast forward activated - advancing to PoV Player Selection");
         // Always advance to the next state
-        this.controller.changeState('PovCompetitionState');
+        this.controller.changeState('PovPlayerSelectionState'); // Updated to go to PoV player selection
         return true;
         
-      case 'continue_to_pov':
-        // After nominations are made, immediately advance to PoV competition
-        this.getLogger().info("Continue to PoV - advancing to PoV Competition");
-        this.controller.changeState('PovCompetitionState');
+      case 'continue_to_pov_selection': // Updated action name
+        // After nominations are made, advance to PoV player selection
+        this.getLogger().info("Continue to PoV Player Selection");
+        this.controller.changeState('PovPlayerSelectionState');
         return true;
         
       default:

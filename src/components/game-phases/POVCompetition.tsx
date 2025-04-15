@@ -1,39 +1,58 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Houseguest, CompetitionType } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { Trophy, Loader, ShieldCheck } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const POVCompetition: React.FC = () => {
   const {
     gameState,
     dispatch,
+    getHouseguestById,
     getActiveHouseguests
   } = useGame();
   const [isCompeting, setIsCompeting] = useState(false);
   const [winner, setWinner] = useState<Houseguest | null>(null);
-  const activeHouseguests = getActiveHouseguests();
-  const nominees = gameState.nominees;
+  
+  // Get the PoV players (or all houseguests if not set)
+  const povPlayerIds = gameState.povPlayers || [];
+  const povPlayers = povPlayerIds
+    .map(id => getHouseguestById(id))
+    .filter(Boolean);
+  
+  const nominees = gameState.nominees
+    .map(id => getHouseguestById(id))
+    .filter(Boolean);
+  
+  const hoh = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
+  
+  // If no PoV players are set, show a warning
+  useEffect(() => {
+    if (povPlayerIds.length === 0 && !isCompeting && !winner) {
+      console.warn('No PoV players selected for competition');
+    }
+  }, [povPlayerIds, isCompeting, winner]);
   
   const startCompetition = () => {
     setIsCompeting(true);
 
     // Simulate the competition running
     setTimeout(() => {
-      // Verify we have houseguests before determining a winner
-      if (activeHouseguests.length === 0) {
-        console.error('No active houseguests available for POV competition');
+      // Verify we have PoV players before determining a winner
+      if (povPlayers.length === 0) {
+        console.error('No PoV players available for competition');
         setIsCompeting(false);
         return;
       }
       
-      // Determine the winner (random for now)
-      const competitionWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
+      // Determine the winner (random from povPlayers)
+      const competitionWinner = povPlayers[Math.floor(Math.random() * povPlayers.length)];
       
       if (!competitionWinner) {
-        console.error('Failed to select a POV competition winner');
+        console.error('Failed to select a PoV competition winner');
         setIsCompeting(false);
         return;
       }
@@ -119,7 +138,7 @@ const POVCompetition: React.FC = () => {
             </div>
             <h3 className="text-xl font-bold mt-4">Competition in Progress...</h3>
             <p className="text-sm text-muted-foreground mt-2">
-              Houseguests are competing for the Power of Veto
+              Selected houseguests are competing for the Power of Veto
             </p>
           </div>
         </CardContent>
@@ -128,9 +147,14 @@ const POVCompetition: React.FC = () => {
   
   return <Card className="shadow-lg border-bb-blue">
       <CardHeader className="bg-bb-blue text-white">
-        <CardTitle className="flex items-center">
-          <ShieldCheck className="mr-2" /> Power of Veto Competition
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <ShieldCheck className="mr-2" /> Power of Veto Competition
+          </CardTitle>
+          <Badge variant="outline" className="bg-white/10">
+            {povPlayers.length} Competitors
+          </Badge>
+        </div>
         <CardDescription className="text-white/80">
           Week {gameState.week}
         </CardDescription>
@@ -139,47 +163,50 @@ const POVCompetition: React.FC = () => {
         <div className="mb-6">
           <h3 className="text-lg font-medium mb-2">Competition Time</h3>
           <p>
-            The Power of Veto competition is about to begin. The winner will have the power to save
-            one of the nominees (or themselves) from eviction.
+            The Power of Veto competition is ready to begin. Six houseguests will compete,
+            and the winner will have the power to save one of the nominees from eviction.
           </p>
         </div>
         
         <div className="mb-6">
-          <h3 className="text-lg font-medium mb-2">Nominees</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {nominees.map(nominee => {
-              const houseguest = activeHouseguests.find(hg => hg.id === nominee.id);
-              return houseguest ? <div key={houseguest.id} className="flex items-center text-sm">
-                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
-                    {houseguest.name.charAt(0)}
-                  </div>
-                  <span>
-                    {houseguest.name}
-                    {houseguest.isPlayer && <span className="text-bb-green text-xs ml-1">(You)</span>}
-                  </span>
-                </div> : null;
-            })}
-          </div>
-        </div>
-        
-        <div className="bg-muted p-4 rounded-lg">
-          <h4 className="font-medium mb-2">Current Houseguests:</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {activeHouseguests.map(houseguest => <div key={houseguest.id} className="flex items-center text-sm">
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
-                  {houseguest.name.charAt(0)}
+          <h3 className="text-lg font-medium mb-2">PoV Competitors</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-muted/20 p-4 rounded-lg">
+            {povPlayers.map(player => (
+              <div key={player.id} className="flex items-center gap-2 bg-white/10 p-2 rounded-md">
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-bold">
+                  {player.name.charAt(0)}
                 </div>
-                <span>
-                  {houseguest.name}
-                  {houseguest.isPlayer && <span className="text-bb-green text-xs ml-1">(You)</span>}
-                </span>
-              </div>)}
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{player.name}</span>
+                  <span className="text-xs opacity-70">
+                    {player.id === hoh?.id ? "HoH" : 
+                     nominees.some(n => n.id === player.id) ? "Nominee" : 
+                     "Random Draw"}
+                  </span>
+                </div>
+                {player.isPlayer && <span className="text-xs text-green-400 ml-1">(You)</span>}
+              </div>
+            ))}
+            
+            {/* Show placeholder cards if less than 6 competitors */}
+            {Array.from({ length: Math.max(0, 6 - povPlayers.length) }).map((_, i) => (
+              <div key={`empty-${i}`} className="flex items-center gap-2 bg-white/5 p-2 rounded-md opacity-50">
+                <div className="w-8 h-8 rounded-full bg-gray-300/30 flex items-center justify-center text-gray-400">
+                  ?
+                </div>
+                <span className="text-sm">Not Selected</span>
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
       <CardFooter className="border-t p-4 bg-[#005a9a]">
         <div className="w-full">
-          <Button onClick={startCompetition} disabled={isCompeting} className="w-full">
+          <Button 
+            onClick={startCompetition} 
+            disabled={isCompeting || povPlayers.length === 0} 
+            className="w-full"
+          >
             Start Power of Veto Competition
           </Button>
         </div>
