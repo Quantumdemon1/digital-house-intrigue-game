@@ -24,7 +24,7 @@ const HouseguestList: React.FC<HouseguestListProps> = ({
     onStartGame();
     
     // Then explicitly navigate to the game route
-    navigate('/game');
+    navigate('/game', { replace: true });
   };
   
   return (

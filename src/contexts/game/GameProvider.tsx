@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
@@ -42,7 +41,18 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     initializeGameSystems();
     initializeGame();
     setLoading(false);
-  }, [initializeGameSystems, initializeGame]);
+    
+    const isAuthBypass = localStorage.getItem('bypass-auth') === 'true';
+    if (!user && !isAuthBypass && window.location.pathname === '/game') {
+      navigate('/');
+    }
+  }, [initializeGameSystems, initializeGame, user, navigate]);
+  
+  useEffect(() => {
+    if (!loading && gameState.phase === 'Setup' && window.location.pathname === '/game') {
+      navigate('/setup');
+    }
+  }, [loading, gameState.phase, navigate]);
   
   const game = useMemo(() => gameRef.current, []);
   const relationshipSystem = useMemo(() => relationshipSystemRef.current!, []);

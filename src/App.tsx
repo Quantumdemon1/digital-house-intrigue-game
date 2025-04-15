@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { GameProvider } from './contexts/game';
 import { AIThoughtsProvider } from './components/ai-feedback';
@@ -39,6 +39,7 @@ function App() {
                       </PrivateRoute>
                     } 
                   />
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 <RelationshipImpactDisplay />
                 <Toaster position="top-center" richColors />

@@ -12,6 +12,7 @@ import SocialInteractionPhase from '../game-phases/social-interaction';
 import POVPlayerSelection from '../game-phases/POVPlayerSelection';
 import FinalHoHPhase from '../game-phases/FinalHoHPhase';
 import JuryQuestioningPhase from '../game-phases/JuryQuestioningPhase';
+import GameSetup from '../GameSetup';
 
 interface PhaseContentProps {
   phase: GamePhase;
@@ -20,6 +21,8 @@ interface PhaseContentProps {
 const PhaseContent: React.FC<PhaseContentProps> = ({ phase }) => {
   // Render the appropriate phase component based on the current game phase
   switch (phase) {
+    case 'Setup':
+      return <GameSetup />;
     case 'HoH':
       return <HOHCompetition />;
     case 'Nomination':
