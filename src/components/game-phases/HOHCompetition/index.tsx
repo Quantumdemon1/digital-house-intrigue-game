@@ -147,16 +147,18 @@ const HOHCompetition: React.FC = () => {
         });
         
         if (game) {
-          logger?.info("Sending continue_to_nominations action to game state");
-          game.handleAction?.('continue_to_nominations', {});
-          
-          // As a fallback, directly tell the game controller to change state
-          if (game.controller) {
-            logger?.info("Using game controller to change state to NominationState");
-            try {
-              game.changeState('NominationState');
-            } catch (error) {
-              logger?.error("Error changing game state:", error);
+          logger?.info("Using game.changeState method to change state to NominationState");
+          try {
+            // Use changeState instead of handleAction or controller properties
+            game.changeState('NominationState');
+          } catch (error) {
+            logger?.error("Error changing game state:", error);
+            
+            // As a fallback, try setting the phase directly
+            logger?.info("Attempting fallback: setting phase directly");
+            if (game.phase) {
+              game.phase = 'Nomination';
+              logger?.info("Set game phase directly to Nomination");
             }
           }
         }
