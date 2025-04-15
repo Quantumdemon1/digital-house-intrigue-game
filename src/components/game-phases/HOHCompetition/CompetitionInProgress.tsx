@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { CompetitionType } from '@/models/houseguest';
+import { useGame } from '@/contexts/GameContext';
 
 interface CompetitionInProgressProps {
   competitionType: CompetitionType | null;
@@ -10,6 +11,11 @@ interface CompetitionInProgressProps {
 
 const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competitionType }) => {
   const [dots, setDots] = useState('');
+  const { logger } = useGame();
+  
+  useEffect(() => {
+    logger?.info(`CompetitionInProgress rendered with type: ${competitionType}`);
+  }, [competitionType, logger]);
   
   // Create animated dots for the loading indicator
   useEffect(() => {
@@ -19,6 +25,19 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
         return prev + '.';
       });
     }, 500);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Progress bar animation that helps show activity
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) return 0;
+        return prev + 5;
+      });
+    }, 150);
     
     return () => clearInterval(interval);
   }, []);
@@ -40,8 +59,15 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
           <p className="text-sm text-muted-foreground mt-2">
             Houseguests are competing for Head of Household
           </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Competition type: <span className="font-medium">{competitionType}</span>
+          </p>
+          
           <div className="mt-6 w-full max-w-xs bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-            <div className="bg-bb-blue h-2.5 rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{width: '45%'}}></div>
+            <div 
+              className="bg-bb-blue h-2.5 rounded-full transition-all duration-150 ease-in-out" 
+              style={{width: `${progress}%`}}
+            ></div>
           </div>
         </div>
       </CardContent>

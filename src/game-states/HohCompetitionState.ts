@@ -19,8 +19,11 @@ export class HohCompetitionState extends GameStateBase {
       this.getLogger().info(`AI HoH ${hoh.name} automatically proceeding to nominations`);
       // Add a slight delay to ensure state changes properly
       setTimeout(() => {
+        this.getLogger().info(`Changing state to NominationState for AI HoH ${hoh.name}`);
         this.controller.changeState('NominationState');
       }, 1000);
+    } else {
+      this.getLogger().info('Waiting for HOH competition to complete or player action');
     }
   }
   
@@ -39,7 +42,7 @@ export class HohCompetitionState extends GameStateBase {
   }
   
   async handleAction(actionId: string, params: any): Promise<boolean> {
-    this.getLogger().info(`HoH Competition handling action: ${actionId}`);
+    this.getLogger().info(`HoH Competition handling action: ${actionId}`, params);
     
     switch (actionId) {
       case 'select_hoh':
@@ -50,22 +53,30 @@ export class HohCompetitionState extends GameStateBase {
           // Check if the HoH is AI-controlled and immediately proceed to nominations if so
           const hoh = this.game.getHouseguestById(params.hohId);
           if (hoh && !hoh.isPlayer) {
-            this.controller.changeState('NominationState');
+            this.getLogger().info(`AI HoH ${hoh.name} automatically proceeding to nominations`);
+            setTimeout(() => {
+              this.controller.changeState('NominationState');
+            }, 500);
+          } else {
+            this.getLogger().info(`Player HoH ${hoh?.name} selected, waiting for continue action`);
           }
           
           return true;
         }
+        this.getLogger().warn('select_hoh action called without hohId parameter');
         return false;
         
       case 'continue_to_nominations':
-        this.getLogger().info('Continuing to nominations');
+        this.getLogger().info('Continuing to nominations via explicit action');
         // Add a small delay to ensure the state changes properly
         setTimeout(() => {
+          this.getLogger().info('Executing state change to NominationState');
           this.controller.changeState('NominationState');
-        }, 100);
+        }, 200);
         return true;
         
       default:
+        this.getLogger().warn(`Unknown action received: ${actionId}`);
         return false;
     }
   }
