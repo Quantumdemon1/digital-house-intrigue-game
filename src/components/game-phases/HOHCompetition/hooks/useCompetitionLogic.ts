@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
 import { selectRandomWinner } from '../utils';
@@ -11,6 +11,7 @@ import { useCompetitionResults } from './useCompetitionResults';
 export const useCompetitionLogic = () => {
   const { logger } = useGame();
   const { processResults } = useCompetitionResults();
+  const processingRef = useRef(false);
   
   // Start the competition simulation
   const simulateCompetition = useCallback((
@@ -20,31 +21,48 @@ export const useCompetitionLogic = () => {
     setResults: (results: any[]) => void,
     setWinner: (winner: Houseguest | null) => void
   ) => {
-    // Verify we have houseguests before determining a winner
-    if (activeHouseguests.length === 0) {
-      logger?.error('No active houseguests available for competition');
-      setIsCompeting(false);
+    // Prevent multiple simultaneous calls
+    if (processingRef.current) {
+      logger?.warn("Competition simulation already in progress");
       return;
     }
     
-    // Determine the winner (weighted random based on stats)
-    const competitionWinner = selectRandomWinner(activeHouseguests, type);
+    processingRef.current = true;
     
-    if (!competitionWinner) {
-      logger?.error('Failed to select a competition winner');
-      setIsCompeting(false);
-      return;
-    }
+    try {
+      // Verify we have houseguests before determining a winner
+      if (activeHouseguests.length === 0) {
+        logger?.error('No active houseguests available for competition');
+        setIsCompeting(false);
+        processingRef.current = false;
+        return;
+      }
+      
+      // Determine the winner (weighted random based on stats)
+      const competitionWinner = selectRandomWinner(activeHouseguests, type);
+      
+      if (!competitionWinner) {
+        logger?.error('Failed to select a competition winner');
+        setIsCompeting(false);
+        processingRef.current = false;
+        return;
+      }
 
-    // Process the results and get positions
-    const positions = processResults(competitionWinner, activeHouseguests);
-    
-    // Update state with results in proper sequence to prevent race conditions
-    setTimeout(() => {
-      setResults(positions);
-      setWinner(competitionWinner);
+      // Process the results and get positions
+      const positions = processResults(competitionWinner, activeHouseguests);
+      
+      // Update state with results in proper sequence to prevent race conditions
+      setTimeout(() => {
+        setResults(positions);
+        setWinner(competitionWinner);
+        setIsCompeting(false);
+        processingRef.current = false;
+      }, 100);
+    } catch (error) {
+      logger?.error("Error during competition simulation:", error);
       setIsCompeting(false);
-    }, 100);
+      processingRef.current = false;
+    }
   }, [logger, processResults]);
 
   return { simulateCompetition };

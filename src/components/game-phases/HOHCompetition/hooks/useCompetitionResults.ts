@@ -2,6 +2,7 @@
 import { useToast } from '@/components/ui/use-toast';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
+import { useRef } from 'react';
 
 /**
  * Hook for handling competition results
@@ -9,6 +10,7 @@ import { Houseguest } from '@/models/houseguest';
 export const useCompetitionResults = () => {
   const { gameState, dispatch, logger } = useGame();
   const { toast } = useToast();
+  const processingRef = useRef(false);
   
   /**
    * Process competition results and update the game state
@@ -17,6 +19,12 @@ export const useCompetitionResults = () => {
     competitionWinner: Houseguest,
     activeHouseguests: Houseguest[]
   ) => {
+    if (processingRef.current) {
+      logger?.warn("Already processing results, ignoring duplicate call");
+      return [];
+    }
+    
+    processingRef.current = true;
     logger?.info(`Competition winner selected: ${competitionWinner.name}`);
 
     // Generate random results
@@ -42,30 +50,36 @@ export const useCompetitionResults = () => {
     
     // Update game state with new HoH - wrapped in setTimeout to prevent race conditions
     setTimeout(() => {
-      logger?.info(`Dispatching SET_HOH action for ${competitionWinner.name}`);
-      dispatch({
-        type: 'SET_HOH',
-        payload: competitionWinner
-      });
+      try {
+        logger?.info(`Dispatching SET_HOH action for ${competitionWinner.name}`);
+        dispatch({
+          type: 'SET_HOH',
+          payload: competitionWinner
+        });
 
-      // Log the event
-      dispatch({
-        type: 'LOG_EVENT',
-        payload: {
-          week: gameState.week,
-          phase: 'HoH',
-          type: 'COMPETITION',
-          description: `${competitionWinner.name} won the Head of Household competition.`,
-          involvedHouseguests: [competitionWinner.id]
-        }
-      });
+        // Log the event
+        dispatch({
+          type: 'LOG_EVENT',
+          payload: {
+            week: gameState.week,
+            phase: 'HoH',
+            type: 'COMPETITION',
+            description: `${competitionWinner.name} won the Head of Household competition.`,
+            involvedHouseguests: [competitionWinner.id]
+          }
+        });
 
-      // Show toast
-      toast({
-        title: "HoH Competition Results",
-        description: `${competitionWinner.name} is the new Head of Household!`,
-      });
-    }, 0);
+        // Show toast
+        toast({
+          title: "HoH Competition Results",
+          description: `${competitionWinner.name} is the new Head of Household!`,
+        });
+      } catch (error) {
+        logger?.error("Error updating game state with competition results:", error);
+      } finally {
+        processingRef.current = false;
+      }
+    }, 300); // Increased delay to ensure UI updates properly
     
     return positions;
   };

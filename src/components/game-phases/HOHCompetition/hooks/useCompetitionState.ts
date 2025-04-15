@@ -20,6 +20,7 @@ export const useCompetitionState = () => {
   
   const activeHouseguests = getActiveHouseguests();
   const competitionRunning = useRef(false);
+  const competitionStarted = useRef(false);
   
   // Log crucial information on component mount and state changes
   useEffect(() => {
@@ -30,28 +31,54 @@ export const useCompetitionState = () => {
       winner: winner?.name || "none",
       competitionType,
       gamePhase: game?.phase || "unknown",
-      transitionAttempted
+      transitionAttempted,
+      competitionRunning: competitionRunning.current,
+      competitionStarted: competitionStarted.current
     });
   }, [gameState.phase, activeHouseguests.length, isCompeting, winner, competitionType, logger, game?.phase, transitionAttempted]);
   
   const startCompetition = (type: CompetitionType) => {
-    if (isCompeting || competitionRunning.current) {
-      logger?.info("Competition already in progress, ignoring start request");
+    // Enhanced guard clauses to prevent duplicate starts
+    if (isCompeting || competitionRunning.current || competitionStarted.current || winner) {
+      logger?.info("Competition already in progress or completed, ignoring start request");
       return;
     }
     
     logger?.info(`Starting ${type} competition...`);
-    setCompetitionType(type);
-    setIsCompeting(true);
+    competitionStarted.current = true;
     competitionRunning.current = true;
-
-    // Simulate the competition running with a delay to prevent UI issues
+    
+    // Update state in a safe sequence
     setTimeout(() => {
-      logger?.info("Competition completed, determining winner");
-      simulateCompetition(type, activeHouseguests, setIsCompeting, setResults, setWinner);
-      competitionRunning.current = false;
-    }, 3000); // Show the competition in progress for 3 seconds
+      setCompetitionType(type);
+      setIsCompeting(true);
+      
+      // Simulate the competition running with a delay to prevent UI issues
+      setTimeout(() => {
+        logger?.info("Competition completed, determining winner");
+        
+        try {
+          // Only run if we're still mounted and competition is actually running
+          if (competitionRunning.current) {
+            simulateCompetition(type, activeHouseguests, setIsCompeting, setResults, setWinner);
+          }
+        } catch (error) {
+          logger?.error("Error during competition simulation:", error);
+          setIsCompeting(false);
+        } finally {
+          competitionRunning.current = false;
+        }
+      }, 3000); // Show the competition in progress for 3 seconds
+    }, 0);
   };
+
+  // Reset state if component is unmounted
+  useEffect(() => {
+    return () => {
+      competitionRunning.current = false;
+      competitionStarted.current = false;
+    };
+  }, []);
 
   return {
     competitionType,
