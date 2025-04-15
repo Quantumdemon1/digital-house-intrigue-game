@@ -1,4 +1,3 @@
-
 /**
  * @file PovMeetingState.ts
  * @description PoV meeting state
@@ -47,6 +46,10 @@ export class PovMeetingState extends GameStateBase {
         parameters: { replacementNomineeId: '' }
       },
       {
+        actionId: 'continue_to_eviction',
+        text: 'Continue to Eviction'
+      },
+      {
         actionId: 'fast_forward',
         text: 'Fast Forward'
       }
@@ -86,12 +89,15 @@ export class PovMeetingState extends GameStateBase {
             const currentNominees = this.game.nominees || [];
             this.game.nominees = [...currentNominees, replacementNomineeId];
             
-            // Immediately advance to Eviction phase
-            this.controller.changeState('EvictionState');
             return true;
           }
         }
         return false;
+      
+      case 'continue_to_eviction':
+        // After PoV meeting is complete, continue to eviction
+        this.controller.changeState('EvictionState');
+        return true;
         
       case 'dont_use_veto':
         // PoV holder decides not to use the veto

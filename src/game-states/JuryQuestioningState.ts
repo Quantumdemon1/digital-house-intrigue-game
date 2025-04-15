@@ -37,7 +37,8 @@ export class JuryQuestioningState extends GameStateBase {
       case 'complete_questioning':
       case 'continue_to_voting':
         this.getLogger().info("Jury questioning complete, moving to final vote");
-        this.controller.changeState('FinaleState');
+        // Move directly to the Finale state which handles the voting and winner determination
+        this.controller.changeState('FinalStageState');
         return true;
         
       default:
