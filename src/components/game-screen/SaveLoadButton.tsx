@@ -37,11 +37,16 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
   // Load saved games list when dialog opens or refresh key changes
   useEffect(() => {
     if (dialogOpen) {
-      setSavedGames(getSavedGames());
+      const loadGames = async () => {
+        const games = await getSavedGames();
+        setSavedGames(games);
+      };
+      
+      loadGames();
     }
   }, [dialogOpen, getSavedGames, refreshKey]);
   
-  const handleSaveGame = () => {
+  const handleSaveGame = async () => {
     if (!saveName.trim()) {
       showToast("Save name required", { 
         variant: "error",
@@ -50,18 +55,24 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
       return;
     }
     
-    const success = saveGame(saveName);
-    if (success) {
+    try {
+      await saveGame(saveName);
       // Refresh saved games list
       setRefreshKey(prev => prev + 1);
       setSaveName("");
+      showToast("Game saved", { variant: "success" });
+    } catch (error) {
+      showToast("Failed to save game", { variant: "error" });
     }
   };
   
-  const handleLoadGame = (saveName: string) => {
-    const success = loadGame(saveName);
-    if (success) {
+  const handleLoadGame = async (saveName: string) => {
+    try {
+      await loadGame(saveName);
       setDialogOpen(false);
+      showToast("Game loaded", { variant: "success" });
+    } catch (error) {
+      showToast("Failed to load game", { variant: "error" });
     }
   };
   
@@ -71,13 +82,17 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
     setDeleteDialogOpen(true);
   };
   
-  const handleDeleteSave = () => {
+  const handleDeleteSave = async () => {
     if (deleteTarget) {
-      const success = deleteSavedGame(deleteTarget);
-      if (success) {
+      try {
+        await deleteSavedGame(deleteTarget);
         // Refresh saved games list
         setRefreshKey(prev => prev + 1);
+        showToast("Save deleted", { variant: "success" });
+      } catch (error) {
+        showToast("Failed to delete save", { variant: "error" });
       }
+      
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
     }

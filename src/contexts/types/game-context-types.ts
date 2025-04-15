@@ -2,12 +2,15 @@
 import { GameState } from '../../models/game-state';
 import { Houseguest } from '../../models/houseguest';
 import { BigBrotherGame } from '../../models/game/BigBrotherGame';
-import { RelationshipSystem } from '../../systems/relationship/RelationshipSystem';
-import { CompetitionSystem } from '../../systems/competition/CompetitionSystem';
-import { AISystem } from '../../systems/ai/AISystem';
-import { PromiseSystem } from '../../systems/promise/PromiseSystem';
-import { RecapGenerator } from '../../systems/recap/RecapGenerator';
-import { GameLogger } from '../../systems/logger/GameLogger';
+import { RelationshipSystem } from '../../systems/relationship';
+import { CompetitionSystem } from '../../systems/competition-system';
+import { AIIntegrationSystem as AISystem } from '../../systems/ai/ai-integration-system';
+import { PromiseSystem } from '../../systems/promise';
+import { RecapGenerator } from '../../utils/recap/recap-generator';
+import { Logger } from '../../utils/logger';
+
+// Re-export GameState so other modules can import it
+export { GameState };
 
 // Define Action type
 export type GameAction = {
@@ -24,7 +27,7 @@ export interface GameContextType {
   aiSystem: AISystem | null;
   promiseSystem: PromiseSystem | null;
   recapGenerator: RecapGenerator | null;
-  logger: GameLogger | null;
+  logger: Logger | null;
   dispatch: React.Dispatch<GameAction>;
   getHouseguestById: (id: string) => Houseguest | undefined;
   getRelationship: (guest1Id: string, guest2Id: string) => number;

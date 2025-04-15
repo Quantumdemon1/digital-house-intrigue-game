@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
@@ -72,12 +73,17 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   }, [getActiveHouseguests]);
   
   const getGameStatus = useCallback(() => {
+    const hohId = game?.hohWinner || null;
+    const hohHouseguest = hohId ? game?.getHouseguestById(hohId) : null;
+    const povId = game?.povWinner || null;
+    const povHouseguest = povId ? game?.getHouseguestById(povId) : null;
+    
     return {
       week: game?.week || 0,
       phase: game?.phase || 'Setup',
-      hoh: game?.hohWinner || null,
+      hoh: hohHouseguest || null,
       nominees: game?.nominees?.join(', ') || '',
-      povHolder: game?.povWinner || null,
+      povHolder: povHouseguest || null,
     };
   }, [game]);
   

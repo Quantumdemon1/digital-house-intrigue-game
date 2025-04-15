@@ -1,3 +1,4 @@
+
 /**
  * @file src/types/index.ts
  * @description Central export for all type definitions
@@ -19,5 +20,6 @@ export type { Alliance } from '../models/alliance';
 export type { BigBrotherGame } from '../models/game/BigBrotherGame';
 export type { GameEvent, GamePhase } from '../models/game-state';
 
-// Export context types
-export type { GameAction, GameState, GameContextType } from '../contexts/types/game-context-types';
+// Export context types - use the re-exported GameState from game-context-types
+export type { GameAction, GameContextType } from '../contexts/types/game-context-types';
+export { GameState } from '../contexts/types/game-context-types';
