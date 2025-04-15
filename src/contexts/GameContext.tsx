@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from "sonner"; // Import sonner toast
 import { useRelationshipImpact } from './RelationshipImpactContext';
@@ -44,14 +45,11 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     
+    // Fix the constructor call by passing the right parameters
     gameRef.current = new BigBrotherGame(
-      gameState,
-      relationshipSystemRef.current,
-      competitionSystemRef.current,
-      aiSystemRef.current,
-      promiseSystemRef.current,
-      recapGeneratorRef.current,
-      loggerRef.current
+      gameState.houseguests,
+      gameState.week,
+      gameState.phase
     );
   }, [gameState]);
   
@@ -81,9 +79,16 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     return game?.getActiveHouseguests() || [];
   }, [game]);
   
+  // Define getRandomNominees as it's missing in the BigBrotherGame
   const getRandomNominees = useCallback((count: number = 2, excludeIds: string[] = []) => {
-    return game?.getRandomNominees(count, excludeIds) || [];
-  }, [game]);
+    const activeHouseguests = getActiveHouseguests();
+    const eligibleHouseguests = activeHouseguests.filter(hg => !excludeIds.includes(hg.id));
+    
+    // Shuffle the array
+    const shuffled = [...eligibleHouseguests].sort(() => 0.5 - Math.random());
+    // Get the first 'count' elements
+    return shuffled.slice(0, Math.min(count, shuffled.length));
+  }, [getActiveHouseguests]);
   
   const getGameStatus = useCallback(() => {
     return {

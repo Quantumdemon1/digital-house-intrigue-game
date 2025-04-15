@@ -2,7 +2,7 @@
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Separator } from '@/components/ui/separator';
-import { SaveLoadButton } from './SaveLoadButton';
+import SaveLoadButton from './SaveLoadButton';
 import FastForwardButton from './FastForwardButton';
 import PromiseButton from './PromiseButton';
 import GameRecapButton from './GameRecapButton';

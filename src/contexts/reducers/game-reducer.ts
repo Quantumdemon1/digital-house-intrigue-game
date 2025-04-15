@@ -8,7 +8,7 @@ import { gameProgressReducer } from './reducers/game-progress-reducer';
 import { logReducer } from './reducers/log-reducer';
 import { playerActionReducer } from './reducers/player-action-reducer';
 import { GameAction } from '../types/game-context-types';
-import { LOAD_GAME, loadGameReducer } from './reducers/load-game-reducer';
+import { loadGameReducer } from './reducers/load-game-reducer';
 
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
   console.log(`Game reducer: ${action.type}`, action.payload);
@@ -50,6 +50,10 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     case 'PLAYER_ACTION':
       return playerActionReducer(state, action);
     
+    // Load game action
+    case 'LOAD_GAME':
+      return loadGameReducer(state, action.payload);
+    
     // System actions (usually handled in the context provider)
     case 'INITIALIZE_GAME':
     case 'START_NEW_GAME_INSTANCE':
@@ -67,10 +71,6 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     case 'RELATIONSHIP_IMPACT':
       // This doesn't actually modify the state, but is used by the RelationshipImpactProvider
       return state;
-    
-    // Add new case for loading a saved game
-    case 'LOAD_GAME':
-      return loadGameReducer(state, action.payload);
       
     default:
       return state;

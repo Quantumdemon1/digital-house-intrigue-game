@@ -1,3 +1,4 @@
+
 /**
  * @file src/models/game-state.ts
  * @description Game state types and interfaces
@@ -76,9 +77,13 @@ export function createInitialGameState(): GameState {
     phase: 'Setup',
     relationships: new Map(),
     evictionVotes: {},
-    gameLog: []
+    gameLog: [],
+    promises: [] // Initialize empty promises array
   };
 }
+
+// Create and export initialGameState
+export const initialGameState: GameState = createInitialGameState();
 
 // Import existing types (this would be added to the existing imports)
 import { Promise } from './promise';
