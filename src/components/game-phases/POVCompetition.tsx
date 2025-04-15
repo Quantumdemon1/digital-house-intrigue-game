@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +16,28 @@ const POVCompetition: React.FC = () => {
   const [winner, setWinner] = useState<Houseguest | null>(null);
   const activeHouseguests = getActiveHouseguests();
   const nominees = gameState.nominees;
+  
   const startCompetition = () => {
     setIsCompeting(true);
 
     // Simulate the competition running
     setTimeout(() => {
+      // Verify we have houseguests before determining a winner
+      if (activeHouseguests.length === 0) {
+        console.error('No active houseguests available for POV competition');
+        setIsCompeting(false);
+        return;
+      }
+      
       // Determine the winner (random for now)
       const competitionWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
+      
+      if (!competitionWinner) {
+        console.error('Failed to select a POV competition winner');
+        setIsCompeting(false);
+        return;
+      }
+      
       setWinner(competitionWinner);
 
       // Update game state with new PoV winner
@@ -51,6 +67,7 @@ const POVCompetition: React.FC = () => {
       }, 5000);
     }, 3000);
   };
+  
   if (winner) {
     return <Card className="shadow-lg border-bb-blue">
         <CardHeader className="bg-bb-blue text-white">
@@ -86,6 +103,7 @@ const POVCompetition: React.FC = () => {
         </CardContent>
       </Card>;
   }
+  
   if (isCompeting) {
     return <Card className="shadow-lg border-bb-blue">
         <CardHeader className="bg-bb-blue text-white">
@@ -107,6 +125,7 @@ const POVCompetition: React.FC = () => {
         </CardContent>
       </Card>;
   }
+  
   return <Card className="shadow-lg border-bb-blue">
       <CardHeader className="bg-bb-blue text-white">
         <CardTitle className="flex items-center">

@@ -6,6 +6,12 @@ import { calculateCompetitionAdvantage } from '../../../models/houseguest';
 export function competitionReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'SET_HOH': {
+      // Check if action.payload is defined before accessing its properties
+      if (!action.payload) {
+        console.error('SET_HOH action missing payload:', action);
+        return state;
+      }
+      
       // Reset previous HoH
       const updatedHouseguests = state.houseguests.map(guest => ({
         ...guest,
@@ -32,6 +38,12 @@ export function competitionReducer(state: GameState, action: GameAction): GameSt
     }
     
     case 'SET_POV_WINNER': {
+      // Check if action.payload is defined before accessing its properties
+      if (!action.payload) {
+        console.error('SET_POV_WINNER action missing payload:', action);
+        return state;
+      }
+      
       // Reset previous PoV holder
       const updatedHouseguestsForPov = state.houseguests.map(guest => ({
         ...guest,

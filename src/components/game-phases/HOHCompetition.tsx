@@ -78,14 +78,28 @@ const HOHCompetition: React.FC = () => {
   const [winner, setWinner] = useState<Houseguest | null>(null);
   const activeHouseguests = getActiveHouseguests();
   const player = activeHouseguests.find(h => h.isPlayer);
+  
   const startCompetition = (type: CompetitionType) => {
     setCompetitionType(type);
     setIsCompeting(true);
 
     // Simulate the competition running
     setTimeout(() => {
+      // Verify we have houseguests before determining a winner
+      if (activeHouseguests.length === 0) {
+        console.error('No active houseguests available for competition');
+        setIsCompeting(false);
+        return;
+      }
+      
       // Determine the winner (weighted random based on stats)
       const competitionWinner = selectRandomWinner(activeHouseguests, type);
+      
+      if (!competitionWinner) {
+        console.error('Failed to select a competition winner');
+        setIsCompeting(false);
+        return;
+      }
 
       // Generate random results
       const positions = activeHouseguests.map(guest => ({
@@ -142,6 +156,7 @@ const HOHCompetition: React.FC = () => {
       }, 5000);
     }, 3000);
   };
+
   if (winner) {
     return <Card className="shadow-lg border-bb-blue">
         <CardHeader className="bg-bb-blue text-white">
