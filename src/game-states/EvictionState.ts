@@ -45,7 +45,7 @@ export class EvictionState extends GameStateBase {
       actions.push({
         actionId: 'final3_hoh_decision',
         text: 'HOH Decides Final 2',
-        parameters: { evictedId: '' }
+        parameters: { nomineeId: '' }  // Changed from evictedId to nomineeId to match the expected type
       });
     }
     
@@ -105,18 +105,18 @@ export class EvictionState extends GameStateBase {
         
       case 'final3_hoh_decision':
         // Special case for final 3 where HOH directly evicts someone
-        if (params && params.evictedId) {
-          const evictedHouseguest = this.game.houseguests.find(hg => hg.id === params.evictedId);
+        if (params && params.nomineeId) {  // Changed from evictedId to nomineeId for consistency
+          const evictedHouseguest = this.game.houseguests.find(hg => hg.id === params.nomineeId);
           if (evictedHouseguest) {
             this.getLogger().info(`Final 3: HOH directly evicted ${evictedHouseguest.name}`);
             
             // Always add to jury at final 3
             evictedHouseguest.status = 'Jury' as HouseguestStatus;
-            this.game.juryMembers.push(params.evictedId);
+            this.game.juryMembers.push(params.nomineeId);
             
             // The remaining two houseguests become the final two
             // But we need Houseguest objects, not just IDs
-            const finalTwoHouseguests = this.game.getActiveHouseguests().filter(hg => hg.id !== params.evictedId);
+            const finalTwoHouseguests = this.game.getActiveHouseguests().filter(hg => hg.id !== params.nomineeId);
             this.game.finalTwo = finalTwoHouseguests; // Now assigning Houseguest[] instead of string[]
             
             // Advance to Jury Questioning phase
