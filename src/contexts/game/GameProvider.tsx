@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +17,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   const relationshipImpact = useRelationshipImpact();
   const [loading, setLoading] = useState(true);
   
-  // Use custom hooks for different concerns
   const { gameState, dispatch } = useGameReducer();
   const { 
     loggerRef,
@@ -45,7 +43,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(false);
   }, [initializeGameSystems, initializeGame]);
   
-  // Create stable references to systems for context value
   const game = useMemo(() => gameRef.current, []);
   const relationshipSystem = useMemo(() => relationshipSystemRef.current!, []);
   const competitionSystem = useMemo(() => competitionSystemRef.current!, []);
@@ -54,7 +51,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   const recapGenerator = useMemo(() => recapGeneratorRef.current!, []);
   const logger = useMemo(() => loggerRef.current!, []);
   
-  // Helper functions
   const getHouseguestById = useCallback((id: string) => {
     return game?.getHouseguestById(id);
   }, [game]);
