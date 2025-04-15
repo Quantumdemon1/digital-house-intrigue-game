@@ -1,7 +1,7 @@
 // This file is simplified as most helpers are directly in GameContext
 // Keeping it as a module with empty export for potential future complex helper logic
 
-import { useGame } from '../GameContext';
+import { useGame } from '../game';
 
 export const useGameHelpers = () => {
   const {

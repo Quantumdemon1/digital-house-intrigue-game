@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { GameProvider } from '@/contexts/GameContext';
-import { useGame } from '@/contexts/GameContext';
+import { useGame, GameProvider } from '@/contexts/game';
 import GameSetup from '@/components/GameSetup';
 import GameScreen from '@/components/game-screen';
 import { TooltipProvider } from '@/components/ui/tooltip';

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { GameProvider } from './contexts/GameContext';
+import { GameProvider } from './contexts/game';
 import { AIThoughtsProvider } from './components/ai-feedback';
 import { RelationshipImpactProvider } from './contexts/RelationshipImpactContext';
 import { RelationshipImpactDisplay } from './components/relationship';
