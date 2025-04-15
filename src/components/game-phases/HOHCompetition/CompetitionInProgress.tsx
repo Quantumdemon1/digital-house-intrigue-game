@@ -14,7 +14,7 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
       <CardHeader className="bg-bb-blue text-white">
         <CardTitle>Head of Household Competition</CardTitle>
         <CardDescription className="text-white/80">
-          {competitionType} Competition
+          {competitionType ?? 'Random'} Competition in Progress
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">

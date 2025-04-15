@@ -21,20 +21,23 @@ const HOHCompetition: React.FC = () => {
   const [results, setResults] = useState<{
     name: string;
     position: number;
+    id: string;
   }[]>([]);
   const [winner, setWinner] = useState<Houseguest | null>(null);
   const activeHouseguests = getActiveHouseguests();
   
-  // Automatically start the competition with a random type when the component mounts
+  // Start the competition with a random type when component mounts
   useEffect(() => {
     // Only start automatically if we haven't started already and there's no winner yet
     if (!isCompeting && !winner && activeHouseguests.length > 0) {
+      console.log("Starting HOH competition...");
       const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
       startCompetition(randomType);
     }
-  }, [activeHouseguests, isCompeting, winner]);
+  }, [activeHouseguests]);
   
   const startCompetition = (type: CompetitionType) => {
+    console.log(`Starting ${type} competition...`);
     setCompetitionType(type);
     setIsCompeting(true);
 
@@ -56,6 +59,8 @@ const HOHCompetition: React.FC = () => {
         return;
       }
 
+      console.log(`Competition winner selected: ${competitionWinner.name}`);
+
       // Generate random results
       const positions = activeHouseguests.map(guest => ({
         name: guest.name,
@@ -63,8 +68,8 @@ const HOHCompetition: React.FC = () => {
         position: Math.random() // random value for sorting
       })).sort((a, b) => a.position - b.position).map((guest, index) => ({
         name: guest.name,
-        position: index + 1,
-        id: guest.id
+        id: guest.id,
+        position: index + 1
       }));
 
       // Make sure the winner is in first place
@@ -74,6 +79,8 @@ const HOHCompetition: React.FC = () => {
         positions[0] = positions[winnerIndex];
         positions[winnerIndex] = temp;
       }
+      
+      console.log("Setting competition results...");
       setResults(positions);
       setWinner(competitionWinner);
 
@@ -104,12 +111,13 @@ const HOHCompetition: React.FC = () => {
 
       // Continue to nomination phase after a delay
       setTimeout(() => {
+        console.log("Advancing to nomination phase...");
         dispatch({
           type: 'SET_PHASE',
           payload: 'Nomination'
         });
       }, 5000);
-    }, 3000);
+    }, 3000); // Show the competition in progress for 3 seconds
   };
 
   // Show the appropriate component based on the competition state

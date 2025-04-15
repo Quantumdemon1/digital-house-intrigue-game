@@ -10,8 +10,9 @@ export class HohCompetitionState extends GameStateBase {
   async enter(): Promise<void> {
     await super.enter();
     this.game.phase = 'HoH';
+    this.getLogger().info('Entered HoH Competition state');
     
-    // If HoH is AI-controlled, immediately proceed to nominations
+    // If HoH is already set (AI-controlled), immediately proceed to nominations
     const hohId = this.game.hohWinner;
     const hoh = hohId ? this.game.getHouseguestById(hohId) : null;
     if (hoh && !hoh.isPlayer) {
@@ -36,6 +37,8 @@ export class HohCompetitionState extends GameStateBase {
   }
   
   async handleAction(actionId: string, params: any): Promise<boolean> {
+    this.getLogger().info(`HoH Competition handling action: ${actionId}`);
+    
     switch (actionId) {
       case 'select_hoh':
         if (params && params.hohId) {
@@ -51,6 +54,12 @@ export class HohCompetitionState extends GameStateBase {
           return true;
         }
         return false;
+        
+      case 'continue_to_nominations':
+        this.getLogger().info('Continuing to nominations');
+        this.controller.changeState('NominationState');
+        return true;
+        
       default:
         return false;
     }
