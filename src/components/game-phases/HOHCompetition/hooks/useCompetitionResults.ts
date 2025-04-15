@@ -1,7 +1,7 @@
 
 import { useToast } from '@/components/ui/use-toast';
 import { useGame } from '@/contexts/GameContext';
-import { CompetitionType, Houseguest } from '@/models/houseguest';
+import { Houseguest } from '@/models/houseguest';
 
 /**
  * Hook for handling competition results
@@ -40,30 +40,32 @@ export const useCompetitionResults = () => {
     
     logger?.info("Setting competition results for display");
     
-    // Update game state with new HoH
-    logger?.info(`Dispatching SET_HOH action for ${competitionWinner.name}`);
-    dispatch({
-      type: 'SET_HOH',
-      payload: competitionWinner
-    });
+    // Update game state with new HoH - wrapped in setTimeout to prevent race conditions
+    setTimeout(() => {
+      logger?.info(`Dispatching SET_HOH action for ${competitionWinner.name}`);
+      dispatch({
+        type: 'SET_HOH',
+        payload: competitionWinner
+      });
 
-    // Log the event
-    dispatch({
-      type: 'LOG_EVENT',
-      payload: {
-        week: gameState.week,
-        phase: 'HoH',
-        type: 'COMPETITION',
-        description: `${competitionWinner.name} won the Head of Household competition.`,
-        involvedHouseguests: [competitionWinner.id]
-      }
-    });
+      // Log the event
+      dispatch({
+        type: 'LOG_EVENT',
+        payload: {
+          week: gameState.week,
+          phase: 'HoH',
+          type: 'COMPETITION',
+          description: `${competitionWinner.name} won the Head of Household competition.`,
+          involvedHouseguests: [competitionWinner.id]
+        }
+      });
 
-    // Show toast
-    toast({
-      title: "HoH Competition Results",
-      description: `${competitionWinner.name} is the new Head of Household!`,
-    });
+      // Show toast
+      toast({
+        title: "HoH Competition Results",
+        description: `${competitionWinner.name} is the new Head of Household!`,
+      });
+    }, 0);
     
     return positions;
   };

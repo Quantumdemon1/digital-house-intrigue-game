@@ -39,9 +39,12 @@ export const useCompetitionLogic = () => {
     // Process the results and get positions
     const positions = processResults(competitionWinner, activeHouseguests);
     
-    // Update state with results
-    setResults(positions);
-    setWinner(competitionWinner);
+    // Update state with results in proper sequence to prevent race conditions
+    setTimeout(() => {
+      setResults(positions);
+      setWinner(competitionWinner);
+      setIsCompeting(false);
+    }, 100);
   }, [logger, processResults]);
 
   return { simulateCompetition };
