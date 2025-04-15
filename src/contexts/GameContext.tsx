@@ -31,8 +31,8 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   
   const initializeGameSystems = useCallback(() => {
     loggerRef.current = new Logger();
-    relationshipSystemRef.current = new RelationshipSystem(gameState);
-    competitionSystemRef.current = new CompetitionSystem(gameState);
+    relationshipSystemRef.current = new RelationshipSystem(loggerRef.current);
+    competitionSystemRef.current = new CompetitionSystem(loggerRef.current);
     aiSystemRef.current = new AIIntegrationSystem(gameState, loggerRef.current);
     promiseSystemRef.current = {};
     recapGeneratorRef.current = {};
