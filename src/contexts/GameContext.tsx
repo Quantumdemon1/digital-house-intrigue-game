@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from "sonner"; // Import sonner toast
 import { useRelationshipImpact } from './RelationshipImpactContext';
@@ -32,12 +31,12 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   
   const initializeGameSystems = useCallback(() => {
     loggerRef.current = new Logger();
-    relationshipSystemRef.current = new RelationshipSystem();
-    competitionSystemRef.current = new CompetitionSystem();
-    aiSystemRef.current = new AIIntegrationSystem();
-    promiseSystemRef.current = {}; // Assuming PromiseSystem doesn't require instantiation
-    recapGeneratorRef.current = {}; // Assuming RecapGenerator doesn't require instantiation
-  }, []);
+    relationshipSystemRef.current = new RelationshipSystem(gameState);
+    competitionSystemRef.current = new CompetitionSystem(gameState);
+    aiSystemRef.current = new AIIntegrationSystem(gameState, loggerRef.current);
+    promiseSystemRef.current = {};
+    recapGeneratorRef.current = {};
+  }, [gameState]);
   
   const initializeGame = useCallback(() => {
     if (!relationshipSystemRef.current || !competitionSystemRef.current || !aiSystemRef.current || !loggerRef.current) {
@@ -45,7 +44,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     
-    // Fix the constructor call by passing the right parameters
     gameRef.current = new BigBrotherGame(
       gameState.houseguests,
       gameState.week,
@@ -79,14 +77,11 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     return game?.getActiveHouseguests() || [];
   }, [game]);
   
-  // Define getRandomNominees as it's missing in the BigBrotherGame
   const getRandomNominees = useCallback((count: number = 2, excludeIds: string[] = []) => {
     const activeHouseguests = getActiveHouseguests();
     const eligibleHouseguests = activeHouseguests.filter(hg => !excludeIds.includes(hg.id));
     
-    // Shuffle the array
     const shuffled = [...eligibleHouseguests].sort(() => 0.5 - Math.random());
-    // Get the first 'count' elements
     return shuffled.slice(0, Math.min(count, shuffled.length));
   }, [getActiveHouseguests]);
   
@@ -104,34 +99,27 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     toast(title, options);
   }, []);
 
-  // Update the saveGame function to include user ID
   const saveGame = (saveName: string): boolean => {
     try {
-      // If there's no game instance active, return false
       if (!game) {
         return false;
       }
 
-      // Create a save name with a timestamp
       const timestamp = new Date().toISOString();
       const saveNameWithTimestamp = `${saveName}_${timestamp}`;
       
-      // Store the entire game state
       const userId = user?.id || 'guest';
       const saveKey = `bb_save_${userId}`;
       
-      // Get existing saves or create an empty array
       const existingSavesStr = localStorage.getItem(saveKey) || '[]';
       let existingSaves = JSON.parse(existingSavesStr);
       
-      // Add the new save
       existingSaves.push({
         name: saveNameWithTimestamp,
         date: timestamp,
         data: gameState
       });
       
-      // Save back to localStorage
       localStorage.setItem(saveKey, JSON.stringify(existingSaves));
       
       toast.success(`Game saved as ${saveName}`);
@@ -143,7 +131,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Update the loadGame function to use user ID
   const loadGame = (saveName: string): boolean => {
     try {
       const userId = user?.id || 'guest';
@@ -152,7 +139,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
       const existingSavesStr = localStorage.getItem(saveKey) || '[]';
       const existingSaves = JSON.parse(existingSavesStr);
       
-      // Find the save with the given name
       const saveToLoad = existingSaves.find((save: any) => save.name === saveName);
       
       if (!saveToLoad) {
@@ -160,7 +146,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      // Dispatch the loaded game state
       dispatch({ type: 'LOAD_GAME', payload: saveToLoad.data });
       
       toast.success(`Game loaded: ${saveName}`);
@@ -172,7 +157,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Update the deleteSavedGame function to use user ID
   const deleteSavedGame = (saveName: string): boolean => {
     try {
       const userId = user?.id || 'guest';
@@ -181,10 +165,8 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
       const existingSavesStr = localStorage.getItem(saveKey) || '[]';
       let existingSaves = JSON.parse(existingSavesStr);
       
-      // Filter out the save to delete
       existingSaves = existingSaves.filter((save: any) => save.name !== saveName);
       
-      // Save the updated list back to localStorage
       localStorage.setItem(saveKey, JSON.stringify(existingSaves));
       
       toast.success(`Save '${saveName}' deleted`);
@@ -196,7 +178,6 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Update the getSavedGames function to use user ID
   const getSavedGames = (): Array<{ name: string; date: string; data: any }> => {
     try {
       const userId = user?.id || 'guest';
