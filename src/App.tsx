@@ -9,24 +9,44 @@ import { RelationshipImpactDisplay } from './components/relationship';
 import { GameControlProvider } from './contexts/GameControlContext';
 import GameScreen from './components/game-screen/GameScreen';
 import GameSetup from './components/GameSetup';
+import AuthPage from './components/auth/AuthPage';
+import PrivateRoute from './components/auth/PrivateRoute';
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
   return (
     <div className="app min-h-screen bg-background">
-      <RelationshipImpactProvider>
-        <GameProvider>
-          <GameControlProvider>
-            <AIThoughtsProvider>
-              <Routes>
-                <Route path="/" element={<GameSetup />} />
-                <Route path="/game" element={<GameScreen />} />
-              </Routes>
-              <RelationshipImpactDisplay />
-              <Toaster position="top-center" richColors />
-            </AIThoughtsProvider>
-          </GameControlProvider>
-        </GameProvider>
-      </RelationshipImpactProvider>
+      <AuthProvider>
+        <RelationshipImpactProvider>
+          <GameProvider>
+            <GameControlProvider>
+              <AIThoughtsProvider>
+                <Routes>
+                  <Route path="/" element={<AuthPage />} />
+                  <Route 
+                    path="/setup" 
+                    element={
+                      <PrivateRoute>
+                        <GameSetup />
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/game" 
+                    element={
+                      <PrivateRoute>
+                        <GameScreen />
+                      </PrivateRoute>
+                    } 
+                  />
+                </Routes>
+                <RelationshipImpactDisplay />
+                <Toaster position="top-center" richColors />
+              </AIThoughtsProvider>
+            </GameControlProvider>
+          </GameProvider>
+        </RelationshipImpactProvider>
+      </AuthProvider>
     </div>
   );
 }
