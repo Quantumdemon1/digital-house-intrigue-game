@@ -35,9 +35,11 @@ const GameScreen: React.FC = () => {
     setIsSaveLoadDialogOpen
   } = useGameDialogs();
   
-  // Log phase changes for debugging
+  // Log phase changes for debugging - add null check for logger
   useEffect(() => {
-    logger.info(`Current game phase: ${phase}`);
+    if (logger) {
+      logger.info(`Current game phase: ${phase}`);
+    }
   }, [phase, logger]);
   
   // Placeholder recap data structure

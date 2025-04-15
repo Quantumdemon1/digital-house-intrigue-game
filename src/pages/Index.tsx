@@ -12,9 +12,11 @@ const GameContent = () => {
     logger
   } = useGame();
 
-  // Log the current phase for debugging
+  // Log the current phase for debugging - add null check for logger
   React.useEffect(() => {
-    logger.info(`Current game phase: ${gameState.phase}`);
+    if (logger) {
+      logger.info(`Current game phase: ${gameState.phase}`);
+    }
   }, [gameState.phase, logger]);
 
   // Display game setup screen or the actual game based on the phase
