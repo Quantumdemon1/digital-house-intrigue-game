@@ -9,9 +9,9 @@ import EvictionPhase from '../game-phases/EvictionPhase';
 import FinalePhase from '../game-phases/FinalePhase';
 import GameOverPhase from '../game-phases/GameOverPhase';
 import SocialInteractionPhase from '../game-phases/social-interaction';
-import POVPlayerSelection from '../game-phases/POVPlayerSelection'; // We'll create this file next
-import FinalHoHPhase from '../game-phases/FinalHoHPhase'; // We'll create this file next
-import JuryQuestioningPhase from '../game-phases/JuryQuestioningPhase'; // We'll create this file next
+import POVPlayerSelection from '../game-phases/POVPlayerSelection';
+import FinalHoHPhase from '../game-phases/FinalHoHPhase';
+import JuryQuestioningPhase from '../game-phases/JuryQuestioningPhase';
 
 interface PhaseContentProps {
   phase: GamePhase;
@@ -48,6 +48,7 @@ const PhaseContent: React.FC<PhaseContentProps> = ({ phase }) => {
     case 'GameOver':
       return <GameOverPhase />;
     default:
+      console.warn(`Unknown phase: ${phase}`);
       return null;
   }
 };

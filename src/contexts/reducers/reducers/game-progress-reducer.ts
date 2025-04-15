@@ -9,10 +9,13 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       // Count active houseguests
       const activeHouseguestsCount = state.houseguests.filter(h => h.status === 'Active').length;
       
+      // Normalize the phase name to handle different casing/formats
+      const normalizedPhase = normalizePhase(action.payload as string);
+      
       // Handle the special cases for final 3
       if (activeHouseguestsCount <= 3 && !state.isFinalStage) {
         // When reaching final 3, transition to final stage
-        if (action.payload === 'PoV') {
+        if (normalizedPhase === 'pov') {
           return {
             ...state,
             phase: 'FinalHoH' as GamePhase,
@@ -20,7 +23,7 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
           };
         }
         
-        if (action.payload === 'PoVMeeting') {
+        if (normalizedPhase === 'povmeeting') {
           // Skip PoV Meeting at final 3 and go straight to special Final HoH
           return {
             ...state,
@@ -32,30 +35,35 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       
       // If we're already in the final stages, manage the proper flow
       if (state.isFinalStage) {
-        if (action.payload === 'FinalHoH' || action.payload === 'Final HOH Part1') {
+        if (normalizedPhase === 'finalhoh' || normalizedPhase === 'finalhohpart1') {
           return {
             ...state,
             phase: 'Final HOH Part1' as GamePhase,
           };
-        } else if (action.payload === 'Final HOH Part2') {
+        } else if (normalizedPhase === 'finalhohpart2') {
           return {
             ...state,
             phase: 'Final HOH Part2' as GamePhase,
           };
-        } else if (action.payload === 'Final HOH Part3') {
+        } else if (normalizedPhase === 'finalhohpart3') {
           return {
             ...state,
             phase: 'Final HOH Part3' as GamePhase,
           };
-        } else if (action.payload === 'JuryQuestioning' || action.payload === 'Jury Questioning') {
+        } else if (normalizedPhase === 'juryquestioning') {
           return {
             ...state,
             phase: 'Jury Questioning' as GamePhase,
           };
+        } else if (normalizedPhase === 'finale') {
+          return {
+            ...state,
+            phase: 'Finale' as GamePhase,
+          };
         }
       }
       
-      // For regular phases
+      // For regular phases, directly set the phase as provided
       return {
         ...state,
         phase: action.payload as GamePhase,
@@ -119,4 +127,10 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
     default:
       return state;
   }
+}
+
+// Helper function to normalize phase names for consistent comparison
+function normalizePhase(phase: string): string {
+  // Remove spaces, convert to lowercase, and remove any special characters
+  return phase.toLowerCase().replace(/[\s-_]/g, '');
 }
