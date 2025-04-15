@@ -11,6 +11,7 @@ const HohCompetitionPhase: React.FC = () => {
   const { toast } = useToast();
   const [monitorActive, setMonitorActive] = useState(false);
   const [stuckDetected, setStuckDetected] = useState(false);
+  const stuckDetectionTimeout = 10000; // Define the timeout constant (10 seconds)
   
   // Use an effect to log important information when the component mounts
   useEffect(() => {
@@ -51,7 +52,6 @@ const HohCompetitionPhase: React.FC = () => {
     const monitorId = setInterval(() => {
       // Check if we've detected a winner but haven't advanced phases
       if (gameState.phase === 'HoH' && gameState.hohWinner) {
-        const stuckTime = 10000; // 10 seconds
         logger?.info('Detected potential stuck state: HoH winner selected but phase not advancing');
         
         // Only show the toast once
@@ -60,8 +60,7 @@ const HohCompetitionPhase: React.FC = () => {
           toast({
             title: "Phase transition delayed",
             description: "Attempting to continue to nominations...",
-            variant: "default", 
-            icon: <AlertCircle className="h-4 w-4" />
+            variant: "default"
           });
         }
         
@@ -106,7 +105,7 @@ const HohCompetitionPhase: React.FC = () => {
         // Reset stuck detection if we're not in a potentially stuck state
         setStuckDetected(false);
       }
-    }, stuckTime);
+    }, stuckDetectionTimeout);
     
     return () => {
       clearInterval(monitorId);
