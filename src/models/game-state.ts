@@ -62,33 +62,10 @@ export function getOrCreateRelationship(
   return guestRelationships.get(guest2Id);
 }
 
-// Create initial game state
-export function createInitialGameState(): GameState {
-  return {
-    houseguests: [],
-    alliances: [],
-    hohWinner: null,
-    povWinner: null,
-    nominees: [],
-    juryMembers: [],
-    winner: null,
-    runnerUp: null,
-    week: 0,
-    phase: 'Setup',
-    relationships: new Map(),
-    evictionVotes: {},
-    gameLog: [],
-    promises: [] // Initialize empty promises array
-  };
-}
-
-// Create and export initialGameState
-export const initialGameState: GameState = createInitialGameState();
-
-// Import existing types (this would be added to the existing imports)
+// Import Promise type
 import { Promise } from './promise';
 
-// Add promise array to GameState (would be added to existing interface)
+// Define GameState interface - explicitly export this
 export interface GameState {
   houseguests: any[];
   alliances: any[];
@@ -111,6 +88,29 @@ export interface GameState {
   gameLog: GameEvent[];
   promises?: Promise[];
 }
+
+// Create initial game state
+export function createInitialGameState(): GameState {
+  return {
+    houseguests: [],
+    alliances: [],
+    hohWinner: null,
+    povWinner: null,
+    nominees: [],
+    juryMembers: [],
+    winner: null,
+    runnerUp: null,
+    week: 0,
+    phase: 'Setup',
+    relationships: new Map(),
+    evictionVotes: {},
+    gameLog: [],
+    promises: [] // Initialize empty promises array
+  };
+}
+
+// Create and export initialGameState
+export const initialGameState: GameState = createInitialGameState();
 
 // Define relationship map type for use in other components
 export type RelationshipMap = Map<string, Map<string, { 

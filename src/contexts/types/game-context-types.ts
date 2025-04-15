@@ -1,5 +1,4 @@
 
-import { GameState } from '../../models/game-state';
 import { Houseguest } from '../../models/houseguest';
 import { BigBrotherGame } from '../../models/game/BigBrotherGame';
 import { RelationshipSystem } from '../../systems/relationship';
@@ -8,9 +7,10 @@ import { AIIntegrationSystem as AISystem } from '../../systems/ai/ai-integration
 import { PromiseSystem } from '../../systems/promise';
 import { RecapGenerator } from '../../utils/recap/recap-generator';
 import { Logger } from '../../utils/logger';
+import { GameState } from '../../models/game-state';
 
 // Re-export GameState so other modules can import it
-export { GameState };
+export type { GameState };
 
 // Define Action type
 export type GameAction = {

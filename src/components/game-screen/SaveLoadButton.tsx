@@ -6,7 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import { useGame } from '@/contexts/GameContext';
+import { useGame } from '@/contexts/game';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, 
@@ -38,8 +38,13 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
   useEffect(() => {
     if (dialogOpen) {
       const loadGames = async () => {
-        const games = await getSavedGames();
-        setSavedGames(games);
+        try {
+          const games = await getSavedGames();
+          setSavedGames(games);
+        } catch (error) {
+          console.error("Error loading saved games:", error);
+          setSavedGames([]);
+        }
       };
       
       loadGames();

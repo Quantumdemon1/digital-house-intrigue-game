@@ -3,10 +3,10 @@ import { toast } from "sonner";
 import { GameState } from "../../../models/game-state";
 
 export function useSaveLoadFunctions(user: any, gameState: GameState) {
-  const saveGame = (saveName: string): boolean => {
+  const saveGame = async (saveName: string): Promise<void> => {
     try {
       if (!gameState) {
-        return false;
+        throw new Error("No game state to save");
       }
 
       const timestamp = new Date().toISOString();
@@ -27,15 +27,14 @@ export function useSaveLoadFunctions(user: any, gameState: GameState) {
       localStorage.setItem(saveKey, JSON.stringify(existingSaves));
       
       toast.success(`Game saved as ${saveName}`);
-      return true;
     } catch (error) {
       console.error('Failed to save game:', error);
       toast.error('Failed to save game');
-      return false;
+      throw error;
     }
   };
 
-  const loadGame = (saveName: string): boolean => {
+  const loadGame = async (saveName: string): Promise<void> => {
     try {
       const userId = user?.id || 'guest';
       const saveKey = `bb_save_${userId}`;
@@ -47,21 +46,20 @@ export function useSaveLoadFunctions(user: any, gameState: GameState) {
       
       if (!saveToLoad) {
         toast.error(`Save '${saveName}' not found`);
-        return false;
+        throw new Error(`Save '${saveName}' not found`);
       }
       
       // Note: dispatch is handled by the caller
       
       toast.success(`Game loaded: ${saveName}`);
-      return true;
     } catch (error) {
       console.error('Failed to load game:', error);
       toast.error('Failed to load game');
-      return false;
+      throw error;
     }
   };
 
-  const deleteSavedGame = (saveName: string): boolean => {
+  const deleteSavedGame = async (saveName: string): Promise<void> => {
     try {
       const userId = user?.id || 'guest';
       const saveKey = `bb_save_${userId}`;
@@ -74,15 +72,14 @@ export function useSaveLoadFunctions(user: any, gameState: GameState) {
       localStorage.setItem(saveKey, JSON.stringify(existingSaves));
       
       toast.success(`Save '${saveName}' deleted`);
-      return true;
     } catch (error) {
       console.error('Failed to delete save:', error);
       toast.error('Failed to delete save');
-      return false;
+      throw error;
     }
   };
 
-  const getSavedGames = (): Array<{ name: string; date: string; data: any }> => {
+  const getSavedGames = async (): Promise<Array<{ name: string; date: string; data: any }>> => {
     try {
       const userId = user?.id || 'guest';
       const saveKey = `bb_save_${userId}`;
