@@ -23,7 +23,7 @@ export const usePhaseTransition = (winner: Houseguest | null, transitionAttempte
     
     logger?.info("Advancing to nomination phase");
     
-    // Add a small delay to ensure React state updates properly
+    // Dispatch phase change with a slight delay to ensure React state updates properly
     setTimeout(() => {
       // Method 1: Primary method - dispatch SET_PHASE action
       dispatch({
@@ -31,22 +31,28 @@ export const usePhaseTransition = (winner: Houseguest | null, transitionAttempte
         payload: 'Nomination'
       });
       
-      // Method 2: Secondary method - dispatch player action for game engine
-      dispatch({
-        type: 'PLAYER_ACTION',
-        payload: {
-          actionId: 'continue_to_nominations',
-          params: {}
-        }
-      });
-      
       // Show a toast to inform the user
       toast({
         title: "Moving to Nominations",
         description: "The Head of Household will now nominate two houseguests.",
       });
-    }, 100); // Small delay to prevent React state issues
-  }, [dispatch, logger, toast, transitionAttempted, setTransitionAttempted]);
+
+      // Method 2: Secondary method - dispatch player action for game engine
+      // This provides a backup mechanism if the first fails
+      setTimeout(() => {
+        if (gameState.phase === 'HoH') {
+          logger?.warn("Primary phase transition didn't take effect, using backup");
+          dispatch({
+            type: 'PLAYER_ACTION',
+            payload: {
+              actionId: 'continue_to_nominations',
+              params: {}
+            }
+          });
+        }
+      }, 500);
+    }, 500); // Increased delay for more reliable state updates
+  }, [dispatch, logger, toast, transitionAttempted, setTransitionAttempted, gameState.phase]);
   
   // Effect to monitor phase transitions
   useEffect(() => {

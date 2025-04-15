@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
 import { selectRandomWinner } from '../utils';
@@ -57,7 +57,7 @@ export const useCompetitionLogic = () => {
         setWinner(competitionWinner);
         setIsCompeting(false);
         processingRef.current = false;
-      }, 100);
+      }, 500); // Increased timeout for better reliability
     } catch (error) {
       logger?.error("Error during competition simulation:", error);
       setIsCompeting(false);
