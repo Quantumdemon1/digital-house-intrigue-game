@@ -11,7 +11,7 @@ export type { RelationshipSystem } from '../systems/relationship-system';
 export type { CompetitionSystem } from '../systems/competition-system';
 export type { AIIntegrationSystem } from '../systems/ai-integration';
 export { PromiseSystem } from '../systems/promise/index'; // Updated export path
-export type { RecapGenerator } from '../utils/recap';
+export type { GameRecapGenerator } from '../utils/recap/recap-generator';
 export type { Logger } from '../utils/logger';
 
 // Export model types

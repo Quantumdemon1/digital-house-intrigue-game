@@ -1,11 +1,10 @@
-
 import { Houseguest } from '../../models/houseguest';
 import { BigBrotherGame } from '../../models/game/BigBrotherGame';
 import { RelationshipSystem } from '../../systems/relationship';
 import { CompetitionSystem } from '../../systems/competition-system';
 import { AIIntegrationSystem as AISystem } from '../../systems/ai/ai-integration-system';
 import { PromiseSystem } from '../../systems/promise';
-import { RecapGenerator } from '../../utils/recap/recap-generator';
+import { GameRecapGenerator } from '../../utils/recap/recap-generator';
 import { Logger } from '../../utils/logger';
 import { GameState } from '../../models/game-state';
 
@@ -26,7 +25,7 @@ export interface GameContextType {
   competitionSystem: CompetitionSystem | null;
   aiSystem: AISystem | null;
   promiseSystem: PromiseSystem | null;
-  recapGenerator: RecapGenerator | null;
+  recapGenerator: GameRecapGenerator | null;
   logger: Logger | null;
   dispatch: React.Dispatch<GameAction>;
   getHouseguestById: (id: string) => Houseguest | undefined;
