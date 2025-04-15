@@ -20,7 +20,7 @@ export class HohCompetitionState extends GameStateBase {
       // Add a slight delay to ensure state changes properly
       setTimeout(() => {
         this.controller.changeState('NominationState');
-      }, 500);
+      }, 1000);
     }
   }
   
@@ -59,7 +59,10 @@ export class HohCompetitionState extends GameStateBase {
         
       case 'continue_to_nominations':
         this.getLogger().info('Continuing to nominations');
-        this.controller.changeState('NominationState');
+        // Add a small delay to ensure the state changes properly
+        setTimeout(() => {
+          this.controller.changeState('NominationState');
+        }, 100);
         return true;
         
       default:

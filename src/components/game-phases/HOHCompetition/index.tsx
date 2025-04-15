@@ -12,7 +12,8 @@ const HOHCompetition: React.FC = () => {
   const {
     gameState,
     dispatch,
-    getActiveHouseguests
+    getActiveHouseguests,
+    game
   } = useGame();
   const { toast } = useToast();
   
@@ -26,28 +27,37 @@ const HOHCompetition: React.FC = () => {
   const [winner, setWinner] = useState<Houseguest | null>(null);
   const activeHouseguests = getActiveHouseguests();
   
-  // Start the competition with a random type when component mounts
   useEffect(() => {
-    const startInitialCompetition = () => {
-      if (!isCompeting && !winner && activeHouseguests.length > 0) {
-        console.log("Starting HOH competition automatically...");
+    console.log("HOHCompetition mounted, phase:", gameState.phase);
+    console.log("Active houseguests:", activeHouseguests.length);
+    
+    // Only start if we're in the HoH phase and there's no competition in progress
+    if (gameState.phase === 'HoH' && !isCompeting && !winner && activeHouseguests.length > 0) {
+      console.log("Setting up competition start timeout");
+      
+      const timer = setTimeout(() => {
+        console.log("Starting competition after delay");
         const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
         startCompetition(randomType);
-      }
-    };
-    
-    // Small delay to ensure everything is mounted properly
-    const timer = setTimeout(startInitialCompetition, 500);
-    return () => clearTimeout(timer);
-  }, []);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.phase, activeHouseguests.length, isCompeting, winner]);
   
   const startCompetition = (type: CompetitionType) => {
+    if (isCompeting) {
+      console.log("Competition already in progress, ignoring start request");
+      return;
+    }
+    
     console.log(`Starting ${type} competition...`);
     setCompetitionType(type);
     setIsCompeting(true);
 
     // Simulate the competition running
     setTimeout(() => {
+      console.log("Competition completed, determining winner");
       // Verify we have houseguests before determining a winner
       if (activeHouseguests.length === 0) {
         console.error('No active houseguests available for competition');
@@ -111,18 +121,30 @@ const HOHCompetition: React.FC = () => {
       toast({
         title: "HoH Competition Results",
         description: `${competitionWinner.name} is the new Head of Household!`,
-        variant: "default"
       });
 
       // Continue to nomination phase after a delay
+      console.log("Scheduling transition to nomination phase");
       setTimeout(() => {
-        console.log("Advancing to nomination phase...");
+        console.log("Advancing to nomination phase via dispatch...");
         dispatch({
           type: 'SET_PHASE',
           payload: 'Nomination'
         });
-      }, 5000); // 5 second delay before moving to nominations
-    }, 3000); // Show the competition in progress for 3 seconds
+        
+        // Directly send PLAYER_ACTION as a backup to ensure state transition
+        if (game) {
+          console.log("Also sending continue_to_nominations action");
+          dispatch({
+            type: 'PLAYER_ACTION',
+            payload: {
+              actionId: 'continue_to_nominations',
+              parameters: {}
+            }
+          });
+        }
+      }, 4000); // 4 second delay before moving to nominations
+    }, 2500); // Show the competition in progress for 2.5 seconds
   };
 
   // Show the appropriate component based on the competition state
