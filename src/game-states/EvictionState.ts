@@ -26,7 +26,7 @@ export class EvictionState extends GameStateBase {
   
   getAvailableActions(): SocialActionChoice[] {
     // Return available actions for this state
-    const actions = [
+    return [
       {
         actionId: 'cast_eviction_vote',
         text: 'Cast Eviction Vote',
@@ -37,19 +37,6 @@ export class EvictionState extends GameStateBase {
         text: 'Complete Eviction',
       }
     ];
-    
-    // Check if we're at final 3
-    const activeHouseguests = this.game.getActiveHouseguests();
-    if (activeHouseguests.length <= 3) {
-      // Add final3_hoh_decision action for final 3
-      actions.push({
-        actionId: 'final3_hoh_decision',
-        text: 'HOH Decides Final 2',
-        parameters: { nomineeId: '' }  // Changed from evictedId to nomineeId to match the expected type
-      });
-    }
-    
-    return actions;
   }
   
   async handleAction(actionId: string, params: any): Promise<boolean> {
@@ -89,38 +76,28 @@ export class EvictionState extends GameStateBase {
             
             this.getLogger().info(`${evictedHouseguest.name} has been evicted and removed from active houseguests`);
           }
-          
-          // Check if we need to advance to final stage
-          const activeHouseguests = this.game.getActiveHouseguests();
-          if (activeHouseguests.length <= 3) {
-            this.getLogger().info("Final 3 reached: Advancing to Final HoH");
-            this.game.advanceWeek();
-            this.controller.changeState('FinalHoHState');
-            return true;
-          }
-          
           return true;
         }
         return false;
         
       case 'final3_hoh_decision':
         // Special case for final 3 where HOH directly evicts someone
-        if (params && params.nomineeId) {  // Changed from evictedId to nomineeId for consistency
-          const evictedHouseguest = this.game.houseguests.find(hg => hg.id === params.nomineeId);
+        if (params && params.evictedId) {
+          const evictedHouseguest = this.game.houseguests.find(hg => hg.id === params.evictedId);
           if (evictedHouseguest) {
             this.getLogger().info(`Final 3: HOH directly evicted ${evictedHouseguest.name}`);
             
             // Always add to jury at final 3
             evictedHouseguest.status = 'Jury' as HouseguestStatus;
-            this.game.juryMembers.push(params.nomineeId);
+            this.game.juryMembers.push(params.evictedId);
             
             // The remaining two houseguests become the final two
             // But we need Houseguest objects, not just IDs
-            const finalTwoHouseguests = this.game.getActiveHouseguests().filter(hg => hg.id !== params.nomineeId);
+            const finalTwoHouseguests = this.game.getActiveHouseguests().filter(hg => hg.id !== params.evictedId);
             this.game.finalTwo = finalTwoHouseguests; // Now assigning Houseguest[] instead of string[]
             
-            // Advance to Jury Questioning phase
-            this.controller.changeState('JuryQuestioningState');
+            // Advance to Finale phase
+            this.controller.changeState('FinalStageState');
             return true;
           }
         }
@@ -129,37 +106,6 @@ export class EvictionState extends GameStateBase {
       case 'advance_week':
         this.getLogger().info("Advancing week after eviction");
         // After eviction is complete, advance immediately to next week/phase
-        
-        // Check if we've reached final 3
-        const activeHouseguests = this.game.getActiveHouseguests();
-        if (activeHouseguests.length <= 3) {
-          this.getLogger().info("Final 3 reached: Advancing to Final HoH");
-          this.game.advanceWeek();
-          this.controller.changeState('FinalHoHState');
-          return true;
-        }
-        
-        // If we're in finale, go to GameOver, otherwise advance week
-        if (this.game.week >= this.controller.getGameSettings().finalWeek) {
-          this.controller.changeState('GameOverState');
-        } else {
-          this.game.advanceWeek();
-          this.controller.changeState('HohCompetitionState');
-        }
-        return true;
-        
-      case 'eviction_complete':
-        this.getLogger().info("Eviction complete, advancing to next phase");
-        
-        // Check if we've reached final 3
-        const remainingHouseguests = this.game.getActiveHouseguests();
-        if (remainingHouseguests.length <= 3) {
-          this.getLogger().info("Final 3 reached: Advancing to Final HoH");
-          this.game.advanceWeek();
-          this.controller.changeState('FinalHoHState');
-          return true;
-        }
-        
         // If we're in finale, go to GameOver, otherwise advance week
         if (this.game.week >= this.controller.getGameSettings().finalWeek) {
           this.controller.changeState('GameOverState');
@@ -171,16 +117,18 @@ export class EvictionState extends GameStateBase {
         
       case 'fast_forward':
         this.getLogger().info("Fast-forwarding eviction phase");
-        
-        // Check if we've reached final 3
-        const remainingPlayers = this.game.getActiveHouseguests();
-        if (remainingPlayers.length <= 3) {
-          this.getLogger().info("Final 3 reached: Advancing to Final HoH");
+        // If we're in finale, go to GameOver, otherwise advance week
+        if (this.game.week >= this.controller.getGameSettings().finalWeek) {
+          this.controller.changeState('GameOverState');
+        } else {
           this.game.advanceWeek();
-          this.controller.changeState('FinalHoHState');
-          return true;
+          this.controller.changeState('HohCompetitionState');
         }
+        return true;
         
+      case 'eviction_complete':
+        this.getLogger().info("Eviction complete, advancing to next phase");
+        // After eviction is complete, advance immediately to next week/phase
         // If we're in finale, go to GameOver, otherwise advance week
         if (this.game.week >= this.controller.getGameSettings().finalWeek) {
           this.controller.changeState('GameOverState');

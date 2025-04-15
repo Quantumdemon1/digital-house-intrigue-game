@@ -12,14 +12,6 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       // Handle the special cases for final 3
       if (activeHouseguestsCount <= 3 && !state.isFinalStage) {
         // When reaching final 3, transition to final stage
-        if (action.payload === 'HOH Competition' || action.payload === 'HoH') {
-          return {
-            ...state,
-            phase: 'FinalHoH' as GamePhase,
-            isFinalStage: true
-          };
-        }
-        
         if (action.payload === 'PoV') {
           return {
             ...state,
@@ -59,11 +51,6 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
           return {
             ...state,
             phase: 'Jury Questioning' as GamePhase,
-          };
-        } else if (action.payload === 'Finale') {
-          return {
-            ...state,
-            phase: 'Finale' as GamePhase,
           };
         }
       }
