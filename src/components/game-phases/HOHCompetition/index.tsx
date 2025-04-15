@@ -1,206 +1,40 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { useToast } from '@/components/ui/use-toast';
-import { CompetitionType, Houseguest } from '@/models/houseguest';
-import { selectRandomWinner, competitionTypes } from './utils';
 import CompetitionInitial from './CompetitionInitial';
 import CompetitionInProgress from './CompetitionInProgress';
 import CompetitionResults from './CompetitionResults';
+import { useCompetitionState } from './hooks/useCompetitionState';
+import { usePhaseTransition } from './hooks/usePhaseTransition';
+import { useCompetitionInitialization } from './hooks/useCompetitionInitialization';
 
 const HOHCompetition: React.FC = () => {
+  const { gameState, logger } = useGame();
+  
+  // Use our custom hooks to manage competition state
   const {
-    gameState,
-    dispatch,
-    getActiveHouseguests,
-    game,
+    competitionType,
+    isCompeting,
+    results,
+    winner,
+    activeHouseguests,
+    transitionAttempted,
+    setTransitionAttempted,
+    startCompetition
+  } = useCompetitionState();
+  
+  // Hook for phase transitions
+  const { advanceToNomination } = usePhaseTransition(winner, transitionAttempted, setTransitionAttempted);
+  
+  // Hook for competition initialization
+  useCompetitionInitialization(
+    gameState.phase, 
+    isCompeting, 
+    winner, 
+    activeHouseguests.length,
+    startCompetition,
     logger
-  } = useGame();
-  const { toast } = useToast();
-  
-  const [competitionType, setCompetitionType] = useState<CompetitionType | null>(null);
-  const [isCompeting, setIsCompeting] = useState(false);
-  const [results, setResults] = useState<{
-    name: string;
-    position: number;
-    id: string;
-  }[]>([]);
-  const [winner, setWinner] = useState<Houseguest | null>(null);
-  const activeHouseguests = getActiveHouseguests();
-  const [transitionAttempted, setTransitionAttempted] = useState(false);
-  
-  // Log crucial information on component mount and state changes
-  useEffect(() => {
-    logger?.info(`HOHCompetition component state:`, {
-      phase: gameState.phase,
-      activeHouseguests: activeHouseguests.length,
-      isCompeting,
-      winner: winner?.name || "none",
-      competitionType,
-      gamePhase: game?.phase || "unknown",
-      transitionAttempted
-    });
-  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, competitionType, logger, game?.phase, transitionAttempted]);
-  
-  // Function to safely advance to the nomination phase - moved outside useEffect for reuse
-  const advanceToNomination = useCallback(() => {
-    // Mark that we've attempted a transition
-    setTransitionAttempted(true);
-    
-    logger?.info("Attempting to advance to nomination phase with multiple methods");
-    
-    // Method 1: Use dispatch to update the game state phase
-    dispatch({
-      type: 'SET_PHASE',
-      payload: 'Nomination'
-    });
-    
-    // Method 2: Try using game.changeState if available
-    if (game) {
-      logger?.info("Using game.changeState method");
-      try {
-        if (typeof game.changeState === 'function') {
-          game.changeState('NominationState');
-          logger?.info("Successfully called game.changeState('NominationState')");
-        } else {
-          logger?.warn("game.changeState is not a function");
-          
-          // Method 3: As a fallback, set phase directly
-          logger?.info("Attempting fallback: setting phase directly");
-          if ('phase' in game) {
-            game.phase = 'Nomination';
-            logger?.info("Set game phase directly to Nomination");
-          }
-        }
-      } catch (error) {
-        logger?.error("Error changing game state:", error);
-      }
-    } else {
-      logger?.warn("Game object not available for state transition");
-    }
-    
-    // Method 4: Additional dispatch for the game engine
-    dispatch({
-      type: 'PLAYER_ACTION',
-      payload: {
-        actionId: 'continue_to_nominations',
-        params: {}
-      }
-    });
-    
-    // Show a toast to inform the user
-    toast({
-      title: "Moving to Nominations",
-      description: "The Head of Household will now nominate two houseguests.",
-    });
-  }, [dispatch, game, logger, toast]);
-  
-  useEffect(() => {
-    // Only start if we're in the HoH phase and there's no competition in progress
-    if (gameState.phase === 'HoH' && !isCompeting && !winner && activeHouseguests.length > 0) {
-      logger?.info("Setting up competition start timeout");
-      
-      const timer = setTimeout(() => {
-        logger?.info("Starting competition after delay");
-        const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
-        logger?.info(`Selected competition type: ${randomType}`);
-        startCompetition(randomType);
-      }, 2000); // Increased from 1000 to 2000 for better visibility
-      
-      return () => clearTimeout(timer);
-    }
-    
-    // If we have a winner but haven't attempted phase transition yet, schedule the transition
-    if (winner && !transitionAttempted && gameState.phase === 'HoH') {
-      logger?.info("Winner selected but phase transition not attempted yet, scheduling transition");
-      const transitionTimer = setTimeout(() => {
-        advanceToNomination();
-      }, 4000); // 4 seconds after displaying the results
-      
-      return () => clearTimeout(transitionTimer);
-    }
-  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, logger, transitionAttempted, advanceToNomination]);
-  
-  const startCompetition = (type: CompetitionType) => {
-    if (isCompeting) {
-      logger?.info("Competition already in progress, ignoring start request");
-      return;
-    }
-    
-    logger?.info(`Starting ${type} competition...`);
-    setCompetitionType(type);
-    setIsCompeting(true);
-
-    // Simulate the competition running
-    setTimeout(() => {
-      logger?.info("Competition completed, determining winner");
-      // Verify we have houseguests before determining a winner
-      if (activeHouseguests.length === 0) {
-        logger?.error('No active houseguests available for competition');
-        setIsCompeting(false);
-        return;
-      }
-      
-      // Determine the winner (weighted random based on stats)
-      const competitionWinner = selectRandomWinner(activeHouseguests, type);
-      
-      if (!competitionWinner) {
-        logger?.error('Failed to select a competition winner');
-        setIsCompeting(false);
-        return;
-      }
-
-      logger?.info(`Competition winner selected: ${competitionWinner.name}`);
-
-      // Generate random results
-      const positions = activeHouseguests.map(guest => ({
-        name: guest.name,
-        id: guest.id,
-        position: Math.random() // random value for sorting
-      })).sort((a, b) => a.position - b.position).map((guest, index) => ({
-        name: guest.name,
-        id: guest.id,
-        position: index + 1
-      }));
-
-      // Make sure the winner is in first place
-      const winnerIndex = positions.findIndex(p => p.id === competitionWinner.id);
-      if (winnerIndex > 0) {
-        const temp = positions[0];
-        positions[0] = positions[winnerIndex];
-        positions[winnerIndex] = temp;
-      }
-      
-      logger?.info("Setting competition results for display");
-      setResults(positions);
-      setWinner(competitionWinner);
-
-      // Update game state with new HoH
-      logger?.info(`Dispatching SET_HOH action for ${competitionWinner.name}`);
-      dispatch({
-        type: 'SET_HOH',
-        payload: competitionWinner
-      });
-
-      // Log the event
-      dispatch({
-        type: 'LOG_EVENT',
-        payload: {
-          week: gameState.week,
-          phase: 'HoH',
-          type: 'COMPETITION',
-          description: `${competitionWinner.name} won the ${type} Head of Household competition.`,
-          involvedHouseguests: [competitionWinner.id]
-        }
-      });
-
-      // Show toast
-      toast({
-        title: "HoH Competition Results",
-        description: `${competitionWinner.name} is the new Head of Household!`,
-      });
-    }, 3000); // Show the competition in progress for 3 seconds
-  };
+  );
 
   // Show the appropriate component based on the competition state
   if (winner) {
