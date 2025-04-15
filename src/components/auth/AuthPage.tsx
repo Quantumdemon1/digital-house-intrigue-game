@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -67,6 +66,13 @@ const AuthPage = () => {
     if (success) {
       navigate("/game");
     }
+  };
+  
+  const handleBypass = () => {
+    // Set bypass flag in localStorage
+    localStorage.setItem('bypass-auth', 'true');
+    // Navigate directly to the game
+    navigate("/game");
   };
 
   return (
@@ -188,8 +194,15 @@ const AuthPage = () => {
             </TabsContent>
           </Tabs>
         </CardContent>
-        <CardFooter className="justify-center text-sm text-muted-foreground">
-          By continuing, you agree to our terms of service
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="text-sm text-muted-foreground text-center w-full">
+            By continuing, you agree to our terms of service
+          </div>
+          <div className="w-full text-center">
+            <Button variant="link" onClick={handleBypass} className="text-sm">
+              Continue as Guest (Testing Only)
+            </Button>
+          </div>
         </CardFooter>
       </Card>
     </div>

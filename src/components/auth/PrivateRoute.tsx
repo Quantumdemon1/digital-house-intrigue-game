@@ -19,13 +19,16 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     );
   }
   
-  // Redirect to login if not authenticated
-  if (!isAuthenticated()) {
-    return <Navigate to="/" replace />;
+  // Check if bypass mode is enabled in localStorage
+  const bypassAuth = localStorage.getItem('bypass-auth') === 'true';
+  
+  // Allow access if authenticated OR if bypass is enabled
+  if (isAuthenticated() || bypassAuth) {
+    return <>{children}</>;
   }
   
-  // Render the protected content if authenticated
-  return <>{children}</>;
+  // Redirect to login if not authenticated and bypass not enabled
+  return <Navigate to="/" replace />;
 };
 
 export default PrivateRoute;
