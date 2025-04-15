@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from "sonner"; // Import sonner toast
 import { useRelationshipImpact } from './RelationshipImpactContext';
@@ -33,7 +34,8 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     loggerRef.current = new Logger();
     relationshipSystemRef.current = new RelationshipSystem(loggerRef.current);
     competitionSystemRef.current = new CompetitionSystem(loggerRef.current);
-    aiSystemRef.current = new AIIntegrationSystem(loggerRef.current, loggerRef.current);
+    // Pass the logger as first parameter and an empty string as the API key for now
+    aiSystemRef.current = new AIIntegrationSystem(loggerRef.current, "");
     promiseSystemRef.current = {};
     recapGeneratorRef.current = {};
   }, []);
