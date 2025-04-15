@@ -20,7 +20,7 @@ export class HohCompetitionState extends GameStateBase {
       // Add a slight delay to ensure state changes properly
       setTimeout(() => {
         this.getLogger().info(`Changing state to NominationState for AI HoH ${hoh.name}`);
-        this.controller.changeState('NominationState');
+        this.changeState('NominationState');
       }, 1000);
     } else {
       this.getLogger().info('Waiting for HOH competition to complete or player action');
@@ -55,7 +55,7 @@ export class HohCompetitionState extends GameStateBase {
           if (hoh && !hoh.isPlayer) {
             this.getLogger().info(`AI HoH ${hoh.name} automatically proceeding to nominations`);
             setTimeout(() => {
-              this.controller.changeState('NominationState');
+              this.changeState('NominationState');
             }, 500);
           } else {
             this.getLogger().info(`Player HoH ${hoh?.name} selected, waiting for continue action`);
@@ -71,13 +71,27 @@ export class HohCompetitionState extends GameStateBase {
         // Add a small delay to ensure the state changes properly
         setTimeout(() => {
           this.getLogger().info('Executing state change to NominationState');
-          this.controller.changeState('NominationState');
+          this.changeState('NominationState');
         }, 200);
         return true;
         
       default:
         this.getLogger().warn(`Unknown action received: ${actionId}`);
         return false;
+    }
+  }
+  
+  changeState(stateName: string): void {
+    this.getLogger().info(`HohCompetitionState changing to ${stateName}`);
+    if (this.controller) {
+      this.controller.changeState(stateName);
+    } else {
+      this.getLogger().error('Cannot change state: controller is undefined');
+      // Fallback: update game phase directly
+      if (stateName === 'NominationState') {
+        this.game.phase = 'Nomination';
+        this.getLogger().info('Set game phase directly to Nomination as fallback');
+      }
     }
   }
 }

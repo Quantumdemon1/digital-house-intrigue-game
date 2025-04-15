@@ -5,7 +5,7 @@ import { useGame } from '@/contexts/GameContext';
 import HOHCompetition from './HOHCompetition';
 
 const HohCompetitionPhase: React.FC = () => {
-  const { gameState, logger, game } = useGame();
+  const { gameState, logger, game, dispatch } = useGame();
   
   useEffect(() => {
     if (logger) {
@@ -28,7 +28,32 @@ const HohCompetitionPhase: React.FC = () => {
         logger.warn('Game object not available in HohPhase');
       }
     }
-  }, [gameState, logger, game]);
+    
+    // Set up a periodic monitor to detect stuck competition
+    const monitorId = setInterval(() => {
+      if (gameState.phase === 'HoH' && game?.phase === 'HoH' && gameState.hohWinner) {
+        logger.info('Detected HoH winner but phase not advancing, attempting to force transition');
+        dispatch({
+          type: 'SET_PHASE',
+          payload: 'Nomination'
+        });
+        
+        if (game) {
+          try {
+            game.phase = 'Nomination';
+            logger.info('Forced phase transition to Nomination');
+          } catch (error) {
+            logger.error('Failed to force phase transition:', error);
+          }
+        }
+      }
+    }, 10000); // Check every 10 seconds
+    
+    return () => {
+      clearInterval(monitorId);
+      logger?.info('HohCompetitionPhase component unmounted');
+    };
+  }, [gameState, logger, game, dispatch]);
   
   return (
     <Card>

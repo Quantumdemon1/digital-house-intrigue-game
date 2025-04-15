@@ -15,6 +15,11 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
   
   useEffect(() => {
     logger?.info(`CompetitionInProgress rendered with type: ${competitionType}`);
+    
+    // Log more detailed debugging info
+    return () => {
+      logger?.info('CompetitionInProgress component unmounting');
+    };
   }, [competitionType, logger]);
   
   // Create animated dots for the loading indicator
@@ -39,8 +44,28 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
       });
     }, 150);
     
+    // Add completion message when progress reaches 100%
+    if (progress === 100) {
+      logger?.info('Competition progress animation completed one cycle');
+    }
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [progress, logger]);
+  
+  // Display the competition phases
+  const [phase, setPhase] = useState('Starting');
+  useEffect(() => {
+    const phases = ['Starting', 'Round 1', 'Round 2', 'Final Round', 'Determining Winner'];
+    let currentIndex = 0;
+    
+    const phaseInterval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % phases.length;
+      setPhase(phases[currentIndex]);
+      logger?.info(`Competition phase changed to: ${phases[currentIndex]}`);
+    }, 1500);
+    
+    return () => clearInterval(phaseInterval);
+  }, [logger]);
   
   return (
     <Card className="shadow-lg border-bb-blue">
@@ -57,6 +82,9 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
           </div>
           <h3 className="text-xl font-bold mt-4">Competition in Progress{dots}</h3>
           <p className="text-sm text-muted-foreground mt-2">
+            Phase: <span className="font-medium">{phase}</span>
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
             Houseguests are competing for Head of Household
           </p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -69,6 +97,10 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
               style={{width: `${progress}%`}}
             ></div>
           </div>
+          
+          <p className="text-xs text-muted-foreground mt-3">
+            Results coming soon...
+          </p>
         </div>
       </CardContent>
     </Card>

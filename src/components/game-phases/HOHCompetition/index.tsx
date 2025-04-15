@@ -35,9 +35,10 @@ const HOHCompetition: React.FC = () => {
       activeHouseguests: activeHouseguests.length,
       isCompeting,
       winner: winner?.name || "none",
-      competitionType
+      competitionType,
+      gamePhase: game?.phase || "unknown"
     });
-  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, competitionType, logger]);
+  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, competitionType, logger, game?.phase]);
   
   useEffect(() => {
     // Only start if we're in the HoH phase and there's no competition in progress
@@ -54,6 +55,48 @@ const HOHCompetition: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [gameState.phase, activeHouseguests.length, isCompeting, winner, logger]);
+  
+  // Function to safely advance to the nomination phase
+  const advanceToNomination = () => {
+    logger?.info("Attempting to advance to nomination phase with multiple methods");
+    
+    // Method 1: Use dispatch to update the game state phase
+    dispatch({
+      type: 'SET_PHASE',
+      payload: 'Nomination'
+    });
+    
+    // Method 2: Try using game.changeState if available
+    if (game) {
+      logger?.info("Using game.changeState method to change state to NominationState");
+      try {
+        game.changeState('NominationState');
+        logger?.info("Successfully called game.changeState('NominationState')");
+      } catch (error) {
+        logger?.error("Error changing game state:", error);
+        
+        // Method 3: As a last resort, set phase directly
+        logger?.info("Attempting fallback: setting phase directly");
+        if ('phase' in game) {
+          game.phase = 'Nomination';
+          logger?.info("Set game phase directly to Nomination");
+        } else {
+          logger?.error("Cannot set game phase directly, property not found");
+        }
+      }
+    } else {
+      logger?.warn("Game object not available for state transition");
+    }
+    
+    // Method 4: Additional dispatch for the game engine
+    dispatch({
+      type: 'PLAYER_ACTION',
+      payload: {
+        actionId: 'continue_to_nominations',
+        params: {}
+      }
+    });
+  };
   
   const startCompetition = (type: CompetitionType) => {
     if (isCompeting) {
@@ -137,31 +180,8 @@ const HOHCompetition: React.FC = () => {
       // Continue to nomination phase after a delay
       logger?.info("Scheduling transition to nomination phase");
       setTimeout(() => {
-        logger?.info("Advancing to nomination phase via dispatch...");
-        
-        // Both update the game state and send a direct action
-        // This ensures the state machine transitions correctly
-        dispatch({
-          type: 'SET_PHASE',
-          payload: 'Nomination'
-        });
-        
-        if (game) {
-          logger?.info("Using game.changeState method to change state to NominationState");
-          try {
-            // Use changeState instead of handleAction or controller properties
-            game.changeState('NominationState');
-          } catch (error) {
-            logger?.error("Error changing game state:", error);
-            
-            // As a fallback, try setting the phase directly
-            logger?.info("Attempting fallback: setting phase directly");
-            if (game.phase) {
-              game.phase = 'Nomination';
-              logger?.info("Set game phase directly to Nomination");
-            }
-          }
-        }
+        logger?.info("Attempting to advance to nomination phase now");
+        advanceToNomination();
       }, 4000); // 4 second delay before moving to nominations
     }, 3000); // Increased to show the competition in progress for 3 seconds
   };
