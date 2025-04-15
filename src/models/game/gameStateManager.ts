@@ -46,6 +46,7 @@ export function cloneGame(game: BigBrotherGame): BigBrotherGame {
   clonedGame.phase = game.phase;
   clonedGame.hohWinner = game.hohWinner;
   clonedGame.povWinner = game.povWinner;
+  clonedGame.povPlayers = [...(game.povPlayers || [])]; // Copy povPlayers
   clonedGame.nominees = [...game.nominees];
   clonedGame.evicted = [...game.evicted];
   clonedGame.jury = [...game.jury];
@@ -54,6 +55,11 @@ export function cloneGame(game: BigBrotherGame): BigBrotherGame {
   clonedGame.eventLog = [...game.eventLog];
   clonedGame.gameLog = [...game.eventLog]; // Set gameLog from eventLog for compatibility
   clonedGame.finalTwo = [...(game.finalTwo || [])];
+  clonedGame.finalHoHWinners = {
+    part1: game.finalHoHWinners?.part1 || null,
+    part2: game.finalHoHWinners?.part2 || null,
+    part3: game.finalHoHWinners?.part3 || null
+  }; // Copy finalHoHWinners
   
   return clonedGame;
 }

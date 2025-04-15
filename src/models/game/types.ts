@@ -22,6 +22,7 @@ export interface GameStateInterface {
   phase: GamePhase;
   hohWinner: string | null;
   povWinner: string | null;
+  povPlayers: string[]; // Add povPlayers property
   nominees: string[];
   evicted: Houseguest[];
   jury: Houseguest[];
@@ -34,10 +35,16 @@ export interface GameStateInterface {
   competitionSystem: any;
   aiSystem: any;
   allianceSystem: any;
+  promiseSystem: any; // Add promiseSystem
   currentState: any;
   currentLocation: string;
   eventLog: GameEvent[];
   gameLog: GameEvent[];
+  finalHoHWinners: {
+    part1: string | null;
+    part2: string | null;
+    part3: string | null;
+  }; // Add finalHoHWinners property
 }
 
 // This is the actual GameState type that BigBrotherGame implements

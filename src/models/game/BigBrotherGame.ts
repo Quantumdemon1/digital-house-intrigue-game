@@ -36,6 +36,7 @@ export class BigBrotherGame implements GameStateInterface {
   // State tracking
   public hohWinner: string | null = null;
   public povWinner: string | null = null;
+  public povPlayers: string[] = []; // Add povPlayers property
   public nominees: string[] = [];
   public evicted: Houseguest[] = [];
   public jury: Houseguest[] = [];
@@ -44,6 +45,11 @@ export class BigBrotherGame implements GameStateInterface {
   public runnerUp: Houseguest | null = null;
   public finalTwo: Houseguest[] = [];
   public currentWeek: number = 1;
+  public finalHoHWinners: {
+    part1: string | null;
+    part2: string | null;
+    part3: string | null;
+  } = { part1: null, part2: null, part3: null }; // Add finalHoHWinners property
   
   // Game systems
   public relationshipSystem: any = null;

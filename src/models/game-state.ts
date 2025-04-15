@@ -84,6 +84,7 @@ export interface GameState {
   juryMembers: any[];
   winner: any | null;
   runnerUp: any | null;
+  finalTwo: any[]; // Add finalTwo property
   week: number;
   phase: GamePhase;
   relationships: Map<string, Map<string, { 
@@ -112,6 +113,7 @@ export function createInitialGameState(): GameState {
     juryMembers: [],
     winner: null,
     runnerUp: null,
+    finalTwo: [], // Initialize finalTwo as an empty array
     week: 0,
     phase: 'Setup',
     relationships: new Map(),
