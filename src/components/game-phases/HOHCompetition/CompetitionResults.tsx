@@ -1,16 +1,23 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Clock, Crown } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trophy, Crown } from 'lucide-react';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
+import { Button } from '@/components/ui/button';
 
 interface CompetitionResultsProps {
   competitionType: CompetitionType | null;
   winner: Houseguest;
-  results: { name: string; position: number }[];
+  results: { name: string; position: number; id: string }[];
+  onContinue?: () => void; // Add optional continue handler
 }
 
-const CompetitionResults: React.FC<CompetitionResultsProps> = ({ competitionType, winner, results }) => {
+const CompetitionResults: React.FC<CompetitionResultsProps> = ({ 
+  competitionType, 
+  winner, 
+  results,
+  onContinue 
+}) => {
   return (
     <Card className="shadow-lg border-bb-blue">
       <CardHeader className="bg-bb-blue text-white">
@@ -41,21 +48,23 @@ const CompetitionResults: React.FC<CompetitionResultsProps> = ({ competitionType
           <h4 className="font-medium mb-2">Final Results:</h4>
           <ol className="space-y-2">
             {results.map(result => (
-              <li key={result.name} className="flex justify-between">
+              <li key={result.id} className="flex justify-between">
                 <span className="font-medium">{result.position}. {result.name}</span>
                 {result.position === 1 && <Crown className="text-bb-blue w-4 h-4" />}
               </li>
             ))}
           </ol>
         </div>
-        
-        <div className="mt-6 text-center text-muted-foreground">
-          Continuing to Nominations...
-          <div className="mt-2 animate-pulse">
-            <Clock className="inline-block" />
-          </div>
-        </div>
       </CardContent>
+      
+      <CardFooter className="pt-2 flex justify-center">
+        <Button 
+          onClick={onContinue}
+          className="bg-bb-blue hover:bg-bb-blue/80 transition-colors"
+        >
+          Continue to Nominations
+        </Button>
+      </CardFooter>
     </Card>
   );
 };

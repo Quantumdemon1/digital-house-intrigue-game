@@ -1,12 +1,18 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGame } from '@/contexts/GameContext';
 import HOHCompetition from './HOHCompetition';
+import { useToast } from '@/components/ui/use-toast';
+import { AlertCircle } from 'lucide-react';
 
 const HohCompetitionPhase: React.FC = () => {
   const { gameState, logger, game, dispatch } = useGame();
+  const { toast } = useToast();
+  const [monitorActive, setMonitorActive] = useState(false);
+  const [stuckDetected, setStuckDetected] = useState(false);
   
+  // Use an effect to log important information when the component mounts
   useEffect(() => {
     if (logger) {
       logger.info(`HohCompetitionPhase rendered, current phase: ${gameState.phase}`);
@@ -30,30 +36,82 @@ const HohCompetitionPhase: React.FC = () => {
     }
     
     // Set up a periodic monitor to detect stuck competition
+    setMonitorActive(true);
+    
+    return () => {
+      setMonitorActive(false);
+      logger?.info('HohCompetitionPhase component unmounted');
+    };
+  }, [gameState, logger, game]);
+  
+  // Monitor effect that checks for and handles stuck states
+  useEffect(() => {
+    if (!monitorActive) return;
+    
     const monitorId = setInterval(() => {
-      if (gameState.phase === 'HoH' && game?.phase === 'HoH' && gameState.hohWinner) {
-        logger.info('Detected HoH winner but phase not advancing, attempting to force transition');
+      // Check if we've detected a winner but haven't advanced phases
+      if (gameState.phase === 'HoH' && gameState.hohWinner) {
+        const stuckTime = 10000; // 10 seconds
+        logger?.info('Detected potential stuck state: HoH winner selected but phase not advancing');
+        
+        // Only show the toast once
+        if (!stuckDetected) {
+          setStuckDetected(true);
+          toast({
+            title: "Phase transition delayed",
+            description: "Attempting to continue to nominations...",
+            variant: "default", 
+            icon: <AlertCircle className="h-4 w-4" />
+          });
+        }
+        
+        // Try multiple methods to advance the phase
+        logger?.info('Attempting to recover from stuck state');
+        
+        // Method 1: Use dispatch to update the game state phase
         dispatch({
           type: 'SET_PHASE',
           payload: 'Nomination'
         });
         
+        // Method 2: Try using game.changeState if available
         if (game) {
           try {
-            game.phase = 'Nomination';
-            logger.info('Forced phase transition to Nomination');
+            // First try changeState method
+            if (typeof game.changeState === 'function') {
+              logger?.info("Using game.changeState('NominationState')");
+              game.changeState('NominationState');
+            } 
+            // Direct property set as fallback
+            else {
+              logger?.info("Setting game.phase directly");
+              game.phase = 'Nomination';
+            }
           } catch (error) {
-            logger.error('Failed to force phase transition:', error);
+            logger?.error("Error changing game state:", error);
           }
         }
+        
+        // Method 3: Use PLAYER_ACTION to trigger state machine
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: {
+            actionId: 'continue_to_nominations',
+            params: {}
+          }
+        });
+        
+        logger?.info("Multiple recovery methods attempted");
+      } else {
+        // Reset stuck detection if we're not in a potentially stuck state
+        setStuckDetected(false);
       }
-    }, 10000); // Check every 10 seconds
+    }, stuckTime);
     
     return () => {
       clearInterval(monitorId);
-      logger?.info('HohCompetitionPhase component unmounted');
     };
-  }, [gameState, logger, game, dispatch]);
+  }, [gameState, game, dispatch, logger, monitorActive, stuckDetected, toast]);
   
   return (
     <Card>

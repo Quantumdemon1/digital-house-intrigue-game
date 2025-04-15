@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/components/ui/use-toast';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
@@ -27,6 +27,7 @@ const HOHCompetition: React.FC = () => {
   }[]>([]);
   const [winner, setWinner] = useState<Houseguest | null>(null);
   const activeHouseguests = getActiveHouseguests();
+  const [transitionAttempted, setTransitionAttempted] = useState(false);
   
   // Log crucial information on component mount and state changes
   useEffect(() => {
@@ -36,9 +37,63 @@ const HOHCompetition: React.FC = () => {
       isCompeting,
       winner: winner?.name || "none",
       competitionType,
-      gamePhase: game?.phase || "unknown"
+      gamePhase: game?.phase || "unknown",
+      transitionAttempted
     });
-  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, competitionType, logger, game?.phase]);
+  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, competitionType, logger, game?.phase, transitionAttempted]);
+  
+  // Function to safely advance to the nomination phase - moved outside useEffect for reuse
+  const advanceToNomination = useCallback(() => {
+    // Mark that we've attempted a transition
+    setTransitionAttempted(true);
+    
+    logger?.info("Attempting to advance to nomination phase with multiple methods");
+    
+    // Method 1: Use dispatch to update the game state phase
+    dispatch({
+      type: 'SET_PHASE',
+      payload: 'Nomination'
+    });
+    
+    // Method 2: Try using game.changeState if available
+    if (game) {
+      logger?.info("Using game.changeState method");
+      try {
+        if (typeof game.changeState === 'function') {
+          game.changeState('NominationState');
+          logger?.info("Successfully called game.changeState('NominationState')");
+        } else {
+          logger?.warn("game.changeState is not a function");
+          
+          // Method 3: As a fallback, set phase directly
+          logger?.info("Attempting fallback: setting phase directly");
+          if ('phase' in game) {
+            game.phase = 'Nomination';
+            logger?.info("Set game phase directly to Nomination");
+          }
+        }
+      } catch (error) {
+        logger?.error("Error changing game state:", error);
+      }
+    } else {
+      logger?.warn("Game object not available for state transition");
+    }
+    
+    // Method 4: Additional dispatch for the game engine
+    dispatch({
+      type: 'PLAYER_ACTION',
+      payload: {
+        actionId: 'continue_to_nominations',
+        params: {}
+      }
+    });
+    
+    // Show a toast to inform the user
+    toast({
+      title: "Moving to Nominations",
+      description: "The Head of Household will now nominate two houseguests.",
+    });
+  }, [dispatch, game, logger, toast]);
   
   useEffect(() => {
     // Only start if we're in the HoH phase and there's no competition in progress
@@ -54,49 +109,17 @@ const HOHCompetition: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, logger]);
-  
-  // Function to safely advance to the nomination phase
-  const advanceToNomination = () => {
-    logger?.info("Attempting to advance to nomination phase with multiple methods");
     
-    // Method 1: Use dispatch to update the game state phase
-    dispatch({
-      type: 'SET_PHASE',
-      payload: 'Nomination'
-    });
-    
-    // Method 2: Try using game.changeState if available
-    if (game) {
-      logger?.info("Using game.changeState method to change state to NominationState");
-      try {
-        game.changeState('NominationState');
-        logger?.info("Successfully called game.changeState('NominationState')");
-      } catch (error) {
-        logger?.error("Error changing game state:", error);
-        
-        // Method 3: As a last resort, set phase directly
-        logger?.info("Attempting fallback: setting phase directly");
-        if ('phase' in game) {
-          game.phase = 'Nomination';
-          logger?.info("Set game phase directly to Nomination");
-        } else {
-          logger?.error("Cannot set game phase directly, property not found");
-        }
-      }
-    } else {
-      logger?.warn("Game object not available for state transition");
+    // If we have a winner but haven't attempted phase transition yet, schedule the transition
+    if (winner && !transitionAttempted && gameState.phase === 'HoH') {
+      logger?.info("Winner selected but phase transition not attempted yet, scheduling transition");
+      const transitionTimer = setTimeout(() => {
+        advanceToNomination();
+      }, 4000); // 4 seconds after displaying the results
+      
+      return () => clearTimeout(transitionTimer);
     }
-    
-    // Method 4: Additional dispatch for the game engine
-    dispatch({
-      type: 'PLAYER_ACTION',
-      payload: {
-        actionId: 'continue_to_nominations',
-        params: {}
-      }
-    });
-  };
+  }, [gameState.phase, activeHouseguests.length, isCompeting, winner, logger, transitionAttempted, advanceToNomination]);
   
   const startCompetition = (type: CompetitionType) => {
     if (isCompeting) {
@@ -176,19 +199,17 @@ const HOHCompetition: React.FC = () => {
         title: "HoH Competition Results",
         description: `${competitionWinner.name} is the new Head of Household!`,
       });
-
-      // Continue to nomination phase after a delay
-      logger?.info("Scheduling transition to nomination phase");
-      setTimeout(() => {
-        logger?.info("Attempting to advance to nomination phase now");
-        advanceToNomination();
-      }, 4000); // 4 second delay before moving to nominations
-    }, 3000); // Increased to show the competition in progress for 3 seconds
+    }, 3000); // Show the competition in progress for 3 seconds
   };
 
   // Show the appropriate component based on the competition state
   if (winner) {
-    return <CompetitionResults competitionType={competitionType} winner={winner} results={results} />;
+    return <CompetitionResults 
+      competitionType={competitionType} 
+      winner={winner} 
+      results={results} 
+      onContinue={advanceToNomination} 
+    />;
   }
   
   if (isCompeting) {
