@@ -33,10 +33,10 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     loggerRef.current = new Logger();
     relationshipSystemRef.current = new RelationshipSystem(loggerRef.current);
     competitionSystemRef.current = new CompetitionSystem(loggerRef.current);
-    aiSystemRef.current = new AIIntegrationSystem(gameState, loggerRef.current);
+    aiSystemRef.current = new AIIntegrationSystem(loggerRef.current, loggerRef.current);
     promiseSystemRef.current = {};
     recapGeneratorRef.current = {};
-  }, [gameState]);
+  }, []);
   
   const initializeGame = useCallback(() => {
     if (!relationshipSystemRef.current || !competitionSystemRef.current || !aiSystemRef.current || !loggerRef.current) {
