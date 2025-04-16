@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import CompetitionInitial from './CompetitionInitial';
@@ -5,7 +6,7 @@ import CompetitionInProgress from './CompetitionInProgress';
 import CompetitionResults from './CompetitionResults';
 import { useCompetitionState } from './hooks/useCompetitionState';
 import { usePhaseTransition } from './hooks/usePhaseTransition';
-import { useCompetitionInitialization } from './hooks/useCompetitionInitialization';
+import { CompetitionType } from '@/models/houseguest/types'; // Import the CompetitionType
 
 const HOHCompetition: React.FC = () => {
   const { gameState, logger } = useGame();
