@@ -108,6 +108,7 @@ const HOHCompetition: React.FC = () => {
       else {
         // CASE 3: Competition hasn't started yet - use the dedicated method
         logger?.info("Fast forward: Competition hasn't started yet, using selectWinnerImmediately");
+        // Fix: Call with just the competition type as required by the function definition
         selectWinnerImmediately(randomType);
       }
     };
