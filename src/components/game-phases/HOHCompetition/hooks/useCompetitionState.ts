@@ -84,6 +84,8 @@ export const useCompetitionState = () => {
     activeHouseguests,
     transitionAttempted,
     setTransitionAttempted,
-    startCompetition
+    startCompetition,
+    setWinner,
+    setResults
   };
 };
