@@ -69,12 +69,17 @@ export const useCompetitionState = () => {
     }, 3000); // Show the competition in progress for 3 seconds
   };
 
-  // Completely rewritten force winner selection for fast forward
+  // Completely rewritten force winner selection for fast forward with immediate phase transition
   const selectWinnerImmediately = (type: CompetitionType) => {
     logger?.info("Fast forward: Immediately selecting competition winner");
     
     if (winner) {
-      logger?.info("Winner already selected, skipping fast forward selection");
+      logger?.info("Winner already selected, forcing phase transition");
+      // Force transition to nomination phase even if we already have a winner
+      dispatch({
+        type: 'SET_PHASE',
+        payload: 'Nomination'
+      });
       return;
     }
     
@@ -114,14 +119,12 @@ export const useCompetitionState = () => {
         payload: randomWinner
       });
       
-      // Explicit phase change
-      setTimeout(() => {
-        logger?.info(`Fast forward: Advancing to nomination phase with ${randomWinner.name} as HoH`);
-        dispatch({
-          type: 'SET_PHASE',
-          payload: 'Nomination'
-        });
-      }, 100);
+      // IMMEDIATE phase change for fast forward reliability
+      logger?.info(`Fast forward: Advancing to nomination phase with ${randomWinner.name} as HoH`);
+      dispatch({
+        type: 'SET_PHASE',
+        payload: 'Nomination'
+      });
     } catch (error) {
       logger?.error("Error during fast forward winner selection:", error);
     }
@@ -147,6 +150,6 @@ export const useCompetitionState = () => {
     selectWinnerImmediately,
     setWinner,
     setResults,
-    setIsCompeting  // Make sure to include this in the return object
+    setIsCompeting
   };
 };

@@ -31,6 +31,8 @@ export function useFastForward() {
     });
 
     // Create and dispatch a custom event for component listeners
+    // This is the critical part that triggers component-specific fast forward handling
+    logger?.info("Dispatching game:fastForward event");
     const fastForwardEvent = new Event('game:fastForward');
     document.dispatchEvent(fastForwardEvent);
 
@@ -54,6 +56,21 @@ export function useFastForward() {
         // Complete the eviction if no nominees are available
         completeEvictionProcess(dispatch);
       }
+    }
+    
+    // For other phases, try a direct phase transition as a backup
+    // This is a failsafe in case the event listener doesn't work
+    if (gameState.phase === 'HoH') {
+      logger?.info("Backup phase transition for HoH phase");
+      setTimeout(() => {
+        if (gameState.phase === 'HoH') {
+          logger?.info("Attempting direct phase change as backup");
+          dispatch({
+            type: 'SET_PHASE',
+            payload: 'Nomination'
+          });
+        }
+      }, 1000);
     }
     
     // Reset processing state after delay
