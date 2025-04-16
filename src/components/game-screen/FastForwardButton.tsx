@@ -9,6 +9,8 @@ export const FastForwardButton: React.FC = () => {
   const { handleFastForward, isProcessing } = useFastForward();
   
   const onFastForwardClick = () => {
+    if (isProcessing) return; // Prevent multiple clicks
+    
     handleFastForward();
     toast.info("Fast forwarding to next event");
   };

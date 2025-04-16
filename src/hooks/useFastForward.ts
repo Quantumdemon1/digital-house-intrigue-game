@@ -1,15 +1,22 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useGame } from '@/contexts/game';
 import { useGameControl } from '@/contexts/GameControlContext';
 import { handleHouseguestEviction, completeEvictionProcess } from '@/utils/eviction-utils';
 
 export function useFastForward() {
-  const { dispatch, gameState } = useGame();
+  const { dispatch, gameState, logger } = useGame();
   const { isProcessing, fastForward } = useGameControl();
+  const [internalProcessing, setInternalProcessing] = useState(false);
   
   const handleFastForward = useCallback(() => {
-    console.log("Fast forward triggered, current phase:", gameState.phase);
+    // Prevent duplicate fast forwards
+    if (internalProcessing) {
+      return;
+    }
+    
+    setInternalProcessing(true);
+    logger?.info("Fast forward triggered, current phase:", gameState.phase);
     
     // Trigger the fast forward in the game control context
     fastForward();
@@ -23,9 +30,13 @@ export function useFastForward() {
       }
     });
 
+    // Create and dispatch a custom event for component listeners
+    const fastForwardEvent = new Event('game:fastForward');
+    document.dispatchEvent(fastForwardEvent);
+
     // Special handling for Eviction phase
     if (gameState.phase === 'Eviction') {
-      console.log("Fast-forwarding Eviction phase");
+      logger?.info("Fast-forwarding Eviction phase");
       
       if (gameState.nominees && gameState.nominees.length > 0) {
         const evictedNominee = gameState.nominees[0];
@@ -44,10 +55,16 @@ export function useFastForward() {
         completeEvictionProcess(dispatch);
       }
     }
-  }, [gameState.phase, gameState.nominees, gameState.week, dispatch, fastForward]);
+    
+    // Reset processing state after delay
+    setTimeout(() => {
+      setInternalProcessing(false);
+      logger?.info("Fast forward processing complete, state reset");
+    }, 1500);
+  }, [gameState.phase, gameState.nominees, gameState.week, dispatch, fastForward, logger, internalProcessing]);
 
   return {
     handleFastForward,
-    isProcessing
+    isProcessing: isProcessing || internalProcessing
   };
 }

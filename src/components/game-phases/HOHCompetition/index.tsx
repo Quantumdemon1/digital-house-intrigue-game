@@ -45,60 +45,68 @@ const HOHCompetition: React.FC = () => {
     return () => clearTimeout(timer);
   }, [gameState.phase, isCompeting, winner, activeHouseguests.length, startCompetition, logger]);
 
-  // Listen for fast forward events
+  // Listen for fast forward events - completely rewritten for reliability
   useEffect(() => {
     const handleFastForward = () => {
       logger?.info("Fast forward event detected in HOH Competition");
       fastForwardingRef.current = true;
+
+      // Create a list of competition types
+      const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
+      const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
       
+      // Different behavior based on current state
       if (!isCompeting && !winner) {
-        // If competition hasn't started yet, immediately select a winner
-        logger?.info("Fast forward: Skipping competition animation");
-        const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
-        const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
-        
-        if (activeHouseguests.length > 0) {
-          // Skip competition animation and select winner immediately
-          selectWinnerImmediately(randomType);
-          
-          // Add a short delay to ensure state updates before proceeding
-          setTimeout(() => {
-            logger?.info("Fast forward: Advancing to nomination phase");
-            advanceToNomination();
-          }, 500);
-        }
-      } else if (winner) {
-        // If we already have a winner, just advance to the next phase
-        logger?.info("Fast forward: Winner already determined, advancing to nomination");
-        advanceToNomination();
-      } else if (isCompeting) {
-        // If competition is in progress, force completion
+        // CASE 1: Competition hasn't started yet - immediately select a winner
+        logger?.info("Fast forward: Competition hasn't started yet, selecting winner directly");
+        selectWinnerImmediately(randomType);
+      } 
+      else if (isCompeting && !winner) {
+        // CASE 2: Competition in progress - force it to complete
         logger?.info("Fast forward: Competition in progress, forcing completion");
         
-        // Select a random winner
+        // Select a random winner from active houseguests
         const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
         
-        // Generate placeholder results
-        const placeholderResults = activeHouseguests.map((guest, idx) => ({
-          name: guest.name,
-          id: guest.id,
-          position: guest.id === randomWinner.id ? 1 : idx + 2
-        }));
+        if (randomWinner) {
+          // Generate results and set winner
+          const placeholderResults = activeHouseguests.map((guest) => ({
+            name: guest.name,
+            id: guest.id,
+            position: guest.id === randomWinner.id ? 1 : 
+              Math.floor(Math.random() * (activeHouseguests.length - 1)) + 2
+          })).sort((a, b) => a.position - b.position);
+          
+          // Update state
+          setResults(placeholderResults); 
+          setWinner(randomWinner);
+          setIsCompeting(false);
+          
+          // Update game state
+          dispatch({
+            type: 'SET_HOH',
+            payload: randomWinner
+          });
+          
+          // Force transition after a short delay
+          setTimeout(() => {
+            logger?.info("Fast forward: Forcing phase transition to Nomination");
+            dispatch({
+              type: 'SET_PHASE',
+              payload: 'Nomination'
+            });
+          }, 100);
+        }
+      }
+      else if (winner) {
+        // CASE 3: We already have a winner, just advance to nomination
+        logger?.info("Fast forward: Winner already determined, advancing to nomination");
         
-        // Update state and advance
-        setResults(placeholderResults);
-        setWinner(randomWinner);
-        
-        // Update HOH in game state
+        // Direct phase change for maximum reliability
         dispatch({
-          type: 'SET_HOH',
-          payload: randomWinner
+          type: 'SET_PHASE',
+          payload: 'Nomination'
         });
-        
-        // Force transition after a short delay
-        setTimeout(() => {
-          advanceToNomination();
-        }, 500);
       }
     };
     
@@ -108,7 +116,7 @@ const HOHCompetition: React.FC = () => {
     return () => {
       document.removeEventListener('game:fastForward', handleFastForward);
     };
-  }, [isCompeting, winner, activeHouseguests, setResults, setWinner, advanceToNomination, dispatch, logger, selectWinnerImmediately]);
+  }, [activeHouseguests, dispatch, isCompeting, logger, selectWinnerImmediately, setIsCompeting, setResults, setWinner, winner]);
 
   // Show the appropriate component based on the competition state
   if (winner) {

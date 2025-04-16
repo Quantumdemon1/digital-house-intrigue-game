@@ -69,36 +69,59 @@ export const useCompetitionState = () => {
     }, 3000); // Show the competition in progress for 3 seconds
   };
 
-  // Force winner selection for fast forward
+  // Completely rewritten force winner selection for fast forward
   const selectWinnerImmediately = (type: CompetitionType) => {
     logger?.info("Fast forward: Immediately selecting competition winner");
     
+    if (winner) {
+      logger?.info("Winner already selected, skipping fast forward selection");
+      return;
+    }
+    
+    // Set flags to prevent duplicate processing
+    competitionStarted.current = true;
+    competitionRunning.current = false;
+    
     // Set competition type for display purposes
     setCompetitionType(type);
+    setIsCompeting(false);
     
     try {
-      // Skip competition animation and directly get results
+      // Select a random winner
       const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
       
+      if (!randomWinner) {
+        logger?.error("Failed to select a random winner - no active houseguests");
+        return;
+      }
+      
+      logger?.info(`Fast forward: Selected ${randomWinner.name} as HoH winner`);
+      
       // Generate placeholder results
-      const placeholderResults = activeHouseguests.map((guest, idx) => ({
+      const placeholderResults = activeHouseguests.map((guest) => ({
         name: guest.name,
         id: guest.id,
-        position: guest.id === randomWinner.id ? 1 : idx + 2
-      }));
+        position: guest.id === randomWinner.id ? 1 : Math.floor(Math.random() * (activeHouseguests.length - 1)) + 2
+      })).sort((a, b) => a.position - b.position);
       
-      // Update state
+      // Update state to reflect the winner
       setResults(placeholderResults);
       setWinner(randomWinner);
       
-      // Update HOH in game state
+      // Update HOH in game state DIRECTLY - this is crucial for the next phase
       dispatch({
         type: 'SET_HOH',
         payload: randomWinner
       });
       
-      logger?.info(`Fast forward: ${randomWinner.name} selected as HoH`);
-      
+      // Explicit phase change
+      setTimeout(() => {
+        logger?.info(`Fast forward: Advancing to nomination phase with ${randomWinner.name} as HoH`);
+        dispatch({
+          type: 'SET_PHASE',
+          payload: 'Nomination'
+        });
+      }, 100);
     } catch (error) {
       logger?.error("Error during fast forward winner selection:", error);
     }
