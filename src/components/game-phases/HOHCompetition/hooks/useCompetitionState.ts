@@ -146,6 +146,7 @@ export const useCompetitionState = () => {
     startCompetition,
     selectWinnerImmediately,
     setWinner,
-    setResults
+    setResults,
+    setIsCompeting  // Make sure to include this in the return object
   };
 };
