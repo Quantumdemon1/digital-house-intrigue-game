@@ -69,7 +69,7 @@ export const useCompetitionState = () => {
     }, 3000); // Show the competition in progress for 3 seconds
   };
 
-  // Completely rewritten force winner selection for fast forward with immediate phase transition
+  // Modified to accept just the type parameter, handling everything internally
   const selectWinnerImmediately = (type: CompetitionType) => {
     logger?.info("Fast forward: Immediately selecting competition winner");
     
