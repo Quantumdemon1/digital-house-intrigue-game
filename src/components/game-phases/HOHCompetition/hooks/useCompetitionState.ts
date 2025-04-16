@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
 import { useCompetitionLogic } from './useCompetitionLogic';
 
 export const useCompetitionState = () => {
-  const { gameState, getActiveHouseguests, logger } = useGame();
+  const { gameState, getActiveHouseguests, logger, dispatch } = useGame();
   const { simulateCompetition } = useCompetitionLogic();
   
   // Keep all useState calls in the same order
@@ -68,6 +69,41 @@ export const useCompetitionState = () => {
     }, 3000); // Show the competition in progress for 3 seconds
   };
 
+  // Force winner selection for fast forward
+  const selectWinnerImmediately = (type: CompetitionType) => {
+    logger?.info("Fast forward: Immediately selecting competition winner");
+    
+    // Set competition type for display purposes
+    setCompetitionType(type);
+    
+    try {
+      // Skip competition animation and directly get results
+      const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
+      
+      // Generate placeholder results
+      const placeholderResults = activeHouseguests.map((guest, idx) => ({
+        name: guest.name,
+        id: guest.id,
+        position: guest.id === randomWinner.id ? 1 : idx + 2
+      }));
+      
+      // Update state
+      setResults(placeholderResults);
+      setWinner(randomWinner);
+      
+      // Update HOH in game state
+      dispatch({
+        type: 'SET_HOH',
+        payload: randomWinner
+      });
+      
+      logger?.info(`Fast forward: ${randomWinner.name} selected as HoH`);
+      
+    } catch (error) {
+      logger?.error("Error during fast forward winner selection:", error);
+    }
+  };
+
   // Reset state if component is unmounted
   useEffect(() => {
     return () => {
@@ -85,6 +121,7 @@ export const useCompetitionState = () => {
     transitionAttempted,
     setTransitionAttempted,
     startCompetition,
+    selectWinnerImmediately,
     setWinner,
     setResults
   };

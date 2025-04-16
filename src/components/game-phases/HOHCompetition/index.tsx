@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import CompetitionInitial from './CompetitionInitial';
@@ -6,7 +5,7 @@ import CompetitionInProgress from './CompetitionInProgress';
 import CompetitionResults from './CompetitionResults';
 import { useCompetitionState } from './hooks/useCompetitionState';
 import { usePhaseTransition } from './hooks/usePhaseTransition';
-import { CompetitionType } from '@/models/houseguest/types'; // Import the CompetitionType
+import { CompetitionType } from '@/models/houseguest/types';
 
 const HOHCompetition: React.FC = () => {
   const { gameState, logger, dispatch } = useGame();
@@ -22,10 +21,14 @@ const HOHCompetition: React.FC = () => {
     transitionAttempted,
     setTransitionAttempted,
     startCompetition,
+    selectWinnerImmediately,
     setWinner,
     setResults
   } = useCompetitionState();
   
+  // Hook for phase transitions - always keep hooks in same order
+  const { advanceToNomination } = usePhaseTransition(winner, transitionAttempted, setTransitionAttempted);
+
   // Add initialization effect here directly to simplify hook order
   useEffect(() => {
     // Wait for component to fully mount to avoid state updates during render
@@ -41,9 +44,6 @@ const HOHCompetition: React.FC = () => {
     
     return () => clearTimeout(timer);
   }, [gameState.phase, isCompeting, winner, activeHouseguests.length, startCompetition, logger]);
-  
-  // Hook for phase transitions - always keep hooks in same order
-  const { advanceToNomination } = usePhaseTransition(winner, transitionAttempted, setTransitionAttempted);
 
   // Listen for fast forward events
   useEffect(() => {
@@ -52,40 +52,20 @@ const HOHCompetition: React.FC = () => {
       fastForwardingRef.current = true;
       
       if (!isCompeting && !winner) {
-        // If competition hasn't started yet, start it with a random type
-        logger?.info("Fast forward: Starting competition immediately");
+        // If competition hasn't started yet, immediately select a winner
+        logger?.info("Fast forward: Skipping competition animation");
         const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
         const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
         
-        // Skip the animation and immediately generate results
         if (activeHouseguests.length > 0) {
-          logger?.info(`Fast forward: Selecting winner from ${activeHouseguests.length} houseguests`);
+          // Skip competition animation and select winner immediately
+          selectWinnerImmediately(randomType);
           
-          // Select a random winner
-          const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
-          
-          // Generate placeholder results
-          const placeholderResults = activeHouseguests.map((guest, idx) => ({
-            name: guest.name,
-            id: guest.id,
-            position: guest.id === randomWinner.id ? 1 : idx + 2
-          }));
-          
-          // Directly set winner and results without animation
-          setResults(placeholderResults);
-          setWinner(randomWinner);
-          
-          // Update HOH in game state
-          dispatch({
-            type: 'SET_HOH',
-            payload: randomWinner
-          });
-          
-          // Add a small delay to ensure state updates before proceeding
+          // Add a short delay to ensure state updates before proceeding
           setTimeout(() => {
             logger?.info("Fast forward: Advancing to nomination phase");
             advanceToNomination();
-          }, 200);
+          }, 500);
         }
       } else if (winner) {
         // If we already have a winner, just advance to the next phase
@@ -105,22 +85,20 @@ const HOHCompetition: React.FC = () => {
           position: guest.id === randomWinner.id ? 1 : idx + 2
         }));
         
-        // Update state
+        // Update state and advance
+        setResults(placeholderResults);
+        setWinner(randomWinner);
+        
+        // Update HOH in game state
+        dispatch({
+          type: 'SET_HOH',
+          payload: randomWinner
+        });
+        
+        // Force transition after a short delay
         setTimeout(() => {
-          setResults(placeholderResults);
-          setWinner(randomWinner);
-          
-          // Update HOH in game state
-          dispatch({
-            type: 'SET_HOH',
-            payload: randomWinner
-          });
-          
-          // Force transition after a small delay
-          setTimeout(() => {
-            advanceToNomination();
-          }, 200);
-        }, 100);
+          advanceToNomination();
+        }, 500);
       }
     };
     
@@ -130,7 +108,7 @@ const HOHCompetition: React.FC = () => {
     return () => {
       document.removeEventListener('game:fastForward', handleFastForward);
     };
-  }, [isCompeting, winner, activeHouseguests, setResults, setWinner, advanceToNomination, dispatch, logger, startCompetition]);
+  }, [isCompeting, winner, activeHouseguests, setResults, setWinner, advanceToNomination, dispatch, logger, selectWinnerImmediately]);
 
   // Show the appropriate component based on the competition state
   if (winner) {
