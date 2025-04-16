@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import CompetitionInitial from './CompetitionInitial';
@@ -23,7 +24,8 @@ const HOHCompetition: React.FC = () => {
     startCompetition,
     selectWinnerImmediately,
     setWinner,
-    setResults
+    setResults,
+    setIsCompeting // Make sure we destructure this from the hook
   } = useCompetitionState();
   
   // Hook for phase transitions - always keep hooks in same order
