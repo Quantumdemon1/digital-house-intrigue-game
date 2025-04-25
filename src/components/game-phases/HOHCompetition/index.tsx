@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import CompetitionInitial from './CompetitionInitial';
@@ -12,7 +11,6 @@ const HOHCompetition: React.FC = () => {
   const { gameState, logger, dispatch } = useGame();
   const fastForwardingRef = useRef(false);
   
-  // Use our custom hooks to manage competition state
   const {
     competitionType,
     isCompeting,
@@ -28,14 +26,10 @@ const HOHCompetition: React.FC = () => {
     setIsCompeting
   } = useCompetitionState();
   
-  // Hook for phase transitions - always keep hooks in same order
-  const { advanceToNomination } = usePhaseTransition(winner, transitionAttempted, setTransitionAttempted);
+  const { advanceToNomination } = usePhaseTransition();
 
-  // Add initialization effect here directly to simplify hook order
   useEffect(() => {
-    // Wait for component to fully mount to avoid state updates during render
     const timer = setTimeout(() => {
-      // Only auto-start if we're in the right phase and not already competing
       if (gameState.phase === 'HoH' && !isCompeting && !winner && activeHouseguests.length > 0 && !fastForwardingRef.current) {
         const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
         const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
@@ -47,21 +41,17 @@ const HOHCompetition: React.FC = () => {
     return () => clearTimeout(timer);
   }, [gameState.phase, isCompeting, winner, activeHouseguests.length, startCompetition, logger]);
 
-  // Enhanced fast forward handler with more direct phase control
   useEffect(() => {
     const handleFastForward = () => {
       logger?.info("Fast forward event detected in HOH Competition");
       fastForwardingRef.current = true;
 
-      // Create a list of competition types
       const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
       const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
       
-      // Improved handling for different competition states
       logger?.info("Fast forward state check - isCompeting:", isCompeting, "winner:", !!winner);
       
       if (winner) {
-        // CASE 1: We already have a winner, force direct phase change
         logger?.info("Fast forward: Winner already selected, forcing phase transition");
         dispatch({
           type: 'SET_PHASE',
@@ -69,17 +59,13 @@ const HOHCompetition: React.FC = () => {
         });
       } 
       else if (isCompeting) {
-        // CASE 2: Competition in progress - force completion with direct phase change
         logger?.info("Fast forward: Competition in progress, forcing completion with direct phase change");
         
-        // Stop the competition visually
         setIsCompeting(false);
         
-        // Select a random winner from active houseguests
         const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
         
         if (randomWinner) {
-          // Generate results and set winner
           const placeholderResults = activeHouseguests.map((guest) => ({
             name: guest.name,
             id: guest.id,
@@ -87,17 +73,14 @@ const HOHCompetition: React.FC = () => {
               Math.floor(Math.random() * (activeHouseguests.length - 1)) + 2
           })).sort((a, b) => a.position - b.position);
           
-          // Update state and game state
           setResults(placeholderResults);
           setWinner(randomWinner);
           
-          // Set HOH directly
           dispatch({
             type: 'SET_HOH',
             payload: randomWinner
           });
           
-          // Force immediate phase transition
           logger?.info("Fast forward: Forcing direct phase transition to Nomination");
           dispatch({
             type: 'SET_PHASE',
@@ -106,14 +89,11 @@ const HOHCompetition: React.FC = () => {
         }
       }
       else {
-        // CASE 3: Competition hasn't started yet - use the dedicated method
         logger?.info("Fast forward: Competition hasn't started yet, using selectWinnerImmediately");
-        // Pass only the competition type
         selectWinnerImmediately(randomType);
       }
     };
     
-    // Listen for the custom fast forward event
     document.addEventListener('game:fastForward', handleFastForward);
     
     return () => {
@@ -121,7 +101,6 @@ const HOHCompetition: React.FC = () => {
     };
   }, [activeHouseguests, dispatch, isCompeting, logger, selectWinnerImmediately, setIsCompeting, setResults, setWinner, winner]);
 
-  // Show the appropriate component based on the competition state
   if (winner) {
     return <CompetitionResults 
       competitionType={competitionType} 
