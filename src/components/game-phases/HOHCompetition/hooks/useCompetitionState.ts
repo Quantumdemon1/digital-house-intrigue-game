@@ -69,7 +69,7 @@ export const useCompetitionState = () => {
     }, 3000); // Show the competition in progress for 3 seconds
   };
 
-  // Modified to accept just the type parameter, handling everything internally
+  // Simplified to accept just the competition type
   const selectWinnerImmediately = (type: CompetitionType) => {
     logger?.info("Fast forward: Immediately selecting competition winner");
     
