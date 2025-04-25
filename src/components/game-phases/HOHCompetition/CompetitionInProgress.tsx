@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Clock, Activity } from 'lucide-react';
 import { CompetitionType } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
-import { competitionProgress } from '@/lib/animations';
+import { animations } from '@/lib/animations';
 
 interface CompetitionInProgressProps {
   competitionType: CompetitionType | null;
@@ -132,11 +132,8 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
           
           <div className="mt-2 w-full max-w-xs bg-gray-200 rounded-full h-2.5 overflow-hidden">
             <div 
-              className="bg-bb-blue h-2.5 rounded-full transition-all duration-150 ease-in-out"
-              style={{
-                width: `${progress}%`,
-                animation: `${competitionProgress} 3s infinite alternate`
-              }}
+              className="bg-bb-blue h-2.5 rounded-full transition-all duration-150 ease-in-out animate-competition-progress"
+              style={{ width: `${progress}%` }}
             ></div>
           </div>
           

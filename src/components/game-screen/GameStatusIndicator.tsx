@@ -44,6 +44,15 @@ const GameStatusIndicator: React.FC = () => {
     }
   };
 
+  // Get HoH name safely
+  const getHoHName = () => {
+    if (!gameState.hohWinner) return 'None';
+    
+    // Find the houseguest by ID in the active houseguests array
+    const hohHouseguest = activeHouseguests.find(h => h.id === gameState.hohWinner);
+    return hohHouseguest?.name || 'Unknown';
+  };
+
   return (
     <div className="flex items-center justify-between w-full bg-background rounded-md p-2 border">
       <div className="flex items-center space-x-2">
@@ -70,7 +79,7 @@ const GameStatusIndicator: React.FC = () => {
         {gameState.hohWinner && (
           <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800 border-blue-200 flex items-center">
             <Crown className="h-3 w-3 mr-1" />
-            HoH: {gameState.getHouseguestById(gameState.hohWinner)?.name || 'Unknown'}
+            HoH: {getHoHName()}
           </Badge>
         )}
       </div>

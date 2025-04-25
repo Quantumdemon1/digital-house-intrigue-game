@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card } from './card';
-import { phaseTransition } from '@/lib/animations';
+import { animations } from '@/lib/animations';
 import { GamePhase } from '@/models/game-state';
 
 interface PhaseTransitionProps {
@@ -59,10 +59,8 @@ export const PhaseTransition: React.FC<PhaseTransitionProps> = ({
         className={`
           p-8 transition-all duration-500
           ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
+          ${visible ? 'animate-phase-transition' : ''}
         `}
-        style={{
-          animation: visible ? `${phaseTransition} 0.5s ease` : 'none',
-        }}
       >
         <div className="text-center">
           <div className="mb-2 text-sm text-muted-foreground">

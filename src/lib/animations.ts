@@ -4,7 +4,7 @@
  * @description Animation utilities for consistent motion throughout the application
  */
 
-// These are now Tailwind animation definitions that can be used in className
+// These are now Tailwind animation class names that can be used in className
 export const animations = {
   fadeIn: 'animate-fade-in',
   fadeOut: 'animate-fade-out',
@@ -19,11 +19,27 @@ export const animations = {
   phaseTransition: 'animate-phase-transition'
 };
 
-// Utility function to apply custom animations
+// Utility function to apply animation classes
 export const applyAnimation = (animationClass: string, duration = '0.3s', timing = 'ease') => {
   return `${animationClass} duration-300 ease-in-out`;
 };
 
+// Utility function to apply transitions
 export const applyTransition = (properties = 'all', duration = '0.3s', timing = 'ease') => {
   return `transition-${properties} duration-300 ease-in-out`;
 };
+
+// Export individual animations for backward compatibility
+export const { 
+  fadeIn, 
+  fadeOut, 
+  scaleIn, 
+  scaleOut, 
+  slideInRight, 
+  slideOutRight, 
+  spin, 
+  pulse, 
+  celebrateWinner, 
+  competitionProgress, 
+  phaseTransition 
+} = animations;
