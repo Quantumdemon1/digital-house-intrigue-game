@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
@@ -24,34 +24,37 @@ const FinalePhase: React.FC = () => {
   const finalists = gameState.houseguests.filter(hg => hg.status === 'Active').slice(0, 2);
   const jurors = gameState.houseguests.filter(hg => hg.status === 'Jury');
   
+  // Check if player is a juror (for spectator mode voting)
+  const playerJuror = jurors.find(j => j.isPlayer);
+  
   const getRelationship = (guest1Id: string, guest2Id: string): number => {
     return game?.relationshipSystem?.getRelationship(guest1Id, guest2Id) ?? 50;
   };
   
-  const handleProceedToSpeeches = () => {
+  const handleProceedToSpeeches = useCallback(() => {
     setStage('speeches');
-  };
+  }, []);
   
-  const handleSpeechesComplete = () => {
+  const handleSpeechesComplete = useCallback(() => {
     setStage('voting');
-  };
+  }, []);
   
-  const handleVotingComplete = (collectedVotes: Record<string, string>) => {
+  const handleVotingComplete = useCallback((collectedVotes: Record<string, string>) => {
     setVotes(collectedVotes);
     setStage('reveal');
-  };
+  }, []);
   
-  const handleRevealComplete = (winnerHg: Houseguest, runnerUpHg: Houseguest) => {
+  const handleRevealComplete = useCallback((winnerHg: Houseguest, runnerUpHg: Houseguest) => {
     setWinner(winnerHg);
     setRunnerUp(runnerUpHg);
     setStage('complete');
-  };
+  }, []);
   
-  const handleSkipToVoting = () => {
+  const handleSkipToVoting = useCallback(() => {
     setStage('voting');
-  };
+  }, []);
   
-  const handleContinueToGameOver = () => {
+  const handleContinueToGameOver = useCallback(() => {
     if (winner) {
       dispatch({
         type: 'PLAYER_ACTION',
@@ -65,7 +68,35 @@ const FinalePhase: React.FC = () => {
       type: 'SET_PHASE',
       payload: 'GameOver'
     });
-  };
+  }, [dispatch, winner]);
+  
+  // Spectator mode: auto-advance through stages (except voting if player is juror)
+  useEffect(() => {
+    if (!gameState.isSpectatorMode) return;
+    
+    if (stage === 'intro') {
+      const timer = setTimeout(() => {
+        handleProceedToSpeeches();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    
+    if (stage === 'speeches') {
+      const timer = setTimeout(() => {
+        handleSkipToVoting();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+    
+    // Note: voting stage respects player's jury vote - handled in JuryVotingWrapper
+    
+    if (stage === 'complete' && winner) {
+      const timer = setTimeout(() => {
+        handleContinueToGameOver();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, stage, winner, handleProceedToSpeeches, handleSkipToVoting, handleContinueToGameOver]);
   
   // Intro Stage
   if (stage === 'intro') {

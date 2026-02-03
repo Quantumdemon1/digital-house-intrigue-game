@@ -65,6 +65,39 @@ const JuryQuestioningPhase: React.FC = () => {
     document.addEventListener('game:fastForward', handleFastForward);
     return () => document.removeEventListener('game:fastForward', handleFastForward);
   }, []);
+  
+  // Spectator mode: auto-start questioning
+  useEffect(() => {
+    if (!gameState.isSpectatorMode || questionsComplete || isAsking) return;
+    
+    const timer = setTimeout(() => {
+      if (currentJurorIndex === 0) {
+        startQuestioning();
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [gameState.isSpectatorMode, questionsComplete, isAsking, currentJurorIndex]);
+  
+  // Spectator mode: auto-continue after each juror
+  useEffect(() => {
+    if (!gameState.isSpectatorMode || isAsking || questionsComplete) return;
+    if (currentJurorIndex > 0 && currentJurorIndex < jurors.length) {
+      const timer = setTimeout(() => {
+        startQuestioning();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, currentJurorIndex, isAsking, questionsComplete, jurors.length]);
+  
+  // Spectator mode: auto-continue to finale
+  useEffect(() => {
+    if (!gameState.isSpectatorMode || !questionsComplete) return;
+    
+    const timer = setTimeout(() => {
+      continueToFinale();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [gameState.isSpectatorMode, questionsComplete]);
 
   // Skip all questioning
   const skipToEnd = useCallback(() => {

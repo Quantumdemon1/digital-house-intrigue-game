@@ -31,7 +31,7 @@ const GameOverPhase: React.FC = () => {
     }
   }, [gameState.phase]);
   
-  const winner = gameState.houseguests.find(hg => hg.isWinner);
+  const winner = gameState.houseguests.find(hg => hg.isWinner || hg.status === 'Winner');
   const runnerUp = gameState.houseguests.find(hg => hg.status === 'Runner-Up');
   
   const handleAction = (actionId: string) => {

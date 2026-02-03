@@ -200,6 +200,78 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         // These are handled by the game state machine
         // No immediate state updates needed
         break;
+      
+      case 'set_final_two':
+        if (payload.params.finalist1Id && payload.params.finalist2Id) {
+          const finalist1 = state.houseguests.find(h => h.id === payload.params.finalist1Id);
+          const finalist2 = state.houseguests.find(h => h.id === payload.params.finalist2Id);
+          if (finalist1 && finalist2) {
+            return {
+              ...state,
+              finalTwo: [finalist1, finalist2]
+            };
+          }
+        }
+        break;
+      
+      case 'set_winner':
+        if (payload.params.winnerId) {
+          const winnerHg = state.houseguests.find(h => h.id === payload.params.winnerId);
+          const runnerUpHg = state.finalTwo?.find(h => h.id !== payload.params.winnerId);
+          if (winnerHg) {
+            // Update houseguests with winner status
+            const updatedHouseguests = state.houseguests.map(h => {
+              if (h.id === winnerHg.id) {
+                return { ...h, status: 'Winner' as const, isWinner: true };
+              }
+              if (runnerUpHg && h.id === runnerUpHg.id) {
+                return { ...h, status: 'Runner-Up' as const };
+              }
+              return h;
+            });
+            return {
+              ...state,
+              houseguests: updatedHouseguests,
+              winner: { ...winnerHg, status: 'Winner' as const, isWinner: true },
+              runnerUp: runnerUpHg ? { ...runnerUpHg, status: 'Runner-Up' as const } : undefined,
+              phase: 'GameOver' as GamePhase
+            };
+          }
+        }
+        break;
+      
+      case 'select_part1_winner':
+      case 'select_part2_winner':
+      case 'select_part3_winner':
+        if (payload.params.winnerId) {
+          const partKey = payload.actionId.replace('select_', '').replace('_winner', '') as 'part1' | 'part2' | 'part3';
+          const updatedFinalHoHWinners = {
+            ...state.finalHoHWinners,
+            [partKey]: payload.params.winnerId
+          };
+          
+          // If part3, also set HOH winner
+          if (partKey === 'part3') {
+            const partWinner = state.houseguests.find(h => h.id === payload.params.winnerId);
+            if (partWinner) {
+              return {
+                ...state,
+                finalHoHWinners: updatedFinalHoHWinners,
+                hohWinner: partWinner,
+                houseguests: state.houseguests.map(h => ({
+                  ...h,
+                  isHoH: h.id === payload.params.winnerId
+                }))
+              };
+            }
+          }
+          
+          return {
+            ...state,
+            finalHoHWinners: updatedFinalHoHWinners
+          };
+        }
+        break;
         
       default:
         // No immediate state update needed
