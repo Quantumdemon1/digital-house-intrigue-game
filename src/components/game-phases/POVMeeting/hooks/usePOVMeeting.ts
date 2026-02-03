@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest } from '@/models/houseguest';
 import { useVetoDecision } from './useVetoDecision';

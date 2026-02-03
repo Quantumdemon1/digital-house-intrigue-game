@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
 import NominationContent from './components/NominationContent';
@@ -24,6 +24,7 @@ const NominationPhase: React.FC = () => {
   } = useGame();
 
   const [stage, setStage] = useState<NominationStage>('pre-ceremony');
+  const spectatorAutoStartRef = useRef(false);
   
   const hohId = gameState?.hohWinner?.id;
   const hoh = hohId ? getHouseguestById(hohId) : null;
@@ -95,6 +96,17 @@ const NominationPhase: React.FC = () => {
       setStage('key-ceremony');
     }
   }, [aiProcessed, nominees.length, isPlayerHoH, stage]);
+
+  // Auto-start nomination in spectator mode
+  useEffect(() => {
+    if (gameState.isSpectatorMode && stage === 'pre-ceremony' && !spectatorAutoStartRef.current && !isPlayerHoH) {
+      spectatorAutoStartRef.current = true;
+      const timer = setTimeout(() => {
+        handleStartCeremony();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, stage, isPlayerHoH, handleStartCeremony]);
 
   // Handle key ceremony completion
   const handleKeyCeremonyComplete = useCallback(() => {

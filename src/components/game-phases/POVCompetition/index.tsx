@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Houseguest, CompetitionType } from '@/models/houseguest';
 
@@ -19,6 +19,7 @@ const POVCompetition: React.FC = () => {
   const [winner, setWinner] = useState<Houseguest | null>(null);
   const [competitionType, setCompetitionType] = useState<CompetitionType | null>(null);
   const [generatedPlayers, setGeneratedPlayers] = useState<string[]>([]);
+  const spectatorAutoStartRef = useRef(false);
   
   // Get the PoV players from state
   const povPlayerIds = gameState.povPlayers || [];
@@ -124,6 +125,17 @@ const povPlayers = effectivePovPlayerIds
       }, 5000);
     }, 3000);
   };
+
+  // Auto-start competition in spectator mode
+  useEffect(() => {
+    if (gameState.isSpectatorMode && !isCompeting && !winner && !spectatorAutoStartRef.current && povPlayers.length > 0) {
+      spectatorAutoStartRef.current = true;
+      const timer = setTimeout(() => {
+        startCompetition();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, isCompeting, winner, povPlayers.length]);
   
   // Render the appropriate component based on the current state
   if (winner) {

@@ -44,12 +44,16 @@ export function evictionReducer(state: GameState, action: GameAction): GameState
       // Clear nominees array to ensure evicted players are completely removed
       const updatedNominees = state.nominees.filter(nominee => nominee.id !== evicted.id);
       
+      // Enable spectator mode if the player was evicted
+      const isPlayerEvicted = evicted.isPlayer === true;
+      
       return {
         ...state,
         houseguests: updatedHouseguestsAfterEviction,
         nominees: updatedNominees,
         juryMembers: updatedJury,
         evictionVotes: {}, // Clear votes after eviction
+        isSpectatorMode: isPlayerEvicted ? true : state.isSpectatorMode,
       };
     }
     

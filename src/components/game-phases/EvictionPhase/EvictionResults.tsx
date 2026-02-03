@@ -209,10 +209,25 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
           </div>
           
           {evictedHouseguest.isPlayer ? (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="font-bold text-red-700">
-                You have been evicted from the Big Brother house.
-              </p>
+            <div className="mt-6 space-y-4">
+              <div className="p-4 bg-red-950/50 border border-red-500/30 rounded-md">
+                <p className="font-bold text-red-400">
+                  You have been evicted from the Big Brother house.
+                </p>
+              </div>
+              {goesToJury && (
+                <p className="text-purple-400 font-medium">
+                  You will join the jury and help decide the winner.
+                </p>
+              )}
+              <Button 
+                onClick={() => goesToJury ? setStage('jury') : setStage('complete')} 
+                className="mt-4 bg-purple-600 hover:bg-purple-700"
+                size="lg"
+              >
+                <Users className="mr-2 h-5 w-5" />
+                {goesToJury ? 'Continue as Jury Member' : 'Continue'}
+              </Button>
             </div>
           ) : (
             <Button 

@@ -11,6 +11,7 @@ import { selectRandomWinner } from './utils';
 const HOHCompetition: React.FC = () => {
   const { gameState, logger, dispatch } = useGame();
   const fastForwardingRef = useRef(false);
+  const spectatorAutoStartRef = useRef(false);
   
   const {
     competitionType,
@@ -28,6 +29,20 @@ const HOHCompetition: React.FC = () => {
   } = useCompetitionState();
   
   const { advanceToNomination } = usePhaseTransition();
+
+  // Auto-start competition in spectator mode
+  useEffect(() => {
+    if (gameState.isSpectatorMode && !isCompeting && !winner && !spectatorAutoStartRef.current) {
+      spectatorAutoStartRef.current = true;
+      const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
+      const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
+      const timer = setTimeout(() => {
+        logger?.info("Spectator mode: Auto-starting HoH competition");
+        startCompetition(randomType);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, isCompeting, winner, startCompetition, logger]);
 
   // Competition is now started manually via the Start button in CompetitionInitial
   // This gives users control and allows them to see the competition type before starting
