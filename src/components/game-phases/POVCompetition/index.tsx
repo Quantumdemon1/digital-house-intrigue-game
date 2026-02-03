@@ -52,9 +52,9 @@ const POVCompetition: React.FC = () => {
   
   // Use effective player IDs (from state or generated)
   const effectivePovPlayerIds = povPlayerIds.length > 0 ? povPlayerIds : generatedPlayers;
-  const povPlayers = effectivePovPlayerIds
-    .map(id => getHouseguestById(id))
-    .filter(Boolean) as Houseguest[];
+const povPlayers = effectivePovPlayerIds
+  .map(id => gameState.houseguests.find(h => h.id === id))
+  .filter(Boolean) as Houseguest[];
   
   const nominees = gameState.nominees
     .map(nominee => gameState.houseguests.find(h => h.id === nominee.id) || nominee)
