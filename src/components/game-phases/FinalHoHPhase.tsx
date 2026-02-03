@@ -1,129 +1,220 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Crown, Award, ChevronRight, User2 } from 'lucide-react';
+import { Crown, Award, ChevronRight, Timer, Swords, Brain, Users, CheckCircle2 } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { GameCard, GameCardHeader, GameCardContent, GameCardTitle, GameCardDescription } from '@/components/ui/game-card';
+import { StatusAvatar } from '@/components/ui/status-avatar';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
+import { runEnduranceCompetition, runCompetition } from '@/systems/competition/competition-runner';
+import { FINAL_HOH_DESCRIPTIONS } from '@/models/competition';
+
+type FinalHoHPart = 'part1' | 'part2' | 'part3' | 'selection';
+
+interface PartStatus {
+  completed: boolean;
+  winnerId: string | null;
+  winnerName: string | null;
+}
 
 const FinalHoHPhase: React.FC = () => {
   const { gameState, dispatch, getActiveHouseguests } = useGame();
-  const [activePart, setActivePart] = useState('part1');
+  const [currentPart, setCurrentPart] = useState<FinalHoHPart>('part1');
   const [isCompeting, setIsCompeting] = useState(false);
-  const [partWinner, setPartWinner] = useState<Houseguest | null>(null);
+  const [competitionProgress, setCompetitionProgress] = useState(0);
+  const [showResults, setShowResults] = useState(false);
+  const [currentWinner, setCurrentWinner] = useState<Houseguest | null>(null);
   
-  // Check if we have winners for each part
-  const part1Winner = gameState.finalHoHWinners?.part1 ? 
-    gameState.houseguests.find(hg => hg.id === gameState.finalHoHWinners?.part1) : null;
-    
-  const part2Winner = gameState.finalHoHWinners?.part2 ? 
-    gameState.houseguests.find(hg => hg.id === gameState.finalHoHWinners?.part2) : null;
-    
-  const part3Winner = gameState.finalHoHWinners?.part3 ? 
-    gameState.houseguests.find(hg => hg.id === gameState.finalHoHWinners?.part3) : null;
+  // Track part completion
+  const [partStatus, setPartStatus] = useState<Record<'part1' | 'part2' | 'part3', PartStatus>>({
+    part1: { completed: false, winnerId: null, winnerName: null },
+    part2: { completed: false, winnerId: null, winnerName: null },
+    part3: { completed: false, winnerId: null, winnerName: null }
+  });
+  
+  // Get the final 3 houseguests
+  const finalThree = getActiveHouseguests();
+  
+  // Get winners from game state on mount
+  useEffect(() => {
+    const winners = gameState.finalHoHWinners;
+    if (winners) {
+      const newStatus = { ...partStatus };
+      
+      if (winners.part1) {
+        const winner = finalThree.find(h => h.id === winners.part1);
+        newStatus.part1 = { completed: true, winnerId: winners.part1, winnerName: winner?.name || null };
+      }
+      if (winners.part2) {
+        const winner = finalThree.find(h => h.id === winners.part2);
+        newStatus.part2 = { completed: true, winnerId: winners.part2, winnerName: winner?.name || null };
+      }
+      if (winners.part3) {
+        const winner = finalThree.find(h => h.id === winners.part3);
+        newStatus.part3 = { completed: true, winnerId: winners.part3, winnerName: winner?.name || null };
+        setCurrentPart('selection');
+      }
+      
+      setPartStatus(newStatus);
+      
+      // Determine current part
+      if (winners.part3) {
+        setCurrentPart('selection');
+      } else if (winners.part2) {
+        setCurrentPart('part3');
+      } else if (winners.part1) {
+        setCurrentPart('part2');
+      }
+    }
+  }, []);
   
   const finalHoH = gameState.hohWinner ? 
     gameState.houseguests.find(hg => hg.id === gameState.hohWinner) : null;
   
-  // Get the final 3 houseguests
-  const finalThree = getActiveHouseguests();
-  const otherFinalists = finalHoH ? finalThree.filter(hg => hg.id !== finalHoH.id) : finalThree;
-  
-  // Start a competition for the current part
-  const startCompetition = () => {
-    setIsCompeting(true);
-    setPartWinner(null);
-    
-    // Simulate the competition running
-    setTimeout(() => {
-      // Get eligible houseguests
-      let eligibleHouseguests: Houseguest[] = [];
-      
-      // For part 1, all 3 compete
-      if (activePart === 'part1') {
-        eligibleHouseguests = finalThree;
-      } 
-      // For part 2, the two losers of part 1 compete
-      else if (activePart === 'part2' && part1Winner) {
-        eligibleHouseguests = finalThree.filter(hg => hg.id !== part1Winner.id);
-      } 
-      // For part 3, the winners of part 1 and 2 compete
-      else if (activePart === 'part3' && part1Winner && part2Winner) {
-        eligibleHouseguests = [part1Winner, part2Winner];
-      }
-      
-      if (eligibleHouseguests.length > 0) {
-        // Select random winner from eligible houseguests
-        const winner = eligibleHouseguests[Math.floor(Math.random() * eligibleHouseguests.length)];
-        setPartWinner(winner);
-        
-        // Update game state based on the part
-        if (activePart === 'part1') {
-          dispatch({
-            type: 'PLAYER_ACTION',
-            payload: {
-              actionId: 'select_part1_winner',
-              params: { winnerId: winner.id }
-            }
-          });
-        } else if (activePart === 'part2') {
-          dispatch({
-            type: 'PLAYER_ACTION',
-            payload: {
-              actionId: 'select_part2_winner',
-              params: { winnerId: winner.id }
-            }
-          });
-        } else if (activePart === 'part3') {
-          // Winner of part 3 becomes the final HoH
-          dispatch({
-            type: 'PLAYER_ACTION',
-            payload: {
-              actionId: 'select_part3_winner',
-              params: { winnerId: winner.id }
-            }
-          });
-          
-          // Update HoH in game state
-          dispatch({
-            type: 'SET_HOH',
-            payload: winner
-          });
-        }
-        
-        // Log the event
-        dispatch({
-          type: 'LOG_EVENT',
-          payload: {
-            week: gameState.week,
-            phase: 'FinalHoH',
-            type: 'COMPETITION',
-            description: `${winner.name} won Part ${activePart.slice(-1)} of the Final HoH competition.`,
-            involvedHouseguests: [winner.id]
-          }
-        });
-      }
-      
-      // Reset competing state
-      setIsCompeting(false);
-    }, 3000);
+  // Get eligible participants for each part
+  const getParticipants = (part: 'part1' | 'part2' | 'part3'): Houseguest[] => {
+    switch (part) {
+      case 'part1':
+        return finalThree;
+      case 'part2':
+        // Part 2: The two losers from Part 1
+        const part1Winner = partStatus.part1.winnerId;
+        return finalThree.filter(h => h.id !== part1Winner);
+      case 'part3':
+        // Part 3: Winners of Part 1 and Part 2
+        const p1Winner = finalThree.find(h => h.id === partStatus.part1.winnerId);
+        const p2Winner = finalThree.find(h => h.id === partStatus.part2.winnerId);
+        return [p1Winner, p2Winner].filter(Boolean) as Houseguest[];
+      default:
+        return [];
+    }
   };
   
-  // Choose the other finalist to go to final 2
+  // Run competition
+  const startCompetition = useCallback(async (part: 'part1' | 'part2' | 'part3') => {
+    setIsCompeting(true);
+    setShowResults(false);
+    setCompetitionProgress(0);
+    
+    const participants = getParticipants(part);
+    
+    // Animate progress
+    const progressInterval = setInterval(() => {
+      setCompetitionProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + (part === 'part1' ? 2 : 4); // Part 1 (endurance) takes longer
+      });
+    }, 100);
+    
+    // Run the actual competition
+    const competitionType = part === 'part1' ? 'FinalHoH1' : part === 'part2' ? 'FinalHoH2' : 'FinalHoH3';
+    
+    let result;
+    if (part === 'part1') {
+      // Endurance competition
+      result = runEnduranceCompetition({
+        type: competitionType,
+        week: gameState.week,
+        participants
+      });
+    } else {
+      result = runCompetition({
+        type: competitionType,
+        week: gameState.week,
+        participants
+      });
+    }
+    
+    // Wait for animation
+    await new Promise(resolve => setTimeout(resolve, part === 'part1' ? 5000 : 3000));
+    
+    clearInterval(progressInterval);
+    setCompetitionProgress(100);
+    
+    const winner = participants.find(p => p.id === result.winnerId);
+    setCurrentWinner(winner || null);
+    setShowResults(true);
+    setIsCompeting(false);
+    
+    if (winner) {
+      // Update part status
+      setPartStatus(prev => ({
+        ...prev,
+        [part]: { completed: true, winnerId: winner.id, winnerName: winner.name }
+      }));
+      
+      // Update game state
+      dispatch({
+        type: 'PLAYER_ACTION',
+        payload: {
+          actionId: `select_${part}_winner`,
+          params: { winnerId: winner.id }
+        }
+      });
+      
+      // Log the event
+      dispatch({
+        type: 'LOG_EVENT',
+        payload: {
+          week: gameState.week,
+          phase: 'FinalHoH',
+          type: 'COMPETITION',
+          description: `${winner.name} won Part ${part.slice(-1)} of the Final HoH competition!`,
+          involvedHouseguests: [winner.id],
+          data: {
+            competitionName: result.name,
+            category: result.category,
+            results: result.results
+          }
+        }
+      });
+      
+      // If Part 3 winner, set them as HoH
+      if (part === 'part3') {
+        dispatch({
+          type: 'SET_HOH',
+          payload: winner
+        });
+      }
+    }
+  }, [dispatch, finalThree, gameState.week, partStatus]);
+  
+  // Continue to next part
+  const continueToNextPart = () => {
+    setShowResults(false);
+    setCurrentWinner(null);
+    
+    if (currentPart === 'part1') {
+      setCurrentPart('part2');
+    } else if (currentPart === 'part2') {
+      setCurrentPart('part3');
+    } else if (currentPart === 'part3') {
+      setCurrentPart('selection');
+    }
+  };
+  
+  // Choose finalist for Final 2
   const chooseFinalist = (finalist: Houseguest) => {
     if (!finalHoH) return;
     
-    // Update game state
+    const evicted = finalThree.find(hg => hg.id !== finalHoH.id && hg.id !== finalist.id);
+    
+    // Set final two
     dispatch({
       type: 'PLAYER_ACTION',
       payload: {
-        actionId: 'select_finalist',
-        params: { finalistId: finalist.id }
+        actionId: 'set_final_two',
+        params: { finalist1Id: finalHoH.id, finalist2Id: finalist.id }
       }
     });
     
-    // Log event
+    // Log selection
     dispatch({
       type: 'LOG_EVENT',
       payload: {
@@ -135,18 +226,20 @@ const FinalHoHPhase: React.FC = () => {
       }
     });
     
-    // Find evicted houseguest
-    const evicted = finalThree.find(hg => hg.id !== finalHoH.id && hg.id !== finalist.id);
-    
+    // Evict and add to jury
     if (evicted) {
-      // Log eviction
+      dispatch({
+        type: 'EVICT_HOUSEGUEST',
+        payload: { evictedId: evicted.id, toJury: true }
+      });
+      
       dispatch({
         type: 'LOG_EVENT',
         payload: {
           week: gameState.week,
           phase: 'FinalHoH',
           type: 'EVICTION',
-          description: `${evicted.name} was evicted and becomes the final juror.`,
+          description: `${evicted.name} was evicted and becomes the final member of the jury.`,
           involvedHouseguests: [evicted.id]
         }
       });
@@ -159,36 +252,77 @@ const FinalHoHPhase: React.FC = () => {
     });
   };
   
-  // Render appropriate content based on progress
-  const renderContent = () => {
-    // If we have a final HoH, show finalist selection
-    if (finalHoH) {
-      return (
-        <div className="text-center space-y-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
-            <div className="flex items-center justify-center gap-2 text-amber-900">
-              <Crown className="h-5 w-5 text-amber-600" />
-              <h3 className="text-xl font-semibold">Final Head of Household</h3>
+  const getPartIcon = (part: 'part1' | 'part2' | 'part3') => {
+    switch (part) {
+      case 'part1': return Timer;
+      case 'part2': return Swords;
+      case 'part3': return Brain;
+    }
+  };
+  
+  const getPartLabel = (part: 'part1' | 'part2' | 'part3') => {
+    switch (part) {
+      case 'part1': return 'Endurance';
+      case 'part2': return 'Skill';
+      case 'part3': return 'Questions';
+    }
+  };
+  
+  // Render finalist selection stage
+  if (currentPart === 'selection' && finalHoH) {
+    const otherFinalists = finalThree.filter(h => h.id !== finalHoH.id);
+    
+    return (
+      <GameCard variant="gold">
+        <GameCardHeader icon={Crown} variant="gold">
+          <GameCardTitle>Final Decision</GameCardTitle>
+          <GameCardDescription>Week {gameState.week} - Choose Your Final 2</GameCardDescription>
+        </GameCardHeader>
+        <GameCardContent className="space-y-6">
+          {/* Final HoH Display */}
+          <div className="text-center p-6 bg-gradient-to-r from-bb-gold/10 to-bb-gold/5 rounded-lg border border-bb-gold/20">
+            <div className="flex items-center justify-center gap-2 text-bb-gold mb-3">
+              <Crown className="h-5 w-5" />
+              <span className="text-sm font-medium uppercase tracking-wider">Final Head of Household</span>
             </div>
-            <p className="mt-2 text-amber-800">{finalHoH.name}</p>
+            <StatusAvatar
+              name={finalHoH.name}
+              imageUrl={finalHoH.avatarUrl}
+              status="hoh"
+              size="lg"
+              className="mx-auto mb-2"
+            />
+            <h3 className="text-xl font-bold">{finalHoH.name}</h3>
+            {finalHoH.isPlayer && <Badge className="mt-2" variant="secondary">You</Badge>}
           </div>
           
-          <h3 className="text-xl font-semibold">Choose Your Final 2 Partner</h3>
-          <p className="text-muted-foreground">
-            As the Final HoH, you must choose which houseguest will join you in the Final 2,
-            and which houseguest will be the final member of the jury.
-          </p>
+          {/* Choice Description */}
+          <div className="text-center">
+            <h4 className="font-semibold text-lg mb-2">Choose Your Final 2 Partner</h4>
+            <p className="text-muted-foreground text-sm">
+              As the Final HoH, you must choose which houseguest will join you in the Final 2.
+              The other houseguest will become the final member of the jury.
+            </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-md mx-auto mt-6">
+          {/* Finalist Options */}
+          <div className="grid grid-cols-2 gap-6">
             {otherFinalists.map(finalist => (
-              <div key={finalist.id} className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full mb-2 flex items-center justify-center">
-                  <User2 className="h-8 w-8 text-gray-600" />
-                </div>
-                <p className="font-medium">{finalist.name}</p>
+              <div 
+                key={finalist.id} 
+                className="flex flex-col items-center p-6 bg-card rounded-lg border-2 border-border hover:border-bb-gold/50 transition-colors"
+              >
+                <StatusAvatar
+                  name={finalist.name}
+                  imageUrl={finalist.avatarUrl}
+                  size="lg"
+                  className="mb-3"
+                />
+                <p className="font-semibold text-lg">{finalist.name}</p>
+                {finalist.isPlayer && <Badge className="mt-1" variant="outline">You</Badge>}
+                
                 <Button
-                  variant="default"
-                  className="mt-4"
+                  className="mt-4 w-full bg-gradient-to-r from-bb-gold to-amber-500 text-black hover:from-amber-500 hover:to-bb-gold"
                   onClick={() => chooseFinalist(finalist)}
                 >
                   Take to Final 2
@@ -196,196 +330,153 @@ const FinalHoHPhase: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
-      );
-    }
-  
-    return (
-      <Tabs 
-        value={activePart} 
-        onValueChange={setActivePart}
-        defaultValue="part1"
-        className="w-full"
-      >
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger 
-            value="part1"
-            disabled={isCompeting}
-            className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-900"
-          >
-            Part 1
-            {part1Winner && <span className="ml-1 text-green-600">✓</span>}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="part2"
-            disabled={!part1Winner || isCompeting}
-            className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-900"
-          >
-            Part 2
-            {part2Winner && <span className="ml-1 text-green-600">✓</span>}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="part3"
-            disabled={!part1Winner || !part2Winner || isCompeting}
-            className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-900"
-          >
-            Part 3
-            {part3Winner && <span className="ml-1 text-green-600">✓</span>}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="part1" className="border rounded-lg p-4">
-          <h3 className="text-lg font-medium mb-2">Endurance Competition</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            All three houseguests compete in an endurance challenge. 
-            The winner advances directly to Part 3, while the other two face off in Part 2.
-          </p>
-          
-          {isCompeting ? (
-            <div className="text-center py-6 animate-pulse">
-              <Award className="h-10 w-10 mx-auto mb-2 text-amber-500" />
-              <p>Competition in progress...</p>
-            </div>
-          ) : part1Winner ? (
-            <div className="bg-green-50 border border-green-200 p-4 rounded-md text-center">
-              <p className="text-green-800 font-medium">
-                {part1Winner.name} won Part 1!
-              </p>
-              <p className="text-sm text-green-700 mt-1">
-                They will move directly to Part 3.
-              </p>
-              
-              <Button
-                variant="default"
-                className="mt-4"
-                onClick={() => setActivePart('part2')}
-              >
-                Continue to Part 2 <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button 
-              onClick={startCompetition}
-              disabled={isCompeting}
-              className="w-full"
-            >
-              Start Part 1
-            </Button>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="part2" className="border rounded-lg p-4">
-          <h3 className="text-lg font-medium mb-2">Mental Competition</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            The two losers from Part 1 compete in a mental challenge.
-            The winner advances to Part 3 to face the Part 1 winner.
-          </p>
-          
-          {isCompeting ? (
-            <div className="text-center py-6 animate-pulse">
-              <Award className="h-10 w-10 mx-auto mb-2 text-amber-500" />
-              <p>Competition in progress...</p>
-            </div>
-          ) : part2Winner ? (
-            <div className="bg-green-50 border border-green-200 p-4 rounded-md text-center">
-              <p className="text-green-800 font-medium">
-                {part2Winner.name} won Part 2!
-              </p>
-              <p className="text-sm text-green-700 mt-1">
-                They will face {part1Winner?.name} in Part 3.
-              </p>
-              
-              <Button
-                variant="default"
-                className="mt-4"
-                onClick={() => setActivePart('part3')}
-              >
-                Continue to Part 3 <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button 
-              onClick={startCompetition}
-              disabled={isCompeting || !part1Winner}
-              className="w-full"
-            >
-              Start Part 2
-            </Button>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="part3" className="border rounded-lg p-4">
-          <h3 className="text-lg font-medium mb-2">Jury Questions</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            The winners of Parts 1 and 2 face off in the final competition.
-            The winner becomes the Final HoH and chooses who to take to the Final 2.
-          </p>
-          
-          {isCompeting ? (
-            <div className="text-center py-6 animate-pulse">
-              <Award className="h-10 w-10 mx-auto mb-2 text-amber-500" />
-              <p>Competition in progress...</p>
-            </div>
-          ) : part3Winner ? (
-            <div className="bg-green-50 border border-green-200 p-4 rounded-md text-center">
-              <p className="text-green-800 font-medium">
-                {part3Winner.name} won Part 3!
-              </p>
-              <p className="text-sm text-green-700 mt-1">
-                They are now the Final Head of Household.
-              </p>
-              
-              <Button
-                variant="default"
-                className="mt-4"
-                onClick={() => {
-                  // Refresh the page state to show the finalist selection
-                  dispatch({
-                    type: 'FORCE_REFRESH',
-                    payload: {}
-                  });
-                }}
-              >
-                Continue to Final Decision <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button 
-              onClick={startCompetition}
-              disabled={isCompeting || !part1Winner || !part2Winner}
-              className="w-full"
-            >
-              Start Part 3
-            </Button>
-          )}
-        </TabsContent>
-      </Tabs>
+        </GameCardContent>
+      </GameCard>
     );
-  };
+  }
+  
+  // Render competition phase
+  const currentPartKey = currentPart as 'part1' | 'part2' | 'part3';
+  const partInfo = FINAL_HOH_DESCRIPTIONS[currentPartKey];
+  const PartIcon = getPartIcon(currentPartKey);
+  const participants = getParticipants(currentPartKey);
   
   return (
-    <Card className="shadow-lg border-amber-200">
-      <CardHeader className="bg-gradient-to-r from-amber-400 to-amber-500 text-white">
-        <CardTitle className="flex items-center">
-          <Crown className="mr-2" /> Final HoH Competition
-        </CardTitle>
-        <CardDescription className="text-white/90">
-          Week {gameState.week} - The Final Three
-        </CardDescription>
-      </CardHeader>
+    <GameCard variant="gold">
+      <GameCardHeader icon={Crown} variant="gold">
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <GameCardTitle>Final HoH Competition</GameCardTitle>
+            <GameCardDescription>Week {gameState.week} - The Final Three</GameCardDescription>
+          </div>
+          <Badge variant="outline" className="bg-bb-gold/10 text-bb-gold border-bb-gold/30">
+            3-Part Competition
+          </Badge>
+        </div>
+      </GameCardHeader>
       
-      <CardContent className="pt-6">
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-2">The Path to Victory</h3>
-          <p className="text-sm text-muted-foreground">
-            The Final Head of Household competition has three parts. The winner will decide
-            who sits beside them in the Final 2, and who becomes the final member of the jury.
-          </p>
+      <GameCardContent className="space-y-6">
+        {/* Part Navigation */}
+        <div className="grid grid-cols-3 gap-2">
+          {(['part1', 'part2', 'part3'] as const).map((part) => {
+            const Icon = getPartIcon(part);
+            const isActive = currentPart === part;
+            const isCompleted = partStatus[part].completed;
+            const isLocked = !isCompleted && part !== currentPart;
+            
+            return (
+              <button
+                key={part}
+                disabled={isLocked}
+                onClick={() => !isLocked && setCurrentPart(part)}
+                className={cn(
+                  "flex flex-col items-center p-3 rounded-lg border-2 transition-all",
+                  isActive && "border-bb-gold bg-bb-gold/10",
+                  isCompleted && !isActive && "border-bb-green/50 bg-bb-green/5",
+                  isLocked && "border-border bg-muted/30 opacity-50 cursor-not-allowed",
+                  !isActive && !isCompleted && !isLocked && "border-border hover:border-bb-gold/50"
+                )}
+              >
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center mb-2",
+                  isActive && "bg-bb-gold text-black",
+                  isCompleted && !isActive && "bg-bb-green text-white",
+                  !isActive && !isCompleted && "bg-muted"
+                )}>
+                  {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                </div>
+                <span className="text-xs font-medium">Part {part.slice(-1)}</span>
+                <span className="text-xs text-muted-foreground">{getPartLabel(part)}</span>
+                {isCompleted && partStatus[part].winnerName && (
+                  <span className="text-xs text-bb-green mt-1">
+                    {partStatus[part].winnerName}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         
-        {renderContent()}
-      </CardContent>
-    </Card>
+        {/* Current Part Content */}
+        <div className="p-6 bg-gradient-to-b from-card to-muted/20 rounded-lg border">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-bb-gold/20 flex items-center justify-center">
+              <PartIcon className="h-6 w-6 text-bb-gold" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">{partInfo.name}</h3>
+              <p className="text-sm text-muted-foreground">Part {currentPartKey.slice(-1)} of 3</p>
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-6">{partInfo.description}</p>
+          
+          {/* Participants */}
+          <div className="mb-6">
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Competitors
+            </h4>
+            <div className="flex justify-center gap-6">
+              {participants.map(hg => (
+                <div key={hg.id} className="flex flex-col items-center">
+                  <StatusAvatar
+                    name={hg.name}
+                    imageUrl={hg.avatarUrl}
+                    size="md"
+                    className="mb-2"
+                  />
+                  <span className="text-sm font-medium">{hg.name}</span>
+                  {hg.isPlayer && <Badge variant="outline" className="text-xs mt-1">You</Badge>}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Competition State */}
+          {isCompeting ? (
+            <div className="space-y-4">
+              <div className="text-center">
+                <Award className="h-12 w-12 mx-auto mb-3 text-bb-gold animate-pulse" />
+                <p className="font-medium">Competition in progress...</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentPartKey === 'part1' ? 'Testing endurance...' : 'Calculating results...'}
+                </p>
+              </div>
+              <Progress value={competitionProgress} className="h-2" />
+            </div>
+          ) : showResults && currentWinner ? (
+            <div className="text-center space-y-4">
+              <div className="p-4 bg-bb-green/10 border border-bb-green/30 rounded-lg">
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-bb-green" />
+                <h4 className="font-bold text-lg text-bb-green">{currentWinner.name} Wins!</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {currentPartKey === 'part1' && 'They advance directly to Part 3!'}
+                  {currentPartKey === 'part2' && `They will face ${partStatus.part1.winnerName} in Part 3!`}
+                  {currentPartKey === 'part3' && 'They are now the Final Head of Household!'}
+                </p>
+              </div>
+              
+              <Button
+                onClick={continueToNextPart}
+                className="bg-gradient-to-r from-bb-gold to-amber-500 text-black hover:from-amber-500 hover:to-bb-gold"
+              >
+                {currentPartKey === 'part3' ? 'Continue to Final Decision' : `Continue to Part ${parseInt(currentPartKey.slice(-1)) + 1}`}
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => startCompetition(currentPartKey)}
+              disabled={isCompeting || partStatus[currentPartKey].completed}
+              className="w-full bg-gradient-to-r from-bb-gold to-amber-500 text-black hover:from-amber-500 hover:to-bb-gold"
+            >
+              Start Part {currentPartKey.slice(-1)}
+            </Button>
+          )}
+        </div>
+      </GameCardContent>
+    </GameCard>
   );
 };
 

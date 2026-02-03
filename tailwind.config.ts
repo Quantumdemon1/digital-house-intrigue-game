@@ -266,6 +266,38 @@ const config: Config = {
             transform: 'scale(1)',
             backgroundColor: 'transparent'
           }
+        },
+        'key-reveal': {
+          '0%': {
+            transform: 'rotateY(180deg) scale(0.5)',
+            opacity: '0',
+            filter: 'blur(10px)'
+          },
+          '50%': {
+            transform: 'rotateY(90deg) scale(1.1)',
+            opacity: '0.5',
+            filter: 'blur(5px)'
+          },
+          '100%': {
+            transform: 'rotateY(0deg) scale(1)',
+            opacity: '1',
+            filter: 'blur(0)'
+          }
+        },
+        'confetti': {
+          '0%': { transform: 'translateY(0) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(100vh) rotate(720deg)', opacity: '0' }
+        },
+        'vote-count': {
+          '0%': { transform: 'scale(1)' },
+          '25%': { transform: 'scale(1.3)' },
+          '50%': { transform: 'scale(1)' },
+          '100%': { transform: 'scale(1)' }
+        },
+        'spotlight': {
+          '0%': { opacity: '0', transform: 'scale(0.8)' },
+          '50%': { opacity: '1', transform: 'scale(1.1)' },
+          '100%': { opacity: '1', transform: 'scale(1)' }
         }
       },
       animation: {
@@ -296,6 +328,10 @@ const config: Config = {
         'vote-reveal': 'vote-reveal 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
         'nominee-highlight': 'nominee-highlight 2s ease-in-out infinite',
         'safe-celebration': 'safe-celebration 0.5s ease-out',
+        'key-reveal': 'key-reveal 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        'confetti': 'confetti 3s ease-in-out forwards',
+        'vote-count': 'vote-count 0.5s ease-out',
+        'spotlight': 'spotlight 0.6s ease-out',
         // Combined animations
         'enter': 'fade-in 0.3s ease-out, scale-in 0.2s ease-out',
         'exit': 'fade-out 0.3s ease-out, scale-out 0.2s ease-out'
