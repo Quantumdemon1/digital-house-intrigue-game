@@ -1,115 +1,346 @@
 
-# Fix HoH Competition Skip/Fast-Forward Winner Selection
+# Big Brother USA Format - Comprehensive Gameplay & UX Overhaul Plan
 
-## Problem Analysis
-When using the Skip button during the HoH competition, no winner is being chosen or the winner selection ignores houseguest stats. The current implementation uses plain `Math.random()` instead of the stat-weighted scoring system.
+## Executive Summary
+This plan outlines a complete overhaul of the gameplay mechanics and UX flow to ensure authentic Big Brother USA format consistency. The improvements span all game phases, ceremonies, and player interactions, prioritizing dramatic tension and strategic depth.
 
-**Root Causes:**
-1. `selectWinnerImmediately` in `useCompetitionState.ts` uses simple random selection instead of `selectRandomWinner`
-2. The fast-forward handler in `HOHCompetition/index.tsx` also bypasses the weighted scoring
-3. Results positions are randomized instead of being calculated from actual scores
+---
+
+## Current State Analysis
+
+### What's Working Well
+- Basic weekly cycle structure (HoH -> Nomination -> PoV -> PoVMeeting -> Eviction)
+- 3-Part Final HoH competition with correct participant logic
+- Stat-weighted competition scoring system
+- Key Ceremony animation for nominations
+- Dramatic Vote Reveal component for evictions
+- Skip/Fast-Forward functionality on major ceremonies
+- Competition types (Endurance, Physical, Mental, Skill, Crapshoot)
+
+### Critical Gaps Identified
+1. **Missing Ceremonies & Speeches**
+   - No nominee speeches before eviction vote
+   - No HoH reveal ceremony after competition
+   - No "Have-Not" or luxury competition systems
+   
+2. **Incomplete Phase Flow**
+   - Social interaction phase placement varies from BB USA format
+   - POV player selection needs "random chip draw" presentation
+   - No dedicated "Live Eviction" ceremony presentation
+   
+3. **Jury System Issues**
+   - Jury questioning is overly simplified
+   - No "final speeches" before jury vote
+   - Jury voting lacks dramatic reveal sequence
+   
+4. **Missing Game Mechanics**
+   - No HoH tiebreaker implementation during eviction
+   - No double eviction week support
+   - No returning player/buyback competition
+   - No alliance voting bloc visualization
+
+5. **UX Inconsistencies**
+   - Phase transitions lack ceremonial polish
+   - Inconsistent skip button placement
+   - No narrator/host voice integration
+   - Missing phase progress indicators
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Update `useCompetitionState.ts` - Use Weighted Winner Selection
+### Phase 1: Core Ceremony Polish (Priority: Critical)
 
-**File:** `src/components/game-phases/HOHCompetition/hooks/useCompetitionState.ts`
+#### 1.1 HoH Reveal Ceremony
+**Files:** `src/components/game-phases/HOHCompetition/CompetitionResults.tsx`
 
-**Changes:**
-- Import `selectRandomWinner` from the utils file
-- Replace plain random selection with the weighted `selectRandomWinner` function
-- Generate results based on actual scoring rather than random positions
+Add a dedicated HoH reveal animation:
+- Crown animation transitioning to winner
+- "Who wants to see my HoH room?" prompt
+- Photo/letter reveal option (cosmetic)
+- Skip button integration
 
-```typescript
-// Before (line 105):
-const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
+#### 1.2 Eviction Ceremony Speeches
+**Files:** New `src/components/game-phases/EvictionPhase/NomineeSpeeches.tsx`
 
-// After:
-const competitionWinner = selectRandomWinner(activeHouseguests, type);
-```
+Add authentic nominee speeches before voting:
+- Each nominee gets a "plea" speech opportunity
+- AI-generated or player-written speech content
+- Timer for each speech (30 seconds)
+- Skip individual speeches or all speeches
 
-### Step 2: Update Fast Forward Handler in `index.tsx`
+#### 1.3 Veto Meeting Ceremony Enhancement
+**Files:** `src/components/game-phases/POVMeeting/stages/InitialStage.tsx`
 
-**File:** `src/components/game-phases/HOHCompetition/index.tsx`
+Add the iconic "I have decided to..." ceremony:
+- PoV holder walks to each nominee
+- Dramatic pause before decision reveal
+- "This Power of Veto meeting is adjourned" closing
+- Proper replacement nominee ceremony if veto used
 
-**Changes:**
-- Import `selectRandomWinner` utility
-- Replace plain random selection in the fast-forward handler with weighted selection
-- Generate score-based results for proper placement display
+#### 1.4 POV Player Selection - Chip Draw Animation
+**Files:** `src/components/game-phases/POVPlayerSelection/`
 
-```typescript
-// Before (line 56):
-const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
-
-// After:
-const randomWinner = selectRandomWinner(activeHouseguests, randomType);
-```
-
-### Step 3: Improve Results Generation with Score-Based Positions
-
-**File:** `src/components/game-phases/HOHCompetition/hooks/useCompetitionState.ts`
-
-**Changes:**
-- Calculate actual scores for each houseguest based on competition type
-- Sort results by score to get proper placements
-- Ensure winner is always first
-
-```typescript
-// Generate scored results instead of random positions
-const scoredResults = activeHouseguests.map(guest => {
-  let score = 1;
-  switch (type) {
-    case 'physical': score = guest.stats.physical; break;
-    case 'mental': score = guest.stats.mental; break;
-    case 'endurance': score = guest.stats.endurance; break;
-    case 'social': score = guest.stats.social; break;
-    case 'luck': score = guest.stats.luck + 5; break;
-  }
-  score *= (0.75 + Math.random() * 0.5); // Add randomness
-  return { id: guest.id, name: guest.name, score };
-}).sort((a, b) => b.score - a.score);
-
-// Winner should be at top
-const winnerIdx = scoredResults.findIndex(r => r.id === competitionWinner.id);
-if (winnerIdx > 0) {
-  [scoredResults[0], scoredResults[winnerIdx]] = 
-    [scoredResults[winnerIdx], scoredResults[0]];
-}
-
-const placeholderResults = scoredResults.map((result, index) => ({
-  name: result.name,
-  id: result.id,
-  position: index + 1
-}));
-```
-
-### Step 4: Apply Same Fix to Fast Forward Handler
-
-**File:** `src/components/game-phases/HOHCompetition/index.tsx`
-
-Apply the same score-based results generation in the `handleFastForward` function for consistency.
+Create authentic "houseguest choice" chip bag draw:
+- Animated bag/container visual
+- Sequential chip reveal for each random slot
+- "Houseguest's Choice" chip possibility
+- 6-player grid display with draw order
 
 ---
 
-## Technical Details
+### Phase 2: Game Flow Corrections (Priority: High)
 
-### Files to Modify
-1. `src/components/game-phases/HOHCompetition/hooks/useCompetitionState.ts`
-2. `src/components/game-phases/HOHCompetition/index.tsx`
+#### 2.1 Correct Weekly Cycle Order
+**Current Flow:**
+```text
+HoH -> Nomination -> PoVPlayerSelection -> PoV -> PoVMeeting -> SocialInteraction -> Eviction
+```
 
-### Key Functions
-- `selectRandomWinner(houseguests, competitionType)` - Uses weighted random based on relevant stat:
-  - `physical`: 1.5x physical stat weight
-  - `mental`: 1.5x mental stat weight  
-  - `endurance`: 1.5x endurance stat weight
-  - `social`: 1.5x social stat weight
-  - `luck`: luck stat + 5 (equalizer)
-  - All weights multiplied by random factor (75-125%)
+**Correct BB USA Flow:**
+```text
+HoH -> HoH Reveal -> Nomination -> PoVPlayerSelection -> PoV -> PoVMeeting -> Eviction -> SocialInteraction (pre-next HoH)
+```
 
-### Expected Behavior After Fix
-1. Skip button properly selects a winner using stat-weighted scoring
-2. Winner is recorded in game state via `SET_HOH` dispatch
-3. Game transitions to Nomination phase with the new HoH
-4. Competition results show proper placements based on scores
+**Files to Update:**
+- `src/contexts/reducers/reducers/game-progress-reducer.ts`
+- `src/components/game-screen/PhaseContent.tsx`
+- `src/game-states/index.ts`
+
+#### 2.2 HoH Tiebreaker System
+**Files:** `src/components/game-phases/EvictionPhase/HohTiebreaker.tsx` (exists, needs integration)
+
+Implement when votes are tied:
+- HoH casts the deciding vote
+- Dramatic "I vote to evict..." reveal
+- Special UI treatment for tiebreaker scenario
+- Integration into `EvictionResults.tsx`
+
+#### 2.3 Post-Eviction Flow
+**Files:** `src/components/game-phases/EvictionPhase/EvictionResults.tsx`
+
+After eviction announcement:
+- "You have X seconds to say your goodbyes"
+- Exit interview prompt (cosmetic)
+- Jury announcement if applicable ("You will now join the jury")
+- Automatic phase advancement to next week's HoH
+
+---
+
+### Phase 3: Finale & Jury Overhaul (Priority: High)
+
+#### 3.1 Final Speeches Before Jury Vote
+**Files:** New `src/components/game-phases/FinalePhase/FinalSpeeches.tsx`
+
+Add authentic finale flow:
+- Each finalist makes a final plea to jury (2 minutes)
+- AI-generated speech based on game history
+- Player can write their own speech if finalist
+- Jury reaction indicators
+
+#### 3.2 Jury Questioning Enhancement
+**Files:** `src/components/game-phases/JuryQuestioningPhase.tsx`
+
+Current implementation is basic. Enhance with:
+- More authentic question types based on gameplay
+- Relationship-based question content
+- Bitter jury mechanics (low relationship = tough questions)
+- Player can choose response strategy
+
+#### 3.3 Jury Vote Reveal Ceremony
+**Files:** `src/components/game-phases/FinalePhase/JuryVoting.tsx`
+
+Create dramatic finale vote reveal:
+- Key-turn style reveal (one vote at a time)
+- Running tally display
+- Confetti/celebration animation for winner
+- Skip to results option
+
+---
+
+### Phase 4: Advanced Game Mechanics (Priority: Medium)
+
+#### 4.1 Double Eviction Support
+**Files:** 
+- `src/models/game-state.ts` (add `isDoubleEviction` flag)
+- New `src/components/game-phases/DoubleEvictionPhase.tsx`
+
+Implement fast-paced double eviction:
+- Compressed timeline UI
+- Immediate HoH competition after first eviction
+- Abbreviated nomination/veto ceremonies
+- Second eviction same episode
+
+#### 4.2 Have-Not System (Optional)
+**Files:** New `src/systems/havenot-system.ts`
+
+Add weekly Have-Not selection:
+- Food competition or HoH selection
+- Stat penalties during Have-Not week
+- Slop diet references
+
+#### 4.3 Alliance Voting Visualization
+**Files:** `src/components/game-phases/EvictionPhase/VoterDisplay.tsx`
+
+Show alliance voting patterns:
+- Color-code voters by alliance
+- Predict vote outcomes based on alliances
+- Post-eviction vote breakdown by group
+
+---
+
+### Phase 5: UX Consistency Layer (Priority: Medium)
+
+#### 5.1 Unified Phase Header
+**Files:** `src/components/GamePhaseHeader.tsx`
+
+Create consistent phase information display:
+- Current week number (prominent)
+- Phase name with icon
+- Key players (HoH, PoV holder, Nominees)
+- Progress indicator (week X of ~12)
+
+#### 5.2 Host Narration System
+**Files:** New `src/components/ui/host-narration.tsx`
+
+Add optional Julie Chen-style narration:
+- Phase transition announcements
+- Ceremony introductions
+- Dramatic pause moments
+- Can be toggled on/off in settings
+
+#### 5.3 Unified Skip/Fast-Forward Pattern
+**Files:** All phase components
+
+Ensure consistent skip button behavior:
+- Position: Top-right of phase card header
+- Style: Ghost variant with SkipForward icon
+- Behavior: Skip current animation, maintain game state integrity
+- Already implemented in: KeyCeremony, DramaticVoteReveal, HOHCompetition
+
+Missing implementations needed:
+- PoV Competition results animation
+- Jury Questioning sequence
+- Final HoH parts
+
+#### 5.4 Phase Transition Animations
+**Files:** `src/components/ui/phase-transition.tsx`
+
+Enhance phase-to-phase transitions:
+- Fade out current phase
+- Show phase title card (e.g., "EVICTION NIGHT")
+- Fade in new phase content
+- Optional: TV-style static/transition effect
+
+---
+
+### Phase 6: Competition System Enhancement (Priority: Medium)
+
+#### 6.1 Competition Preview Screen
+**Files:** `src/components/game-phases/HOHCompetition/CompetitionInitial.tsx`
+
+Before competition starts, show:
+- Competition name and category
+- Stat advantages explanation
+- Participant grid with key stats highlighted
+- "Players, take your positions" narrative
+
+#### 6.2 Competition Play-by-Play
+**Files:** `src/components/game-phases/HOHCompetition/CompetitionInProgress.tsx`
+
+Add elimination announcements during endurance:
+- "[Name] has fallen!" notifications
+- Time elapsed display
+- Remaining players count
+- Stat-based commentary
+
+#### 6.3 Crapshoot Fairness Indicator
+**Files:** Competition UI components
+
+When Crapshoot competition type:
+- Display "Anyone can win this one!"
+- Equal chance messaging
+- Random outcome emphasis
+
+---
+
+### Phase 7: Mobile & Accessibility (Priority: Lower)
+
+#### 7.1 Mobile Layout Optimization
+- Collapsible sidebar for small screens
+- Touch-friendly vote buttons
+- Swipe between houseguest cards
+- Bottom navigation for phase actions
+
+#### 7.2 Accessibility Improvements
+- ARIA labels for all interactive elements
+- Keyboard navigation for ceremonies
+- Screen reader announcements for phase changes
+- Color contrast compliance for all game states
+
+---
+
+## Technical Architecture Changes
+
+### State Management Updates
+```text
+GameState additions:
+- isDoubleEviction: boolean
+- currentCeremony: 'none' | 'hoh_reveal' | 'nomination' | 'veto_meeting' | 'eviction'
+- nomineeSpeeches: Record<string, string>
+- juryQuestions: JuryQuestion[]
+- phaseProgress: number (0-100 for animations)
+```
+
+### New Components Summary
+```text
+src/components/
+├── game-phases/
+│   ├── EvictionPhase/
+│   │   └── NomineeSpeeches.tsx (NEW)
+│   ├── FinalePhase/
+│   │   ├── FinalSpeeches.tsx (NEW)
+│   │   └── JuryVoteReveal.tsx (NEW)
+│   ├── HOHCompetition/
+│   │   └── HoHRevealCeremony.tsx (NEW)
+│   └── DoubleEvictionPhase.tsx (NEW)
+├── ui/
+│   └── host-narration.tsx (NEW)
+```
+
+### Phase Reducer Updates
+The `game-progress-reducer.ts` needs updated phase transition logic to match the correct BB USA flow order and handle special cases like double eviction.
+
+---
+
+## Implementation Priority Matrix
+
+| Feature | Impact | Effort | Priority |
+|---------|--------|--------|----------|
+| Nominee Speeches | High | Medium | Week 1 |
+| HoH Tiebreaker Integration | High | Low | Week 1 |
+| Correct Phase Order | High | Medium | Week 1 |
+| POV Chip Draw Animation | Medium | Medium | Week 2 |
+| Jury Vote Reveal Ceremony | High | Medium | Week 2 |
+| Final Speeches | Medium | Medium | Week 2 |
+| Skip Button Consistency | Medium | Low | Week 2 |
+| Host Narration System | Low | Medium | Week 3 |
+| Double Eviction | Medium | High | Week 3 |
+| Phase Transition Animations | Low | Low | Week 3 |
+| Competition Play-by-Play | Low | Medium | Week 4 |
+| Have-Not System | Low | High | Backlog |
+
+---
+
+## Testing Checklist
+
+After implementation, verify:
+- [ ] Complete game playthrough from Week 1 to Finale
+- [ ] Player as HoH completes all ceremonies correctly
+- [ ] Player as nominee can give speech and campaign
+- [ ] Tiebreaker triggers correctly when votes are equal
+- [ ] Skip buttons work on all animated sequences
+- [ ] Jury voting reveals correctly with dramatic pacing
+- [ ] Winner is crowned with proper celebration
+- [ ] Fast-forward through entire game maintains state integrity
+- [ ] Mobile layout remains usable throughout all phases
