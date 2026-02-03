@@ -28,18 +28,8 @@ const HOHCompetition: React.FC = () => {
   
   const { advanceToNomination } = usePhaseTransition();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (gameState.phase === 'HoH' && !isCompeting && !winner && activeHouseguests.length > 0 && !fastForwardingRef.current) {
-        const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
-        const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
-        logger?.info(`Auto-starting competition with type: ${randomType}`);
-        startCompetition(randomType);
-      }
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [gameState.phase, isCompeting, winner, activeHouseguests.length, startCompetition, logger]);
+  // Competition is now started manually via the Start button in CompetitionInitial
+  // This gives users control and allows them to see the competition type before starting
 
   useEffect(() => {
     const handleFastForward = () => {
@@ -114,7 +104,13 @@ const HOHCompetition: React.FC = () => {
     return <CompetitionInProgress competitionType={competitionType} />;
   }
   
-  return <CompetitionInitial gameWeek={gameState.week} activeHouseguests={activeHouseguests} />;
+  return (
+    <CompetitionInitial 
+      gameWeek={gameState.week} 
+      activeHouseguests={activeHouseguests}
+      onStartCompetition={startCompetition}
+    />
+  );
 };
 
 export default HOHCompetition;

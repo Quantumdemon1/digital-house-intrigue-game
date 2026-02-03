@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Key, Target, ChevronRight, Crown, AlertCircle, User } from 'lucide-react';
+import { Key, Target, ChevronRight, Crown, AlertCircle, User, SkipForward } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { GameCard, GameCardHeader, GameCardContent, GameCardTitle, GameCardDescription } from '@/components/ui/game-card';
@@ -33,6 +33,13 @@ export const KeyCeremony: React.FC<KeyCeremonyProps> = ({
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [ceremonyStarted, setCeremonyStarted] = useState(false);
   const [ceremonyComplete, setCeremonyComplete] = useState(false);
+  
+  // Skip to end function
+  const skipToEnd = useCallback(() => {
+    // Mark all as revealed
+    setKeyReveals(prev => prev.map(reveal => ({ ...reveal, revealed: true })));
+    setCeremonyComplete(true);
+  }, []);
   
   // Initialize key reveals (safe houseguests + nominees at end)
   useEffect(() => {
@@ -104,8 +111,21 @@ export const KeyCeremony: React.FC<KeyCeremonyProps> = ({
     return (
       <GameCard variant="primary">
         <GameCardHeader variant="primary" icon={Key}>
-          <GameCardTitle>Nomination Ceremony</GameCardTitle>
-          <GameCardDescription>The Key Ceremony</GameCardDescription>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <GameCardTitle>Nomination Ceremony</GameCardTitle>
+              <GameCardDescription>The Key Ceremony</GameCardDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={skipToEnd}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <SkipForward className="h-4 w-4 mr-1" />
+              Skip
+            </Button>
+          </div>
         </GameCardHeader>
         
         <GameCardContent className="space-y-6">
@@ -144,13 +164,23 @@ export const KeyCeremony: React.FC<KeyCeremonyProps> = ({
             </div>
           </div>
           
-          <Button
-            onClick={startCeremony}
-            size="lg"
-            className="w-full bg-gradient-to-r from-primary to-primary/80"
-          >
-            Begin Key Ceremony
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={startCeremony}
+              size="lg"
+              className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+            >
+              Begin Key Ceremony
+            </Button>
+            <Button
+              onClick={skipToEnd}
+              variant="outline"
+              size="lg"
+            >
+              <SkipForward className="h-4 w-4 mr-1" />
+              Skip
+            </Button>
+          </div>
         </GameCardContent>
       </GameCard>
     );
@@ -211,10 +241,23 @@ export const KeyCeremony: React.FC<KeyCeremonyProps> = ({
   return (
     <GameCard variant="primary">
       <GameCardHeader variant="primary" icon={Key}>
-        <GameCardTitle>Nomination Ceremony</GameCardTitle>
-        <GameCardDescription>
-          Revealing key {currentIndex + 1} of {keyReveals.length}
-        </GameCardDescription>
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <GameCardTitle>Nomination Ceremony</GameCardTitle>
+            <GameCardDescription>
+              Revealing key {currentIndex + 1} of {keyReveals.length}
+            </GameCardDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={skipToEnd}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <SkipForward className="h-4 w-4 mr-1" />
+            Skip
+          </Button>
+        </div>
       </GameCardHeader>
       
       <GameCardContent className="space-y-6">

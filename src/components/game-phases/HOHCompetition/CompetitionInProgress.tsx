@@ -4,13 +4,15 @@ import { CompetitionType } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
 import { CompetitionVisual, CompetitionTypeBadge } from '@/components/ui/competition-visual';
-import { Crown, Check } from 'lucide-react';
+import { Crown, Check, SkipForward } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CompetitionInProgressProps {
   competitionType: CompetitionType | null;
+  onSkip?: () => void;
 }
 
-const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competitionType }) => {
+const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competitionType, onSkip }) => {
   const { logger } = useGame();
   
   useEffect(() => {
@@ -36,17 +38,35 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
     return () => clearInterval(phaseInterval);
   }, [logger, phases]);
   
+  const handleSkip = () => {
+    document.dispatchEvent(new Event('game:fastForward'));
+    onSkip?.();
+  };
+  
   return (
     <GameCard variant="primary">
       <GameCardHeader variant="primary" icon={Crown}>
-        <GameCardTitle>Head of Household Competition</GameCardTitle>
-        <GameCardDescription>
-          {competitionType ? (
-            <CompetitionTypeBadge type={competitionType} className="mt-1" />
-          ) : (
-            'Competition in Progress'
-          )}
-        </GameCardDescription>
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <GameCardTitle>Head of Household Competition</GameCardTitle>
+            <GameCardDescription>
+              {competitionType ? (
+                <CompetitionTypeBadge type={competitionType} className="mt-1" />
+              ) : (
+                'Competition in Progress'
+              )}
+            </GameCardDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSkip}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <SkipForward className="h-4 w-4 mr-1" />
+            Skip
+          </Button>
+        </div>
       </GameCardHeader>
       
       <GameCardContent className="space-y-6">
@@ -105,6 +125,18 @@ const CompetitionInProgress: React.FC<CompetitionInProgressProps> = ({ competiti
           <p className="text-xs text-muted-foreground mt-2 italic animate-pulse">
             Results coming soon...
           </p>
+        </div>
+        
+        {/* Skip Button */}
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            onClick={handleSkip}
+            className="gap-2"
+          >
+            <SkipForward className="h-4 w-4" />
+            Skip to Results
+          </Button>
         </div>
       </GameCardContent>
     </GameCard>
