@@ -117,10 +117,10 @@ const GameSidebar: React.FC = () => {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="houseguests" className="mt-2">
-          <Card className="game-card">
+          <Card className="game-card overflow-hidden">
             <ScrollArea className="h-[400px]">
-              <CardContent className="p-3">
-                <HouseguestListComponent />
+              <CardContent className="p-3 overflow-hidden">
+                <HouseguestListComponent compact />
               </CardContent>
             </ScrollArea>
           </Card>

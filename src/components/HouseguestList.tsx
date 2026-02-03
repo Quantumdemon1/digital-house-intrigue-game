@@ -1,10 +1,13 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGame } from '@/contexts/GameContext';
-import HouseguestCard from './HouseguestCard';
+import HouseguestCardCompact from './houseguest/HouseguestCardCompact';
 
-const HouseguestList: React.FC = () => {
+interface HouseguestListProps {
+  compact?: boolean;
+}
+
+const HouseguestList: React.FC<HouseguestListProps> = ({ compact = true }) => {
   const { gameState } = useGame();
   
   // Group houseguests by status
@@ -16,14 +19,20 @@ const HouseguestList: React.FC = () => {
   );
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 overflow-hidden">
       {/* Active houseguests */}
       {activeHouseguests.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Active Houseguests</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            Active ({activeHouseguests.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-1.5">
             {activeHouseguests.map(houseguest => (
-              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+              <HouseguestCardCompact 
+                key={houseguest.id} 
+                houseguest={houseguest} 
+                showRelationship
+              />
             ))}
           </div>
         </div>
@@ -31,11 +40,13 @@ const HouseguestList: React.FC = () => {
       
       {/* Finalists */}
       {finalistsHouseguests.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Finalists</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            Finalists ({finalistsHouseguests.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-1.5">
             {finalistsHouseguests.map(houseguest => (
-              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+              <HouseguestCardCompact key={houseguest.id} houseguest={houseguest} />
             ))}
           </div>
         </div>
@@ -43,11 +54,13 @@ const HouseguestList: React.FC = () => {
       
       {/* Jury members */}
       {juryHouseguests.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Jury Members</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            Jury ({juryHouseguests.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-1.5">
             {juryHouseguests.map(houseguest => (
-              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+              <HouseguestCardCompact key={houseguest.id} houseguest={houseguest} />
             ))}
           </div>
         </div>
@@ -55,11 +68,13 @@ const HouseguestList: React.FC = () => {
       
       {/* Evicted houseguests */}
       {evictedHouseguests.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Evicted Houseguests</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            Evicted ({evictedHouseguests.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-1.5">
             {evictedHouseguests.map(houseguest => (
-              <HouseguestCard key={houseguest.id} houseguest={houseguest} />
+              <HouseguestCardCompact key={houseguest.id} houseguest={houseguest} />
             ))}
           </div>
         </div>
