@@ -168,10 +168,10 @@ const CompletedStage: React.FC<CompletedStageProps> = ({
         <Button 
           onClick={handleContinue} 
           size="lg"
-          className="bg-bb-blue hover:bg-bb-blue/90 text-white"
+          className="bg-bb-blue hover:bg-bb-blue/90 text-white gap-2"
         >
           Continue to Eviction
-          <ArrowRight className="ml-2 h-5 w-5" />
+          <ArrowRight className="h-5 w-5" />
         </Button>
       </div>
     </div>
