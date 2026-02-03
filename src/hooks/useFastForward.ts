@@ -47,7 +47,8 @@ export function useFastForward() {
         handleHouseguestEviction(
           dispatch, 
           evictedNominee, 
-          gameState.week >= 5
+          gameState.week >= 5,
+          gameState.week
         );
         
         // Complete the eviction process

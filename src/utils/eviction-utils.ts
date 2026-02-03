@@ -9,14 +9,29 @@ import { Houseguest } from '@/models/houseguest';
  * @param dispatch - The dispatch function from the Game context
  * @param evictedHouseguest - The houseguest being evicted
  * @param isJuryEligible - Whether the houseguest is eligible for jury (usually based on week number)
+ * @param week - The current week number for logging
  */
 export const handleHouseguestEviction = (
   dispatch: Dispatch<GameAction>,
   evictedHouseguest: Houseguest,
-  isJuryEligible: boolean
+  isJuryEligible: boolean,
+  week: number
 ) => {
   console.log(`Evicting houseguest: ${evictedHouseguest.name} (${evictedHouseguest.id})`, 
     isJuryEligible ? 'to jury' : 'from house');
+  
+  // Log the eviction event
+  dispatch({
+    type: 'LOG_EVENT',
+    payload: {
+      week: week,
+      phase: 'Eviction',
+      type: 'EVICTION',
+      description: `${evictedHouseguest.name} was evicted from the Big Brother house${isJuryEligible ? ' and joined the jury' : ''}.`,
+      involvedHouseguests: [evictedHouseguest.id],
+      metadata: { toJury: isJuryEligible }
+    }
+  });
   
   // Step 1: Dispatch player action for eviction
   dispatch({
