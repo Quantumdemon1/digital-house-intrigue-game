@@ -255,18 +255,18 @@ const GameSummary: React.FC<GameSummaryProps> = ({ gameState: propGameState }) =
                 </li>
               ))}
               
-            {gameState.juryMembers.map((hg, index) => (
-              <li key={hg.id} className="flex items-center gap-3">
+            {gameState.juryMembers?.filter(hg => hg && hg.name).map((hg, index) => (
+              <li key={hg.id || `jury-${index}`} className="flex items-center gap-3">
                 <div className="flex-1 flex items-center gap-2">
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
                     {hg.avatarUrl ? (
                       <img src={hg.avatarUrl} alt={hg.name} className="w-full h-full object-cover" />
                     ) : (
-                      hg.name.charAt(0)
+                      hg.name?.charAt(0) || '?'
                     )}
                   </div>
                   <div>
-                    <span className="font-medium">{hg.name}</span>
+                    <span className="font-medium">{hg.name || 'Unknown'}</span>
                     {hg.isPlayer && <span className="ml-2 text-xs text-blue-600">(You)</span>}
                   </div>
                 </div>
