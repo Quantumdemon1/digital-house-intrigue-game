@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { useToast } from '@/hooks/use-toast';
 import { updateHouseguestMentalState } from '@/models/houseguest';
+import { useGame } from '@/contexts/GameContext';
 
 interface UseNominationCeremonyReturn {
   nominees: Houseguest[];
@@ -21,6 +22,7 @@ export const useNominationCeremony = (hoh: Houseguest | null): UseNominationCere
   const [isNominating, setIsNominating] = useState(false);
   const [ceremonyComplete, setCeremonyComplete] = useState(false);
   const { toast } = useToast();
+  const { dispatch, gameState } = useGame();
   
   // Start the ceremony
   const startCeremony = useCallback(() => {
@@ -48,6 +50,19 @@ export const useNominationCeremony = (hoh: Houseguest | null): UseNominationCere
       return;
     }
     
+    // Log the nomination event
+    dispatch({
+      type: 'LOG_EVENT',
+      payload: {
+        week: gameState.week,
+        phase: 'Nomination',
+        type: 'NOMINATION',
+        description: `${hoh?.name} nominated ${nominees.map(n => n.name).join(' and ')} for eviction.`,
+        involvedHouseguests: [hoh?.id, ...nominees.map(n => n.id)].filter(Boolean),
+        metadata: { hohId: hoh?.id, nomineeIds: nominees.map(n => n.id) }
+      }
+    });
+    
     // Set ceremony as complete
     setIsNominating(false);
     setCeremonyComplete(true);
@@ -64,7 +79,7 @@ export const useNominationCeremony = (hoh: Houseguest | null): UseNominationCere
       description: `${nominees.map(n => n.name).join(' and ')} have been nominated.`,
       variant: "default"
     });
-  }, [nominees, toast]);
+  }, [nominees, toast, dispatch, gameState.week, hoh]);
   
   return {
     nominees,

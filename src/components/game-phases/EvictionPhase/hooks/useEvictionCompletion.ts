@@ -24,7 +24,8 @@ export function useEvictionCompletion() {
     handleHouseguestEviction(
       dispatch, 
       evictedHouseguest, 
-      gameState.week >= 5  // Jury eligibility typically starts around week 5
+      gameState.week >= 5,  // Jury eligibility typically starts around week 5
+      gameState.week
     );
     
     toast({

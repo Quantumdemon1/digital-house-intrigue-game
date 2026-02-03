@@ -5,13 +5,13 @@ import { useGame } from '@/contexts/GameContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const GameLog: React.FC = () => {
-  const { game } = useGame();
+  const { gameState } = useGame();
   
-  if (!game) {
+  if (!gameState) {
     return <p>No game data available.</p>;
   }
   
-  const events = game.gameLog || [];
+  const events = gameState.gameLog || [];
   
   return (
     <Card>
