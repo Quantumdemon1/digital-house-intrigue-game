@@ -1,160 +1,151 @@
 
-# Plan: Fix Game Event Log Not Tracking Key Events
 
-## Problem Analysis
+# Plan: Fix Competition Results UI Overlapping
 
-The Game Event Log is not tracking HoH wins, PoV wins, nominations, and evictions. After investigating the codebase, I found **two main issues**:
+## Problem Summary
 
-### Issue 1: GameEventLog reads from stale `game` object instead of `gameState`
+When a houseguest wins a competition (HoH or PoV), the results screen has severe overlapping UI elements:
 
-```typescript
-// Current (broken) in GameEventLog.tsx
-const { game } = useGame();
-const events = game.gameLog || [];  // Always empty - never synced!
-```
+1. The winner avatar is positioned outside its container using absolute positioning with `-bottom-8`, causing it to overlap with the "Wins!" text inside the CompetitionVisual
+2. An extra Crown/Trophy icon is placed above the avatar at `-top-3`, overlapping with the avatar's own status badge
+3. The winner's name appears in 3 places: CompetitionVisual, the overlaid avatar, and the text section below - creating visual redundancy
 
-The `game` object (BigBrotherGame instance) is initialized once and never updated. All LOG_EVENT dispatches update `gameState.gameLog` in the reducer, but `game.gameLog` stays empty.
+## Root Cause
 
-### Issue 2: Missing LOG_EVENT dispatches in key phases
-
-| Phase | LOG_EVENT Dispatch | Status |
-|-------|-------------------|--------|
-| HoH Competition | `useCompetitionResults.ts:60` | Works (but data goes to gameState, not game) |
-| Nominations | `useNominationCeremony.ts` | MISSING - no LOG_EVENT dispatch |
-| PoV Competition | `POVCompetition/index.tsx:116` | Works (but data goes to gameState) |
-| PoV Meeting | `useNomineeReplacement.ts:75` | Works (but data goes to gameState) |
-| Eviction | `eviction-utils.ts`, `eviction-reducer.ts` | MISSING - no LOG_EVENT dispatch |
-
----
+The layout uses `position: absolute` with negative offsets to position the avatar partially outside its parent container. This creates a stacking conflict where:
+- CompetitionVisual shows "{name} Wins!" text
+- StatusAvatar with initials overlays on top of that text
+- Additional Crown icon overlays on the avatar badge
+- Status badge from StatusAvatar (HoH crown/PoV shield) adds yet another icon layer
 
 ## Solution
 
-### Fix 1: Update GameEventLog.tsx to read from `gameState`
+Restructure the layout to avoid negative positioning and remove redundant elements:
 
-Change the component to use the reducer state instead of the stale game object:
+1. **Remove the overlapping avatar from CompetitionVisual area** - place it below in a proper flow layout
+2. **Remove the extra Crown/Trophy icon** - the StatusAvatar already has a status badge
+3. **Simplify the winner display** - show avatar and name in a single, clean section
 
-```typescript
-// Before
-const { game } = useGame();
-const events = game.gameLog || [];
+---
 
-// After
-const { gameState } = useGame();
-const events = gameState.gameLog || [];
-```
+## Technical Changes
 
-### Fix 2: Add LOG_EVENT dispatch to Nomination phase
+### File: `src/components/game-phases/HOHCompetition/CompetitionResults.tsx`
 
-**File**: `src/components/game-phases/NominationPhase/hooks/useNominationCeremony.ts`
-
-Add event logging when nominations are confirmed:
-
-```typescript
-import { useGame } from '@/contexts/GameContext';
-
-export const useNominationCeremony = (hoh: Houseguest | null): UseNominationCeremonyReturn => {
-  const { dispatch, gameState } = useGame();  // Add this
-  // ... existing code ...
+**Before (problematic layout):**
+```tsx
+<div className="relative">
+  <CompetitionVisual type={...} status="complete" winner={winner.name} />
   
-  const confirmNominations = useCallback(() => {
-    // ... existing validation ...
-    
-    // Log the nomination event
-    dispatch({
-      type: 'LOG_EVENT',
-      payload: {
-        week: gameState.week,
-        phase: 'Nomination',
-        type: 'NOMINATION',
-        description: `${hoh?.name} nominated ${nominees.map(n => n.name).join(' and ')} for eviction.`,
-        involvedHouseguests: [hoh?.id, ...nominees.map(n => n.id)].filter(Boolean),
-        metadata: { hohId: hoh?.id, nomineeIds: nominees.map(n => n.id) }
-      }
-    });
-    
-    // ... rest of existing code ...
-  }, [nominees, toast, dispatch, gameState.week, hoh]);
+  {/* Avatar OVERLAPPING the visual with negative positioning */}
+  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+    <StatusAvatar ... />
+    <div className="absolute -top-3">  {/* Extra crown OVERLAPPING avatar */}
+      <Crown ... />
+    </div>
+  </div>
+</div>
 ```
 
-### Fix 3: Add LOG_EVENT dispatch to Eviction phase
+**After (clean layout):**
+```tsx
+{/* Competition Visual - no avatar overlay */}
+<CompetitionVisual type={...} status="complete" winner={winner.name} />
 
-**File**: `src/utils/eviction-utils.ts`
-
-Add event logging when a houseguest is evicted:
-
-```typescript
-export const handleHouseguestEviction = (
-  dispatch: Dispatch<GameAction>,
-  evictedHouseguest: Houseguest,
-  isJuryEligible: boolean,
-  week: number  // Add week parameter
-) => {
-  // Log the eviction event
-  dispatch({
-    type: 'LOG_EVENT',
-    payload: {
-      week: week,
-      phase: 'Eviction',
-      type: 'EVICTION',
-      description: `${evictedHouseguest.name} was evicted from the Big Brother house${isJuryEligible ? ' and joined the jury' : ''}.`,
-      involvedHouseguests: [evictedHouseguest.id],
-      metadata: { toJury: isJuryEligible }
-    }
-  });
+{/* Winner Section - properly positioned below */}
+<div className="flex flex-col items-center pt-4 space-y-4">
+  <StatusAvatar 
+    name={winner.name}
+    status="hoh"
+    size="xl"
+    isPlayer={winner.isPlayer}
+    showBadge={true}
+    className="animate-celebrate-winner"
+  />
   
-  // ... existing eviction dispatch logic ...
-};
+  <div className="text-center space-y-1">
+    <h3 className="text-sm font-medium text-muted-foreground uppercase">
+      New Head of Household
+    </h3>
+    <p className="text-3xl font-bold font-display text-bb-gold">
+      {winner.name}
+    </p>
+    <p className="text-sm text-muted-foreground">
+      {winner.isPlayer 
+        ? "Congratulations! You are the new HoH!" 
+        : `${winner.name} has won!`}
+    </p>
+  </div>
+</div>
 ```
 
-**File**: `src/components/game-phases/EvictionPhase/hooks/useEvictionCompletion.ts`
+### File: `src/components/game-phases/POVCompetition/CompetitionResults.tsx`
 
-Update the call to pass the week:
+Apply the same fix - remove absolute positioning and extra trophy icon.
 
-```typescript
-handleHouseguestEviction(
-  dispatch, 
-  evictedHouseguest, 
-  gameState.week >= 5,
-  gameState.week  // Pass week
-);
+---
+
+## Layout Comparison
+
+### Current Layout (Broken)
+```text
++----------------------------------+
+|      CompetitionVisual           |
+|   +-----------------------+      |
+|   |    [Trophy Icon]      |      |
+|   |   "Taylor Kim Wins!"  |      |
+|   |      [TK Avatar]      |  <- OVERLAPPING here!
+|   |   [Crown] [Crown]     |  <- Two icons!
+|   +-----------------------+      |
+|                                  |
+|   NEW HEAD OF HOUSEHOLD          |
+|      Taylor Kim                  |  <- Name shown 3 times
++----------------------------------+
+```
+
+### Fixed Layout (Clean)
+```text
++----------------------------------+
+|      CompetitionVisual           |
+|   +-----------------------+      |
+|   |    [Trophy Icon]      |      |
+|   |   "Taylor Kim Wins!"  |      |
+|   +-----------------------+      |
+|                                  |
+|         [TK Avatar]              |  <- Properly below
+|         [HoH Badge]              |  <- Single status badge
+|                                  |
+|   NEW HEAD OF HOUSEHOLD          |
+|      Taylor Kim                  |
++----------------------------------+
 ```
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/GameEventLog.tsx` | Use `gameState.gameLog` instead of `game.gameLog` |
-| `src/components/game-phases/NominationPhase/hooks/useNominationCeremony.ts` | Add LOG_EVENT dispatch for nominations |
-| `src/utils/eviction-utils.ts` | Add LOG_EVENT dispatch for evictions |
-| `src/components/game-phases/EvictionPhase/hooks/useEvictionCompletion.ts` | Pass `gameState.week` to eviction utility |
+| File | Changes |
+|------|---------|
+| `src/components/game-phases/HOHCompetition/CompetitionResults.tsx` | Remove absolute positioning on avatar, remove extra Crown icon, clean up layout |
+| `src/components/game-phases/POVCompetition/CompetitionResults.tsx` | Apply same fixes - remove absolute positioning and extra Trophy icon |
 
 ---
 
-## Event Types to Track
+## Additional Improvements
 
-After implementation, the game log will record:
-
-| Event | Description Example |
-|-------|---------------------|
-| HoH Win | "Alex won the Head of Household competition." |
-| Nominations | "Alex nominated Jamie and Sam for eviction." |
-| PoV Win | "Jordan won the Power of Veto competition (mental - Mental stat favored)." |
-| Veto Used/Not Used | "Jordan used the Power of Veto on Sam." or "Jordan chose not to use the Power of Veto." |
-| Replacement Nominee | "Alex nominated Casey as a replacement nominee." |
-| Eviction | "Jamie was evicted from the Big Brother house and joined the jury." |
+1. **Reduce avatar size** from `xl` to `lg` if needed for better proportions
+2. **Add proper spacing** using Tailwind gap utilities instead of negative margins
+3. **Consider reducing CompetitionVisual height** on completion state since the avatar no longer overlaps
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Start a new game and play through Week 1
-- [ ] Click "Game History" button to view the Event Log tab
-- [ ] Verify HoH competition win is logged
-- [ ] Verify nominations are logged with both nominee names
-- [ ] Verify PoV competition win is logged
-- [ ] Verify veto decision is logged
-- [ ] Verify eviction is logged with jury status
-- [ ] Check that events appear in chronological order
+- [ ] Play through an HoH competition and verify results screen has no overlapping elements
+- [ ] Verify the winner avatar displays below the competition visual, not on top
+- [ ] Verify only ONE status badge (crown for HoH) appears, not duplicate icons
+- [ ] Play through a PoV competition and verify same clean layout
+- [ ] Test on mobile viewport to ensure layout is responsive
+- [ ] Verify animations still work smoothly (celebrate-winner animation)
+
