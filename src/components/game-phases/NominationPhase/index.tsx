@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
 import { useGame } from '@/contexts/GameContext';
-import NominationHeader from './components/NominationHeader';
+import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
 import NominationContent from './components/NominationContent';
 import NominationFooter from './components/NominationFooter';
 import { useNominationCeremony } from './hooks/useNominationCeremony';
 import { useNominationTimer } from './hooks/useNominationTimer';
 import { useAINomination } from './hooks/useAINomination';
 import AIDecisionDisplay from './AIDecisionDisplay';
-import { Houseguest } from '@/models/houseguest';
+import { Crown, Target } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const NominationPhase: React.FC = () => {
   const {
@@ -20,11 +20,9 @@ const NominationPhase: React.FC = () => {
     logger
   } = useGame();
 
-  // Convert HoH ID to Houseguest object
   const hohId = gameState?.hohWinner?.id;
   const hoh = hohId ? getHouseguestById(hohId) : null;
   
-  // Local state and ceremony hooks
   const { 
     nominees, 
     setNominees,
@@ -42,15 +40,12 @@ const NominationPhase: React.FC = () => {
     resetTimer
   } = useNominationTimer(60);
   
-  // Get all eligible houseguests (active and not HoH)
   const potentialNominees = gameState.houseguests.filter(
     hg => hg.status === 'Active' && hg.id !== hohId
   );
 
-  // Determine if player is HoH
   const isPlayerHoH = hoh?.isPlayer ?? false;
 
-  // Handle AI nomination if HoH is AI-controlled
   const {
     aiProcessed,
     showAIDecision,
@@ -66,7 +61,6 @@ const NominationPhase: React.FC = () => {
     setNominees
   });
 
-  // Continue to Power of Veto phase
   const continueToPoV = () => {
     if (nominees.length !== 2) {
       return;
@@ -81,7 +75,6 @@ const NominationPhase: React.FC = () => {
     });
   };
 
-  // After nominations are confirmed, update game state
   useEffect(() => {
     if (ceremonyComplete && nominees.length === 2) {
       dispatch({
@@ -92,28 +85,41 @@ const NominationPhase: React.FC = () => {
   }, [ceremonyComplete, nominees, dispatch]);
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
-      <NominationHeader 
-        hoh={hoh}
-        ceremonyComplete={ceremonyComplete}
-        week={gameState.week}
-      />
+    <GameCard variant="danger" className="w-full max-w-4xl mx-auto animate-fade-in">
+      <GameCardHeader variant="danger" icon={Target}>
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <GameCardTitle>Nomination Ceremony</GameCardTitle>
+            <GameCardDescription>
+              {gameState.week && `Week ${gameState.week}`}
+              {hoh && ` • Head of Household: ${hoh.name}`}
+              {ceremonyComplete && ' • Nominations Complete'}
+            </GameCardDescription>
+          </div>
+          {hoh && (
+            <Badge variant="outline" className="bg-bb-gold/10 text-white border-white/30">
+              <Crown className="h-3 w-3 mr-1" /> {hoh.name}
+            </Badge>
+          )}
+        </div>
+      </GameCardHeader>
       
-      {!ceremonyComplete ? (
-        <NominationContent 
-          hoh={hoh!} 
-          startCeremony={startCeremony}
-          isPlayerHoH={isPlayerHoH}
-        />
-      ) : (
-        <NominationFooter 
-          nominees={nominees}
-          ceremonyComplete={ceremonyComplete}
-          continueToPoV={continueToPoV}
-        />
-      )}
+      <GameCardContent>
+        {!ceremonyComplete ? (
+          <NominationContent 
+            hoh={hoh!} 
+            startCeremony={startCeremony}
+            isPlayerHoH={isPlayerHoH}
+          />
+        ) : (
+          <NominationFooter 
+            nominees={nominees}
+            ceremonyComplete={ceremonyComplete}
+            continueToPoV={continueToPoV}
+          />
+        )}
+      </GameCardContent>
       
-      {/* AI Decision Display */}
       {showAIDecision && aiDecision && hoh && (
         <AIDecisionDisplay
           hohName={hoh.name}
@@ -123,7 +129,7 @@ const NominationPhase: React.FC = () => {
           onClose={handleCloseAIDecision}
         />
       )}
-    </Card>
+    </GameCard>
   );
 };
 

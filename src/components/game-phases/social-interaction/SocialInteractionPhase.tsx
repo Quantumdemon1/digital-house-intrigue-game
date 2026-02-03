@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGame } from '@/contexts/GameContext';
-import { Users } from 'lucide-react'; // Add the missing import
+import { Users, MessageCircle, Clock } from 'lucide-react';
+import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
+import { Badge } from '@/components/ui/badge';
 import LocationDisplay from './LocationDisplay';
 import InteractionsCounter from './InteractionsCounter';
 import ActionSections from './ActionSections';
@@ -22,7 +23,6 @@ const SocialInteractionPhase: React.FC = () => {
     isOpen: false
   });
 
-  // Initialize enhanced logger when game is available
   useEffect(() => {
     if (game) {
       setEnhancedLogger(new EnhancedGameLogger(game, logger));
@@ -30,16 +30,21 @@ const SocialInteractionPhase: React.FC = () => {
   }, [game, logger]);
 
   if (!game || !game.currentState || !(game.currentState.constructor.name === 'SocialInteractionState')) {
-    return <Card><CardContent className="pt-6">Loading Social Phase...</CardContent></Card>;
+    return (
+      <GameCard className="animate-pulse">
+        <GameCardContent>
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            Loading Social Phase...
+          </div>
+        </GameCardContent>
+      </GameCard>
+    );
   }
 
   const currentState = game.currentState;
-  
-  // Get available actions from the state
   const availableActions = currentState.getAvailableActions();
 
   const handleActionClick = (actionId: string, params?: any) => {
-    // Special handling for certain actions that need dialogs
     if (actionId === 'strategic_discussion') {
       setDialogAction({
         type: 'strategic_discussion',
@@ -58,7 +63,6 @@ const SocialInteractionPhase: React.FC = () => {
       return;
     }
     
-    // Log the action with enhanced details
     if (enhancedLogger) {
       const playerHG = game.getHouseguestById(game.houseguests.find(h => h.isPlayer)?.id || '');
       enhancedLogger.logEvent({
@@ -69,7 +73,6 @@ const SocialInteractionPhase: React.FC = () => {
       });
     }
     
-    // Standard action dispatch
     logger.info(`Player triggering social action: ${actionId}`);
     dispatch({ 
       type: 'PLAYER_ACTION', 
@@ -77,24 +80,29 @@ const SocialInteractionPhase: React.FC = () => {
     });
   };
 
-  // Handle dialog closures
   const handleCloseDialog = () => {
     setDialogAction(prev => ({ ...prev, isOpen: false }));
   };
 
   return (
-    <Card className="shadow-lg border-blue-300 dark:border-blue-700">
-      <CardHeader className="bg-blue-100 dark:bg-blue-900/30">
-        <CardTitle className="flex items-center">
-          <Users className="mr-2 text-blue-600" /> Social Phase
-        </CardTitle>
-        <CardDescription>
-          Week {game.week} - Interact with other houseguests.
-        </CardDescription>
-      </CardHeader>
+    <GameCard variant="primary" className="w-full max-w-4xl mx-auto animate-fade-in">
+      <GameCardHeader variant="primary" icon={Users}>
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <GameCardTitle>Social Phase</GameCardTitle>
+            <GameCardDescription>
+              Week {game.week} - Interact with other houseguests
+            </GameCardDescription>
+          </div>
+          <Badge variant="outline" className="bg-white/10 text-white border-white/30">
+            <Clock className="h-3 w-3 mr-1" />
+            {currentState.interactionsRemaining} Actions
+          </Badge>
+        </div>
+      </GameCardHeader>
       
-      <CardContent className="pt-6 space-y-6">
-        {/* Location and Present Guests */}
+      <GameCardContent className="space-y-6">
+        {/* Location Display */}
         <LocationDisplay 
           currentLocation={game.currentLocation}
           activeGuests={game.getActiveHouseguests()}
@@ -108,9 +116,9 @@ const SocialInteractionPhase: React.FC = () => {
           availableActions={availableActions}
           onActionClick={handleActionClick}
         />
-      </CardContent>
+      </GameCardContent>
       
-      {/* Dialog components */}
+      {/* Dialogs */}
       {dialogAction.type === 'strategic_discussion' && (
         <StrategicDiscussionDialog 
           open={dialogAction.isOpen}
@@ -126,7 +134,7 @@ const SocialInteractionPhase: React.FC = () => {
           params={dialogAction.params}
         />
       )}
-    </Card>
+    </GameCard>
   );
 };
 
