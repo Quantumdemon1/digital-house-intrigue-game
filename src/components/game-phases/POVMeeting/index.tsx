@@ -1,27 +1,33 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
+import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
+import { Badge } from '@/components/ui/badge';
 import POVMeetingContent from './POVMeetingContent';
 
 const POVMeeting: React.FC = () => {
   const { gameState } = useGame();
   
   return (
-    <Card className="shadow-lg border-bb-green">
-      <CardHeader className="bg-bb-green text-bb-dark">
-        <CardTitle className="flex items-center">
-          <Shield className="mr-2" /> Power of Veto Meeting
-        </CardTitle>
-        <CardDescription className="text-bb-dark/80">
-          Week {gameState.week}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
+    <GameCard variant="success" className="w-full max-w-4xl mx-auto animate-fade-in">
+      <GameCardHeader variant="success" icon={Shield}>
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <GameCardTitle>Power of Veto Meeting</GameCardTitle>
+            <GameCardDescription>
+              Week {gameState.week}
+            </GameCardDescription>
+          </div>
+          <Badge variant="outline" className="bg-white/10 text-white border-white/30">
+            <Shield className="h-3 w-3 mr-1" /> Veto Ceremony
+          </Badge>
+        </div>
+      </GameCardHeader>
+      <GameCardContent>
         <POVMeetingContent />
-      </CardContent>
-    </Card>
+      </GameCardContent>
+    </GameCard>
   );
 };
 
