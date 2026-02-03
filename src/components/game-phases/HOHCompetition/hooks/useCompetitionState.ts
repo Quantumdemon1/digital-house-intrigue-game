@@ -153,12 +153,14 @@ export const useCompetitionState = () => {
         payload: competitionWinner
       });
       
-      // IMMEDIATE phase change for fast forward reliability
+      // Wait for state to propagate before phase change to avoid race condition
       logger?.info(`Fast forward: Advancing to nomination phase with ${competitionWinner.name} as HoH`);
-      dispatch({
-        type: 'SET_PHASE',
-        payload: 'Nomination'
-      });
+      setTimeout(() => {
+        dispatch({
+          type: 'SET_PHASE',
+          payload: 'Nomination'
+        });
+      }, 100);
     } catch (error) {
       logger?.error("Error during fast forward winner selection:", error);
     }
