@@ -315,20 +315,52 @@ The `game-progress-reducer.ts` needs updated phase transition logic to match the
 
 ## Implementation Priority Matrix
 
-| Feature | Impact | Effort | Priority |
-|---------|--------|--------|----------|
-| Nominee Speeches | High | Medium | Week 1 |
-| HoH Tiebreaker Integration | High | Low | Week 1 |
-| Correct Phase Order | High | Medium | Week 1 |
-| POV Chip Draw Animation | Medium | Medium | Week 2 |
-| Jury Vote Reveal Ceremony | High | Medium | Week 2 |
-| Final Speeches | Medium | Medium | Week 2 |
-| Skip Button Consistency | Medium | Low | Week 2 |
-| Host Narration System | Low | Medium | Week 3 |
-| Double Eviction | Medium | High | Week 3 |
-| Phase Transition Animations | Low | Low | Week 3 |
-| Competition Play-by-Play | Low | Medium | Week 4 |
-| Have-Not System | Low | High | Backlog |
+| Feature | Impact | Effort | Priority | Status |
+|---------|--------|--------|----------|--------|
+| Nominee Speeches | High | Medium | Week 1 | ✅ DONE |
+| HoH Tiebreaker Integration | High | Low | Week 1 | ✅ DONE |
+| Correct Phase Order | High | Medium | Week 1 | ✅ DONE |
+| POV Chip Draw Animation | Medium | Medium | Week 2 | Pending |
+| Jury Vote Reveal Ceremony | High | Medium | Week 2 | Pending |
+| Final Speeches | Medium | Medium | Week 2 | Pending |
+| Skip Button Consistency | Medium | Low | Week 2 | Pending |
+| Host Narration System | Low | Medium | Week 3 | Pending |
+| Double Eviction | Medium | High | Week 3 | Pending |
+| Phase Transition Animations | Low | Low | Week 3 | Pending |
+| Competition Play-by-Play | Low | Medium | Week 4 | Pending |
+| Have-Not System | Low | High | Backlog | Pending |
+
+---
+
+## Completed Features
+
+### Week 1 Implementation (COMPLETE)
+
+#### 1. Nominee Speeches (`NomineeSpeeches.tsx`)
+- Created new component with 30-second timer per nominee
+- Player can write custom speech when nominated
+- AI generates contextual plea speeches for NPCs
+- Skip individual or all speeches with button
+- Fast-forward event integration
+- Animated speech reveal with speaker progress dots
+
+#### 2. HoH Tiebreaker Integration
+- Enhanced `HohTiebreaker.tsx` with dramatic UI
+- Automatic tie detection in `useEvictionPhase.ts`
+- New 'tiebreaker' stage in eviction flow
+- AI HoH makes decision with thinking delay
+- Player HoH gets choice buttons
+- Fast-forward support for AI decisions
+
+#### 3. Correct Phase Order (BB USA Format)
+- Updated `game-progress-reducer.ts` with documentation
+- Social Interaction now occurs AFTER Eviction, before next HoH
+- Week flow: HoH → Nomination → PoVPlayerSelection → PoV → PoVMeeting → Eviction → SocialInteraction
+
+#### 4. Eviction Stage System Update
+- Added 'speeches' and 'tiebreaker' stages to `useEvictionStages.ts`
+- Updated all eviction hooks for new stage types
+- Stage header badge shows current stage name
 
 ---
 
@@ -337,8 +369,8 @@ The `game-progress-reducer.ts` needs updated phase transition logic to match the
 After implementation, verify:
 - [ ] Complete game playthrough from Week 1 to Finale
 - [ ] Player as HoH completes all ceremonies correctly
-- [ ] Player as nominee can give speech and campaign
-- [ ] Tiebreaker triggers correctly when votes are equal
+- [x] Player as nominee can give speech and campaign
+- [x] Tiebreaker triggers correctly when votes are equal
 - [ ] Skip buttons work on all animated sequences
 - [ ] Jury voting reveals correctly with dramatic pacing
 - [ ] Winner is crowned with proper celebration

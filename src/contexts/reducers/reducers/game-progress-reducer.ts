@@ -3,6 +3,18 @@ import { GameState, GamePhase } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { HouseguestStatus } from '../../../models/houseguest';
 
+/**
+ * Big Brother USA Weekly Cycle Order:
+ * 1. HoH Competition
+ * 2. Nomination Ceremony
+ * 3. PoV Player Selection
+ * 4. PoV Competition  
+ * 5. PoV Meeting (Veto Ceremony)
+ * 6. Eviction
+ * 7. Social Interaction (between weeks)
+ * 8. Next Week's HoH Competition
+ */
+
 export function gameProgressReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'SET_PHASE':
@@ -61,6 +73,15 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
             phase: 'Finale' as GamePhase,
           };
         }
+      }
+      
+      // BB USA Format: Social Interaction happens AFTER Eviction, before next HoH
+      // This is the "between weeks" period
+      if (normalizedPhase === 'socialinteraction') {
+        return {
+          ...state,
+          phase: 'SocialInteraction' as GamePhase,
+        };
       }
       
       // For regular phases, directly set the phase as provided
