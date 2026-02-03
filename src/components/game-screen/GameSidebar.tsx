@@ -13,11 +13,15 @@ import { StatusAvatar } from '@/components/ui/status-avatar';
 const GameSidebar: React.FC = () => {
   const { gameState, getHouseguestById } = useGame();
   
-  // Get houseguest data safely
-  const hohHouseguest = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
-  const povHouseguest = gameState.povWinner ? getHouseguestById(gameState.povWinner) : null;
+  // Get houseguest data directly from gameState (they're already full objects)
+  const hohHouseguest = gameState.hohWinner 
+    ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
+    : null;
+  const povHouseguest = gameState.povWinner 
+    ? gameState.houseguests.find(h => h.id === gameState.povWinner.id) || gameState.povWinner
+    : null;
   const nominees = gameState.nominees
-    .map(id => getHouseguestById(id))
+    .map(nominee => gameState.houseguests.find(h => h.id === nominee.id) || nominee)
     .filter(Boolean);
   
   return (

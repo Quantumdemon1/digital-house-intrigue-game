@@ -26,11 +26,15 @@ const NominationPhase: React.FC = () => {
   const [showThoughts, setShowThoughts] = useState(true);
   const [isLoading, setIsLoading] = useState(!gameState.hohWinner);
 
-  // Convert HoH ID to Houseguest object
-  const hoh = gameState?.hohWinner ? getHouseguestById(gameState.hohWinner.id) : null;
+  // Get HoH directly from gameState (it's already a full Houseguest object)
+  const hoh = gameState.hohWinner 
+    ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
+    : null;
 
-  // Convert nominee IDs to Houseguest objects, if they exist
-  const nominees = gameState?.nominees?.map(nomineeId => getHouseguestById(nomineeId.id)).filter(Boolean) || [];
+  // Get nominees from gameState (they're already full Houseguest objects)
+  const nominees = gameState?.nominees?.map(nominee => 
+    gameState.houseguests.find(h => h.id === nominee.id) || nominee
+  ).filter(Boolean) || [];
 
   // Get all eligible houseguests (active and not HoH)
   const eligibleHouseguests = gameState.houseguests.filter(hg => hg.status === 'Active' && hg.id !== hoh?.id);
