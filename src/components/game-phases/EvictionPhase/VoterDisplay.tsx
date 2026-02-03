@@ -1,15 +1,16 @@
 
 import React from 'react';
-import { Clock, User, Brain, Check } from 'lucide-react';
+import { Clock, Brain, Check, Vote } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
+import { StatusAvatar } from '@/components/ui/status-avatar';
 
 interface VoterDisplayProps {
-  voter: Houseguest;  // Added to match what's being passed
+  voter: Houseguest;
   nominees: Houseguest[];
-  votes: Record<string, string>;  // Added to match what's being passed
-  onVoteSubmit: (voterId: string, nomineeId: string) => void;  // Added to match what's being passed
-  onShowDecision?: () => void;  // Made optional to match what's being passed
+  votes: Record<string, string>;
+  onVoteSubmit: (voterId: string, nomineeId: string) => void;
+  onShowDecision?: () => void;
 }
 
 const VoterDisplay: React.FC<VoterDisplayProps> = ({
@@ -23,32 +24,48 @@ const VoterDisplay: React.FC<VoterDisplayProps> = ({
   const isPlayer = voter.isPlayer;
 
   return (
-    <div className="p-3 border rounded-md shadow-sm bg-white">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-            {voter.name.charAt(0)}
-          </div>
-          <div>
-            <p className="font-medium">{voter.name}</p>
-            <p className="text-xs text-muted-foreground">{voter.occupation}</p>
+    <div className={`
+      p-4 rounded-xl border transition-all duration-300
+      ${hasVoted 
+        ? 'bg-bb-green/5 border-bb-green/30' 
+        : isPlayer 
+          ? 'bg-bb-blue/5 border-bb-blue/30' 
+          : 'bg-card border-border hover:border-muted-foreground/30'
+      }
+    `}>
+      <div className="flex justify-between items-center gap-4">
+        <div className="flex items-center gap-3">
+          <StatusAvatar
+            name={voter.name}
+            imageUrl={voter.imageUrl}
+            isPlayer={isPlayer}
+            size="sm"
+          />
+          <div className="min-w-0">
+            <p className="font-medium text-foreground truncate">
+              {voter.name}
+              {isPlayer && <span className="text-bb-blue ml-1">(You)</span>}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">{voter.occupation}</p>
           </div>
         </div>
         
         {hasVoted ? (
-          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
-            <Check className="h-3 w-3 mr-1" /> Voted
+          <span className="flex items-center gap-1 text-xs font-medium bg-bb-green/10 text-bb-green px-3 py-1.5 rounded-full">
+            <Check className="h-3 w-3" /> Voted
           </span>
         ) : isPlayer ? (
-          <div className="space-x-1">
+          <div className="flex gap-2">
             {nominees.map(nominee => (
               <Button 
                 key={nominee.id}
                 size="sm" 
                 variant="destructive"
+                className="bg-bb-red hover:bg-bb-red/90 text-white"
                 onClick={() => onVoteSubmit(voter.id, nominee.id)}
               >
-                Evict {nominee.name}
+                <Vote className="h-3 w-3 mr-1" />
+                {nominee.name}
               </Button>
             ))}
           </div>
@@ -56,14 +73,14 @@ const VoterDisplay: React.FC<VoterDisplayProps> = ({
           <Button
             variant="outline"
             size="sm"
-            className="border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1"
+            className="border-bb-blue/30 text-bb-blue hover:bg-bb-blue/10"
             onClick={onShowDecision}
           >
-            <Brain className="h-3 w-3" /> Show thoughts
+            <Brain className="h-3 w-3 mr-1" /> Thoughts
           </Button>
         ) : (
-          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full flex items-center">
-            <Clock className="h-3 w-3 mr-1" /> Thinking...
+          <span className="flex items-center gap-1 text-xs font-medium bg-amber-500/10 text-amber-600 px-3 py-1.5 rounded-full animate-pulse">
+            <Clock className="h-3 w-3" /> Thinking...
           </span>
         )}
       </div>
