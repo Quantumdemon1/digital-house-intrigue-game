@@ -1,20 +1,30 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useEvictionStages } from './hooks/useEvictionStages';
 import { useVotingTimer } from './hooks/useVotingTimer';
 import { useVoteHandler } from './hooks/useVoteHandler';
 import { useEvictionCompletion } from './hooks/useEvictionCompletion';
 import { useTimeExpirationHandler } from './hooks/useTimeExpirationHandler';
+import { Houseguest } from '@/models/houseguest';
 
 export function useEvictionPhase() {
   const { gameState } = useGame();
   
   // Get data from the smaller hooks
-  const { stage, handleProceedToVoting, progressToResults } = useEvictionStages();
+  const { 
+    stage, 
+    handleProceedToVoting, 
+    handleSpeechesComplete,
+    progressToTiebreaker,
+    progressToResults 
+  } = useEvictionStages();
   const { timeRemaining, timerExpired, setTimerExpired, VOTING_TIME_LIMIT } = useVotingTimer(stage);
   const { votes, handleVoteSubmit, handleRandomVotes } = useVoteHandler();
   const { handleEvictionComplete } = useEvictionCompletion();
+  
+  // Tiebreaker state
+  const [tiebreakerVote, setTiebreakerVote] = useState<string | null>(null);
   
   // Get the needed data from game state
   const nominees = gameState.nominees;
@@ -29,6 +39,25 @@ export function useEvictionPhase() {
   
   // Check if player is one of the nominees
   const playerIsNominee = nominees.some(nominee => nominee.isPlayer);
+
+  // Check for tie in votes
+  const checkForTie = useCallback((currentVotes: Record<string, string>): boolean => {
+    if (nominees.length !== 2) return false;
+    
+    const voteCounts = nominees.reduce((counts, nominee) => {
+      counts[nominee.id] = 0;
+      return counts;
+    }, {} as Record<string, number>);
+    
+    Object.values(currentVotes).forEach(nomineeId => {
+      if (voteCounts[nomineeId] !== undefined) {
+        voteCounts[nomineeId]++;
+      }
+    });
+    
+    const voteValues = Object.values(voteCounts);
+    return voteValues.length === 2 && voteValues[0] === voteValues[1];
+  }, [nominees]);
 
   // Set up the time expiration handler
   const { handleTimeExpired } = useTimeExpirationHandler({
@@ -50,19 +79,62 @@ export function useEvictionPhase() {
     }
   }, [timeRemaining, stage, timerExpired, setTimerExpired, handleTimeExpired]);
 
-  // Handle vote submission with automatic transition to results
-  const enhancedVoteSubmit = (voterId: string, nomineeId: string) => {
+  // Handle vote submission with automatic transition to results or tiebreaker
+  const enhancedVoteSubmit = useCallback((voterId: string, nomineeId: string) => {
     handleVoteSubmit(voterId, nomineeId);
     
     // Check if all votes are in after this vote
     const updatedVotes = { ...votes, [voterId]: nomineeId };
     if (Object.keys(updatedVotes).length >= nonNominees.length) {
-      // All votes are in, move to results
+      // All votes are in, check for tie
       setTimeout(() => {
-        progressToResults();
+        if (checkForTie(updatedVotes) && hoh) {
+          // Tie detected - go to tiebreaker
+          progressToTiebreaker();
+        } else {
+          // No tie - go to results
+          progressToResults();
+        }
       }, 2000);
     }
-  };
+  }, [votes, nonNominees.length, checkForTie, hoh, progressToTiebreaker, progressToResults, handleVoteSubmit]);
+
+  // Handle HoH tiebreaker vote
+  const handleTiebreakerVote = useCallback((hohId: string, nomineeId: string) => {
+    setTiebreakerVote(nomineeId);
+    // Add tiebreaker vote and proceed to results
+    handleVoteSubmit(hohId, nomineeId);
+    setTimeout(() => {
+      progressToResults();
+    }, 1500);
+  }, [handleVoteSubmit, progressToResults]);
+
+  // Get evicted houseguest considering tiebreaker
+  const getEvictedHouseguest = useCallback((): Houseguest | null => {
+    if (nominees.length !== 2) return null;
+    
+    // Count all votes including potential tiebreaker
+    const allVotes = { ...votes };
+    if (tiebreakerVote && hoh) {
+      allVotes[hoh.id] = tiebreakerVote;
+    }
+    
+    const voteCounts = nominees.reduce((counts, nominee) => {
+      counts[nominee.id] = 0;
+      return counts;
+    }, {} as Record<string, number>);
+    
+    Object.values(allVotes).forEach(nomineeId => {
+      if (voteCounts[nomineeId] !== undefined) {
+        voteCounts[nomineeId]++;
+      }
+    });
+    
+    // The nominee with MORE votes is evicted
+    return voteCounts[nominees[0].id] > voteCounts[nominees[1].id] 
+      ? nominees[0] 
+      : nominees[1];
+  }, [nominees, votes, tiebreakerVote, hoh]);
 
   return {
     stage,
@@ -73,9 +145,14 @@ export function useEvictionPhase() {
     hoh,
     playerIsNominee,
     isFinal3,
+    tiebreakerVote,
     handleProceedToVoting,
+    handleSpeechesComplete,
     handleVoteSubmit: enhancedVoteSubmit,
+    handleTiebreakerVote,
     handleEvictionComplete,
+    getEvictedHouseguest,
+    checkForTie,
     VOTING_TIME_LIMIT
   };
 }

@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
 import { StatusAvatar } from '@/components/ui/status-avatar';
 import EvictionInteractionStage from './EvictionPhase/EvictionInteractionStage';
+import NomineeSpeeches from './EvictionPhase/NomineeSpeeches';
 import EvictionVoting from './EvictionPhase/EvictionVoting';
 import EvictionResults from './EvictionPhase/EvictionResults';
+import HohTiebreaker from './EvictionPhase/HohTiebreaker';
 import { useEvictionPhase } from './EvictionPhase/useEvictionPhase';
 
 const EvictionPhase: React.FC = () => {
@@ -25,7 +27,9 @@ const EvictionPhase: React.FC = () => {
     playerIsNominee,
     isFinal3,
     handleProceedToVoting,
+    handleSpeechesComplete,
     handleVoteSubmit,
+    handleTiebreakerVote,
     handleEvictionComplete,
     VOTING_TIME_LIMIT
   } = useEvictionPhase();
@@ -78,7 +82,7 @@ const EvictionPhase: React.FC = () => {
       );
     }
 
-    // Regular eviction process
+    // Regular eviction process with BB USA format stages
     switch (stage) {
       case 'interaction':
         return (
@@ -87,6 +91,13 @@ const EvictionPhase: React.FC = () => {
             nonNominees={nonNominees} 
             playerIsNominee={playerIsNominee} 
             onInteractionStageComplete={handleProceedToVoting} 
+          />
+        );
+      case 'speeches':
+        return (
+          <NomineeSpeeches
+            nominees={nominees}
+            onComplete={handleSpeechesComplete}
           />
         );
       case 'voting':
@@ -100,6 +111,18 @@ const EvictionPhase: React.FC = () => {
             timeRemaining={timeRemaining} 
             totalTime={VOTING_TIME_LIMIT} 
           />
+        );
+      case 'tiebreaker':
+        return hoh ? (
+          <HohTiebreaker
+            hoh={hoh}
+            nominees={nominees}
+            onVote={handleTiebreakerVote}
+          />
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Processing tiebreaker...</p>
+          </div>
         );
       case 'results':
         return (
@@ -118,6 +141,18 @@ const EvictionPhase: React.FC = () => {
     }
   };
 
+  // Get stage label for header
+  const getStageLabel = () => {
+    switch (stage) {
+      case 'interaction': return 'Campaign Period';
+      case 'speeches': return 'Final Pleas';
+      case 'voting': return 'Live Vote';
+      case 'tiebreaker': return 'Tiebreaker';
+      case 'results': return 'Results';
+      default: return 'Live Vote';
+    }
+  };
+
   return (
     <GameCard variant="danger" className="w-full max-w-4xl mx-auto animate-fade-in">
       <GameCardHeader variant="danger" icon={UserX}>
@@ -131,7 +166,7 @@ const EvictionPhase: React.FC = () => {
             </GameCardDescription>
           </div>
           <Badge variant="outline" className="bg-bb-red/10 text-white border-white/30">
-            <Clock className="h-3 w-3 mr-1" /> Live Vote
+            <Clock className="h-3 w-3 mr-1" /> {getStageLabel()}
           </Badge>
         </div>
       </GameCardHeader>

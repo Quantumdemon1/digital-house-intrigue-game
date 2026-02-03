@@ -1,9 +1,10 @@
 
 import { useCallback } from 'react';
 import { Houseguest } from '@/models/houseguest';
+import { EvictionStage } from './useEvictionStages';
 
 interface TimeExpirationHandlerProps {
-  stage: string;
+  stage: EvictionStage;
   timerExpired: boolean;
   nonNominees: Houseguest[];
   nominees: Houseguest[];

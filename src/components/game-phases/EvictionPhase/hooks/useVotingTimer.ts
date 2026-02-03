@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from 'react';
+import { EvictionStage } from './useEvictionStages';
 
 export const VOTING_TIME_LIMIT = 30; // 30 seconds for voting
 
-export function useVotingTimer(stage: string) {
+export function useVotingTimer(stage: EvictionStage) {
   const [timeRemaining, setTimeRemaining] = useState(VOTING_TIME_LIMIT);
   const [votingStarted, setVotingStarted] = useState(false);
   const [timerExpired, setTimerExpired] = useState(false);
