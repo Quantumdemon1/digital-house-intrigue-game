@@ -29,13 +29,17 @@ const InitialStage: React.FC<InitialStageProps> = ({
       };
     }
     
+    // Safely get nominee names with fallbacks
+    const nominee1Name = nominees[0]?.name || 'the first nominee';
+    const nominee2Name = nominees[1]?.name || 'the second nominee';
+    
     const reasons = [
-      `${nominees[0].name} is my closest ally in the house. I need to use the veto to save them and maintain trust.`,
+      `${nominee1Name} is my closest ally in the house. I need to use the veto to save them and maintain trust.`,
       `Using the veto would create more chaos and make others targets instead of me.`,
-      `I need to prove my loyalty to ${nominees[0].name} by using the veto.`,
+      `I need to prove my loyalty to ${nominee1Name} by using the veto.`,
       `Not using the veto keeps the nominations the same and keeps me off the block.`,
       `Using the veto could put me at risk if the HoH nominates an ally of mine as a replacement.`,
-      `${nominees[0].name} and ${nominees[1].name} are both bigger threats than me, so keeping them nominated is better for my game.`
+      `${nominee1Name} and ${nominee2Name} are both bigger threats than me, so keeping them nominated is better for my game.`
     ];
     
     return {
