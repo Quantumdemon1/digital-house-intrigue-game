@@ -71,8 +71,46 @@ const FinalHoHPhase: React.FC = () => {
     }
   }, []);
   
+  // Spectator mode: auto-start competitions
+  useEffect(() => {
+    if (!gameState.isSpectatorMode) return;
+    
+    const currentPartKey = currentPart as 'part1' | 'part2' | 'part3';
+    if (currentPart !== 'selection' && !isCompeting && !showResults && !partStatus[currentPartKey]?.completed) {
+      const timer = setTimeout(() => {
+        startCompetition(currentPartKey);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, currentPart, isCompeting, showResults, partStatus]);
+  
+  // Spectator mode: auto-continue after results
+  useEffect(() => {
+    if (!gameState.isSpectatorMode || !showResults) return;
+    
+    const timer = setTimeout(() => {
+      continueToNextPart();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [gameState.isSpectatorMode, showResults]);
+  
   const finalHoH = gameState.hohWinner ? 
     gameState.houseguests.find(hg => hg.id === gameState.hohWinner) : null;
+  
+  // Spectator mode: auto-select finalist (AI decision)
+  useEffect(() => {
+    if (!gameState.isSpectatorMode || currentPart !== 'selection' || !finalHoH) return;
+    
+    const timer = setTimeout(() => {
+      // AI chooses - pick randomly for now (could use relationship system)
+      const otherFinalists = finalThree.filter(h => h.id !== finalHoH.id);
+      const selectedFinalist = otherFinalists[Math.floor(Math.random() * otherFinalists.length)];
+      if (selectedFinalist) {
+        chooseFinalist(selectedFinalist);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [gameState.isSpectatorMode, currentPart, finalHoH]);
   
   // Get eligible participants for each part
   const getParticipants = (part: 'part1' | 'part2' | 'part3'): Houseguest[] => {
