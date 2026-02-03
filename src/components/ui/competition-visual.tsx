@@ -8,18 +8,22 @@ import {
   Users, 
   Dice6,
   Trophy,
-  Loader2
+  Loader2,
+  Target,
+  Zap
 } from 'lucide-react';
 import { CompetitionType } from '@/models/houseguest/types';
+import { BBCompetitionCategory } from '@/models/competition';
 
 interface CompetitionVisualProps {
-  type: CompetitionType | null;
+  type: CompetitionType | BBCompetitionCategory | null;
   status: 'idle' | 'running' | 'complete';
   winner?: string;
   className?: string;
 }
 
-const typeConfig: Record<CompetitionType, {
+// Config for legacy competition types
+const legacyTypeConfig: Record<CompetitionType, {
   icon: React.ElementType;
   label: string;
   gradient: string;
@@ -51,13 +55,68 @@ const typeConfig: Record<CompetitionType, {
   }
 };
 
+// Config for BB USA competition categories
+const bbCategoryConfig: Record<BBCompetitionCategory, {
+  icon: React.ElementType;
+  label: string;
+  description: string;
+  gradient: string;
+}> = {
+  'Endurance': {
+    icon: Clock,
+    label: 'Endurance Competition',
+    description: 'Outlast the competition!',
+    gradient: 'from-emerald-500 to-teal-600'
+  },
+  'Physical': {
+    icon: Dumbbell,
+    label: 'Physical Competition',
+    description: 'Strength and agility!',
+    gradient: 'from-orange-500 to-red-600'
+  },
+  'Mental': {
+    icon: Brain,
+    label: 'Mental Competition',
+    description: 'Puzzles and strategy!',
+    gradient: 'from-purple-500 to-indigo-600'
+  },
+  'Skill': {
+    icon: Target,
+    label: 'Skill Competition',
+    description: 'Precision and focus!',
+    gradient: 'from-blue-500 to-cyan-600'
+  },
+  'Crapshoot': {
+    icon: Dice6,
+    label: 'Crapshoot Competition',
+    description: 'Anyone can win!',
+    gradient: 'from-yellow-500 to-amber-600'
+  }
+};
+
+function getConfig(type: CompetitionType | BBCompetitionCategory | null) {
+  if (!type) return null;
+  
+  // Check if it's a BB category (capitalized)
+  if (type in bbCategoryConfig) {
+    return bbCategoryConfig[type as BBCompetitionCategory];
+  }
+  
+  // Fall back to legacy types
+  if (type in legacyTypeConfig) {
+    return legacyTypeConfig[type as CompetitionType];
+  }
+  
+  return null;
+}
+
 export const CompetitionVisual: React.FC<CompetitionVisualProps> = ({
   type,
   status,
   winner,
   className
 }) => {
-  const config = type ? typeConfig[type] : null;
+  const config = getConfig(type);
   const Icon = config?.icon || Trophy;
 
   return (
@@ -120,18 +179,23 @@ export const CompetitionVisual: React.FC<CompetitionVisualProps> = ({
   );
 };
 
-// Competition type badge
+// Competition type badge - supports both legacy and BB USA types
 interface CompetitionTypeBadgeProps {
-  type: CompetitionType;
+  type: CompetitionType | BBCompetitionCategory;
   className?: string;
+  showDescription?: boolean;
 }
 
 export const CompetitionTypeBadge: React.FC<CompetitionTypeBadgeProps> = ({
   type,
-  className
+  className,
+  showDescription = false
 }) => {
-  const config = typeConfig[type];
+  const config = getConfig(type);
+  if (!config) return null;
+  
   const Icon = config.icon;
+  const displayType = typeof type === 'string' ? type.charAt(0).toUpperCase() + type.slice(1) : type;
 
   return (
     <div 
@@ -142,7 +206,53 @@ export const CompetitionTypeBadge: React.FC<CompetitionTypeBadgeProps> = ({
       )}
     >
       <Icon className="w-3 h-3" />
-      <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+      <span>{displayType}</span>
+    </div>
+  );
+};
+
+// BB Category selector for showing all competition types
+interface CompetitionCategorySelectorProps {
+  selectedCategory?: BBCompetitionCategory;
+  onSelect?: (category: BBCompetitionCategory) => void;
+  className?: string;
+}
+
+export const CompetitionCategorySelector: React.FC<CompetitionCategorySelectorProps> = ({
+  selectedCategory,
+  onSelect,
+  className
+}) => {
+  const categories: BBCompetitionCategory[] = ['Endurance', 'Physical', 'Mental', 'Skill', 'Crapshoot'];
+  
+  return (
+    <div className={cn('flex flex-wrap gap-2 justify-center', className)}>
+      {categories.map(category => {
+        const config = bbCategoryConfig[category];
+        const Icon = config.icon;
+        const isSelected = selectedCategory === category;
+        
+        return (
+          <button
+            key={category}
+            onClick={() => onSelect?.(category)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all',
+              isSelected 
+                ? `bg-gradient-to-r ${config.gradient} border-transparent text-white` 
+                : 'border-border bg-card hover:border-primary/50'
+            )}
+          >
+            <Icon className="w-4 h-4" />
+            <div className="text-left">
+              <span className="block text-sm font-medium">{category}</span>
+              {!isSelected && (
+                <span className="block text-xs text-muted-foreground">{config.description}</span>
+              )}
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 };
