@@ -21,7 +21,7 @@ interface PartStatus {
 }
 
 const FinalHoHPhase: React.FC = () => {
-  const { gameState, dispatch, getActiveHouseguests } = useGame();
+  const { gameState, dispatch } = useGame();
   const [currentPart, setCurrentPart] = useState<FinalHoHPart>('part1');
   const [isCompeting, setIsCompeting] = useState(false);
   const [competitionProgress, setCompetitionProgress] = useState(0);
@@ -37,8 +37,8 @@ const FinalHoHPhase: React.FC = () => {
     part3: { completed: false, winnerId: null, winnerName: null }
   });
   
-  // Get the final 3 houseguests
-  const finalThree = getActiveHouseguests();
+  // Get the final 3 houseguests - IMPORTANT: Use gameState directly to ensure eliminated players are excluded
+  const finalThree = gameState.houseguests.filter(h => h.status === 'Active');
   
   // Get winners from game state on mount
   useEffect(() => {
@@ -104,29 +104,34 @@ const FinalHoHPhase: React.FC = () => {
     if (!gameState.isSpectatorMode || currentPart !== 'selection' || !finalHoH) return;
     
     const timer = setTimeout(() => {
-      // AI chooses - pick randomly for now (could use relationship system)
-      const otherFinalists = finalThree.filter(h => h.id !== finalHoH.id);
-      const selectedFinalist = otherFinalists[Math.floor(Math.random() * otherFinalists.length)];
+      // Filter again to ensure we only pick from truly active houseguests
+      const activeOthers = gameState.houseguests.filter(
+        h => h.status === 'Active' && h.id !== finalHoH.id
+      );
+      const selectedFinalist = activeOthers[Math.floor(Math.random() * activeOthers.length)];
       if (selectedFinalist) {
         chooseFinalist(selectedFinalist);
       }
     }, 3000);
     return () => clearTimeout(timer);
-  }, [gameState.isSpectatorMode, currentPart, finalHoH]);
+  }, [gameState.isSpectatorMode, currentPart, finalHoH, gameState.houseguests]);
   
-  // Get eligible participants for each part
+  // Get eligible participants for each part - always filter for Active status
   const getParticipants = (part: 'part1' | 'part2' | 'part3'): Houseguest[] => {
+    // Always use fresh filter to ensure eliminated players are excluded
+    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    
     switch (part) {
       case 'part1':
-        return finalThree;
+        return activeHouseguests;
       case 'part2':
         // Part 2: The two losers from Part 1
         const part1Winner = partStatus.part1.winnerId;
-        return finalThree.filter(h => h.id !== part1Winner);
+        return activeHouseguests.filter(h => h.id !== part1Winner);
       case 'part3':
         // Part 3: Winners of Part 1 and Part 2
-        const p1Winner = finalThree.find(h => h.id === partStatus.part1.winnerId);
-        const p2Winner = finalThree.find(h => h.id === partStatus.part2.winnerId);
+        const p1Winner = activeHouseguests.find(h => h.id === partStatus.part1.winnerId);
+        const p2Winner = activeHouseguests.find(h => h.id === partStatus.part2.winnerId);
         return [p1Winner, p2Winner].filter(Boolean) as Houseguest[];
       default:
         return [];
@@ -299,7 +304,18 @@ const FinalHoHPhase: React.FC = () => {
   const chooseFinalist = (finalist: Houseguest) => {
     if (!finalHoH) return;
     
-    const evicted = finalThree.find(hg => hg.id !== finalHoH.id && hg.id !== finalist.id);
+    // Validate that finalist is still active
+    const activeFinalist = gameState.houseguests.find(
+      h => h.id === finalist.id && h.status === 'Active'
+    );
+    if (!activeFinalist) {
+      console.error('Attempted to select eliminated houseguest as finalist:', finalist.name);
+      return;
+    }
+    
+    // Use fresh active filter to find the evicted houseguest
+    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    const evicted = activeHouseguests.find(hg => hg.id !== finalHoH.id && hg.id !== finalist.id);
     
     // Set final two
     dispatch({
