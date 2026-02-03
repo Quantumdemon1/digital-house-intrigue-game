@@ -35,10 +35,10 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         
         if (payload.params.currentPhase === 'Eviction') {
           console.log("Fast forwarding from Eviction - advancing week");
-          const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
+          const activeCountEviction = state.houseguests.filter(h => h.status === 'Active').length;
           
           // Check for final stages
-          if (activeCount <= 2) {
+          if (activeCountEviction <= 2) {
             return {
               ...state,
               week: state.week + 1,
@@ -48,7 +48,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               evictionVotes: {}
             };
           }
-          if (activeCount <= 3) {
+          if (activeCountEviction <= 3) {
             return {
               ...state,
               week: state.week + 1,
@@ -67,6 +67,74 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             nominees: [],
             evictionVotes: {}
           };
+        }
+        
+        // Handle FinalHoH fast-forward - simulate all 3 parts and evict 3rd place
+        if (payload.params.currentPhase === 'FinalHoH') {
+          console.log("Fast forwarding from FinalHoH - simulating all parts");
+          const activeHouseguests = state.houseguests.filter(h => h.status === 'Active');
+          
+          if (activeHouseguests.length >= 2) {
+            // Pick winners randomly weighted by stats
+            const scoreHouseguest = (h: typeof activeHouseguests[0], type: 'endurance' | 'skill' | 'mental') => {
+              const statMap = {
+                endurance: h.stats.endurance * 1.5 + h.stats.physical * 0.5,
+                skill: h.stats.physical + h.stats.mental * 0.5,
+                mental: h.stats.mental * 1.5 + h.stats.social * 0.3
+              };
+              return statMap[type] * (0.75 + Math.random() * 0.5);
+            };
+            
+            // Part 1: Endurance - all 3 compete
+            const part1Scores = activeHouseguests.map(h => ({ h, score: scoreHouseguest(h, 'endurance') }));
+            part1Scores.sort((a, b) => b.score - a.score);
+            const part1Winner = part1Scores[0].h;
+            const part1Losers = part1Scores.slice(1).map(s => s.h);
+            
+            // Part 2: Skill - 2 losers compete
+            const part2Scores = part1Losers.map(h => ({ h, score: scoreHouseguest(h, 'skill') }));
+            part2Scores.sort((a, b) => b.score - a.score);
+            const part2Winner = part2Scores[0]?.h || part1Losers[0];
+            
+            // Part 3: Mental - Part 1 and Part 2 winners compete
+            const part3Competitors = [part1Winner, part2Winner];
+            const part3Scores = part3Competitors.map(h => ({ h, score: scoreHouseguest(h, 'mental') }));
+            part3Scores.sort((a, b) => b.score - a.score);
+            const finalHoH = part3Scores[0].h;
+            
+            // Final HoH picks finalist (pick randomly from the other two)
+            const otherTwo = activeHouseguests.filter(h => h.id !== finalHoH.id);
+            const finalist = otherTwo[Math.floor(Math.random() * otherTwo.length)];
+            const evicted = otherTwo.find(h => h.id !== finalist.id);
+            
+            // Update houseguests
+            const updatedHouseguests = state.houseguests.map(h => {
+              if (evicted && h.id === evicted.id) {
+                return { ...h, status: 'Jury' as const, isHoH: false, isNominated: false };
+              }
+              if (h.id === finalHoH.id) {
+                return { ...h, isHoH: true };
+              }
+              return { ...h, isHoH: false };
+            });
+            
+            return {
+              ...state,
+              houseguests: updatedHouseguests,
+              finalHoHWinners: {
+                part1: part1Winner.id,
+                part2: part2Winner.id,
+                part3: finalHoH.id
+              },
+              hohWinner: finalHoH,
+              finalTwo: [finalHoH, finalist],
+              juryMembers: evicted 
+                ? [...(state.juryMembers || []), evicted.id]
+                : state.juryMembers || [],
+              phase: 'JuryQuestioning' as GamePhase,
+              isFinalStage: true
+            };
+          }
         }
         break;
         
