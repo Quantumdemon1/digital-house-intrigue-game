@@ -1,124 +1,129 @@
 
-# Fix: HOH Not Detected in Nomination Phase
+# Fix: PoV Players Not Being Displayed
 
-## Root Cause Analysis
+## Problem Summary
+The POV Competition screen shows all 6 player slots as "Not Selected" because the `povPlayers` array is empty in the reducer state.
 
-The issue is a **type mismatch** between how `hohWinner` is stored and how it's being accessed:
+## Root Cause
+There's a disconnect between two sources of truth:
 
-### How It's Stored (in reducer)
+| Component | Data Source | Value |
+|-----------|-------------|-------|
+| `PovPlayerSelectionState.ts` | `this.game.povPlayers` (BigBrotherGame instance) | Gets populated with 6 player IDs |
+| `POVCompetition/index.tsx` | `gameState.povPlayers` (Reducer state) | Always empty `[]` |
+
+The `PovPlayerSelectionState.ts` sets players on the legacy game object (line 47):
 ```typescript
-// competition-reducer.ts line 31-33
-return {
-  ...state,
-  hohWinner: newHohWinner,  // Full Houseguest OBJECT
-  ...
-};
+this.game.povPlayers = povPlayers.filter(Boolean);
 ```
 
-### How It's Being Accessed (inconsistently across files)
+But the `POVCompetition/index.tsx` reads from the reducer (line 23):
+```typescript
+const povPlayerIds = gameState.povPlayers || [];
+```
 
-| File | Code | Issue |
-|------|------|-------|
-| `NominationPhase.tsx` | `getHouseguestById(gameState.hohWinner.id)` | Looks up in stale `game` object |
-| `GameSidebar.tsx` | `getHouseguestById(gameState.hohWinner)` | Passes object instead of ID |
-| `GameStatusIndicator.tsx` | `getHouseguestById(gameState.hohWinner)` | Passes object instead of ID |
-| `POVCompetition/index.tsx` | `getHouseguestById(gameState.hohWinner)` | Passes object instead of ID |
-
-### Why `getHouseguestById` Fails
-The `getHouseguestById` function looks in `game.houseguests` (the `BigBrotherGame` instance), which is initialized once and **never synced** with the reducer's `gameState.houseguests`. When a new HoH is set via dispatch, the game object's internal houseguest list doesn't get updated.
+**There's no `SET_POV_PLAYERS` reducer action to sync these two sources.**
 
 ---
 
 ## Solution
 
-Since `gameState.hohWinner` is already the full Houseguest object, we should use it directly instead of looking it up. For the most current data (in case houseguest properties change), we can look it up from `gameState.houseguests`.
+### Step 1: Add SET_POV_PLAYERS to Competition Reducer
+**File:** `src/contexts/reducers/reducers/competition-reducer.ts`
 
-### Files to Modify
-
-#### 1. `src/components/game-phases/NominationPhase.tsx`
-**Line 30** - Change:
+Add a new case to handle setting PoV players:
 ```typescript
-// BEFORE
-const hoh = gameState?.hohWinner ? getHouseguestById(gameState.hohWinner.id) : null;
-
-// AFTER  
-const hoh = gameState.hohWinner 
-  ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
-  : null;
+case 'SET_POV_PLAYERS': {
+  if (!action.payload || !Array.isArray(action.payload)) {
+    console.error('SET_POV_PLAYERS action missing payload:', action);
+    return state;
+  }
+  
+  return {
+    ...state,
+    povPlayers: action.payload,
+  };
+}
 ```
 
-**Line 33** - Also fix nominees which may have same issue:
-```typescript
-// BEFORE
-const nominees = gameState?.nominees?.map(nomineeId => getHouseguestById(nomineeId.id)).filter(Boolean) || [];
+### Step 2: Dispatch SET_POV_PLAYERS from PovPlayerSelectionState
+**File:** `src/game-states/PovPlayerSelectionState.ts`
 
-// AFTER
-const nominees = gameState?.nominees?.map(nominee => 
-  gameState.houseguests.find(h => h.id === nominee.id) || nominee
-).filter(Boolean) || [];
+After setting `this.game.povPlayers`, also dispatch to the reducer:
+```typescript
+// Set the PoV players on game object
+this.game.povPlayers = povPlayers.filter(Boolean);
+
+// ALSO sync to reducer state
+if (this.controller && this.controller.dispatch) {
+  this.controller.dispatch({
+    type: 'SET_POV_PLAYERS',
+    payload: this.game.povPlayers
+  });
+}
 ```
 
-#### 2. `src/components/game-screen/GameSidebar.tsx`
-**Line 17-18** - Fix to use gameState directly:
-```typescript
-// BEFORE
-const hohHouseguest = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
-const povHouseguest = gameState.povWinner ? getHouseguestById(gameState.povWinner) : null;
+### Step 3: Add SET_POV_PLAYERS to Action Types
+**File:** `src/contexts/types/game-context-types.ts`
 
-// AFTER
-const hohHouseguest = gameState.hohWinner 
-  ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
-  : null;
-const povHouseguest = gameState.povWinner 
-  ? gameState.houseguests.find(h => h.id === gameState.povWinner.id) || gameState.povWinner
-  : null;
+Ensure the action type is defined (may already exist, need to verify).
+
+### Step 4: Fallback in POVCompetition Component
+**File:** `src/components/game-phases/POVCompetition/index.tsx`
+
+As a safety net, if `gameState.povPlayers` is empty, auto-generate the player list using HoH, nominees, and 3 random houseguests:
+
+```typescript
+// Get the PoV players - with fallback generation if empty
+const povPlayerIds = gameState.povPlayers || [];
+const [generatedPlayers, setGeneratedPlayers] = useState<string[]>([]);
+
+// Auto-generate PoV players if none set (fallback)
+useEffect(() => {
+  if (povPlayerIds.length === 0 && generatedPlayers.length === 0) {
+    // Generate: HoH + nominees + 3 random
+    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    const mandatory = [
+      gameState.hohWinner?.id,
+      ...(gameState.nominees?.map(n => n.id) || [])
+    ].filter(Boolean);
+    
+    const eligible = activeHouseguests
+      .filter(h => !mandatory.includes(h.id))
+      .map(h => h.id);
+    
+    const shuffled = [...eligible].sort(() => 0.5 - Math.random());
+    const needed = Math.min(6 - mandatory.length, shuffled.length);
+    const final = [...mandatory, ...shuffled.slice(0, needed)];
+    
+    setGeneratedPlayers(final);
+    
+    // Dispatch to sync state
+    dispatch({
+      type: 'SET_POV_PLAYERS',
+      payload: final
+    });
+  }
+}, [povPlayerIds, gameState.hohWinner, gameState.nominees]);
+
+const effectivePovPlayerIds = povPlayerIds.length > 0 ? povPlayerIds : generatedPlayers;
 ```
 
-#### 3. `src/components/game-screen/GameStatusIndicator.tsx`
-**Lines 14-16** - Fix HoH lookup:
-```typescript
-// BEFORE
-const getHoHName = () => {
-  if (!gameState.hohWinner) return null;
-  const hoh = getHouseguestById(gameState.hohWinner);
-  return hoh?.name || null;
-};
+---
 
-// AFTER
-const getHoHName = () => {
-  if (!gameState.hohWinner) return null;
-  return gameState.hohWinner.name || null;
-};
-```
+## Files to Modify
 
-#### 4. `src/components/game-phases/POVCompetition/index.tsx`
-**Line 32** - Fix HoH lookup:
-```typescript
-// BEFORE
-const hoh = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
-
-// AFTER
-const hoh = gameState.hohWinner 
-  ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
-  : null;
-```
+| File | Changes |
+|------|---------|
+| `competition-reducer.ts` | Add `SET_POV_PLAYERS` case |
+| `PovPlayerSelectionState.ts` | Dispatch `SET_POV_PLAYERS` after setting players |
+| `POVCompetition/index.tsx` | Add fallback generation if `povPlayers` is empty |
 
 ---
 
 ## Why This Approach
 
-1. **`gameState.hohWinner` is already the full Houseguest object** - No need to look it up
-2. **Looking up in `gameState.houseguests`** ensures we get the most current version (in case properties like `competitionsWon` are updated elsewhere)
-3. **Fallback to `gameState.hohWinner`** ensures we always have data even if lookup fails
-4. **Avoids dependency on stale `game` object** - The `BigBrotherGame` instance is a legacy pattern that's not synced with reducer state
-
----
-
-## Testing Verification
-
-After implementation:
-- [ ] Skip HOH competition - HoH name should display correctly in Nomination phase
-- [ ] Play through HOH competition normally - HoH name should display correctly
-- [ ] Sidebar should show current HoH and PoV holder correctly
-- [ ] POV Competition should recognize the HoH
-- [ ] Continue full game cycle to verify no regressions
+1. **Adds the missing reducer action** - The proper fix is to sync the game object with reducer state
+2. **Fallback generation** - Ensures the game doesn't break even if state sync fails
+3. **Minimal disruption** - Follows existing patterns from `SET_NOMINEES` and `SET_HOH`
+4. **Future-proof** - All components can rely on `gameState.povPlayers` as the single source of truth
