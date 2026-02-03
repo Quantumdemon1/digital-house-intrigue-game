@@ -1,145 +1,124 @@
 
-# Fix HOH Competition Skip and Navigation Issues
-
-## Problem Summary
-When skipping the HOH competition, the game enters a broken state where:
-- The houseguest gets the HoH badge (game state is updated)
-- The screen shows "No HoH" in the Nomination phase header
-- The player cannot navigate away or proceed with the game
+# Fix: HOH Not Detected in Nomination Phase
 
 ## Root Cause Analysis
-The issue is a race condition in `selectWinnerImmediately()` where:
-1. `SET_HOH` dispatch happens
-2. `SET_PHASE` dispatch happens immediately after (same synchronous block)
-3. React batches these updates, but the Nomination component mounts before `hohWinner` is fully propagated
+
+The issue is a **type mismatch** between how `hohWinner` is stored and how it's being accessed:
+
+### How It's Stored (in reducer)
+```typescript
+// competition-reducer.ts line 31-33
+return {
+  ...state,
+  hohWinner: newHohWinner,  // Full Houseguest OBJECT
+  ...
+};
+```
+
+### How It's Being Accessed (inconsistently across files)
+
+| File | Code | Issue |
+|------|------|-------|
+| `NominationPhase.tsx` | `getHouseguestById(gameState.hohWinner.id)` | Looks up in stale `game` object |
+| `GameSidebar.tsx` | `getHouseguestById(gameState.hohWinner)` | Passes object instead of ID |
+| `GameStatusIndicator.tsx` | `getHouseguestById(gameState.hohWinner)` | Passes object instead of ID |
+| `POVCompetition/index.tsx` | `getHouseguestById(gameState.hohWinner)` | Passes object instead of ID |
+
+### Why `getHouseguestById` Fails
+The `getHouseguestById` function looks in `game.houseguests` (the `BigBrotherGame` instance), which is initialized once and **never synced** with the reducer's `gameState.houseguests`. When a new HoH is set via dispatch, the game object's internal houseguest list doesn't get updated.
+
+---
 
 ## Solution
 
-### Fix 1: Add Delay Between State Updates
-**File:** `src/components/game-phases/HOHCompetition/hooks/useCompetitionState.ts`
+Since `gameState.hohWinner` is already the full Houseguest object, we should use it directly instead of looking it up. For the most current data (in case houseguest properties change), we can look it up from `gameState.houseguests`.
 
-Modify `selectWinnerImmediately` to wait for `SET_HOH` to propagate before dispatching `SET_PHASE`:
+### Files to Modify
 
+#### 1. `src/components/game-phases/NominationPhase.tsx`
+**Line 30** - Change:
 ```typescript
-// Update HOH in game state DIRECTLY
-dispatch({
-  type: 'SET_HOH',
-  payload: competitionWinner
-});
+// BEFORE
+const hoh = gameState?.hohWinner ? getHouseguestById(gameState.hohWinner.id) : null;
 
-// Wait for state to propagate before phase change
-setTimeout(() => {
-  dispatch({
-    type: 'SET_PHASE',
-    payload: 'Nomination'
-  });
-}, 100);
+// AFTER  
+const hoh = gameState.hohWinner 
+  ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
+  : null;
 ```
 
-### Fix 2: Add Delay in Fast Forward Handler
-**File:** `src/components/game-phases/HOHCompetition/index.tsx`
-
-Same issue in the `handleFastForward` effect when competition is in progress:
-
+**Line 33** - Also fix nominees which may have same issue:
 ```typescript
-dispatch({
-  type: 'SET_HOH',
-  payload: competitionWinner
-});
+// BEFORE
+const nominees = gameState?.nominees?.map(nomineeId => getHouseguestById(nomineeId.id)).filter(Boolean) || [];
 
-// Delay phase transition to ensure HoH is set
-setTimeout(() => {
-  dispatch({
-    type: 'SET_PHASE',
-    payload: 'Nomination'
-  });
-}, 100);
+// AFTER
+const nominees = gameState?.nominees?.map(nominee => 
+  gameState.houseguests.find(h => h.id === nominee.id) || nominee
+).filter(Boolean) || [];
 ```
 
-### Fix 3: Add Recovery Navigation in Nomination Phase
-**File:** `src/components/game-phases/NominationPhase.tsx`
+#### 2. `src/components/game-screen/GameSidebar.tsx`
+**Line 17-18** - Fix to use gameState directly:
+```typescript
+// BEFORE
+const hohHouseguest = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
+const povHouseguest = gameState.povWinner ? getHouseguestById(gameState.povWinner) : null;
 
-Add a fallback UI when HoH is missing that allows users to recover:
-
-```tsx
-{!hoh && (
-  <div className="bg-destructive/10 border border-destructive/30 p-4 rounded-lg">
-    <p className="text-destructive font-medium">
-      No Head of Household detected. This may be a timing issue.
-    </p>
-    <div className="mt-3 flex gap-2">
-      <Button 
-        variant="outline"
-        onClick={() => dispatch({ type: 'SET_PHASE', payload: 'HoH' })}
-      >
-        Return to HoH Competition
-      </Button>
-    </div>
-  </div>
-)}
+// AFTER
+const hohHouseguest = gameState.hohWinner 
+  ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
+  : null;
+const povHouseguest = gameState.povWinner 
+  ? gameState.houseguests.find(h => h.id === gameState.povWinner.id) || gameState.povWinner
+  : null;
 ```
 
-### Fix 4: Add Skip Button to Nomination Phase Header
-**File:** `src/components/game-phases/NominationPhase.tsx`
+#### 3. `src/components/game-screen/GameStatusIndicator.tsx`
+**Lines 14-16** - Fix HoH lookup:
+```typescript
+// BEFORE
+const getHoHName = () => {
+  if (!gameState.hohWinner) return null;
+  const hoh = getHouseguestById(gameState.hohWinner);
+  return hoh?.name || null;
+};
 
-Add a skip/fast-forward button in the header for consistency:
-
-```tsx
-<Button
-  variant="ghost"
-  size="sm"
-  onClick={() => document.dispatchEvent(new Event('game:fastForward'))}
-  className="text-white/70 hover:text-white"
->
-  <SkipForward className="h-4 w-4 mr-1" />
-  Skip
-</Button>
+// AFTER
+const getHoHName = () => {
+  if (!gameState.hohWinner) return null;
+  return gameState.hohWinner.name || null;
+};
 ```
 
-### Fix 5: Validate HoH Before Showing Nomination Content
-**File:** `src/components/game-phases/NominationPhase.tsx`
+#### 4. `src/components/game-phases/POVCompetition/index.tsx`
+**Line 32** - Fix HoH lookup:
+```typescript
+// BEFORE
+const hoh = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
 
-Early return with loading state if HoH is not yet available:
-
-```tsx
-// Add loading state while waiting for HoH
-const [isLoading, setIsLoading] = useState(!gameState.hohWinner);
-
-useEffect(() => {
-  if (gameState.hohWinner) {
-    setIsLoading(false);
-  } else {
-    // Give it a moment to load
-    const timeout = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timeout);
-  }
-}, [gameState.hohWinner]);
-
-if (isLoading) {
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardContent className="p-8 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p>Loading Nomination Ceremony...</p>
-      </CardContent>
-    </Card>
-  );
-}
+// AFTER
+const hoh = gameState.hohWinner 
+  ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
+  : null;
 ```
 
-## Files to Modify
+---
 
-| File | Changes |
-|------|---------|
-| `useCompetitionState.ts` | Add 100ms delay between SET_HOH and SET_PHASE dispatches |
-| `HOHCompetition/index.tsx` | Add same delay in fast forward handler |
-| `NominationPhase.tsx` | Add loading state, recovery UI when no HoH, skip button |
+## Why This Approach
+
+1. **`gameState.hohWinner` is already the full Houseguest object** - No need to look it up
+2. **Looking up in `gameState.houseguests`** ensures we get the most current version (in case properties like `competitionsWon` are updated elsewhere)
+3. **Fallback to `gameState.hohWinner`** ensures we always have data even if lookup fails
+4. **Avoids dependency on stale `game` object** - The `BigBrotherGame` instance is a legacy pattern that's not synced with reducer state
+
+---
 
 ## Testing Verification
 
-After implementation, verify:
-- [ ] Skip button on HOH Competition Initial screen works correctly
-- [ ] HoH name displays properly in Nomination phase after skip
-- [ ] Skip button during competition in-progress works correctly
-- [ ] If HoH is missing, recovery button allows return to HOH phase
-- [ ] Normal game flow (no skip) still works correctly
+After implementation:
+- [ ] Skip HOH competition - HoH name should display correctly in Nomination phase
+- [ ] Play through HOH competition normally - HoH name should display correctly
+- [ ] Sidebar should show current HoH and PoV holder correctly
+- [ ] POV Competition should recognize the HoH
+- [ ] Continue full game cycle to verify no regressions
