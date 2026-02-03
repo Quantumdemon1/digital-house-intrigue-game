@@ -1,12 +1,14 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, Crown, Target, Shuffle } from 'lucide-react';
-import { Houseguest } from '@/models/houseguest';
+import { Shield, ArrowRight, Crown, Target, Shuffle, Dumbbell, Brain, Timer, Dice1, Users } from 'lucide-react';
+import { Houseguest, CompetitionType } from '@/models/houseguest';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent, GameCardFooter } from '@/components/ui/game-card';
 import { CompetitionVisual } from '@/components/ui/competition-visual';
 import { StatusAvatar, AvatarStatus } from '@/components/ui/status-avatar';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { getCompetitionStatLabel } from './utils';
 
 interface InitialStageProps {
   povPlayers: Houseguest[];
@@ -14,14 +16,27 @@ interface InitialStageProps {
   startCompetition: () => void;
   nominees: Houseguest[];
   hoh: Houseguest | null;
+  competitionType?: CompetitionType | null;
 }
+
+// Get icon for competition type
+const getCompetitionIcon = (type: CompetitionType) => {
+  switch (type) {
+    case 'physical': return Dumbbell;
+    case 'mental': return Brain;
+    case 'endurance': return Timer;
+    case 'luck': return Dice1;
+    case 'social': return Users;
+  }
+};
 
 const InitialStage: React.FC<InitialStageProps> = ({ 
   povPlayers, 
   week, 
   startCompetition,
   nominees,
-  hoh
+  hoh,
+  competitionType
 }) => {
   // Get player status for avatar
   const getPlayerStatus = (player: Houseguest): AvatarStatus => {
@@ -36,6 +51,8 @@ const InitialStage: React.FC<InitialStageProps> = ({
     if (nominees.some(n => n.id === player.id)) return { label: 'Nominee', icon: <Target className="w-3 h-3" /> };
     return { label: 'Random', icon: <Shuffle className="w-3 h-3" /> };
   };
+
+  const CompTypeIcon = competitionType ? getCompetitionIcon(competitionType) : Shield;
 
   return (
     <GameCard variant="primary">
@@ -54,6 +71,19 @@ const InitialStage: React.FC<InitialStageProps> = ({
       <GameCardContent className="space-y-6">
         {/* Competition Visual */}
         <CompetitionVisual type={null} status="idle" />
+        
+        {/* Competition Type Badge */}
+        {competitionType && (
+          <div className="flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-2">
+              <CompTypeIcon className="w-5 h-5 text-primary" />
+              <span className="text-lg font-bold capitalize">{competitionType} Competition</span>
+            </div>
+            <p className="text-sm text-muted-foreground text-center">
+              {getCompetitionStatLabel(competitionType)} will be key to winning!
+            </p>
+          </div>
+        )}
         
         {/* Description */}
         <div className="text-center space-y-2">

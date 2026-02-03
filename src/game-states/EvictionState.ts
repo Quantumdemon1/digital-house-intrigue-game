@@ -104,37 +104,34 @@ export class EvictionState extends GameStateBase {
         return false;
         
       case 'advance_week':
-        this.getLogger().info("Advancing week after eviction");
-        // After eviction is complete, advance immediately to next week/phase
-        // If we're in finale, go to GameOver, otherwise advance week
+        this.getLogger().info("Advancing week after eviction - going to social phase first");
+        // BB USA Format: After eviction, go to Social Interaction phase
+        // Week advancement happens AFTER social phase ends
         if (this.game.week >= this.controller.getGameSettings().finalWeek) {
           this.controller.changeState('GameOverState');
         } else {
-          this.game.advanceWeek();
-          this.controller.changeState('HohCompetitionState');
+          // Go to social interaction phase first (between weeks)
+          this.controller.changeState('SocialInteractionState');
         }
         return true;
         
       case 'fast_forward':
         this.getLogger().info("Fast-forwarding eviction phase");
-        // If we're in finale, go to GameOver, otherwise advance week
+        // Same as advance_week - go to social phase first
         if (this.game.week >= this.controller.getGameSettings().finalWeek) {
           this.controller.changeState('GameOverState');
         } else {
-          this.game.advanceWeek();
-          this.controller.changeState('HohCompetitionState');
+          this.controller.changeState('SocialInteractionState');
         }
         return true;
         
       case 'eviction_complete':
-        this.getLogger().info("Eviction complete, advancing to next phase");
-        // After eviction is complete, advance immediately to next week/phase
-        // If we're in finale, go to GameOver, otherwise advance week
+        this.getLogger().info("Eviction complete - transitioning to social phase");
+        // BB USA Format: After eviction, go to Social Interaction phase
         if (this.game.week >= this.controller.getGameSettings().finalWeek) {
           this.controller.changeState('GameOverState');
         } else {
-          this.game.advanceWeek();
-          this.controller.changeState('HohCompetitionState');
+          this.controller.changeState('SocialInteractionState');
         }
         return true;
         
