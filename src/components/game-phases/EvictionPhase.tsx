@@ -31,6 +31,7 @@ const EvictionPhase: React.FC = () => {
     handleVoteSubmit,
     handleTiebreakerVote,
     handleEvictionComplete,
+    progressToResults,
     VOTING_TIME_LIMIT
   } = useEvictionPhase();
 
@@ -118,6 +119,7 @@ const EvictionPhase: React.FC = () => {
             hoh={hoh}
             nominees={nominees}
             onVote={handleTiebreakerVote}
+            onContinue={progressToResults}
           />
         ) : (
           <div className="text-center py-8">
