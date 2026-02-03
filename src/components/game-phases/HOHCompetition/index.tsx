@@ -30,6 +30,14 @@ const HOHCompetition: React.FC = () => {
   
   const { advanceToNomination } = usePhaseTransition();
 
+  // Redirect to Final HoH if 3 or fewer houseguests remain
+  useEffect(() => {
+    if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+      logger?.info(`Only ${activeHouseguests.length} houseguests - redirecting to Final HoH`);
+      dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+    }
+  }, [activeHouseguests.length, gameState.isFinalStage, dispatch, logger]);
+
   // Auto-start competition in spectator mode
   useEffect(() => {
     if (gameState.isSpectatorMode && !isCompeting && !winner && !spectatorAutoStartRef.current) {

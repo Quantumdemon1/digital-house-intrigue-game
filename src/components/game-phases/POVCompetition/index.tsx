@@ -65,6 +65,15 @@ const povPlayers = effectivePovPlayerIds
     ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
     : null;
   
+  // Redirect to final stages if not enough houseguests
+  useEffect(() => {
+    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    
+    if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+      dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+    }
+  }, [gameState.houseguests, gameState.isFinalStage, dispatch]);
+  
   // Select competition type on mount
   useEffect(() => {
     if (!competitionType) {

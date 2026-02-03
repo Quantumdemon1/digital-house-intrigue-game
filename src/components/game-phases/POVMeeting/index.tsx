@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Shield } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
@@ -7,7 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import POVMeetingContent from './POVMeetingContent';
 
 const POVMeeting: React.FC = () => {
-  const { gameState } = useGame();
+  const { gameState, dispatch } = useGame();
+  
+  // Redirect to final stages if not enough houseguests
+  useEffect(() => {
+    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    
+    if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+      dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+    }
+  }, [gameState.houseguests, gameState.isFinalStage, dispatch]);
   
   return (
     <GameCard variant="success" className="w-full max-w-4xl mx-auto animate-fade-in">
