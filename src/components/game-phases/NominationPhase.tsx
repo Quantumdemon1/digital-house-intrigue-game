@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
-import { Crown, Target, Clock, BrainCircuit } from 'lucide-react';
+import { Crown, Target, Clock, BrainCircuit, SkipForward, Loader2, ArrowLeft } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { updateHouseguestMentalState } from '@/models/houseguest';
@@ -24,6 +24,7 @@ const NominationPhase: React.FC = () => {
   const [ceremonyStarted, setCeremonyStarted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [showThoughts, setShowThoughts] = useState(true);
+  const [isLoading, setIsLoading] = useState(!gameState.hohWinner);
 
   // Convert HoH ID to Houseguest object
   const hoh = gameState?.hohWinner ? getHouseguestById(gameState.hohWinner.id) : null;
@@ -33,6 +34,17 @@ const NominationPhase: React.FC = () => {
 
   // Get all eligible houseguests (active and not HoH)
   const eligibleHouseguests = gameState.houseguests.filter(hg => hg.status === 'Active' && hg.id !== hoh?.id);
+
+  // Wait for HoH to be set
+  useEffect(() => {
+    if (gameState.hohWinner) {
+      setIsLoading(false);
+    } else {
+      // Give it a moment to load
+      const timeout = setTimeout(() => setIsLoading(false), 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [gameState.hohWinner]);
 
   // Start the ceremony
   const startCeremony = () => {
@@ -98,8 +110,55 @@ const NominationPhase: React.FC = () => {
       }
     });
   };
+
+  const handleSkip = () => {
+    document.dispatchEvent(new Event('game:fastForward'));
+  };
+
+  const handleReturnToHoH = () => {
+    dispatch({ type: 'SET_PHASE', payload: 'HoH' });
+  };
+
+  // Loading state while waiting for HoH
+  if (isLoading) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
+        <CardContent className="p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading Nomination Ceremony...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Recovery UI when HoH is missing
+  if (!hoh) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-destructive/30">
+        <CardContent className="p-8 space-y-4">
+          <div className="bg-destructive/10 border border-destructive/30 p-4 rounded-lg">
+            <p className="text-destructive font-medium mb-2">
+              No Head of Household detected.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              This may be a timing issue. Please return to the HoH Competition to select a winner.
+            </p>
+          </div>
+          <Button 
+            variant="outline"
+            onClick={handleReturnToHoH}
+            className="w-full"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Return to HoH Competition
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   
-  return <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
+  return (
+    <Card className="w-full max-w-4xl mx-auto shadow-lg border-2 border-amber-100/30">
       <CardHeader className="bg-bb-blue text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -108,9 +167,20 @@ const NominationPhase: React.FC = () => {
             </div>
             <CardTitle className="text-xl md:text-2xl">Nomination Ceremony</CardTitle>
           </div>
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Week {gameState.week}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Clock className="h-3 w-3" /> Week {gameState.week}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSkip}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+            >
+              <SkipForward className="h-4 w-4 mr-1" />
+              Skip
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
@@ -122,7 +192,7 @@ const NominationPhase: React.FC = () => {
           </div>
           <div className="bg-bb-blue text-white p-3 flex justify-center items-center gap-3">
             <Crown className="h-6 w-6 text-amber-400" />
-            <p className="text-xl md:text-2xl font-bold">{hoh?.name || 'No HoH'}</p>
+            <p className="text-xl md:text-2xl font-bold">{hoh.name}</p>
             <Crown className="h-6 w-6 text-amber-400" />
           </div>
         </div>
@@ -175,7 +245,7 @@ const NominationPhase: React.FC = () => {
               <Target className="h-10 w-10 mx-auto text-red-500 mb-2" />
               <h3 className="text-xl font-semibold mb-1">Nominations Complete</h3>
               <p className="text-muted-foreground">
-                {hoh?.name} has nominated:
+                {hoh.name} has nominated:
               </p>
             </div>
             
@@ -202,7 +272,8 @@ const NominationPhase: React.FC = () => {
           </div>
         ) : null}
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
 
 export default NominationPhase;

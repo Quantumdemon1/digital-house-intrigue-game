@@ -93,10 +93,13 @@ const HOHCompetition: React.FC = () => {
           });
           
           logger?.info(`Fast forward: ${competitionWinner.name} selected as HoH (stat-weighted)`);
-          dispatch({
-            type: 'SET_PHASE',
-            payload: 'Nomination'
-          });
+          // Wait for state to propagate before phase change
+          setTimeout(() => {
+            dispatch({
+              type: 'SET_PHASE',
+              payload: 'Nomination'
+            });
+          }, 100);
         }
       }
       else {
