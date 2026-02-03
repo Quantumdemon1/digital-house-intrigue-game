@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Houseguest } from '@/models/houseguest';
+import { Houseguest, CompetitionType } from '@/models/houseguest';
 
 // Import our newly created components
 import CompetitionInProgress from './CompetitionInProgress';
 import CompetitionResults from './CompetitionResults';
 import InitialStage from './InitialStage';
-import { determineRandomWinner, hasValidPlayers } from './utils';
+import { selectStatWeightedWinner, selectRandomCompetitionType, hasValidPlayers, getCompetitionStatLabel } from './utils';
 
 const POVCompetition: React.FC = () => {
   const {
@@ -17,6 +17,7 @@ const POVCompetition: React.FC = () => {
   } = useGame();
   const [isCompeting, setIsCompeting] = useState(false);
   const [winner, setWinner] = useState<Houseguest | null>(null);
+  const [competitionType, setCompetitionType] = useState<CompetitionType | null>(null);
   
   // Get the PoV players
   const povPlayerIds = gameState.povPlayers || [];
@@ -29,6 +30,14 @@ const POVCompetition: React.FC = () => {
     .filter(Boolean) as Houseguest[];
   
   const hoh = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
+  
+  // Select competition type on mount
+  useEffect(() => {
+    if (!competitionType) {
+      const type = selectRandomCompetitionType();
+      setCompetitionType(type);
+    }
+  }, [competitionType]);
   
   // If no PoV players are set, show a warning
   useEffect(() => {
@@ -49,8 +58,9 @@ const POVCompetition: React.FC = () => {
         return;
       }
       
-      // Determine the winner
-      const competitionWinner = determineRandomWinner(povPlayers);
+      // Use stat-weighted selection based on competition type
+      const type = competitionType || selectRandomCompetitionType();
+      const competitionWinner = selectStatWeightedWinner(povPlayers, type);
       
       if (!competitionWinner) {
         console.error('Failed to select a PoV competition winner');
@@ -66,15 +76,16 @@ const POVCompetition: React.FC = () => {
         payload: competitionWinner
       });
 
-      // Log the event
+      // Log the event with competition type info
       dispatch({
         type: 'LOG_EVENT',
         payload: {
           week: gameState.week,
           phase: 'PoV',
           type: 'COMPETITION',
-          description: `${competitionWinner.name} won the Power of Veto competition.`,
-          involvedHouseguests: [competitionWinner.id]
+          description: `${competitionWinner.name} won the Power of Veto competition (${type} - ${getCompetitionStatLabel(type)}).`,
+          involvedHouseguests: [competitionWinner.id],
+          data: { competitionType: type }
         }
       });
 
@@ -94,7 +105,7 @@ const POVCompetition: React.FC = () => {
   }
   
   if (isCompeting) {
-    return <CompetitionInProgress />;
+    return <CompetitionInProgress competitionType={competitionType} />;
   }
   
   return (
@@ -104,6 +115,7 @@ const POVCompetition: React.FC = () => {
       startCompetition={startCompetition} 
       nominees={nominees}
       hoh={hoh}
+      competitionType={competitionType}
     />
   );
 };

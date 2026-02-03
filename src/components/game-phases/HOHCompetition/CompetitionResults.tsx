@@ -1,13 +1,12 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Trophy, Crown, Check, ArrowRight, Users, Target } from 'lucide-react';
+import { Trophy, Crown, Check, ArrowRight, Target, Loader2 } from 'lucide-react';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent, GameCardFooter } from '@/components/ui/game-card';
 import { CompetitionVisual, CompetitionTypeBadge } from '@/components/ui/competition-visual';
 import { StatusAvatar } from '@/components/ui/status-avatar';
 import { cn } from '@/lib/utils';
-import { useGame } from '@/contexts/GameContext';
 
 interface CompetitionResult {
   id: string;
@@ -20,23 +19,16 @@ interface CompetitionResultsProps {
   winner: Houseguest;
   results: CompetitionResult[];
   onContinue: () => void;
+  isTransitioning?: boolean;
 }
 
 const CompetitionResults: React.FC<CompetitionResultsProps> = ({
   competitionType,
   winner,
   results,
-  onContinue
+  onContinue,
+  isTransitioning = false
 }) => {
-  const { dispatch } = useGame();
-  
-  const handleSocialFirst = () => {
-    dispatch({
-      type: 'SET_PHASE',
-      payload: 'SocialInteraction'
-    });
-  };
-  
   return (
     <GameCard variant="gold">
       <GameCardHeader variant="gold" icon={Trophy}>
@@ -137,20 +129,14 @@ const CompetitionResults: React.FC<CompetitionResultsProps> = ({
       </GameCardContent>
       
       <GameCardFooter>
-        {/* Navigation Options */}
-        <div className="w-full space-y-3">
-          <p className="text-center text-sm text-muted-foreground">
-            Choose your next action:
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <Button 
-              variant="outline"
-              onClick={handleSocialFirst}
-              className="gap-2"
-            >
-              <Users className="w-4 h-4" />
-              Talk to Houseguests First
-            </Button>
+        {/* BB USA format: Proceed directly to Nominations - no mid-week social phase */}
+        <div className="w-full flex justify-center">
+          {isTransitioning ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Continuing to Nominations...</span>
+            </div>
+          ) : (
             <Button 
               onClick={onContinue}
               className="bg-primary hover:bg-primary/90 text-white gap-2"
@@ -160,7 +146,7 @@ const CompetitionResults: React.FC<CompetitionResultsProps> = ({
               Continue to Nominations
               <ArrowRight className="w-4 h-4" />
             </Button>
-          </div>
+          )}
         </div>
       </GameCardFooter>
     </GameCard>

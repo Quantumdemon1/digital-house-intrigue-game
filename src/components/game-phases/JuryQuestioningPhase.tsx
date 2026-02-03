@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { MessageSquare, ChevronRight, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, ChevronRight, HelpCircle, CheckCircle2, SkipForward } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,18 +10,31 @@ import { GameCard, GameCardHeader, GameCardContent, GameCardTitle, GameCardDescr
 import { StatusAvatar } from '@/components/ui/status-avatar';
 import { cn } from '@/lib/utils';
 
-// Jury questions for dramatic effect
-const JURY_QUESTIONS = [
-  "What was your biggest move in the game?",
-  "Why do you deserve to win over your opponent?",
-  "Who was the most influential player on your game?",
-  "What would you have done differently?",
-  "Describe your game in three words.",
-  "When did you feel most in danger of going home?",
-  "What was your biggest regret in this game?",
-  "How did you balance competition wins with social game?",
-  "Who was the biggest threat you had to overcome?"
-];
+// Jury questions categorized by tone
+const JURY_QUESTIONS = {
+  neutral: [
+    "What was your biggest move in the game?",
+    "Why do you deserve to win over your opponent?",
+    "Who was the most influential player on your game?",
+    "What would you have done differently?",
+    "Describe your game in three words.",
+    "How did you balance competition wins with social game?"
+  ],
+  bitter: [
+    "Why should I vote for you after you betrayed our alliance?",
+    "Do you feel any remorse for how you played?",
+    "How do you justify the lies you told in this game?",
+    "Did you ever consider how your actions affected others?",
+    "What makes you think you deserve my vote after backstabbing me?"
+  ],
+  supportive: [
+    "Walk us through your strategic masterplan.",
+    "How did you manage to stay so calm under pressure?",
+    "What advice would you give to future players?",
+    "When did you know you could win this game?",
+    "Tell us about your proudest moment in the house."
+  ]
+};
 
 const JuryQuestioningPhase: React.FC = () => {
   const { gameState, dispatch } = useGame();
@@ -30,6 +43,7 @@ const JuryQuestioningPhase: React.FC = () => {
   const [questionsComplete, setQuestionsComplete] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [answeredBy, setAnsweredBy] = useState<Set<string>>(new Set());
+  const [questionType, setQuestionType] = useState<'neutral' | 'bitter' | 'supportive'>('neutral');
   
   // Get the final 2 houseguests
   const finalists = gameState.finalTwo || [];
@@ -41,13 +55,57 @@ const JuryQuestioningPhase: React.FC = () => {
   
   const currentJuror = jurors[currentJurorIndex];
   const progress = ((currentJurorIndex) / jurors.length) * 100;
+
+  // Listen for fast-forward events
+  useEffect(() => {
+    const handleFastForward = () => {
+      skipToEnd();
+    };
+    
+    document.addEventListener('game:fastForward', handleFastForward);
+    return () => document.removeEventListener('game:fastForward', handleFastForward);
+  }, []);
+
+  // Skip all questioning
+  const skipToEnd = useCallback(() => {
+    setQuestionsComplete(true);
+    setIsAsking(false);
+    
+    // Log event
+    dispatch({
+      type: 'LOG_EVENT',
+      payload: {
+        week: gameState.week,
+        phase: 'JuryQuestioning',
+        type: 'JURY_QUESTIONING',
+        description: `The jury questioned ${finalists.map(f => f.name).join(' and ')}.`,
+        involvedHouseguests: [...finalists.map(f => f.id), ...jurors.map(j => j.id)]
+      }
+    });
+  }, [dispatch, finalists, gameState.week, jurors]);
+  
+  // Determine question type based on relationship
+  const getQuestionType = (juror: Houseguest): 'neutral' | 'bitter' | 'supportive' => {
+    // For now, randomize with weighted probability
+    // In a full implementation, this would check relationship scores
+    const roll = Math.random();
+    if (roll < 0.2) return 'bitter';
+    if (roll < 0.4) return 'supportive';
+    return 'neutral';
+  };
   
   // Start questioning for current juror
   const startQuestioning = () => {
     if (!currentJuror) return;
     
     setIsAsking(true);
-    const question = JURY_QUESTIONS[currentJurorIndex % JURY_QUESTIONS.length];
+    
+    // Determine question type based on juror's relationship
+    const qType = getQuestionType(currentJuror);
+    setQuestionType(qType);
+    
+    const questions = JURY_QUESTIONS[qType];
+    const question = questions[currentJurorIndex % questions.length];
     setCurrentQuestion(question);
     
     // Simulate answer time for each finalist
@@ -101,6 +159,18 @@ const JuryQuestioningPhase: React.FC = () => {
       payload: 'Finale'
     });
   };
+
+  // Get badge variant for question type
+  const getQuestionBadge = () => {
+    switch (questionType) {
+      case 'bitter':
+        return <Badge variant="destructive" className="text-xs">Tough Question</Badge>;
+      case 'supportive':
+        return <Badge variant="outline" className="text-xs bg-bb-green/10 text-bb-green border-bb-green/30">Friendly</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-xs">Neutral</Badge>;
+    }
+  };
   
   return (
     <GameCard variant="default">
@@ -110,9 +180,22 @@ const JuryQuestioningPhase: React.FC = () => {
             <GameCardTitle>Jury Questioning</GameCardTitle>
             <GameCardDescription>Week {gameState.week} - The Final 2 Face the Jury</GameCardDescription>
           </div>
-          <Badge variant="outline" className="bg-primary/10">
-            {jurors.length} Jury Members
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-primary/10">
+              {jurors.length} Jury Members
+            </Badge>
+            {!questionsComplete && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={skipToEnd}
+                className="gap-1"
+              >
+                <SkipForward className="h-4 w-4" />
+                Skip All
+              </Button>
+            )}
+          </div>
         </div>
       </GameCardHeader>
       
@@ -165,10 +248,13 @@ const JuryQuestioningPhase: React.FC = () => {
           <div className="p-4 bg-muted/50 rounded-lg border animate-fade-in">
             <div className="flex items-start gap-3">
               <HelpCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-sm text-muted-foreground mb-1">
-                  {currentJuror?.name} asks:
-                </p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-medium text-sm text-muted-foreground">
+                    {currentJuror?.name} asks:
+                  </p>
+                  {getQuestionBadge()}
+                </div>
                 <p className="text-lg font-medium italic">"{currentQuestion}"</p>
               </div>
             </div>

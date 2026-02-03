@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Target, ArrowRight, Check, Users, Shield } from 'lucide-react';
+import { Target, ArrowRight, Check, Shield } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
@@ -38,13 +38,6 @@ const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
         }
       });
     }
-  };
-  
-  const handleCampaign = () => {
-    dispatch({
-      type: 'SET_PHASE',
-      payload: 'SocialInteraction'
-    });
   };
   
   return (
@@ -96,30 +89,17 @@ const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
         for a chance to save themselves from eviction.
       </p>
       
-      {/* Navigation Options */}
-      <div className="space-y-3 w-full max-w-md">
-        <p className="text-center text-sm text-muted-foreground">
-          Choose your next action:
-        </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-3">
-          <Button 
-            variant="outline"
-            onClick={handleCampaign}
-            className="gap-2"
-          >
-            <Users className="h-4 w-4" />
-            Campaign Period
-          </Button>
-          <Button 
-            onClick={handleContinue} 
-            size="lg"
-            className="bg-bb-blue hover:bg-bb-blue/90 text-white font-semibold px-8 gap-2"
-          >
-            <Shield className="h-4 w-4" />
-            Continue to PoV
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-        </div>
+      {/* Single primary action - BB USA format has no mid-week social phase */}
+      <div className="flex justify-center">
+        <Button 
+          onClick={handleContinue} 
+          size="lg"
+          className="bg-bb-blue hover:bg-bb-blue/90 text-white font-semibold px-8 gap-2"
+        >
+          <Shield className="h-4 w-4" />
+          Continue to PoV Player Selection
+          <ArrowRight className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );

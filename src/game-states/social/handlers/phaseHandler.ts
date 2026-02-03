@@ -4,6 +4,8 @@ import { RelationshipEventType } from '../../../models/relationship-event';
 
 /**
  * Handle advancing to the next game phase
+ * BB USA Format: Social interaction happens ONLY after eviction, before next HoH
+ * This action ends the social phase and advances to the next week
  */
 export function handleAdvancePhase({ controller }: SocialActionHandlerParams): void {
   // Log that the player is advancing to the next phase
@@ -28,9 +30,10 @@ export function handleAdvancePhase({ controller }: SocialActionHandlerParams): v
     });
   }
   
-  // Advance to POV Competition
+  // BB USA Format: After social phase ends, advance week and go to next HoH competition
+  // This is the ONLY place where week advancement should happen
   controller.dispatch({
-    type: 'SET_PHASE', 
-    payload: 'POVCompetition'
+    type: 'ADVANCE_WEEK',
+    payload: {}
   });
 }
