@@ -53,7 +53,7 @@ const NominationPhase: React.FC = () => {
   // Start the ceremony
   const startCeremony = () => {
     setCeremonyStarted(true);
-    logger.info(`${hoh?.name} has started the Nomination Ceremony`);
+    logger?.info(`${hoh?.name} has started the Nomination Ceremony`);
 
     // Countdown sequence - for visual effect
     setTimeout(() => {
@@ -84,7 +84,7 @@ const NominationPhase: React.FC = () => {
               updateHouseguestMentalState(nominee, 'nominated');
             }
           });
-          logger.info(`${hoh?.name} has nominated ${randomNominees.map(n => n.name).join(' and ')}`);
+          logger?.info(`${hoh?.name} has nominated ${randomNominees.map(n => n.name).join(' and ')}`);
         } else {
           // Update mental state of existing nominees
           nominees.forEach(nominee => {
