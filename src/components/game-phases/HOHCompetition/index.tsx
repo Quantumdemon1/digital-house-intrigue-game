@@ -49,7 +49,7 @@ const HOHCompetition: React.FC = () => {
       const competitionTypes: Array<CompetitionType> = ['physical', 'mental', 'endurance', 'social', 'luck'];
       const randomType = competitionTypes[Math.floor(Math.random() * competitionTypes.length)];
       
-      logger?.info("Fast forward state check - isCompeting:", isCompeting, "winner:", !!winner);
+      logger?.info(`Fast forward state check - isCompeting: ${isCompeting}, winner: ${!!winner}`);
       
       if (winner) {
         logger?.info("Fast forward: Winner already selected, forcing phase transition");

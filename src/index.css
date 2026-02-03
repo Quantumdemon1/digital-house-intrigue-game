@@ -7,6 +7,7 @@
 
 @layer base {
   :root {
+    /* Base theme colors */
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
 
@@ -16,14 +17,14 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 210 100% 42%;
+    --primary: 210 100% 44%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 3 100% 60%;
     --secondary-foreground: 210 40% 98%;
 
-    --accent: 142 100% 50%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215 16% 47%;
@@ -33,10 +34,62 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 222 84% 5%;
+    --ring: 210 100% 44%;
 
     --radius: 0.5rem;
 
+    /* Big Brother Game Colors - HSL format */
+    --bb-blue: 210 100% 44%;
+    --bb-blue-light: 210 100% 55%;
+    --bb-blue-dark: 210 100% 35%;
+    
+    --bb-red: 6 100% 60%;
+    --bb-red-light: 6 100% 70%;
+    --bb-red-dark: 6 100% 45%;
+    
+    --bb-gold: 36 100% 50%;
+    --bb-gold-light: 36 100% 65%;
+    --bb-gold-dark: 36 100% 40%;
+    
+    --bb-green: 145 100% 39%;
+    --bb-green-light: 145 100% 50%;
+    --bb-green-dark: 145 100% 30%;
+    
+    --bb-dark: 220 26% 14%;
+    --bb-light: 210 17% 98%;
+
+    /* Semantic Game Colors */
+    --game-success: 145 100% 39%;
+    --game-warning: 36 100% 50%;
+    --game-danger: 6 100% 60%;
+    --game-info: 210 100% 44%;
+    
+    /* Role Colors */
+    --hoh-color: 36 100% 50%;
+    --nominee-color: 6 100% 60%;
+    --pov-color: 36 100% 50%;
+    --safe-color: 145 100% 39%;
+    --evicted-color: 0 0% 50%;
+
+    /* Gradients as CSS custom properties */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 44%) 0%, hsl(210 100% 55%) 100%);
+    --gradient-danger: linear-gradient(135deg, hsl(6 100% 60%) 0%, hsl(6 100% 45%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(36 100% 50%) 0%, hsl(45 100% 60%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(145 100% 39%) 0%, hsl(145 100% 50%) 100%);
+    --gradient-dark: linear-gradient(135deg, hsl(220 26% 14%) 0%, hsl(220 26% 24%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+
+    /* Shadow System */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-glow-primary: 0 0 20px hsl(210 100% 44% / 0.4);
+    --shadow-glow-gold: 0 0 20px hsl(36 100% 50% / 0.4);
+    --shadow-glow-danger: 0 0 20px hsl(6 100% 60% / 0.4);
+    --shadow-glow-success: 0 0 20px hsl(145 100% 39% / 0.4);
+
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5% 26%;
     --sidebar-primary: 240 6% 10%;
@@ -48,7 +101,7 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 
     --card: 222 47% 11%;
@@ -57,13 +110,13 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 100% 42%;
+    --primary: 210 100% 50%;
     --primary-foreground: 222 47% 11%;
 
     --secondary: 3 100% 60%;
     --secondary-foreground: 210 40% 98%;
 
-    --accent: 142 100% 50%;
+    --accent: 142 76% 42%;
     --accent-foreground: 222 47% 11%;
 
     --muted: 217 33% 18%;
@@ -72,9 +125,38 @@
     --destructive: 3 100% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 213 27% 84%;
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 210 100% 50%;
+
+    /* Dark mode game colors */
+    --bb-blue: 210 100% 50%;
+    --bb-blue-light: 210 100% 60%;
+    --bb-blue-dark: 210 100% 40%;
+    
+    --game-success: 145 100% 45%;
+    --game-warning: 36 100% 55%;
+    --game-danger: 6 100% 65%;
+    --game-info: 210 100% 50%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(210 100% 60%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+
+    /* Dark mode shadows */
+    --shadow-glow-primary: 0 0 25px hsl(210 100% 50% / 0.5);
+    --shadow-glow-gold: 0 0 25px hsl(36 100% 55% / 0.5);
+    --shadow-glow-danger: 0 0 25px hsl(6 100% 65% / 0.5);
+    --shadow-glow-success: 0 0 25px hsl(145 100% 45% / 0.5);
+
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 22%;
+    --sidebar-ring: 210 100% 50%;
   }
 }
 
@@ -84,119 +166,335 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-family: 'Montserrat', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-wide;
-  }
-
-  h1, h2, .themed-header {
+  /* Typography Hierarchy */
+  h1 {
+    @apply text-3xl md:text-4xl font-bold tracking-tight;
     font-family: 'Orbitron', sans-serif;
   }
 
-  .surveillance-bg {
-    @apply bg-surveillance-pattern;
+  h2 {
+    @apply text-2xl md:text-3xl font-bold tracking-tight;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl font-semibold tracking-wide;
+  }
+
+  h4 {
+    @apply text-lg md:text-xl font-semibold;
+  }
+
+  h5 {
+    @apply text-base md:text-lg font-medium;
+  }
+
+  h6 {
+    @apply text-sm md:text-base font-medium;
+  }
+
+  .themed-header {
+    font-family: 'Orbitron', sans-serif;
+    @apply tracking-wider uppercase;
+  }
+
+  .game-title {
+    font-family: 'Orbitron', sans-serif;
+    @apply text-2xl md:text-3xl font-bold tracking-widest uppercase;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
 
 @layer components {
+  /* Enhanced Camera Lens Effect */
   .camera-lens {
-    @apply relative overflow-hidden rounded-full border-4 border-bb-dark;
+    @apply relative overflow-hidden rounded-full border-4;
+    border-color: hsl(var(--bb-dark));
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), var(--shadow-md);
   }
   
   .camera-lens::after {
     content: "";
-    @apply absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-bb-blue/30 to-transparent animate-camera-scan;
+    @apply absolute top-0 left-0 right-0 h-1/3 animate-camera-scan pointer-events-none;
+    background: linear-gradient(to bottom, hsl(var(--bb-blue) / 0.3), transparent);
   }
 
-  .bb-card {
-    @apply bg-white rounded-lg shadow-lg border p-4 hover:shadow-xl transition-shadow;
+  /* Game Card Styles */
+  .game-card {
+    @apply relative overflow-hidden rounded-xl border transition-all duration-300;
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+    box-shadow: var(--shadow-md);
   }
 
+  .game-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  .game-card-header {
+    @apply p-4 md:p-6 border-b;
+    border-color: hsl(var(--border));
+  }
+
+  .game-card-header.primary {
+    background: var(--gradient-primary);
+    @apply text-white border-0;
+  }
+
+  .game-card-header.danger {
+    background: var(--gradient-danger);
+    @apply text-white border-0;
+  }
+
+  .game-card-header.gold {
+    background: var(--gradient-gold);
+    @apply text-white border-0;
+  }
+
+  .game-card-header.success {
+    background: var(--gradient-success);
+    @apply text-white border-0;
+  }
+
+  .game-card-content {
+    @apply p-4 md:p-6;
+  }
+
+  .game-card-footer {
+    @apply p-4 md:p-6 border-t flex items-center justify-between;
+    border-color: hsl(var(--border));
+  }
+
+  /* Status Avatar with Role Indicators */
+  .status-avatar {
+    @apply relative inline-flex;
+  }
+
+  .status-avatar-ring {
+    @apply absolute inset-0 rounded-full;
+    box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 0 5px currentColor;
+  }
+
+  .status-avatar-ring.hoh {
+    color: hsl(var(--hoh-color));
+    box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 0 5px hsl(var(--hoh-color)), var(--shadow-glow-gold);
+  }
+
+  .status-avatar-ring.nominee {
+    color: hsl(var(--nominee-color));
+    box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 0 5px hsl(var(--nominee-color)), var(--shadow-glow-danger);
+  }
+
+  .status-avatar-ring.pov {
+    color: hsl(var(--pov-color));
+    box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 0 5px hsl(var(--pov-color)), var(--shadow-glow-gold);
+  }
+
+  .status-avatar-ring.safe {
+    color: hsl(var(--safe-color));
+    box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 0 5px hsl(var(--safe-color)), var(--shadow-glow-success);
+  }
+
+  .status-avatar-ring.evicted {
+    color: hsl(var(--evicted-color));
+    @apply opacity-60;
+  }
+
+  .status-avatar-badge {
+    @apply absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Phase Indicator Styles */
+  .phase-indicator {
+    @apply flex items-center gap-2 md:gap-4 overflow-x-auto py-2 px-1;
+  }
+
+  .phase-step {
+    @apply flex items-center gap-2 transition-all duration-300;
+  }
+
+  .phase-step-circle {
+    @apply w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300;
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+  }
+
+  .phase-step-circle.active {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: var(--shadow-glow-primary);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .phase-step-circle.completed {
+    background: hsl(var(--game-success));
+    color: white;
+  }
+
+  .phase-step-label {
+    @apply text-xs md:text-sm font-medium hidden sm:block;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .phase-step-label.active {
+    color: hsl(var(--primary));
+    @apply font-semibold;
+  }
+
+  .phase-step-connector {
+    @apply w-8 md:w-12 h-0.5 transition-all duration-300;
+    background: hsl(var(--border));
+  }
+
+  .phase-step-connector.completed {
+    background: hsl(var(--game-success));
+  }
+
+  /* Vote Counter Animation */
+  .vote-counter {
+    @apply relative flex flex-col items-center;
+  }
+
+  .vote-counter-number {
+    @apply text-4xl md:text-6xl font-bold transition-all duration-300;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .vote-counter-number.animating {
+    animation: count-bounce 0.3s ease-out;
+  }
+
+  /* Competition Visual */
+  .competition-visual {
+    @apply relative w-full h-48 md:h-64 rounded-xl overflow-hidden;
+    background: var(--gradient-dark);
+  }
+
+  .competition-visual::before {
+    content: "";
+    @apply absolute inset-0;
+    background: var(--gradient-glass);
+  }
+
+  .competition-visual-icon {
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 md:w-32 md:h-32;
+    color: hsl(var(--bb-blue-light));
+    opacity: 0.8;
+  }
+
+  /* Badge Variants */
   .bb-badge {
-    @apply px-2 py-0.5 rounded text-xs font-medium;
+    @apply px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 transition-all duration-200;
   }
 
+  .bb-badge.primary {
+    background: hsl(var(--bb-blue) / 0.15);
+    color: hsl(var(--bb-blue));
+  }
+
+  .bb-badge.danger {
+    background: hsl(var(--bb-red) / 0.15);
+    color: hsl(var(--bb-red));
+  }
+
+  .bb-badge.success {
+    background: hsl(var(--bb-green) / 0.15);
+    color: hsl(var(--bb-green));
+  }
+
+  .bb-badge.gold {
+    background: hsl(var(--bb-gold) / 0.15);
+    color: hsl(var(--bb-gold));
+  }
+
+  .bb-badge.muted {
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Status Indicator */
   .status-indicator {
-    @apply w-2 h-2 rounded-full;
+    @apply w-2.5 h-2.5 rounded-full;
   }
 
   .status-indicator.active {
-    @apply bg-green-500 animate-pulse;
+    background: hsl(var(--game-success));
+    box-shadow: 0 0 8px hsl(var(--game-success) / 0.6);
+    animation: pulse-glow 2s ease-in-out infinite;
   }
 
   .status-indicator.inactive {
-    @apply bg-red-500;
+    background: hsl(var(--game-danger));
+  }
+
+  .status-indicator.pending {
+    background: hsl(var(--game-warning));
+    animation: pulse-slow 2s ease-in-out infinite;
+  }
+
+  /* Glass Card Effect */
+  .glass-card {
+    @apply rounded-xl border backdrop-blur-sm;
+    background: hsl(var(--card) / 0.8);
+    border-color: hsl(var(--border) / 0.5);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Dramatic Reveal Animation Container */
+  .reveal-container {
+    @apply relative overflow-hidden;
+  }
+
+  .reveal-container::before {
+    content: "";
+    @apply absolute inset-0 z-10 pointer-events-none;
+    background: linear-gradient(to right, hsl(var(--bb-gold)) 0%, transparent 50%, hsl(var(--bb-gold)) 100%);
+    animation: reveal-sweep 1s ease-out forwards;
+    opacity: 0;
+  }
+
+  .reveal-container.revealing::before {
+    opacity: 1;
+  }
+
+  /* Hover Effects */
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300;
+  }
+
+  .hover-glow:hover {
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200;
+  }
+
+  .hover-scale:hover {
+    transform: scale(1.05);
   }
 }
 
-/* Big Brother theme colors */
-@layer utilities {
-  .text-bb-blue {
-    @apply text-[#1c6dc1];
-  }
-  
-  .text-bb-red {
-    @apply text-[#e74c3c];
-  }
-  
-  .text-bb-gold {
-    @apply text-[#f1c40f];
-  }
-  
-  .text-bb-green {
-    @apply text-[#27ae60];
-  }
-  
-  .text-bb-dark {
-    @apply text-[#2c3e50];
-  }
-  
-  .bg-bb-blue {
-    @apply bg-[#1c6dc1];
-  }
-  
-  .bg-bb-red {
-    @apply bg-[#e74c3c];
-  }
-  
-  .bg-bb-gold {
-    @apply bg-[#f1c40f];
-  }
-  
-  .bg-bb-green {
-    @apply bg-[#27ae60];
-  }
-  
-  .bg-bb-dark {
-    @apply bg-[#2c3e50];
-  }
-  
-  .border-bb-blue {
-    @apply border-[#1c6dc1];
-  }
-  
-  .border-bb-red {
-    @apply border-[#e74c3c];
-  }
-  
-  .border-bb-gold {
-    @apply border-[#f1c40f];
-  }
-  
-  .border-bb-green {
-    @apply border-[#27ae60];
-  }
-  
-  .border-bb-dark {
-    @apply border-[#2c3e50];
-  }
-}
-
-/* Animation for camera scan effect */
+/* Keyframe Animations */
 @keyframes camera-scan {
   0% {
     transform: translateY(-100%);
@@ -206,10 +504,121 @@
   }
 }
 
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: var(--shadow-glow-primary);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 30px hsl(var(--bb-blue) / 0.6);
+  }
+}
+
+@keyframes count-bounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes reveal-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Utility Animations */
 .animate-camera-scan {
   animation: camera-scan 4s linear infinite;
 }
 
 .animate-pulse-slow {
   animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Responsive Utilities */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Safe area padding for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Focus visible ring */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    --tw-ring-color: hsl(var(--ring));
+  }
 }
