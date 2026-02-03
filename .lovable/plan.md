@@ -1,259 +1,162 @@
 
-# Plan: Complete Final Stages Implementation
+# Plan: Complete UI/UX Overhaul for Eviction & Sidebar
 
-## Current State Analysis
+## Problems Identified from Screenshot
 
-The final stages are mostly implemented but have several gaps and issues that need to be addressed:
-
-### What's Working
-- **FinalHoHPhase.tsx**: 3-part competition UI with participant tracking and selection
-- **JuryQuestioningPhase.tsx**: Question-answer flow with skip functionality
-- **FinalePhase.tsx**: Speeches, voting, and vote reveal stages
-- **GameOverPhase.tsx**: Winner display and game summary
-- **Spectator Mode**: Auto-advance for evicted players in most phases
-
-### Issues Found
-
-1. **Missing state updates for final actions**: The `set_final_two` and `set_winner` player actions are dispatched but not handled in the reducer - the `finalTwo` and winner data isn't being saved to state
-
-2. **Missing spectator mode in final phases**: FinalHoHPhase, JuryQuestioningPhase, and FinalePhase don't have auto-advance logic for spectator mode
-
-3. **Missing `isWinner` property update**: The `END_GAME` reducer sets `status: 'Winner'` but the GameOverPhase looks for `hg.isWinner` property instead
-
-4. **No auto-advance from FinalHoH selection**: When AI is Final HoH, they need to automatically select a finalist
-
-5. **juryMembers state mismatch**: Some code expects array of IDs, other code expects array of Houseguest objects
+1. **Voting Buttons Cut Off**: Player vote buttons display full nominee names ("Casey Wilson", "Av...") causing overflow and clipping
+2. **Sidebar Houseguest Cards Overflow**: The "Active Houseguests" section shows cards that are too wide, with names like "Jamie Roberts" and "Sam Williams" being cut off
+3. **Horizontal Overflow**: The sidebar content extends beyond its container width
+4. **Grid Layout Issues**: HouseguestList uses a 4-column grid that doesn't fit in the sidebar context
+5. **Text Truncation Missing**: Names and occupations overflow their containers without proper truncation
 
 ---
 
-## Implementation Plan
+## Solution Overview
 
-### 1. Fix Player Action Reducer for Final Stage Actions
-**File**: `src/contexts/reducers/reducers/player-action-reducer.ts`
+### 1. Fix Voting Buttons - Use Short Labels
+Replace full nominee names with shorter button text to prevent overflow.
 
-Add handlers for:
-- `set_final_two`: Update `finalTwo` array in state
-- `set_winner`: Update winner houseguest with `isWinner: true` and call END_GAME
+**File**: `src/components/game-phases/EvictionPhase/VoterDisplay.tsx`
+
+Changes:
+- Replace `{nominee.name}` with first name only or "Vote 1" / "Vote 2" pattern
+- Add tooltip showing full nominee name
+- Make buttons wrap properly on smaller screens
 
 ```typescript
-case 'set_final_two':
-  if (payload.params.finalist1Id && payload.params.finalist2Id) {
-    const finalist1 = state.houseguests.find(h => h.id === payload.params.finalist1Id);
-    const finalist2 = state.houseguests.find(h => h.id === payload.params.finalist2Id);
-    if (finalist1 && finalist2) {
-      return {
-        ...state,
-        finalTwo: [finalist1, finalist2]
-      };
-    }
-  }
-  break;
+// Before
+<Button>
+  <Vote className="h-3 w-3 mr-1" />
+  {nominee.name}  // Full name causes overflow
+</Button>
 
-case 'set_winner':
-  if (payload.params.winnerId) {
-    const winner = state.houseguests.find(h => h.id === payload.params.winnerId);
-    const runnerUp = state.finalTwo.find(h => h.id !== payload.params.winnerId);
-    if (winner && runnerUp) {
-      // Update houseguests with winner status
-      const updatedHouseguests = state.houseguests.map(h => {
-        if (h.id === winner.id) {
-          return { ...h, status: 'Winner', isWinner: true };
-        }
-        if (h.id === runnerUp.id) {
-          return { ...h, status: 'Runner-Up' };
-        }
-        return h;
-      });
-      return {
-        ...state,
-        houseguests: updatedHouseguests,
-        winner: { ...winner, status: 'Winner', isWinner: true },
-        runnerUp: { ...runnerUp, status: 'Runner-Up' },
-        phase: 'GameOver'
-      };
-    }
-  }
-  break;
+// After
+<Tooltip>
+  <TooltipTrigger asChild>
+    <Button className="flex-shrink-0 min-w-0">
+      <Vote className="h-3 w-3 mr-1" />
+      <span className="truncate max-w-[80px]">
+        {nominee.name.split(' ')[0]}  // First name only
+      </span>
+    </Button>
+  </TooltipTrigger>
+  <TooltipContent>
+    <p>Vote to evict {nominee.name}</p>
+  </TooltipContent>
+</Tooltip>
 ```
 
 ---
 
-### 2. Add Spectator Mode to FinalHoHPhase
-**File**: `src/components/game-phases/FinalHoHPhase.tsx`
+### 2. Fix Sidebar HouseguestList Layout
+Create a dedicated compact layout for when displayed in the sidebar.
 
-Add auto-advance logic when in spectator mode:
-- Auto-start each competition part after 2 seconds
-- Auto-continue to next part after results
-- Auto-select finalist (AI chooses based on relationships)
+**File**: `src/components/HouseguestList.tsx`
+
+Changes:
+- Change grid to single column for sidebar context
+- Use a compact card variant optimized for narrow widths
+- Add horizontal scroll fallback if needed
 
 ```typescript
-// Auto-start competition in spectator mode
-useEffect(() => {
-  if (!gameState.isSpectatorMode) return;
-  
-  if (currentPart !== 'selection' && !isCompeting && !showResults && !partStatus[currentPartKey].completed) {
-    const timer = setTimeout(() => {
-      startCompetition(currentPartKey);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }
-}, [gameState.isSpectatorMode, currentPart, isCompeting, showResults, partStatus]);
-
-// Auto-continue after results in spectator mode
-useEffect(() => {
-  if (!gameState.isSpectatorMode || !showResults) return;
-  
-  const timer = setTimeout(() => {
-    continueToNextPart();
-  }, 3000);
-  return () => clearTimeout(timer);
-}, [gameState.isSpectatorMode, showResults]);
-
-// Auto-select finalist in spectator mode (AI decision)
-useEffect(() => {
-  if (!gameState.isSpectatorMode || currentPart !== 'selection' || !finalHoH) return;
-  
-  const timer = setTimeout(() => {
-    // AI chooses based on relationships - pick who they have better relationship with
-    const otherFinalists = finalThree.filter(h => h.id !== finalHoH.id);
-    // Simple random selection for now (could use relationship system)
-    const selectedFinalist = otherFinalists[Math.floor(Math.random() * otherFinalists.length)];
-    if (selectedFinalist) {
-      chooseFinalist(selectedFinalist);
-    }
-  }, 3000);
-  return () => clearTimeout(timer);
-}, [gameState.isSpectatorMode, currentPart, finalHoH]);
+// Change from 4-column grid to responsive single/2-column
+<div className="grid grid-cols-1 gap-2">
+  {activeHouseguests.map(houseguest => (
+    <CompactHouseguestCard key={houseguest.id} houseguest={houseguest} />
+  ))}
+</div>
 ```
 
 ---
 
-### 3. Add Spectator Mode to JuryQuestioningPhase
-**File**: `src/components/game-phases/JuryQuestioningPhase.tsx`
+### 3. Create Compact Houseguest Card Variant
+Create a horizontal card layout that fits better in the sidebar.
 
-Add auto-advance for spectator mode:
+**New File**: `src/components/houseguest/HouseguestCardCompact.tsx`
+
+Features:
+- Horizontal layout (avatar left, info right)
+- Smaller avatar size
+- Truncated names with ellipsis
+- Status badges positioned compactly
+- Fixed width constraints
 
 ```typescript
-// Auto-start questioning in spectator mode
-useEffect(() => {
-  if (!gameState.isSpectatorMode || questionsComplete || isAsking) return;
-  
-  const timer = setTimeout(() => {
-    if (currentJurorIndex === 0) {
-      startQuestioning();
-    }
-  }, 2000);
-  return () => clearTimeout(timer);
-}, [gameState.isSpectatorMode, questionsComplete, isAsking, currentJurorIndex]);
-
-// Auto-continue after each juror in spectator mode  
-useEffect(() => {
-  if (!gameState.isSpectatorMode || isAsking || questionsComplete) return;
-  if (currentJurorIndex > 0 && currentJurorIndex < jurors.length) {
-    const timer = setTimeout(() => {
-      startQuestioning();
-    }, 1500);
-    return () => clearTimeout(timer);
-  }
-}, [gameState.isSpectatorMode, currentJurorIndex, isAsking, questionsComplete]);
-
-// Auto-continue to finale in spectator mode
-useEffect(() => {
-  if (!gameState.isSpectatorMode || !questionsComplete) return;
-  
-  const timer = setTimeout(() => {
-    continueToFinale();
-  }, 2000);
-  return () => clearTimeout(timer);
-}, [gameState.isSpectatorMode, questionsComplete]);
+<div className="flex items-center gap-3 p-2 rounded-lg border bg-card">
+  <StatusAvatar name={name} status={status} size="sm" />
+  <div className="flex-1 min-w-0">  {/* min-w-0 enables truncation */}
+    <p className="font-medium truncate">{houseguest.name}</p>
+    <p className="text-xs text-muted-foreground truncate">
+      {houseguest.age} - {houseguest.occupation}
+    </p>
+  </div>
+  <HouseguestBadges houseguest={houseguest} compact />
+</div>
 ```
 
 ---
 
-### 4. Add Spectator Mode to FinalePhase
-**File**: `src/components/game-phases/FinalePhase.tsx`
+### 4. Fix HouseguestCard Text Overflow
+Add proper text truncation and min-width constraints.
 
-Add auto-advance through finale stages:
+**File**: `src/components/houseguest/HouseguestCard.tsx`
 
-```typescript
-// Auto-advance through stages in spectator mode
-useEffect(() => {
-  if (!gameState.isSpectatorMode) return;
-  
-  if (stage === 'intro') {
-    const timer = setTimeout(() => {
-      handleProceedToSpeeches();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }
-  
-  if (stage === 'speeches') {
-    // Skip speeches but let FinalSpeeches component handle it
-    const timer = setTimeout(() => {
-      handleSkipToVoting();
-    }, 2000);
-    return () => clearTimeout(timer);
-  }
-  
-  if (stage === 'complete' && winner) {
-    const timer = setTimeout(() => {
-      handleContinueToGameOver();
-    }, 5000);
-    return () => clearTimeout(timer);
-  }
-}, [gameState.isSpectatorMode, stage, winner]);
-```
-
-Note: During voting stage, spectator player still gets to cast their jury vote.
-
----
-
-### 5. Fix GameOverPhase Winner Detection
-**File**: `src/components/game-phases/GameOverPhase.tsx`
-
-Update to check both `isWinner` property and `status === 'Winner'`:
+Changes:
+- Add `min-w-0` to flex containers to enable truncation
+- Add `truncate` class to name and occupation
+- Reduce padding for tighter layout
+- Cap card max-width
 
 ```typescript
-const winner = gameState.houseguests.find(hg => hg.isWinner || hg.status === 'Winner');
+<h3 className="font-bold text-center truncate max-w-full">
+  {houseguest.name}
+</h3>
+<p className="text-xs text-muted-foreground text-center mt-0.5 truncate">
+  {houseguest.age} - {houseguest.occupation}
+</p>
 ```
 
 ---
 
-### 6. Add Missing FinalHoH Part Winner Actions in Player Action Reducer
-**File**: `src/contexts/reducers/reducers/player-action-reducer.ts`
+### 5. Fix GameSidebar Scroll Container
+Ensure sidebar content respects boundaries.
 
-Handle the competition part winner actions:
+**File**: `src/components/game-screen/GameSidebar.tsx`
+
+Changes:
+- Add `overflow-hidden` to parent containers
+- Ensure ScrollArea doesn't allow horizontal overflow
+- Add proper width constraints
 
 ```typescript
-case 'select_part1_winner':
-case 'select_part2_winner':
-case 'select_part3_winner':
-  if (payload.params.winnerId) {
-    const partKey = payload.actionId.replace('select_', '').replace('_winner', '') as 'part1' | 'part2' | 'part3';
-    const updatedFinalHoHWinners = {
-      ...state.finalHoHWinners,
-      [partKey]: payload.params.winnerId
-    };
-    
-    // If part3, also set HOH winner
-    const updates: Partial<GameState> = {
-      finalHoHWinners: updatedFinalHoHWinners
-    };
-    
-    if (partKey === 'part3') {
-      const winner = state.houseguests.find(h => h.id === payload.params.winnerId);
-      if (winner) {
-        updates.hohWinner = winner;
-        updates.houseguests = state.houseguests.map(h => ({
-          ...h,
-          isHoH: h.id === payload.params.winnerId
-        }));
-      }
-    }
-    
-    return { ...state, ...updates };
-  }
-  break;
+<Card className="game-card overflow-hidden">
+  <ScrollArea className="h-[400px]">
+    <CardContent className="p-3 overflow-hidden">
+      <HouseguestListComponent compact />
+    </CardContent>
+  </ScrollArea>
+</Card>
+```
+
+---
+
+### 6. Improve HouseguestBadges for Compact Mode
+Add compact variant for badges that uses icons only.
+
+**File**: `src/components/houseguest/HouseguestBadges.tsx`
+
+Changes:
+- Add `compact` prop
+- In compact mode, show only icons without text labels
+- Stack vertically for narrow spaces
+
+```typescript
+{houseguest.isHoH && (
+  <Badge className={compact ? "p-1" : "px-2"}>
+    <Crown className="h-3 w-3" />
+    {!compact && <span className="ml-1">HoH</span>}
+  </Badge>
+)}
 ```
 
 ---
@@ -262,47 +165,90 @@ case 'select_part3_winner':
 
 | File | Changes |
 |------|---------|
-| `src/contexts/reducers/reducers/player-action-reducer.ts` | Add handlers for `set_final_two`, `set_winner`, and part winner actions |
-| `src/components/game-phases/FinalHoHPhase.tsx` | Add spectator mode auto-advance for all stages |
-| `src/components/game-phases/JuryQuestioningPhase.tsx` | Add spectator mode auto-advance |
-| `src/components/game-phases/FinalePhase.tsx` | Add spectator mode auto-advance (respecting player jury vote) |
-| `src/components/game-phases/GameOverPhase.tsx` | Fix winner detection to check both properties |
+| `src/components/game-phases/EvictionPhase/VoterDisplay.tsx` | Fix vote button overflow with first names + tooltips |
+| `src/components/HouseguestList.tsx` | Change to single-column layout, add compact mode support |
+| `src/components/houseguest/HouseguestCard.tsx` | Add truncation, compact variant, width constraints |
+| `src/components/houseguest/HouseguestBadges.tsx` | Add compact mode (icon-only badges) |
+| `src/components/game-screen/GameSidebar.tsx` | Add overflow constraints, pass compact prop |
 
 ---
 
-## Testing Flow
+## Visual Comparison
 
-After implementation, the complete final stages should flow as:
-
+### Before (Current Issues)
 ```
-Final 4 Week:
-  Normal HoH → Nominations → PoV → Eviction
-      ↓
-3 houseguests remain → isFinalStage = true
-      ↓
-FinalHoH Phase:
-  Part 1 (Endurance) - all 3 compete
-      ↓
-  Part 2 (Skill) - 2 losers compete
-      ↓
-  Part 3 (Questions) - 2 winners compete → Final HoH crowned
-      ↓
-  Final HoH selects finalist → 3rd place evicted to jury
-      ↓
-Jury Questioning:
-  Each juror asks questions → finalists answer
-      ↓
-Finale:
-  Final speeches → Jury votes → Dramatic reveal → Winner crowned
-      ↓
-GameOver:
-  Winner display → Stats → Recap → New Game option
++---------------------------+
+| Active Houseguests        |
++---------------------------+
+| [X]  xzxc (You)           |  <- Cards too wide
+|  25 - zc                  |
+| [Compact][Loyal]          |  <- Traits overflow
++--[JR]---[SW]---[CW]-------+  <- Cut off cards
+| Jamie  Sam     Casey      |  <- Names cut off
+| Roberts Williams Wilson   |
++---------------------------+
+
+Voting Buttons:
+[Casey Wilson] [Av...]  <- Buttons cut off
 ```
 
-### Spectator Mode Flow
+### After (Fixed)
+```
++---------------------------+
+| Active Houseguests        |
++---------------------------+
+| [X] xzxc (You)   25-zc    |  <- Horizontal compact card
+| [JR] Jamie Roberts  27    |  <- Single column, truncated
+| [SW] Sam Williams   34    |
+| [CW] Casey Wilson   24    |
++---------------------------+
 
-If player is evicted:
-- SpectatorBanner appears with skip button
-- All phases auto-advance after brief delays
-- Player still casts jury vote during Finale
-- Player can skip to next phase at any time
+Voting Buttons:
+[Vote Casey] [Vote Avery]   <- First names + tooltips
+```
+
+---
+
+## Technical Details
+
+### Key CSS Fixes
+
+1. **Enable Text Truncation in Flex Containers**
+   ```css
+   .min-w-0 {
+     min-width: 0;  /* Required for truncate to work in flex */
+   }
+   ```
+
+2. **Button Flex Shrink Prevention**
+   ```css
+   .flex-shrink-0 {
+     flex-shrink: 0;  /* Prevent buttons from shrinking */
+   }
+   ```
+
+3. **Sidebar Card Constraints**
+   ```css
+   .overflow-hidden {
+     overflow: hidden;  /* Clip overflow content */
+   }
+   ```
+
+### Responsive Breakpoints
+- Sidebar width: 320px (lg:w-80) to 384px (xl:w-96)
+- Compact cards adapt to available width
+- Single column layout eliminates horizontal overflow
+
+---
+
+## Testing Checklist
+
+After implementation:
+- [ ] Vote buttons show first names and don't overflow
+- [ ] Tooltips appear on hover showing full nominee names
+- [ ] Sidebar houseguest cards are single-column and compact
+- [ ] Long names truncate with ellipsis
+- [ ] Status badges (HoH, PoV, Nom) display correctly in compact mode
+- [ ] No horizontal scrolling in sidebar
+- [ ] Cards are clickable and open the houseguest dialog
+- [ ] Mobile responsiveness maintained
