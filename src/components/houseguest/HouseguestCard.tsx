@@ -8,7 +8,7 @@ import { useGame } from '@/contexts/GameContext';
 import { Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import HouseguestAvatar from './HouseguestAvatar';
+import { StatusAvatar, AvatarStatus } from '@/components/ui/status-avatar';
 import HouseguestBadges from './HouseguestBadges';
 import HouseguestRelationship from './HouseguestRelationship';
 import HouseguestDialog from './HouseguestDialog';
@@ -33,28 +33,41 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({
     relationshipScore = getRelationship(player.id, houseguest.id);
     
     if (relationshipScore > 50) {
-      relationshipColor = 'text-green-600';
-      relationshipBorderStyle = 'border-green-600/50';
+      relationshipColor = 'text-game-success';
+      relationshipBorderStyle = 'border-bb-green/50';
     } else if (relationshipScore > 0) {
-      relationshipColor = 'text-green-400';
-      relationshipBorderStyle = 'border-green-400/40';
+      relationshipColor = 'text-bb-green-light';
+      relationshipBorderStyle = 'border-bb-green/30';
     } else if (relationshipScore > -50) {
-      relationshipColor = 'text-red-400';
-      relationshipBorderStyle = 'border-red-400/40';
+      relationshipColor = 'text-bb-red-light';
+      relationshipBorderStyle = 'border-bb-red/30';
     } else {
-      relationshipColor = 'text-red-600';
-      relationshipBorderStyle = 'border-red-600/50';
+      relationshipColor = 'text-game-danger';
+      relationshipBorderStyle = 'border-bb-red/50';
     }
   }
+
+  // Determine houseguest status for avatar
+  const getHouseguestStatus = (): AvatarStatus => {
+    const isActive = houseguest.status === 'Active';
+    if (!isActive) return 'evicted';
+    if (gameState.hohWinner === houseguest.id) return 'hoh';
+    if (gameState.povWinner === houseguest.id) return 'pov';
+    if (gameState.nominees.includes(houseguest.id)) return 'nominee';
+    return 'none';
+  };
+
+  const isActive = houseguest.status === 'Active';
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Card 
           className={cn(
-            "relative shadow-md hover:shadow-lg transition-shadow cursor-pointer",
-            houseguest.isPlayer ? 'border-bb-green border-2' : 
-            showRelationship ? relationshipBorderStyle : ''
+            "game-card relative cursor-pointer group",
+            houseguest.isPlayer && 'ring-2 ring-bb-green ring-offset-2',
+            showRelationship && relationshipBorderStyle,
+            !isActive && 'opacity-60'
           )}
         >
           <div className="absolute top-2 right-2 z-10">
@@ -63,19 +76,27 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({
           
           <CardContent className="pt-5">
             <div className="flex flex-col items-center">
-              <HouseguestAvatar houseguest={houseguest} className="mb-2" />
+              <StatusAvatar 
+                name={houseguest.name}
+                status={getHouseguestStatus()}
+                size="md"
+                isPlayer={houseguest.isPlayer}
+                className="mb-3 group-hover:scale-105 transition-transform duration-200"
+              />
               
               <h3 className="font-bold text-center">
                 {houseguest.name}
-                {houseguest.isPlayer && <span className="text-bb-green text-sm ml-1">(You)</span>}
+                {houseguest.isPlayer && (
+                  <span className="text-bb-green text-xs ml-1 font-normal">(You)</span>
+                )}
               </h3>
               
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-xs text-muted-foreground text-center mt-0.5">
                 {houseguest.age} • {houseguest.occupation}
               </p>
               
               {showRelationship && !houseguest.isPlayer && player && (
-                <div className="mt-2 w-full">
+                <div className="mt-3 w-full">
                   <HouseguestRelationship 
                     relationshipScore={relationshipScore}
                     relationshipColor={relationshipColor}
@@ -85,20 +106,23 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({
             </div>
           </CardContent>
           
-          <CardFooter className="p-2 text-xs flex justify-between items-center">
-            <div className="flex space-x-1 flex-wrap">
+          <CardFooter className="p-2 pt-0 text-xs flex justify-between items-center">
+            <div className="flex gap-1 flex-wrap">
               {houseguest.traits.slice(0, 2).map(trait => (
-                <Badge key={trait} variant="secondary" className="text-[10px] mb-1">
+                <span 
+                  key={trait} 
+                  className="bb-badge muted text-[10px] py-0.5"
+                >
                   {trait}
-                </Badge>
+                </span>
               ))}
               {houseguest.traits.length > 2 && (
-                <Badge variant="outline" className="text-[10px]">
+                <span className="bb-badge muted text-[10px] py-0.5">
                   +{houseguest.traits.length - 2}
-                </Badge>
+                </span>
               )}
             </div>
-            <Info className="h-3 w-3 text-muted-foreground" />
+            <Info className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </CardFooter>
         </Card>
       </DialogTrigger>

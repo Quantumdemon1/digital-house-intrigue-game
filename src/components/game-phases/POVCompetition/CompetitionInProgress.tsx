@@ -1,29 +1,31 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader } from 'lucide-react';
+import { Shield, Loader2 } from 'lucide-react';
+import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
+import { CompetitionVisual } from '@/components/ui/competition-visual';
 
 const CompetitionInProgress: React.FC = () => {
   return (
-    <Card className="shadow-lg border-bb-blue">
-      <CardHeader className="bg-bb-blue text-white">
-        <CardTitle>Power of Veto Competition</CardTitle>
-        <CardDescription className="text-white/80">
-          Competition in Progress
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="flex flex-col items-center">
-          <div className="animate-pulse">
-            <Loader className="w-16 h-16" />
+    <GameCard variant="primary">
+      <GameCardHeader variant="primary" icon={Shield}>
+        <GameCardTitle>Power of Veto Competition</GameCardTitle>
+        <GameCardDescription>Competition in Progress</GameCardDescription>
+      </GameCardHeader>
+      
+      <GameCardContent className="space-y-6">
+        <CompetitionVisual type={null} status="running" />
+        
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Determining winner...</span>
           </div>
-          <h3 className="text-xl font-bold mt-4">Competition in Progress...</h3>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-sm text-muted-foreground">
             Selected houseguests are competing for the Power of Veto
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </GameCardContent>
+    </GameCard>
   );
 };
 
