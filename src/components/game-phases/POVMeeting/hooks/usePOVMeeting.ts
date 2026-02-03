@@ -30,7 +30,8 @@ export const usePOVMeeting = () => {
     savedNominee,
     meetingStage,
     setMeetingStage,
-    setReplacementNominee
+    setReplacementNominee,
+    setSavedNominee
   });
   
   // Use extracted hook for veto decision logic
