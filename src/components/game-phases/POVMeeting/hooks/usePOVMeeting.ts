@@ -7,7 +7,7 @@ import { useNomineeReplacement } from './useNomineeReplacement';
 import { useAIDecisions } from './useAIDecisions';
 
 export const usePOVMeeting = () => {
-  const { gameState, getActiveHouseguests } = useGame();
+  const { gameState } = useGame();
   const [meetingStage, setMeetingStage] = useState<'initial' | 'selectSaved' | 'selectReplacement' | 'complete'>('initial');
   const [savedNominee, setSavedNominee] = useState<Houseguest | null>(null);
   const [replacementNominee, setReplacementNominee] = useState<Houseguest | null>(null);
@@ -15,7 +15,8 @@ export const usePOVMeeting = () => {
   const povHolder = gameState.povWinner;
   const nominees = gameState.nominees;
   const hoh = gameState.hohWinner;
-  const activeHouseguests = getActiveHouseguests();
+  // Get active houseguests directly from reducer state (avoids stale game object)
+  const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
   
   // Use extracted hooks for nominee replacement logic
   const { 
