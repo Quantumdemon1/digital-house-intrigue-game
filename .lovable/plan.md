@@ -1,135 +1,122 @@
 
-# Plan: Fix Skip Feature Including Eliminated Player in Final 2
+# Plan: Fix Game Event Log Not Tracking Key Events
 
-## Problem Summary
+## Problem Analysis
 
-When your character was eliminated and you used the "Skip to Next Phase" button, the game incorrectly placed your eliminated character in the Final 2. This happens because the FinalHoHPhase component reads houseguest data from a stale source that doesn't reflect your elimination.
+The Game Event Log is not tracking HoH wins, PoV wins, nominations, and evictions. After investigating the codebase, I found **two main issues**:
 
-## Root Cause
+### Issue 1: GameEventLog reads from stale `game` object instead of `gameState`
 
-The game has two data sources that are out of sync:
-- **Reducer state** (`gameState.houseguests`): Correctly updated when you're eliminated
-- **Game object** (`game.houseguests`): Never updated after initialization
+```typescript
+// Current (broken) in GameEventLog.tsx
+const { game } = useGame();
+const events = game.gameLog || [];  // Always empty - never synced!
+```
 
-The `FinalHoHPhase` component uses `getActiveHouseguests()` which reads from the stale game object, returning your eliminated character as if they were still active.
+The `game` object (BigBrotherGame instance) is initialized once and never updated. All LOG_EVENT dispatches update `gameState.gameLog` in the reducer, but `game.gameLog` stays empty.
+
+### Issue 2: Missing LOG_EVENT dispatches in key phases
+
+| Phase | LOG_EVENT Dispatch | Status |
+|-------|-------------------|--------|
+| HoH Competition | `useCompetitionResults.ts:60` | Works (but data goes to gameState, not game) |
+| Nominations | `useNominationCeremony.ts` | MISSING - no LOG_EVENT dispatch |
+| PoV Competition | `POVCompetition/index.tsx:116` | Works (but data goes to gameState) |
+| PoV Meeting | `useNomineeReplacement.ts:75` | Works (but data goes to gameState) |
+| Eviction | `eviction-utils.ts`, `eviction-reducer.ts` | MISSING - no LOG_EVENT dispatch |
+
+---
 
 ## Solution
 
-Replace all usages of `getActiveHouseguests()` in `FinalHoHPhase.tsx` with direct reads from `gameState.houseguests`, filtering for `status === 'Active'`.
+### Fix 1: Update GameEventLog.tsx to read from `gameState`
 
----
-
-## Technical Changes
-
-### File: `src/components/game-phases/FinalHoHPhase.tsx`
-
-**Change 1: Replace stale `finalThree` with reducer state**
-
-```text
-Before (line 41):
-const finalThree = getActiveHouseguests();
-
-After:
-const finalThree = gameState.houseguests.filter(h => h.status === 'Active');
-```
-
-This ensures eliminated players are not included in the competition.
-
-**Change 2: Update `getParticipants` function**
-
-The `getParticipants` helper also uses `finalThree`, so the fix propagates automatically. However, we should add a safety check:
+Change the component to use the reducer state instead of the stale game object:
 
 ```typescript
-// Get eligible participants for each part
-const getParticipants = (part: 'part1' | 'part2' | 'part3'): Houseguest[] => {
-  // Always filter for Active status to be extra safe
-  const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
-  
-  switch (part) {
-    case 'part1':
-      return activeHouseguests;
-    case 'part2':
-      const part1Winner = partStatus.part1.winnerId;
-      return activeHouseguests.filter(h => h.id !== part1Winner);
-    case 'part3':
-      const p1Winner = activeHouseguests.find(h => h.id === partStatus.part1.winnerId);
-      const p2Winner = activeHouseguests.find(h => h.id === partStatus.part2.winnerId);
-      return [p1Winner, p2Winner].filter(Boolean) as Houseguest[];
-    default:
-      return [];
-  }
-};
+// Before
+const { game } = useGame();
+const events = game.gameLog || [];
+
+// After
+const { gameState } = useGame();
+const events = gameState.gameLog || [];
 ```
 
-**Change 3: Update spectator auto-select finalist logic**
+### Fix 2: Add LOG_EVENT dispatch to Nomination phase
 
-The AI selection logic (lines 103-115) uses `finalThree`. After fixing `finalThree`, this will automatically work correctly. But add a safety guard:
+**File**: `src/components/game-phases/NominationPhase/hooks/useNominationCeremony.ts`
+
+Add event logging when nominations are confirmed:
 
 ```typescript
-// Spectator mode: auto-select finalist (AI decision)
-useEffect(() => {
-  if (!gameState.isSpectatorMode || currentPart !== 'selection' || !finalHoH) return;
+import { useGame } from '@/contexts/GameContext';
+
+export const useNominationCeremony = (hoh: Houseguest | null): UseNominationCeremonyReturn => {
+  const { dispatch, gameState } = useGame();  // Add this
+  // ... existing code ...
   
-  const timer = setTimeout(() => {
-    // Filter again to ensure we only pick from truly active houseguests
-    const activeOthers = gameState.houseguests.filter(
-      h => h.status === 'Active' && h.id !== finalHoH.id
-    );
-    const selectedFinalist = activeOthers[Math.floor(Math.random() * activeOthers.length)];
-    if (selectedFinalist) {
-      chooseFinalist(selectedFinalist);
+  const confirmNominations = useCallback(() => {
+    // ... existing validation ...
+    
+    // Log the nomination event
+    dispatch({
+      type: 'LOG_EVENT',
+      payload: {
+        week: gameState.week,
+        phase: 'Nomination',
+        type: 'NOMINATION',
+        description: `${hoh?.name} nominated ${nominees.map(n => n.name).join(' and ')} for eviction.`,
+        involvedHouseguests: [hoh?.id, ...nominees.map(n => n.id)].filter(Boolean),
+        metadata: { hohId: hoh?.id, nomineeIds: nominees.map(n => n.id) }
+      }
+    });
+    
+    // ... rest of existing code ...
+  }, [nominees, toast, dispatch, gameState.week, hoh]);
+```
+
+### Fix 3: Add LOG_EVENT dispatch to Eviction phase
+
+**File**: `src/utils/eviction-utils.ts`
+
+Add event logging when a houseguest is evicted:
+
+```typescript
+export const handleHouseguestEviction = (
+  dispatch: Dispatch<GameAction>,
+  evictedHouseguest: Houseguest,
+  isJuryEligible: boolean,
+  week: number  // Add week parameter
+) => {
+  // Log the eviction event
+  dispatch({
+    type: 'LOG_EVENT',
+    payload: {
+      week: week,
+      phase: 'Eviction',
+      type: 'EVICTION',
+      description: `${evictedHouseguest.name} was evicted from the Big Brother house${isJuryEligible ? ' and joined the jury' : ''}.`,
+      involvedHouseguests: [evictedHouseguest.id],
+      metadata: { toJury: isJuryEligible }
     }
-  }, 3000);
-  return () => clearTimeout(timer);
-}, [gameState.isSpectatorMode, currentPart, finalHoH, gameState.houseguests]);
-```
-
-**Change 4: Validate finalist selection in `chooseFinalist`**
-
-Add validation to prevent eliminated players from being selected:
-
-```typescript
-const chooseFinalist = (finalist: Houseguest) => {
-  if (!finalHoH) return;
+  });
   
-  // Validate that finalist is still active
-  const activeFinalist = gameState.houseguests.find(
-    h => h.id === finalist.id && h.status === 'Active'
-  );
-  if (!activeFinalist) {
-    console.error('Attempted to select eliminated houseguest as finalist:', finalist.name);
-    return;
-  }
-  
-  // ... rest of the function
+  // ... existing eviction dispatch logic ...
 };
 ```
 
----
+**File**: `src/components/game-phases/EvictionPhase/hooks/useEvictionCompletion.ts`
 
-## Additional Safety: Update Fast-Forward Reducer
-
-### File: `src/contexts/reducers/reducers/player-action-reducer.ts`
-
-The fast-forward logic for FinalHoH (lines 73-137) already correctly filters by `status === 'Active'`. However, add extra validation:
+Update the call to pass the week:
 
 ```typescript
-if (payload.params.currentPhase === 'FinalHoH') {
-  const activeHouseguests = state.houseguests.filter(h => h.status === 'Active');
-  
-  // Validate we have exactly 3 active houseguests for Final HoH
-  if (activeHouseguests.length < 2) {
-    console.error('Not enough active houseguests for Final HoH:', activeHouseguests.length);
-    // Skip to jury questioning if only 2 remain
-    return {
-      ...state,
-      phase: 'JuryQuestioning' as GamePhase,
-      isFinalStage: true
-    };
-  }
-  
-  // ... rest of the simulation
-}
+handleHouseguestEviction(
+  dispatch, 
+  evictedHouseguest, 
+  gameState.week >= 5,
+  gameState.week  // Pass week
+);
 ```
 
 ---
@@ -138,17 +125,36 @@ if (payload.params.currentPhase === 'FinalHoH') {
 
 | File | Change |
 |------|--------|
-| `src/components/game-phases/FinalHoHPhase.tsx` | Replace `getActiveHouseguests()` with `gameState.houseguests.filter(h => h.status === 'Active')` |
-| `src/contexts/reducers/reducers/player-action-reducer.ts` | Add validation for minimum active houseguests |
+| `src/components/GameEventLog.tsx` | Use `gameState.gameLog` instead of `game.gameLog` |
+| `src/components/game-phases/NominationPhase/hooks/useNominationCeremony.ts` | Add LOG_EVENT dispatch for nominations |
+| `src/utils/eviction-utils.ts` | Add LOG_EVENT dispatch for evictions |
+| `src/components/game-phases/EvictionPhase/hooks/useEvictionCompletion.ts` | Pass `gameState.week` to eviction utility |
+
+---
+
+## Event Types to Track
+
+After implementation, the game log will record:
+
+| Event | Description Example |
+|-------|---------------------|
+| HoH Win | "Alex won the Head of Household competition." |
+| Nominations | "Alex nominated Jamie and Sam for eviction." |
+| PoV Win | "Jordan won the Power of Veto competition (mental - Mental stat favored)." |
+| Veto Used/Not Used | "Jordan used the Power of Veto on Sam." or "Jordan chose not to use the Power of Veto." |
+| Replacement Nominee | "Alex nominated Casey as a replacement nominee." |
+| Eviction | "Jamie was evicted from the Big Brother house and joined the jury." |
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Start game, play until you get eliminated mid-game
-- [ ] Verify you enter spectator mode with the purple banner
-- [ ] Click "Skip to Next Phase" multiple times until reaching Final HoH
-- [ ] Verify your eliminated character is NOT in the Final 3
-- [ ] Verify the Final 2 only includes active houseguests
-- [ ] Complete game through to winner announcement
+- [ ] Start a new game and play through Week 1
+- [ ] Click "Game History" button to view the Event Log tab
+- [ ] Verify HoH competition win is logged
+- [ ] Verify nominations are logged with both nominee names
+- [ ] Verify PoV competition win is logged
+- [ ] Verify veto decision is logged
+- [ ] Verify eviction is logged with jury status
+- [ ] Check that events appear in chronological order
