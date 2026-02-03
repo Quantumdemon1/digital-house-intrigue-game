@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Vote, ChevronRight, Trophy, User, Clock, Users } from 'lucide-react';
+import { Vote, ChevronRight, Trophy, User, Clock, Users, SkipForward } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { GameCard, GameCardHeader, GameCardContent, GameCardTitle, GameCardDescription } from '@/components/ui/game-card';
@@ -40,6 +40,25 @@ export const DramaticVoteReveal: React.FC<DramaticVoteRevealProps> = ({
     [nominee2.id]: 0
   });
   const [evicted, setEvicted] = useState<Houseguest | null>(null);
+  
+  // Skip to results function
+  const skipToResults = useCallback(() => {
+    // Count all votes immediately
+    const finalCounts = { [nominee1.id]: 0, [nominee2.id]: 0 };
+    voters.forEach(voter => {
+      const votedFor = votes[voter.id] || nominee1.id;
+      finalCounts[votedFor] = (finalCounts[votedFor] || 0) + 1;
+    });
+    
+    setVoteCount(finalCounts);
+    setVoteReveals(prev => prev.map(v => ({ ...v, revealed: true })));
+    setCurrentIndex(voters.length);
+    
+    // Determine evicted
+    const evictedId = finalCounts[nominee1.id] >= finalCounts[nominee2.id] ? nominee1.id : nominee2.id;
+    const evictedHG = evictedId === nominee1.id ? nominee1 : nominee2;
+    setEvicted(evictedHG);
+  }, [nominee1, nominee2, voters, votes]);
   
   // Initialize vote reveals with randomized order
   useEffect(() => {
@@ -180,8 +199,21 @@ export const DramaticVoteReveal: React.FC<DramaticVoteRevealProps> = ({
     return (
       <GameCard variant="default">
         <GameCardHeader icon={Vote}>
-          <GameCardTitle>Live Eviction Vote</GameCardTitle>
-          <GameCardDescription>Week {gameState.week}</GameCardDescription>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <GameCardTitle>Live Eviction Vote</GameCardTitle>
+              <GameCardDescription>Week {gameState.week}</GameCardDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={skipToResults}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <SkipForward className="h-4 w-4 mr-1" />
+              Skip
+            </Button>
+          </div>
         </GameCardHeader>
         
         <GameCardContent className="space-y-6">
@@ -230,13 +262,23 @@ export const DramaticVoteReveal: React.FC<DramaticVoteRevealProps> = ({
             </p>
           </div>
           
-          <Button
-            onClick={startReveal}
-            size="lg"
-            className="w-full bg-gradient-to-r from-bb-red to-red-600"
-          >
-            Begin Vote Reveal
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={startReveal}
+              size="lg"
+              className="flex-1 bg-gradient-to-r from-bb-red to-red-600"
+            >
+              Begin Vote Reveal
+            </Button>
+            <Button
+              onClick={skipToResults}
+              variant="outline"
+              size="lg"
+            >
+              <SkipForward className="h-4 w-4 mr-1" />
+              Skip
+            </Button>
+          </div>
         </GameCardContent>
       </GameCard>
     );
@@ -253,9 +295,20 @@ export const DramaticVoteReveal: React.FC<DramaticVoteRevealProps> = ({
             <GameCardTitle>Live Eviction Vote</GameCardTitle>
             <GameCardDescription>Vote {Math.min(currentIndex + 1, voters.length)} of {voters.length}</GameCardDescription>
           </div>
-          <Badge variant="outline" className="bg-bb-red/10 text-bb-red border-bb-red/30">
-            LIVE
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-bb-red/10 text-bb-red border-bb-red/30">
+              LIVE
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={skipToResults}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <SkipForward className="h-4 w-4 mr-1" />
+              Skip
+            </Button>
+          </div>
         </div>
       </GameCardHeader>
       
