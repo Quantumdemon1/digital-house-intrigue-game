@@ -1,140 +1,236 @@
 
-# Fix: PoV Meeting Veto Logic - savedNominee Not Being Set
+# Fix: Final Stages Game Logic for Big Brother USA Format
 
 ## Problem Summary
 
-When the Power of Veto holder uses the veto to save a nominee (when they themselves are NOT on the block), the `savedNominee` state never gets updated. This causes the veto meeting to fail because:
-1. `handleSaveNominee` only updates the stage but doesn't set `savedNominee`
-2. `completeVetoMeeting` receives `null` for the saved nominee
-3. The veto action effectively does nothing
+The game is broken at the final stages. Looking at the screenshot:
+- Week 13 with only 2 houseguests left (Sam Williams and Blake Peterson)
+- Blake is HoH, PoV holder, and has only nominated 1 person (Sam)
+- The game shows "Cannot Continue - Two houseguests must be nominated first"
 
-## Root Cause Analysis
+This is incorrect because with only 2 houseguests remaining, the game should already be in the Finale or Jury Questioning phase, not trying to run more normal weekly cycles.
 
-In `src/components/game-phases/POVMeeting/hooks/useNomineeReplacement.ts`:
+---
+
+## Root Causes Identified
+
+### 1. Player-Action-Reducer Bypasses Final Stage Checks
+The `player-action-reducer.ts` handles `advance_week` and `eviction_complete` actions by directly setting `phase: 'HoH'` without checking if we should transition to `FinalHoH` instead:
 
 ```typescript
-// Line 103-113 - handleSaveNominee doesn't update savedNominee state!
-const handleSaveNominee = useCallback((nominee: Houseguest) => {
-  dispatch({
-    type: 'PLAYER_ACTION',
-    payload: {
-      actionId: 'save_nominee',
-      params: { nomineeId: nominee.id }
-    }
-  });
-  
-  setMeetingStage('selectReplacement');
-  // MISSING: setSavedNominee(nominee) should be called here!
-}, [dispatch, setMeetingStage]);
+// Lines 100-120 in player-action-reducer.ts
+case 'eviction_complete':
+case 'advance_week':
+  return {
+    ...state,
+    week: state.week + 1,
+    phase: 'HoH' as GamePhase,  // Always goes to HoH, ignoring houseguest count!
+    ...
+  };
 ```
 
-The `setSavedNominee` setter is only passed to `useVetoDecision` hook (for auto-saving when PoV holder is nominated), but `useNomineeReplacement` hook never receives it.
+### 2. HOH Competition Component Doesn't Check for Final 3
+The HOH Competition component starts without verifying if there are only 3 houseguests left (which should trigger Final HoH instead).
 
-## Solution
+### 3. Nomination Phase Doesn't Handle Edge Cases
+When there are fewer than 3 non-HoH houseguests, the nomination phase still requires 2 nominees, which is impossible.
 
-Pass `setSavedNominee` to `useNomineeReplacement` and call it in `handleSaveNominee`.
+---
+
+## Solution Overview
+
+Add proper final stage detection at multiple checkpoints:
+
+1. **Fix player-action-reducer** to check houseguest counts before advancing to HoH
+2. **Add checks in HOH Competition** to redirect to FinalHoH when 3 or fewer houseguests remain
+3. **Add checks in Nomination Phase** to redirect appropriately for edge cases
+4. **Handle 2-houseguest scenario** by going directly to JuryQuestioning/Finale
 
 ---
 
 ## Technical Implementation
 
-### File 1: `src/components/game-phases/POVMeeting/hooks/usePOVMeeting.ts`
+### File 1: `src/contexts/reducers/reducers/player-action-reducer.ts`
 
-Add `setSavedNominee` to the props passed to `useNomineeReplacement`:
-
-**Lines 26-34** - Update the hook call to include `setSavedNominee`:
+**Add final stage check to advance_week and eviction_complete actions:**
 
 ```typescript
-const { 
-  handleSaveNominee,
-  handleSelectReplacement,
-  completeVetoMeeting 
-} = useNomineeReplacement({
-  povHolder,
-  nominees,
-  hoh,
-  savedNominee,
-  meetingStage,
-  setMeetingStage,
-  setReplacementNominee,
-  setSavedNominee  // ADD THIS
-});
-```
-
----
-
-### File 2: `src/components/game-phases/POVMeeting/hooks/useNomineeReplacement.ts`
-
-**Step A - Update interface (lines 5-13):**
-
-Add `setSavedNominee` to the props interface:
-
-```typescript
-interface UseNomineeReplacementProps {
-  povHolder: Houseguest | null;
-  nominees: Houseguest[];
-  hoh: Houseguest | null;
-  savedNominee: Houseguest | null;
-  meetingStage: 'initial' | 'selectSaved' | 'selectReplacement' | 'complete';
-  setMeetingStage: React.Dispatch<React.SetStateAction<'initial' | 'selectSaved' | 'selectReplacement' | 'complete'>>;
-  setReplacementNominee: React.Dispatch<React.SetStateAction<Houseguest | null>>;
-  setSavedNominee: React.Dispatch<React.SetStateAction<Houseguest | null>>;  // ADD THIS
+case 'eviction_complete':
+case 'advance_week': {
+  // Count active houseguests AFTER eviction
+  const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
+  
+  // If 3 or fewer houseguests remain, go to Final HoH
+  if (activeCount <= 3) {
+    return {
+      ...state,
+      week: state.week + 1,
+      phase: 'FinalHoH' as GamePhase,
+      isFinalStage: true,
+      nominees: [],
+      evictionVotes: {}
+    };
+  }
+  
+  // If only 2 remain (shouldn't happen normally), go to Jury Questioning
+  if (activeCount <= 2) {
+    return {
+      ...state,
+      week: state.week + 1,
+      phase: 'JuryQuestioning' as GamePhase,
+      isFinalStage: true,
+      nominees: [],
+      evictionVotes: {}
+    };
+  }
+  
+  // Normal week advancement
+  return {
+    ...state,
+    week: state.week + 1,
+    phase: 'HoH' as GamePhase,
+    nominees: [],
+    evictionVotes: {}
+  };
 }
 ```
 
-**Step B - Update function destructuring (line 15-22):**
+### File 2: `src/components/game-phases/HOHCompetition/index.tsx`
+
+**Add early redirect check at component mount:**
 
 ```typescript
-export const useNomineeReplacement = ({
-  povHolder,
-  nominees,
-  hoh,
-  savedNominee,
-  setMeetingStage,
-  setReplacementNominee,
-  setSavedNominee  // ADD THIS
-}: UseNomineeReplacementProps) => {
+// After getting activeHouseguests in useCompetitionState
+useEffect(() => {
+  // Redirect to Final HoH if we have 3 or fewer houseguests
+  if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+    logger?.info(`Only ${activeHouseguests.length} houseguests - redirecting to Final HoH`);
+    dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+  }
+}, [activeHouseguests.length, gameState.isFinalStage]);
 ```
 
-**Step C - Update handleSaveNominee (lines 103-113):**
+### File 3: `src/components/game-phases/NominationPhase/index.tsx`
 
-Call `setSavedNominee` before advancing the stage:
+**Add redirect logic for final stages:**
 
 ```typescript
-const handleSaveNominee = useCallback((nominee: Houseguest) => {
-  // SET THE SAVED NOMINEE STATE
-  setSavedNominee(nominee);
+// Early in the component, add check
+useEffect(() => {
+  const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
   
-  dispatch({
-    type: 'PLAYER_ACTION',
-    payload: {
-      actionId: 'save_nominee',
-      params: { nomineeId: nominee.id }
+  // If 3 or fewer houseguests, shouldn't be in Nomination - redirect to Final HoH
+  if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+    dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+  }
+  
+  // If only 2 houseguests, go to Jury Questioning
+  if (activeHouseguests.length <= 2) {
+    dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
+  }
+}, [gameState.houseguests, gameState.isFinalStage]);
+```
+
+### File 4: `src/contexts/reducers/reducers/game-progress-reducer.ts`
+
+**Improve SET_PHASE to handle edge cases:**
+
+Add check at the start of SET_PHASE:
+```typescript
+case 'SET_PHASE':
+  const activeHouseguestsCount = state.houseguests.filter(h => h.status === 'Active').length;
+  
+  // Override: If only 2 houseguests remain and we're not already at finale, go to Jury Questioning
+  if (activeHouseguestsCount <= 2 && !['JuryQuestioning', 'Jury Questioning', 'Finale', 'GameOver'].includes(action.payload as string)) {
+    return {
+      ...state,
+      phase: 'JuryQuestioning' as GamePhase,
+      isFinalStage: true
+    };
+  }
+  
+  // Override: If 3 houseguests and not already in final stages, go to FinalHoH
+  if (activeHouseguestsCount === 3 && !state.isFinalStage) {
+    const normalizedPhase = normalizePhase(action.payload as string);
+    if (['hoh', 'nomination', 'pov', 'povmeeting'].includes(normalizedPhase)) {
+      return {
+        ...state,
+        phase: 'FinalHoH' as GamePhase,
+        isFinalStage: true
+      };
     }
-  });
+  }
   
-  setMeetingStage('selectReplacement');
-}, [dispatch, setMeetingStage, setSavedNominee]);  // Add setSavedNominee to deps
+  // ... existing logic continues
+```
+
+### File 5: `src/components/game-phases/POVCompetition/index.tsx`
+
+**Add the same safeguard:**
+
+```typescript
+useEffect(() => {
+  const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+  
+  if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+    dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+  }
+}, [gameState.houseguests, gameState.isFinalStage]);
+```
+
+### File 6: `src/components/game-phases/POVMeeting/index.tsx`
+
+**Add the same safeguard:**
+
+```typescript
+useEffect(() => {
+  const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+  
+  if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+    dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+  }
+}, [gameState.houseguests, gameState.isFinalStage]);
 ```
 
 ---
 
-## Summary of Changes
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `usePOVMeeting.ts` | Pass `setSavedNominee` to `useNomineeReplacement` |
-| `useNomineeReplacement.ts` | Add `setSavedNominee` to interface and call it in `handleSaveNominee` |
+| `src/contexts/reducers/reducers/player-action-reducer.ts` | Add houseguest count check before advancing to HoH |
+| `src/contexts/reducers/reducers/game-progress-reducer.ts` | Add override logic for 2-3 houseguest edge cases |
+| `src/components/game-phases/HOHCompetition/index.tsx` | Add redirect to FinalHoH when 3 or fewer houseguests |
+| `src/components/game-phases/NominationPhase/index.tsx` | Add redirect to FinalHoH when 3 or fewer houseguests |
+| `src/components/game-phases/POVCompetition/index.tsx` | Add redirect to FinalHoH when 3 or fewer houseguests |
+| `src/components/game-phases/POVMeeting/index.tsx` | Add redirect to FinalHoH when 3 or fewer houseguests |
+
+---
+
+## Big Brother USA Final Stages Flow
+
+```text
+Final 4 (Week starts with 4 active):
+    HoH → Nominations → PoV Selection → PoV → PoV Meeting → Eviction
+    → 3 houseguests remain
+
+Final 3 (Week starts with 3 active):
+    Final HoH Part 1 (all 3 compete) → Part 2 (2 losers compete) → Part 3 (2 winners compete)
+    → Final HoH winner evicts 1 person → 2 houseguests remain
+
+Final 2 (2 remaining):
+    Jury Questioning → Finale (jury votes) → Winner Announced → GameOver
+```
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- POV holder (not on block) uses veto
-- POV holder selects a nominee to save
-- `savedNominee` is correctly set
-- HoH selects replacement nominee
-- `completeVetoMeeting` receives correct `saved` and `replacement` values
-- Nominees are correctly updated in state
-- Game advances to Eviction phase with correct nominees
+- [ ] When 4 houseguests remain at week start, normal weekly cycle runs
+- [ ] When eviction brings count to 3, next phase is FinalHoH (not regular HoH)
+- [ ] If somehow at 2 houseguests during normal phases, redirects to JuryQuestioning
+- [ ] Final HoH 3-part competition runs correctly with 3 houseguests
+- [ ] Final HoH winner can evict one of the other 2 houseguests
+- [ ] After Final HoH eviction, transitions to JuryQuestioning
+- [ ] Jury votes and winner is determined correctly
