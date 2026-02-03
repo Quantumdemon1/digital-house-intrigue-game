@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { Shield, CheckCircle2, XCircle } from 'lucide-react';
+import { Shield, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Houseguest } from '@/models/houseguest';
 import { AIDecisionCard } from '@/components/ai-feedback';
+import { StatusAvatar } from '@/components/ui/status-avatar';
 
 interface InitialStageProps {
   povHolder: Houseguest | null;
@@ -21,7 +21,6 @@ const InitialStage: React.FC<InitialStageProps> = ({
   const nomineeNames = nominees.map(n => n.name).join(' and ');
   const isPlayerPovHolder = povHolder?.isPlayer || false;
 
-  // Generate a random decision explanation for non-player POV holders
   const getDecisionExplanation = () => {
     if (povHolder?.isNominated) {
       return {
@@ -30,7 +29,6 @@ const InitialStage: React.FC<InitialStageProps> = ({
       };
     }
     
-    // If POV holder has alliances with nominees
     const reasons = [
       `${nominees[0].name} is my closest ally in the house. I need to use the veto to save them and maintain trust.`,
       `Using the veto would create more chaos and make others targets instead of me.`,
@@ -49,22 +47,64 @@ const InitialStage: React.FC<InitialStageProps> = ({
   const decisionInfo = getDecisionExplanation();
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
       <div className="text-center space-y-4">
-        <Shield className="h-12 w-12 text-green-600 mx-auto" />
-        <h3 className="text-xl font-semibold">Power of Veto Meeting</h3>
+        <div className="inline-flex items-center justify-center p-4 rounded-full bg-gradient-to-br from-bb-green/20 to-bb-gold/20">
+          <Shield className="h-12 w-12 text-bb-green" />
+        </div>
+        <h3 className="text-2xl font-display font-bold text-foreground">Power of Veto Meeting</h3>
         
         <p className="text-muted-foreground max-w-md mx-auto">
-          {povHolder?.name} has won the Power of Veto and must decide whether to use it to save one of the nominees: {nomineeNames}.
+          {povHolder?.name} has won the Power of Veto and must decide whether to use it to save one of the nominees.
         </p>
       </div>
       
+      {/* POV Holder and Nominees Display */}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+        {/* POV Holder */}
+        <div className="flex flex-col items-center p-6 rounded-xl bg-gradient-to-b from-bb-green/10 to-card border border-bb-green/20">
+          <StatusAvatar
+            name={povHolder?.name || 'Unknown'}
+            imageUrl={povHolder?.imageUrl}
+            status="pov"
+            size="lg"
+            className="mb-3"
+          />
+          <span className="font-semibold text-lg text-foreground">{povHolder?.name}</span>
+          <span className="text-sm text-bb-green font-medium">PoV Holder</span>
+        </div>
+        
+        {/* Sparkles divider */}
+        <div className="flex items-center">
+          <Sparkles className="h-6 w-6 text-bb-gold animate-pulse" />
+        </div>
+        
+        {/* Nominees */}
+        <div className="flex gap-4">
+          {nominees.map(nominee => (
+            <div key={nominee.id} className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-bb-red/10 to-card border border-bb-red/20">
+              <StatusAvatar
+                name={nominee.name}
+                imageUrl={nominee.imageUrl}
+                status="nominee"
+                size="md"
+                className="mb-2"
+              />
+              <span className="font-medium text-foreground">{nominee.name}</span>
+              <span className="text-xs text-bb-red">Nominee</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* AI Decision Card for non-player */}
       {!isPlayerPovHolder && !showDecisionCard && (
-        <div className="text-center mt-6">
+        <div className="text-center">
           <Button 
             onClick={() => setShowDecisionCard(true)} 
             variant="outline"
-            className="border-green-500 text-green-700 hover:bg-green-50"
+            className="border-bb-green/30 text-bb-green hover:bg-bb-green/10"
           >
             Show {povHolder?.name}'s Decision Process
           </Button>
@@ -72,7 +112,7 @@ const InitialStage: React.FC<InitialStageProps> = ({
       )}
       
       {!isPlayerPovHolder && showDecisionCard && (
-        <div className="max-w-lg mx-auto mt-4">
+        <div className="max-w-lg mx-auto">
           <AIDecisionCard
             houseguest={povHolder}
             decision={decisionInfo.decision}
@@ -83,45 +123,52 @@ const InitialStage: React.FC<InitialStageProps> = ({
         </div>
       )}
       
+      {/* Player Decision */}
       {isPlayerPovHolder ? (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <h4 className="text-center font-semibold mb-4">What will you do with the Power of Veto?</h4>
+        <div className="p-6 rounded-xl bg-gradient-to-b from-bb-green/10 to-card border border-bb-green/20 max-w-md mx-auto">
+          <h4 className="text-center font-semibold text-lg mb-6 text-foreground">
+            What will you do with the Power of Veto?
+          </h4>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button 
+              onClick={() => onVetoDecision(true)}
+              size="lg"
+              className="bg-bb-green hover:bg-bb-green/90 text-white"
+            >
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              Use the Veto
+            </Button>
             
-            <div className="flex justify-center gap-4">
-              <Button 
-                onClick={() => onVetoDecision(true)}
-                className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                Use the Veto
-              </Button>
-              
-              <Button 
-                onClick={() => onVetoDecision(false)}
-                variant="outline"
-                className="border-red-500 text-red-700 hover:bg-red-50 flex items-center gap-2"
-              >
-                <XCircle className="h-4 w-4" />
-                Don't Use the Veto
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            <Button 
+              onClick={() => onVetoDecision(false)}
+              size="lg"
+              variant="outline"
+              className="border-bb-red/50 text-bb-red hover:bg-bb-red/10"
+            >
+              <XCircle className="h-5 w-5 mr-2" />
+              Don't Use
+            </Button>
+          </div>
+        </div>
       ) : (
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center gap-4">
           <Button 
             onClick={() => onVetoDecision(true)} 
-            className="bg-green-600 hover:bg-green-700 mr-4"
+            size="lg"
+            className="bg-bb-green hover:bg-bb-green/90 text-white"
           >
+            <CheckCircle2 className="h-5 w-5 mr-2" />
             Use the Veto
           </Button>
           <Button 
             onClick={() => onVetoDecision(false)} 
+            size="lg"
             variant="outline" 
-            className="border-red-500 text-red-700 hover:bg-red-50"
+            className="border-bb-red/50 text-bb-red hover:bg-bb-red/10"
           >
-            Don't Use the Veto
+            <XCircle className="h-5 w-5 mr-2" />
+            Don't Use
           </Button>
         </div>
       )}

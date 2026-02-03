@@ -1,9 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
-import { Trophy, BarChart, Home, RefreshCw, History } from 'lucide-react';
+import { Trophy, BarChart, Home, RefreshCw, History, Sparkles } from 'lucide-react';
+import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent, GameCardFooter } from '@/components/ui/game-card';
+import { Badge } from '@/components/ui/badge';
 import GameSummary from './GameOverPhase/GameSummary';
 import PlayerStats from './GameOverPhase/PlayerStats';
 import WinnerDisplay from './GameOverPhase/WinnerDisplay';
@@ -16,42 +17,21 @@ const GameOverPhase: React.FC = () => {
   const navigate = useNavigate();
   const [showRecap, setShowRecap] = useState(false);
   
-  // Get available actions from the controller
   const availableActions = gameState.phase === 'GameOver' ? 
     [
-      {
-        actionId: 'new_game',
-        text: 'Start New Game',
-        category: 'game_flow'
-      },
-      {
-        actionId: 'view_stats',
-        text: 'View Game Statistics',
-        category: 'information'
-      },
-      {
-        actionId: 'season_recap',
-        text: 'Season Timeline',
-        category: 'information'
-      },
-      {
-        actionId: 'exit_game',
-        text: 'Exit to Main Menu',
-        category: 'game_flow'
-      }
+      { actionId: 'new_game', text: 'Start New Game', icon: RefreshCw, primary: true },
+      { actionId: 'season_recap', text: 'Season Timeline', icon: History, primary: false },
+      { actionId: 'view_stats', text: 'View Statistics', icon: BarChart, primary: false },
+      { actionId: 'exit_game', text: 'Exit to Menu', icon: Home, primary: false },
     ] : [];
   
   useEffect(() => {
-    // When component mounts, make sure we're in the right game state
     if (gameState.phase !== 'GameOver') {
-      // If somehow we're viewing this component but not in game over state
       console.warn("GameOverPhase component loaded but game is not in GameOver phase");
     }
   }, [gameState.phase]);
   
-  // Get winner information
   const winner = gameState.houseguests.find(hg => hg.isWinner);
-  // Get runner-up
   const runnerUp = gameState.houseguests.find(hg => hg.status === 'Runner-Up');
   
   const handleAction = (actionId: string) => {
@@ -85,7 +65,6 @@ const GameOverPhase: React.FC = () => {
     }
   };
   
-  // Create a recap object if recapGenerator is not available
   const generateRecap = () => {
     return {
       season: {
@@ -99,73 +78,73 @@ const GameOverPhase: React.FC = () => {
   
   if (showRecap) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Season Timeline</h2>
-          <Button variant="outline" onClick={() => setShowRecap(false)}>
-            Back to Results
-          </Button>
-        </div>
-        <SeasonRecap recap={generateRecap()} />
-      </div>
+      <GameCard variant="gold" className="w-full max-w-4xl mx-auto animate-fade-in">
+        <GameCardHeader variant="gold" icon={History}>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <GameCardTitle>Season Timeline</GameCardTitle>
+              <GameCardDescription>Relive the journey</GameCardDescription>
+            </div>
+            <Button variant="outline" onClick={() => setShowRecap(false)} className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+              Back to Results
+            </Button>
+          </div>
+        </GameCardHeader>
+        <GameCardContent>
+          <SeasonRecap recap={generateRecap()} />
+        </GameCardContent>
+      </GameCard>
     );
   }
   
   return (
-    <div className="space-y-8">
-      <Card className="border-2 border-amber-100">
-        <CardHeader className="bg-gradient-to-r from-amber-400 to-amber-300 text-black">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-6 w-6 text-amber-800" />
-              <div>
-                <CardTitle className="text-2xl">Game Over</CardTitle>
-                <CardDescription className="text-black/70">The season has concluded!</CardDescription>
-              </div>
+    <div className="space-y-8 animate-fade-in">
+      {/* Winner Card */}
+      <GameCard variant="gold" className="w-full max-w-4xl mx-auto overflow-visible">
+        <GameCardHeader variant="gold" icon={Trophy}>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <GameCardTitle className="text-2xl">Game Over</GameCardTitle>
+              <GameCardDescription>The season has concluded!</GameCardDescription>
             </div>
+            <Badge variant="outline" className="bg-white/10 text-white border-white/30">
+              <Sparkles className="h-3 w-3 mr-1" /> Champion Crowned
+            </Badge>
           </div>
-        </CardHeader>
+        </GameCardHeader>
         
-        <CardContent className="p-6">
-          {/* Winner Display */}
+        <GameCardContent>
           {winner ? (
             <WinnerDisplay winner={winner} runnerUp={runnerUp} />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground">
+              <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
               No winner determined.
             </div>
           )}
-          
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-4 justify-center mt-8">
-            {availableActions.map(action => {
-              let icon;
-              switch (action.actionId) {
-                case 'new_game': icon = <RefreshCw className="mr-2 h-4 w-4" />; break;
-                case 'view_stats': icon = <BarChart className="mr-2 h-4 w-4" />; break;
-                case 'season_recap': icon = <History className="mr-2 h-4 w-4" />; break;
-                case 'exit_game': icon = <Home className="mr-2 h-4 w-4" />; break;
-                default: icon = null;
+        </GameCardContent>
+        
+        <GameCardFooter className="flex-wrap gap-3 justify-center">
+          {availableActions.map(action => (
+            <Button 
+              key={action.actionId}
+              onClick={() => handleAction(action.actionId)}
+              variant={action.primary ? 'default' : 'outline'}
+              size="lg"
+              className={action.primary 
+                ? 'bg-gradient-to-r from-bb-gold to-amber-500 hover:from-bb-gold/90 hover:to-amber-500/90 text-white shadow-game-md'
+                : 'border-border'
               }
-              
-              return (
-                <Button 
-                  key={action.actionId}
-                  className="min-w-[180px]"
-                  onClick={() => handleAction(action.actionId)}
-                  variant={action.actionId === 'new_game' ? 'default' : 'outline'}
-                >
-                  {icon}
-                  {action.text}
-                </Button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+            >
+              <action.icon className="mr-2 h-4 w-4" />
+              {action.text}
+            </Button>
+          ))}
+        </GameCardFooter>
+      </GameCard>
       
-      {/* Game Recap */}
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* Stats Grid */}
+      <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
         <GameSummary gameState={gameState} />
         <PlayerStats gameState={gameState} />
       </div>
