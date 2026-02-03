@@ -39,44 +39,36 @@ const CompetitionResults: React.FC<CompetitionResultsProps> = ({
       </GameCardHeader>
       
       <GameCardContent className="space-y-6">
-        {/* Winner Celebration */}
-        <div className="relative">
-          <CompetitionVisual 
-            type={competitionType} 
-            status="complete"
-            winner={winner.name}
+        {/* Competition Visual */}
+        <CompetitionVisual 
+          type={competitionType} 
+          status="complete"
+          winner={winner.name}
+        />
+        
+        {/* Winner Section - properly positioned below */}
+        <div className="flex flex-col items-center pt-4 space-y-4">
+          <StatusAvatar 
+            name={winner.name}
+            status="hoh"
+            size="xl"
+            isPlayer={winner.isPlayer}
+            className="animate-celebrate-winner"
           />
           
-          {/* Winner Avatar Overlay */}
-          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
-            <div className="relative">
-              <StatusAvatar 
-                name={winner.name}
-                status="hoh"
-                size="xl"
-                isPlayer={winner.isPlayer}
-                className="animate-celebrate-winner"
-              />
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Crown className="w-8 h-8 text-bb-gold animate-bounce-subtle" />
-              </div>
-            </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              New Head of Household
+            </h3>
+            <p className="text-3xl font-bold font-display text-bb-gold">
+              {winner.name}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {winner.isPlayer 
+                ? "Congratulations! You are the new Head of Household!" 
+                : `${winner.name} has won the competition!`}
+            </p>
           </div>
-        </div>
-        
-        {/* Winner Name */}
-        <div className="text-center pt-8 space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            New Head of Household
-          </h3>
-          <p className="text-3xl font-bold font-display text-bb-gold">
-            {winner.name}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {winner.isPlayer 
-              ? "Congratulations! You are the new Head of Household!" 
-              : `${winner.name} has won the competition!`}
-          </p>
         </div>
         
         {/* Competition Results */}
