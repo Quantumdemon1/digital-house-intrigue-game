@@ -24,6 +24,8 @@ const Progress = ({
 interface EvictionResultsProps {
   nominees: Houseguest[];
   votes: Record<string, string>;
+  tiebreakerVote?: string | null;
+  hohId?: string;
   onComplete: (evictedHouseguest: Houseguest) => void;
 }
 
@@ -32,6 +34,8 @@ type ResultStage = 'counting' | 'announcement' | 'goodbye' | 'jury' | 'complete'
 const EvictionResults: React.FC<EvictionResultsProps> = ({
   nominees,
   votes,
+  tiebreakerVote,
+  hohId,
   onComplete
 }) => {
   const [revealedCount, setRevealedCount] = useState(0);
@@ -45,12 +49,17 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
   // Check if evicted houseguest goes to jury (usually week 5+)
   const goesToJury = gameState.week >= 5;
 
-  // Count votes for each nominee
-  const voteCounts = Object.values(votes).reduce((counts, nomineeId) => {
+  // Count votes for each nominee, including tiebreaker vote if present
+  const allVotes = { ...votes };
+  if (tiebreakerVote && hohId) {
+    allVotes[hohId] = tiebreakerVote;
+  }
+  
+  const voteCounts = Object.values(allVotes).reduce((counts, nomineeId) => {
     counts[nomineeId] = (counts[nomineeId] || 0) + 1;
     return counts;
   }, {} as Record<string, number>);
-  const totalVotes = Object.values(votes).length;
+  const totalVotes = Object.values(allVotes).length;
 
   // Determine who's evicted
   useEffect(() => {

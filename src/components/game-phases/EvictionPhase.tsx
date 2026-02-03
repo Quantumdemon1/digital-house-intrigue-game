@@ -26,6 +26,7 @@ const EvictionPhase: React.FC = () => {
     hoh,
     playerIsNominee,
     isFinal3,
+    tiebreakerVote,
     handleProceedToVoting,
     handleSpeechesComplete,
     handleVoteSubmit,
@@ -131,6 +132,8 @@ const EvictionPhase: React.FC = () => {
           <EvictionResults 
             nominees={nominees} 
             votes={votes} 
+            tiebreakerVote={tiebreakerVote}
+            hohId={hoh?.id}
             onComplete={handleEvictionComplete} 
           />
         );
