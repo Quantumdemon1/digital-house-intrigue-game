@@ -1,11 +1,11 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
 import { useCompetitionLogic } from './useCompetitionLogic';
 
 export const useCompetitionState = () => {
-  const { gameState, getActiveHouseguests, logger, dispatch } = useGame();
+  const { gameState, logger, dispatch } = useGame();
   const { simulateCompetition } = useCompetitionLogic();
   
   // Keep all useState calls in the same order
@@ -19,7 +19,16 @@ export const useCompetitionState = () => {
   }[]>([]);
   const [transitionAttempted, setTransitionAttempted] = useState(false);
   
-  const activeHouseguests = getActiveHouseguests();
+  // Get active houseguests directly from gameState, excluding outgoing HoH
+  const activeHouseguests = useMemo(() => {
+    const active = gameState.houseguests.filter(h => h.status === 'Active');
+    // For HoH competition, exclude the outgoing HoH (they can't compete)
+    const outgoingHohId = gameState.hohWinner?.id;
+    return outgoingHohId 
+      ? active.filter(h => h.id !== outgoingHohId)
+      : active;
+  }, [gameState.houseguests, gameState.hohWinner]);
+  
   const competitionRunning = useRef(false);
   const competitionStarted = useRef(false);
   
