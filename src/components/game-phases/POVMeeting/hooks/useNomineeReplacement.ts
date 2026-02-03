@@ -10,6 +10,7 @@ interface UseNomineeReplacementProps {
   meetingStage: 'initial' | 'selectSaved' | 'selectReplacement' | 'complete';
   setMeetingStage: React.Dispatch<React.SetStateAction<'initial' | 'selectSaved' | 'selectReplacement' | 'complete'>>;
   setReplacementNominee: React.Dispatch<React.SetStateAction<Houseguest | null>>;
+  setSavedNominee: React.Dispatch<React.SetStateAction<Houseguest | null>>;
 }
 
 export const useNomineeReplacement = ({
@@ -18,7 +19,8 @@ export const useNomineeReplacement = ({
   hoh,
   savedNominee,
   setMeetingStage,
-  setReplacementNominee
+  setReplacementNominee,
+  setSavedNominee
 }: UseNomineeReplacementProps) => {
   const { dispatch, gameState } = useGame();
   
@@ -101,6 +103,8 @@ export const useNomineeReplacement = ({
   }, [povHolder, hoh, nominees, dispatch, setMeetingStage, gameState.week]);
   
   const handleSaveNominee = useCallback((nominee: Houseguest) => {
+    setSavedNominee(nominee);
+    
     dispatch({
       type: 'PLAYER_ACTION',
       payload: {
@@ -110,7 +114,7 @@ export const useNomineeReplacement = ({
     });
     
     setMeetingStage('selectReplacement');
-  }, [dispatch, setMeetingStage]);
+  }, [dispatch, setMeetingStage, setSavedNominee]);
   
   const handleSelectReplacement = useCallback((replacement: Houseguest) => {
     setReplacementNominee(replacement);
