@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
 import { Shuffle, Users, SkipForward } from 'lucide-react';
@@ -22,6 +22,7 @@ const POVPlayerSelectionContent: React.FC = () => {
   
   const [mode, setMode] = useState<SelectionMode>('draw');
   const [drawComplete, setDrawComplete] = useState(false);
+  const spectatorAutoStartRef = useRef(false);
   
   // Get mandatory and eligible players
   const hohId = gameState.hohWinner;
@@ -58,6 +59,17 @@ const POVPlayerSelectionContent: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [drawComplete, selectedPlayers.length]);
+
+  // Auto-advance in spectator mode
+  useEffect(() => {
+    if (gameState.isSpectatorMode && !drawComplete && !spectatorAutoStartRef.current) {
+      spectatorAutoStartRef.current = true;
+      const timer = setTimeout(() => {
+        handleSkipDraw();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, drawComplete]);
   
   return (
     <Card className="shadow-lg border-bb-blue">

@@ -5,6 +5,7 @@ import PhaseContent from './PhaseContent';
 import GameSidebar from './GameSidebar';
 import GameHeader from './GameHeader';
 import GameStatusIndicator from './GameStatusIndicator';
+import SpectatorBanner from './SpectatorBanner';
 
 const GameScreen: React.FC = () => {
   const { gameState } = useGame();
@@ -15,6 +16,9 @@ const GameScreen: React.FC = () => {
       <div className="fixed inset-0 bg-surveillance-pattern opacity-[0.02] pointer-events-none" />
       
       <div className="relative container mx-auto px-4 py-4 md:py-6 space-y-4">
+        {/* Spectator Mode Banner */}
+        <SpectatorBanner />
+        
         {/* Header */}
         <GameHeader />
         

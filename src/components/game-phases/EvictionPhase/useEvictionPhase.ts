@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { useEvictionStages } from './hooks/useEvictionStages';
 import { useVotingTimer } from './hooks/useVotingTimer';
@@ -10,6 +10,7 @@ import { Houseguest } from '@/models/houseguest';
 
 export function useEvictionPhase() {
   const { gameState } = useGame();
+  const spectatorAutoStartRef = useRef(false);
   
   // Get data from the smaller hooks
   const { 
@@ -39,6 +40,17 @@ export function useEvictionPhase() {
   
   // Check if player is one of the nominees
   const playerIsNominee = nominees.some(nominee => nominee.isPlayer);
+
+  // Auto-advance in spectator mode - skip interaction stage
+  useEffect(() => {
+    if (gameState.isSpectatorMode && stage === 'interaction' && !spectatorAutoStartRef.current) {
+      spectatorAutoStartRef.current = true;
+      const timer = setTimeout(() => {
+        handleProceedToVoting();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.isSpectatorMode, stage, handleProceedToVoting]);
 
   // Check for tie in votes
   const checkForTie = useCallback((currentVotes: Record<string, string>): boolean => {

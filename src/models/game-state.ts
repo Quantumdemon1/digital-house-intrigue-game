@@ -99,6 +99,7 @@ export interface GameState {
   promises?: Promise[];
   finalHoHWinners?: {part1: string | null, part2: string | null, part3: string | null}; // Added to track final HoH winners
   isFinalStage: boolean; // Added to track when we're in the final stages
+  isSpectatorMode: boolean; // True when player is evicted but game continues (jury spectating)
 }
 
 // Create initial game state
@@ -121,7 +122,8 @@ export function createInitialGameState(): GameState {
     gameLog: [],
     promises: [], // Initialize empty promises array
     finalHoHWinners: {part1: null, part2: null, part3: null},
-    isFinalStage: false
+    isFinalStage: false,
+    isSpectatorMode: false
   };
 }
 
