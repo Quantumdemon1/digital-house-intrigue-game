@@ -3,6 +3,35 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { CompetitionType, Houseguest } from '@/models/houseguest';
 import { useCompetitionLogic } from './useCompetitionLogic';
+import { selectRandomWinner } from '../utils';
+
+// Helper to generate score-based results
+const generateScoredResults = (houseguests: Houseguest[], type: CompetitionType, winner: Houseguest) => {
+  const scoredResults = houseguests.map(guest => {
+    let score = 1;
+    switch (type) {
+      case 'physical': score = guest.stats.physical; break;
+      case 'mental': score = guest.stats.mental; break;
+      case 'endurance': score = guest.stats.endurance; break;
+      case 'social': score = guest.stats.social; break;
+      case 'luck': score = guest.stats.luck + 5; break;
+    }
+    score *= (0.75 + Math.random() * 0.5); // Add randomness
+    return { id: guest.id, name: guest.name, score };
+  }).sort((a, b) => b.score - a.score);
+
+  // Ensure winner is at top
+  const winnerIdx = scoredResults.findIndex(r => r.id === winner.id);
+  if (winnerIdx > 0) {
+    [scoredResults[0], scoredResults[winnerIdx]] = [scoredResults[winnerIdx], scoredResults[0]];
+  }
+
+  return scoredResults.map((result, index) => ({
+    name: result.name,
+    id: result.id,
+    position: index + 1
+  }));
+};
 
 export const useCompetitionState = () => {
   const { gameState, logger, dispatch } = useGame();
@@ -101,35 +130,31 @@ export const useCompetitionState = () => {
     setIsCompeting(false);
     
     try {
-      // Select a random winner
-      const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
+      // Select winner using stat-weighted scoring
+      const competitionWinner = selectRandomWinner(activeHouseguests, type);
       
-      if (!randomWinner) {
-        logger?.error("Failed to select a random winner - no active houseguests");
+      if (!competitionWinner) {
+        logger?.error("Failed to select a winner - no active houseguests");
         return;
       }
       
-      logger?.info(`Fast forward: Selected ${randomWinner.name} as HoH winner`);
+      logger?.info(`Fast forward: Selected ${competitionWinner.name} as HoH winner (stat-weighted)`);
       
-      // Generate placeholder results
-      const placeholderResults = activeHouseguests.map((guest) => ({
-        name: guest.name,
-        id: guest.id,
-        position: guest.id === randomWinner.id ? 1 : Math.floor(Math.random() * (activeHouseguests.length - 1)) + 2
-      })).sort((a, b) => a.position - b.position);
+      // Generate score-based results
+      const placeholderResults = generateScoredResults(activeHouseguests, type, competitionWinner);
       
       // Update state to reflect the winner
       setResults(placeholderResults);
-      setWinner(randomWinner);
+      setWinner(competitionWinner);
       
       // Update HOH in game state DIRECTLY - this is crucial for the next phase
       dispatch({
         type: 'SET_HOH',
-        payload: randomWinner
+        payload: competitionWinner
       });
       
       // IMMEDIATE phase change for fast forward reliability
-      logger?.info(`Fast forward: Advancing to nomination phase with ${randomWinner.name} as HoH`);
+      logger?.info(`Fast forward: Advancing to nomination phase with ${competitionWinner.name} as HoH`);
       dispatch({
         type: 'SET_PHASE',
         payload: 'Nomination'

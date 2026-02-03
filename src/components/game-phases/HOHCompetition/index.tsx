@@ -6,6 +6,7 @@ import CompetitionResults from './CompetitionResults';
 import { useCompetitionState } from './hooks/useCompetitionState';
 import { usePhaseTransition } from './hooks/usePhaseTransition';
 import { CompetitionType } from '@/models/houseguest/types';
+import { selectRandomWinner } from './utils';
 
 const HOHCompetition: React.FC = () => {
   const { gameState, logger, dispatch } = useGame();
@@ -53,25 +54,45 @@ const HOHCompetition: React.FC = () => {
         
         setIsCompeting(false);
         
-        const randomWinner = activeHouseguests[Math.floor(Math.random() * activeHouseguests.length)];
+        // Use stat-weighted winner selection
+        const competitionWinner = selectRandomWinner(activeHouseguests, randomType);
         
-        if (randomWinner) {
-          const placeholderResults = activeHouseguests.map((guest) => ({
-            name: guest.name,
-            id: guest.id,
-            position: guest.id === randomWinner.id ? 1 : 
-              Math.floor(Math.random() * (activeHouseguests.length - 1)) + 2
-          })).sort((a, b) => a.position - b.position);
+        if (competitionWinner) {
+          // Generate score-based results
+          const scoredResults = activeHouseguests.map(guest => {
+            let score = 1;
+            switch (randomType) {
+              case 'physical': score = guest.stats.physical; break;
+              case 'mental': score = guest.stats.mental; break;
+              case 'endurance': score = guest.stats.endurance; break;
+              case 'social': score = guest.stats.social; break;
+              case 'luck': score = guest.stats.luck + 5; break;
+            }
+            score *= (0.75 + Math.random() * 0.5);
+            return { id: guest.id, name: guest.name, score };
+          }).sort((a, b) => b.score - a.score);
+
+          // Ensure winner is at top
+          const winnerIdx = scoredResults.findIndex(r => r.id === competitionWinner.id);
+          if (winnerIdx > 0) {
+            [scoredResults[0], scoredResults[winnerIdx]] = [scoredResults[winnerIdx], scoredResults[0]];
+          }
+
+          const placeholderResults = scoredResults.map((result, index) => ({
+            name: result.name,
+            id: result.id,
+            position: index + 1
+          }));
           
           setResults(placeholderResults);
-          setWinner(randomWinner);
+          setWinner(competitionWinner);
           
           dispatch({
             type: 'SET_HOH',
-            payload: randomWinner
+            payload: competitionWinner
           });
           
-          logger?.info("Fast forward: Forcing direct phase transition to Nomination");
+          logger?.info(`Fast forward: ${competitionWinner.name} selected as HoH (stat-weighted)`);
           dispatch({
             type: 'SET_PHASE',
             payload: 'Nomination'
