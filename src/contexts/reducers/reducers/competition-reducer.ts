@@ -37,6 +37,18 @@ export function competitionReducer(state: GameState, action: GameAction): GameSt
       };
     }
     
+    case 'SET_POV_PLAYERS': {
+      if (!action.payload || !Array.isArray(action.payload)) {
+        console.error('SET_POV_PLAYERS action missing payload:', action);
+        return state;
+      }
+      
+      return {
+        ...state,
+        povPlayers: action.payload,
+      };
+    }
+    
     case 'SET_POV_WINNER': {
       // Check if action.payload is defined before accessing its properties
       if (!action.payload) {

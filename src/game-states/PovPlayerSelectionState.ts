@@ -45,7 +45,15 @@ export class PovPlayerSelectionState extends GameStateBase {
     
     // Set the PoV players
     this.game.povPlayers = povPlayers.filter(Boolean);
-    this.getLogger().info(`Selected ${this.game.povPlayers.length} players for PoV competition: ${this.game.povPlayers.join(', ')}`);
+    this.getLogger()?.info(`Selected ${this.game.povPlayers.length} players for PoV competition: ${this.game.povPlayers.join(', ')}`);
+    
+    // Sync to reducer state
+    if (this.controller && this.controller.dispatch) {
+      this.controller.dispatch({
+        type: 'SET_POV_PLAYERS',
+        payload: this.game.povPlayers
+      });
+    }
     
     // Immediately advance to PoV competition
     this.controller.changeState('PovCompetitionState');

@@ -18,10 +18,41 @@ const POVCompetition: React.FC = () => {
   const [isCompeting, setIsCompeting] = useState(false);
   const [winner, setWinner] = useState<Houseguest | null>(null);
   const [competitionType, setCompetitionType] = useState<CompetitionType | null>(null);
+  const [generatedPlayers, setGeneratedPlayers] = useState<string[]>([]);
   
-  // Get the PoV players
+  // Get the PoV players from state
   const povPlayerIds = gameState.povPlayers || [];
-  const povPlayers = povPlayerIds
+  
+  // Auto-generate PoV players if none set (fallback)
+  useEffect(() => {
+    if (povPlayerIds.length === 0 && generatedPlayers.length === 0 && !isCompeting && !winner) {
+      const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+      const mandatory = [
+        gameState.hohWinner?.id,
+        ...(gameState.nominees?.map(n => n.id) || [])
+      ].filter(Boolean) as string[];
+      
+      const eligible = activeHouseguests
+        .filter(h => !mandatory.includes(h.id))
+        .map(h => h.id);
+      
+      const shuffled = [...eligible].sort(() => 0.5 - Math.random());
+      const needed = Math.min(6 - mandatory.length, shuffled.length);
+      const final = [...mandatory, ...shuffled.slice(0, needed)];
+      
+      setGeneratedPlayers(final);
+      
+      // Dispatch to sync state
+      dispatch({
+        type: 'SET_POV_PLAYERS',
+        payload: final
+      });
+    }
+  }, [povPlayerIds.length, generatedPlayers.length, isCompeting, winner, gameState.houseguests, gameState.hohWinner, gameState.nominees, dispatch]);
+  
+  // Use effective player IDs (from state or generated)
+  const effectivePovPlayerIds = povPlayerIds.length > 0 ? povPlayerIds : generatedPlayers;
+  const povPlayers = effectivePovPlayerIds
     .map(id => getHouseguestById(id))
     .filter(Boolean) as Houseguest[];
   
@@ -40,13 +71,6 @@ const POVCompetition: React.FC = () => {
       setCompetitionType(type);
     }
   }, [competitionType]);
-  
-  // If no PoV players are set, show a warning
-  useEffect(() => {
-    if (povPlayerIds.length === 0 && !isCompeting && !winner) {
-      console.warn('No PoV players selected for competition');
-    }
-  }, [povPlayerIds, isCompeting, winner]);
   
   const startCompetition = () => {
     setIsCompeting(true);
