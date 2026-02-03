@@ -26,10 +26,12 @@ const POVCompetition: React.FC = () => {
     .filter(Boolean) as Houseguest[];
   
   const nominees = gameState.nominees
-    .map(id => getHouseguestById(id))
+    .map(nominee => gameState.houseguests.find(h => h.id === nominee.id) || nominee)
     .filter(Boolean) as Houseguest[];
   
-  const hoh = gameState.hohWinner ? getHouseguestById(gameState.hohWinner) : null;
+  const hoh = gameState.hohWinner 
+    ? gameState.houseguests.find(h => h.id === gameState.hohWinner.id) || gameState.hohWinner
+    : null;
   
   // Select competition type on mount
   useEffect(() => {

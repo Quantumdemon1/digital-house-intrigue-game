@@ -9,18 +9,16 @@ const GameStatusIndicator: React.FC = () => {
   const { gameState, getActiveHouseguests, getHouseguestById } = useGame();
   const activeHouseguests = getActiveHouseguests();
 
-  // Get HoH name safely
+  // Get HoH name directly from gameState (it's already a full Houseguest object)
   const getHoHName = () => {
     if (!gameState.hohWinner) return null;
-    const hoh = getHouseguestById(gameState.hohWinner);
-    return hoh?.name || null;
+    return gameState.hohWinner.name || null;
   };
 
-  // Get PoV holder name safely
+  // Get PoV holder name directly from gameState (it's already a full Houseguest object)
   const getPoVName = () => {
     if (!gameState.povWinner) return null;
-    const pov = getHouseguestById(gameState.povWinner);
-    return pov?.name || null;
+    return gameState.povWinner.name || null;
   };
 
   const hohName = getHoHName();
