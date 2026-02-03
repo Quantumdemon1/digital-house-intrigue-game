@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Crown, Award, ChevronRight, Timer, Swords, Brain, Users, CheckCircle2 } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
@@ -27,6 +27,8 @@ const FinalHoHPhase: React.FC = () => {
   const [competitionProgress, setCompetitionProgress] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [currentWinner, setCurrentWinner] = useState<Houseguest | null>(null);
+  const competitionRunningRef = useRef(false);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track part completion
   const [partStatus, setPartStatus] = useState<Record<'part1' | 'part2' | 'part3', PartStatus>>({
@@ -133,96 +135,152 @@ const FinalHoHPhase: React.FC = () => {
   
   // Run competition
   const startCompetition = useCallback(async (part: 'part1' | 'part2' | 'part3') => {
+    // Prevent double-execution
+    if (competitionRunningRef.current) {
+      console.log('Competition already running, ignoring start request');
+      return;
+    }
+    
+    competitionRunningRef.current = true;
     setIsCompeting(true);
     setShowResults(false);
     setCompetitionProgress(0);
     
     const participants = getParticipants(part);
     
+    if (participants.length < 2) {
+      console.error('Not enough participants for competition:', participants);
+      competitionRunningRef.current = false;
+      setIsCompeting(false);
+      return;
+    }
+    
+    console.log(`Starting Final HoH Part ${part} with participants:`, participants.map(p => p.name));
+    
+    // Clear any existing interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    
     // Animate progress
-    const progressInterval = setInterval(() => {
+    const duration = part === 'part1' ? 5000 : 3000;
+    const increment = 100 / (duration / 100);
+    
+    progressIntervalRef.current = setInterval(() => {
       setCompetitionProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
+        const next = prev + increment;
+        if (next >= 100) {
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+          }
           return 100;
         }
-        return prev + (part === 'part1' ? 2 : 4); // Part 1 (endurance) takes longer
+        return next;
       });
     }, 100);
     
-    // Run the actual competition
-    const competitionType = part === 'part1' ? 'FinalHoH1' : part === 'part2' ? 'FinalHoH2' : 'FinalHoH3';
-    
-    let result;
-    if (part === 'part1') {
-      // Endurance competition
-      result = runEnduranceCompetition({
-        type: competitionType,
-        week: gameState.week,
-        participants
-      });
-    } else {
-      result = runCompetition({
-        type: competitionType,
-        week: gameState.week,
-        participants
-      });
-    }
-    
-    // Wait for animation
-    await new Promise(resolve => setTimeout(resolve, part === 'part1' ? 5000 : 3000));
-    
-    clearInterval(progressInterval);
-    setCompetitionProgress(100);
-    
-    const winner = participants.find(p => p.id === result.winnerId);
-    setCurrentWinner(winner || null);
-    setShowResults(true);
-    setIsCompeting(false);
-    
-    if (winner) {
-      // Update part status
-      setPartStatus(prev => ({
-        ...prev,
-        [part]: { completed: true, winnerId: winner.id, winnerName: winner.name }
-      }));
+    try {
+      // Run the actual competition
+      const competitionType = part === 'part1' ? 'FinalHoH1' : part === 'part2' ? 'FinalHoH2' : 'FinalHoH3';
       
-      // Update game state
-      dispatch({
-        type: 'PLAYER_ACTION',
-        payload: {
-          actionId: `select_${part}_winner`,
-          params: { winnerId: winner.id }
-        }
-      });
-      
-      // Log the event
-      dispatch({
-        type: 'LOG_EVENT',
-        payload: {
+      let result;
+      if (part === 'part1') {
+        // Endurance competition
+        result = runEnduranceCompetition({
+          type: competitionType,
           week: gameState.week,
-          phase: 'FinalHoH',
-          type: 'COMPETITION',
-          description: `${winner.name} won Part ${part.slice(-1)} of the Final HoH competition!`,
-          involvedHouseguests: [winner.id],
-          data: {
-            competitionName: result.name,
-            category: result.category,
-            results: result.results
-          }
-        }
-      });
-      
-      // If Part 3 winner, set them as HoH
-      if (part === 'part3') {
-        dispatch({
-          type: 'SET_HOH',
-          payload: winner
+          participants
         });
+      } else {
+        result = runCompetition({
+          type: competitionType,
+          week: gameState.week,
+          participants
+        });
+      }
+      
+      console.log(`Competition result:`, result);
+      
+      // Wait for animation
+      await new Promise(resolve => setTimeout(resolve, duration));
+      
+      // Ensure progress is at 100%
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setCompetitionProgress(100);
+      
+      const winner = participants.find(p => p.id === result.winnerId);
+      console.log(`Winner found:`, winner?.name);
+      
+      setCurrentWinner(winner || null);
+      setShowResults(true);
+      setIsCompeting(false);
+      competitionRunningRef.current = false;
+      
+      if (winner) {
+        // Update part status
+        setPartStatus(prev => ({
+          ...prev,
+          [part]: { completed: true, winnerId: winner.id, winnerName: winner.name }
+        }));
+        
+        // Update game state
+        dispatch({
+          type: 'PLAYER_ACTION',
+          payload: {
+            actionId: `select_${part}_winner`,
+            params: { winnerId: winner.id }
+          }
+        });
+        
+        // Log the event
+        dispatch({
+          type: 'LOG_EVENT',
+          payload: {
+            week: gameState.week,
+            phase: 'FinalHoH',
+            type: 'COMPETITION',
+            description: `${winner.name} won Part ${part.slice(-1)} of the Final HoH competition!`,
+            involvedHouseguests: [winner.id],
+            data: {
+              competitionName: result.name,
+              category: result.category,
+              results: result.results
+            }
+          }
+        });
+        
+        // If Part 3 winner, set them as HoH
+        if (part === 'part3') {
+          dispatch({
+            type: 'SET_HOH',
+            payload: winner
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error running competition:', error);
+      setIsCompeting(false);
+      competitionRunningRef.current = false;
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
     }
   }, [dispatch, finalThree, gameState.week, partStatus]);
   
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
+
   // Continue to next part
   const continueToNextPart = () => {
     setShowResults(false);
