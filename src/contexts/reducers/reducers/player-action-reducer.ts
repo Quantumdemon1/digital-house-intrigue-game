@@ -35,7 +35,31 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         
         if (payload.params.currentPhase === 'Eviction') {
           console.log("Fast forwarding from Eviction - advancing week");
-          // For eviction phase, we advance the week and go to HoH
+          const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
+          
+          // Check for final stages
+          if (activeCount <= 2) {
+            return {
+              ...state,
+              week: state.week + 1,
+              phase: 'JuryQuestioning' as GamePhase,
+              isFinalStage: true,
+              nominees: [],
+              evictionVotes: {}
+            };
+          }
+          if (activeCount <= 3) {
+            return {
+              ...state,
+              week: state.week + 1,
+              phase: 'FinalHoH' as GamePhase,
+              isFinalStage: true,
+              nominees: [],
+              evictionVotes: {}
+            };
+          }
+          
+          // Normal week advancement
           return {
             ...state,
             week: state.week + 1,
@@ -98,19 +122,41 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         break;
         
       case 'eviction_complete':
-        console.log('Eviction complete, advancing to next phase');
-        // For immediate UI feedback while the state machine processes
-        return {
-          ...state,
-          week: state.week + 1,
-          phase: 'HoH' as GamePhase,
-          nominees: [],
-          evictionVotes: {}
-        };
+      case 'advance_week': {
+        const actionName = payload.actionId === 'eviction_complete' ? 'Eviction complete' : 'Advancing week';
+        console.log(`${actionName}, checking houseguest count for final stages`);
         
-      case 'advance_week':
-        console.log('Advancing week to', state.week + 1);
-        // For immediate UI feedback while the state machine processes
+        // Count active houseguests
+        const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
+        console.log(`Active houseguests: ${activeCount}`);
+        
+        // If only 2 remain, go to Jury Questioning
+        if (activeCount <= 2) {
+          console.log('Only 2 houseguests remain - advancing to Jury Questioning');
+          return {
+            ...state,
+            week: state.week + 1,
+            phase: 'JuryQuestioning' as GamePhase,
+            isFinalStage: true,
+            nominees: [],
+            evictionVotes: {}
+          };
+        }
+        
+        // If 3 remain, go to Final HoH
+        if (activeCount <= 3) {
+          console.log('3 houseguests remain - advancing to Final HoH');
+          return {
+            ...state,
+            week: state.week + 1,
+            phase: 'FinalHoH' as GamePhase,
+            isFinalStage: true,
+            nominees: [],
+            evictionVotes: {}
+          };
+        }
+        
+        // Normal week advancement
         return {
           ...state,
           week: state.week + 1,
@@ -118,6 +164,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
           nominees: [],
           evictionVotes: {}
         };
+      }
         
       case 'make_promise':
         // Process a player-made promise

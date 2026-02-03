@@ -24,25 +24,26 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       // Normalize the phase name to handle different casing/formats
       const normalizedPhase = normalizePhase(action.payload as string);
       
-      // Handle the special cases for final 3
-      if (activeHouseguestsCount <= 3 && !state.isFinalStage) {
-        // When reaching final 3, transition to final stage
-        if (normalizedPhase === 'pov') {
-          return {
-            ...state,
-            phase: 'FinalHoH' as GamePhase,
-            isFinalStage: true
-          };
-        }
-        
-        if (normalizedPhase === 'povmeeting') {
-          // Skip PoV Meeting at final 3 and go straight to special Final HoH
-          return {
-            ...state,
-            phase: 'FinalHoH' as GamePhase,
-            isFinalStage: true
-          };
-        }
+      // Override: If only 2 houseguests remain and we're not already at finale phases, go to Jury Questioning
+      const finalePhases = ['juryquestioning', 'finale', 'gameover'];
+      if (activeHouseguestsCount <= 2 && !finalePhases.includes(normalizedPhase)) {
+        console.log(`SET_PHASE override: Only ${activeHouseguestsCount} houseguests, redirecting to JuryQuestioning`);
+        return {
+          ...state,
+          phase: 'JuryQuestioning' as GamePhase,
+          isFinalStage: true
+        };
+      }
+      
+      // Override: If 3 houseguests and trying to enter normal weekly phases, go to FinalHoH
+      const weeklyPhases = ['hoh', 'nomination', 'pov', 'povmeeting', 'povplayerselection', 'eviction'];
+      if (activeHouseguestsCount === 3 && !state.isFinalStage && weeklyPhases.includes(normalizedPhase)) {
+        console.log(`SET_PHASE override: 3 houseguests in weekly phase, redirecting to FinalHoH`);
+        return {
+          ...state,
+          phase: 'FinalHoH' as GamePhase,
+          isFinalStage: true
+        };
       }
       
       // If we're already in the final stages, manage the proper flow

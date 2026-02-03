@@ -90,6 +90,22 @@ const NominationPhase: React.FC = () => {
     setNominees
   });
 
+  // Redirect to final stages if not enough houseguests
+  useEffect(() => {
+    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    
+    // If only 2 houseguests, go to Jury Questioning
+    if (activeHouseguests.length <= 2) {
+      dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
+      return;
+    }
+    
+    // If 3 or fewer houseguests, shouldn't be in Nomination - redirect to Final HoH
+    if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+      dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+    }
+  }, [gameState.houseguests, gameState.isFinalStage, dispatch]);
+
   // When AI makes decision, move to key ceremony
   useEffect(() => {
     if (aiProcessed && nominees.length === 2 && !isPlayerHoH && stage !== 'key-ceremony' && stage !== 'complete') {
