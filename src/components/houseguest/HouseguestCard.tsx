@@ -75,7 +75,7 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({
           </div>
           
           <CardContent className="pt-5">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center min-w-0">
               <StatusAvatar 
                 name={houseguest.name}
                 status={getHouseguestStatus()}
@@ -84,14 +84,14 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({
                 className="mb-3 group-hover:scale-105 transition-transform duration-200"
               />
               
-              <h3 className="font-bold text-center">
+              <h3 className="font-bold text-center truncate max-w-full">
                 {houseguest.name}
                 {houseguest.isPlayer && (
                   <span className="text-bb-green text-xs ml-1 font-normal">(You)</span>
                 )}
               </h3>
               
-              <p className="text-xs text-muted-foreground text-center mt-0.5">
+              <p className="text-xs text-muted-foreground text-center mt-0.5 truncate max-w-full">
                 {houseguest.age} • {houseguest.occupation}
               </p>
               
