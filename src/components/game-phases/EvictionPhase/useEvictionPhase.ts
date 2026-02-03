@@ -153,6 +153,7 @@ export function useEvictionPhase() {
     handleEvictionComplete,
     getEvictedHouseguest,
     checkForTie,
+    progressToResults,
     VOTING_TIME_LIMIT
   };
 }

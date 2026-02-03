@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Gavel, AlertTriangle } from 'lucide-react';
+import { Gavel, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/contexts/GameContext';
@@ -10,12 +10,15 @@ interface HohTiebreakerProps {
   hoh: Houseguest;
   nominees: Houseguest[];
   onVote: (hohId: string, nomineeId: string) => void;
+  onContinue?: () => void;
+  hasVoted?: boolean;
 }
 
-const HohTiebreaker: React.FC<HohTiebreakerProps> = ({ hoh, nominees, onVote }) => {
+const HohTiebreaker: React.FC<HohTiebreakerProps> = ({ hoh, nominees, onVote, onContinue, hasVoted = false }) => {
   const { logger } = useGame();
   const [aiDecision, setAiDecision] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [playerVoted, setPlayerVoted] = useState(false);
 
   // For AI HoH, simulate decision making
   useEffect(() => {
@@ -43,7 +46,16 @@ const HohTiebreaker: React.FC<HohTiebreakerProps> = ({ hoh, nominees, onVote }) 
   // Handle the player's tiebreaker vote with clear logging
   const handleTiebreakerVote = (nomineeId: string) => {
     logger.info(`HoH Tiebreaker: ${hoh.name} casting tiebreaker vote`);
+    setPlayerVoted(true);
     onVote(hoh.id, nomineeId);
+  };
+  
+  // Track which nominee the player voted for
+  const [playerVotedNomineeId, setPlayerVotedNomineeId] = useState<string | null>(null);
+  
+  const handlePlayerVote = (nomineeId: string) => {
+    setPlayerVotedNomineeId(nomineeId);
+    handleTiebreakerVote(nomineeId);
   };
 
   // Handle fast-forward for AI decision
@@ -96,30 +108,47 @@ const HohTiebreaker: React.FC<HohTiebreakerProps> = ({ hoh, nominees, onVote }) 
         
         {hoh.isPlayer ? (
           <div className="space-y-4">
-            <p className="text-center text-muted-foreground">
-              You must break the tie. Who do you vote to evict?
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              {nominees.map(nominee => (
-                <Button
-                  key={nominee.id}
-                  variant="outline"
-                  size="lg"
-                  className="flex flex-col items-center h-auto py-6 hover:bg-bb-red/10 hover:border-bb-red transition-all group"
-                  onClick={() => handleTiebreakerVote(nominee.id)}
-                >
-                  <StatusAvatar
-                    name={nominee.name}
-                    imageUrl={nominee.imageUrl}
-                    status="nominee"
-                    size="md"
-                    className="mb-2 group-hover:scale-105 transition-transform"
-                  />
-                  <span className="font-semibold">{nominee.name}</span>
-                  <span className="text-xs text-muted-foreground mt-1">Vote to Evict</span>
-                </Button>
-              ))}
-            </div>
+            {!playerVoted ? (
+              <>
+                <p className="text-center text-muted-foreground">
+                  You must break the tie. Who do you vote to evict?
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  {nominees.map(nominee => (
+                    <Button
+                      key={nominee.id}
+                      variant="outline"
+                      size="lg"
+                      className="flex flex-col items-center h-auto py-6 hover:bg-bb-red/10 hover:border-bb-red transition-all group"
+                      onClick={() => handlePlayerVote(nominee.id)}
+                    >
+                      <StatusAvatar
+                        name={nominee.name}
+                        imageUrl={nominee.imageUrl}
+                        status="nominee"
+                        size="md"
+                        className="mb-2 group-hover:scale-105 transition-transform"
+                      />
+                      <span className="font-semibold">{nominee.name}</span>
+                      <span className="text-xs text-muted-foreground mt-1">Vote to Evict</span>
+                    </Button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="animate-fade-in space-y-4">
+                <p className="text-xl text-bb-red font-display font-bold text-center">
+                  "I vote to evict {nominees.find(n => n.id === playerVotedNomineeId)?.name}."
+                </p>
+                {onContinue && (
+                  <div className="flex justify-center pt-4">
+                    <Button onClick={onContinue} size="lg" className="gap-2">
+                      Continue to Results <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center space-y-4">
@@ -139,6 +168,14 @@ const HohTiebreaker: React.FC<HohTiebreakerProps> = ({ hoh, nominees, onVote }) 
                 <p className="text-xl text-bb-red font-display font-bold">
                   "I vote to evict {nominees.find(n => n.id === aiDecision)?.name}."
                 </p>
+                
+                {onContinue && (
+                  <div className="flex justify-center pt-4">
+                    <Button onClick={onContinue} size="lg" className="gap-2">
+                      Continue to Results <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
