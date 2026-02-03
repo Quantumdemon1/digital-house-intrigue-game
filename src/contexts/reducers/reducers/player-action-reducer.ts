@@ -74,6 +74,17 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
           console.log("Fast forwarding from FinalHoH - simulating all parts");
           const activeHouseguests = state.houseguests.filter(h => h.status === 'Active');
           
+          // Validate we have enough active houseguests for Final HoH
+          if (activeHouseguests.length < 2) {
+            console.error('Not enough active houseguests for Final HoH:', activeHouseguests.length);
+            // Skip directly to jury questioning if only 2 remain
+            return {
+              ...state,
+              phase: 'JuryQuestioning' as GamePhase,
+              isFinalStage: true
+            };
+          }
+          
           if (activeHouseguests.length >= 2) {
             // Pick winners randomly weighted by stats
             const scoreHouseguest = (h: typeof activeHouseguests[0], type: 'endurance' | 'skill' | 'mental') => {
