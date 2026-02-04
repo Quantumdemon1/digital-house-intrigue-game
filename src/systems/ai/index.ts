@@ -39,3 +39,18 @@ export {
 } from './threat-assessment';
 
 export type { ThreatBreakdown } from './threat-assessment';
+
+// NPC Social Behavior System
+export {
+  evaluateAllianceDesire,
+  shouldNPCMakePromise,
+  generateNPCActions,
+  executeNPCAction,
+  executeAllNPCActions,
+} from './npc-social-behavior';
+
+export type { NPCAction, NPCActionResult, NPCActivityItem } from './npc-social-behavior';
+
+// Interaction Tracking System
+export { InteractionTracker, getInteractionDefaults } from './interaction-tracker';
+export type { TrackedInteraction, InteractionType, InteractionSentiment, InteractionSummary } from './interaction-tracker';

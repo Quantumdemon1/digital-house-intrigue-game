@@ -74,7 +74,9 @@ const PromiseCard: React.FC<PromiseCardProps> = ({
     'vote': 'Vote Promise',
     'final_2': 'Final 2 Deal',
     'alliance_loyalty': 'Alliance Loyalty',
-    'information': 'Information Sharing'
+    'information': 'Information Sharing',
+    'veto_use': 'Veto Promise',
+    'hoh_protection': 'HoH Protection'
   };
   
   // Type descriptions
@@ -83,7 +85,9 @@ const PromiseCard: React.FC<PromiseCardProps> = ({
     'vote': 'A promise to vote in a certain way',
     'final_2': 'A promise to take someone to the final 2',
     'alliance_loyalty': 'A promise to stay loyal to an alliance',
-    'information': 'A promise to share information'
+    'information': 'A promise to share information',
+    'veto_use': 'A promise to use the veto on someone',
+    'hoh_protection': 'A promise to protect when winning HoH'
   };
   
   // Impact labels

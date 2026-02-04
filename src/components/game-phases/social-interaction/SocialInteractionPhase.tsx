@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Users, MessageCircle, Clock } from 'lucide-react';
+import { Users, Clock } from 'lucide-react';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
 import { Badge } from '@/components/ui/badge';
 import LocationDisplay from './LocationDisplay';
@@ -9,11 +9,20 @@ import InteractionsCounter from './InteractionsCounter';
 import ActionSections from './ActionSections';
 import StrategicDiscussionDialog from '../social/StrategicDiscussionDialog';
 import MakePromiseDialog from '../social/MakePromiseDialog';
+import NPCActivityFeed from './NPCActivityFeed';
 import { EnhancedGameLogger } from '@/utils/game-log';
+import { executeAllNPCActions, type NPCActivityItem } from '@/systems/ai/npc-social-behavior';
+import { InteractionTracker } from '@/systems/ai/interaction-tracker';
+import { config } from '@/config';
 
 const SocialInteractionPhase: React.FC = () => {
   const { game, logger, dispatch } = useGame();
   const [enhancedLogger, setEnhancedLogger] = useState<EnhancedGameLogger | null>(null);
+  const [npcActivities, setNpcActivities] = useState<NPCActivityItem[]>([]);
+  const [isNPCPhaseActive, setIsNPCPhaseActive] = useState(false);
+  const interactionTrackerRef = useRef<InteractionTracker | null>(null);
+  const hasRunNPCActions = useRef(false);
+  
   const [dialogAction, setDialogAction] = useState<{
     type: string;
     params?: any;
@@ -23,11 +32,55 @@ const SocialInteractionPhase: React.FC = () => {
     isOpen: false
   });
 
+  // Initialize interaction tracker
+  useEffect(() => {
+    if (!interactionTrackerRef.current && logger) {
+      interactionTrackerRef.current = new InteractionTracker(logger);
+    }
+    if (game && interactionTrackerRef.current) {
+      interactionTrackerRef.current.setCurrentWeek(game.week);
+    }
+  }, [game, logger]);
+
   useEffect(() => {
     if (game) {
       setEnhancedLogger(new EnhancedGameLogger(game, logger));
     }
   }, [game, logger]);
+
+  // Run NPC autonomous actions when social phase starts
+  const runNPCActions = useCallback(async () => {
+    if (!game || !config.NPC_AUTONOMOUS_ACTIONS_ENABLED || hasRunNPCActions.current) return;
+    
+    hasRunNPCActions.current = true;
+    setIsNPCPhaseActive(true);
+    
+    try {
+      await executeAllNPCActions(
+        game,
+        logger,
+        interactionTrackerRef.current || undefined,
+        (item) => {
+          setNpcActivities(prev => [...prev, item]);
+        }
+      );
+    } catch (error) {
+      logger.error('Error running NPC actions', error);
+    } finally {
+      setIsNPCPhaseActive(false);
+    }
+  }, [game, logger]);
+
+  // Trigger NPC actions when phase starts
+  useEffect(() => {
+    if (game?.currentState?.constructor.name === 'SocialInteractionState') {
+      // Small delay before running NPC actions
+      const timer = setTimeout(() => {
+        runNPCActions();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [game?.currentState, runNPCActions]);
 
   if (!game || !game.currentState || !(game.currentState.constructor.name === 'SocialInteractionState')) {
     return (
@@ -110,6 +163,12 @@ const SocialInteractionPhase: React.FC = () => {
 
         {/* Interactions Counter */}
         <InteractionsCounter interactionsRemaining={currentState.interactionsRemaining} />
+
+        {/* NPC Activity Feed */}
+        <NPCActivityFeed 
+          activities={npcActivities} 
+          maxItems={15}
+        />
 
         {/* Action Sections */}
         <ActionSections 
