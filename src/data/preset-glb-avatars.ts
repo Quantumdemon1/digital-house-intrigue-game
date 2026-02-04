@@ -33,21 +33,21 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     url: '/avatars/glb/marcus.glb',
     thumbnail: '/avatars/thumbnails/marcus.webp',
     style: 'casual',
-    bodyType: 'athletic',
-    traits: ['confident', 'competitive'],
-    description: 'Athletic build with a confident stance',
-    isPlaceholder: true
+    bodyType: 'slim',
+    traits: ['confident', 'agile'],
+    description: 'Rigged figure with humanoid proportions',
+    isPlaceholder: false
   },
   {
     id: 'glb-elena',
     name: 'Elena',
     url: '/avatars/glb/elena.glb',
     thumbnail: '/avatars/thumbnails/elena.webp',
-    style: 'professional',
+    style: 'casual',
     bodyType: 'slim',
-    traits: ['strategic', 'charming'],
-    description: 'Professional attire with elegant posture',
-    isPlaceholder: true
+    traits: ['graceful', 'charming'],
+    description: 'Expressive character with smooth animations',
+    isPlaceholder: false
   },
   {
     id: 'glb-tyler',
@@ -55,32 +55,32 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     url: '/avatars/glb/tyler.glb',
     thumbnail: '/avatars/thumbnails/tyler.webp',
     style: 'athletic',
-    bodyType: 'stocky',
-    traits: ['competitive', 'loyal'],
-    description: 'Built for competition',
-    isPlaceholder: true
+    bodyType: 'athletic',
+    traits: ['competitive', 'tech-savvy'],
+    description: 'Robot-style character ready for action',
+    isPlaceholder: false
   },
   {
     id: 'glb-sophia',
     name: 'Sophia',
     url: '/avatars/glb/sophia.glb',
     thumbnail: '/avatars/thumbnails/sophia.webp',
-    style: 'casual',
-    bodyType: 'average',
-    traits: ['social', 'observant'],
-    description: 'Approachable and friendly',
-    isPlaceholder: true
+    style: 'formal',
+    bodyType: 'athletic',
+    traits: ['strategic', 'disciplined'],
+    description: 'Military-inspired tactical character',
+    isPlaceholder: false
   },
   {
     id: 'glb-jamal',
     name: 'Jamal',
     url: '/avatars/glb/jamal.glb',
     thumbnail: '/avatars/thumbnails/jamal.webp',
-    style: 'formal',
+    style: 'casual',
     bodyType: 'slim',
-    traits: ['strategic', 'analytical'],
-    description: 'Sharp mind, sharper suit',
-    isPlaceholder: true
+    traits: ['analytical', 'calm'],
+    description: 'Simple rigged humanoid with clean lines',
+    isPlaceholder: false
   },
   {
     id: 'glb-maya',
@@ -88,10 +88,10 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     url: '/avatars/glb/maya.glb',
     thumbnail: '/avatars/thumbnails/maya.webp',
     style: 'fantasy',
-    bodyType: 'slim',
-    traits: ['mysterious', 'adaptive'],
-    description: 'Otherworldly presence',
-    isPlaceholder: true
+    bodyType: 'average',
+    traits: ['creative', 'expressive'],
+    description: 'Expressive robot with emotional animations',
+    isPlaceholder: false
   },
   {
     id: 'glb-derek',
@@ -99,10 +99,10 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     url: '/avatars/glb/derek.glb',
     thumbnail: '/avatars/thumbnails/derek.webp',
     style: 'casual',
-    bodyType: 'athletic',
-    traits: ['confrontational', 'honest'],
-    description: 'What you see is what you get',
-    isPlaceholder: true
+    bodyType: 'average',
+    traits: ['honest', 'reliable'],
+    description: 'Classic humanoid with space-suit style',
+    isPlaceholder: false
   },
   {
     id: 'glb-luna',
@@ -110,10 +110,10 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     url: '/avatars/glb/luna.glb',
     thumbnail: '/avatars/thumbnails/luna.webp',
     style: 'fantasy',
-    bodyType: 'average',
-    traits: ['creative', 'unpredictable'],
-    description: 'Expects the unexpected',
-    isPlaceholder: true
+    bodyType: 'slim',
+    traits: ['quick', 'clever'],
+    description: 'Playful fox character with smooth motion',
+    isPlaceholder: false
   },
   {
     id: 'glb-carlos',
@@ -133,9 +133,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     thumbnail: '/avatars/thumbnails/zara.webp',
     style: 'athletic',
     bodyType: 'athletic',
-    traits: ['competitive', 'determined'],
-    description: 'Born to win',
-    isPlaceholder: true
+    traits: ['fast', 'determined'],
+    description: 'Galloping horse with dynamic animations',
+    isPlaceholder: false
   }
 ];
 
