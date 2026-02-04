@@ -6,13 +6,15 @@
 import { Promise, PromiseType } from '../../models/promise';
 import { BigBrotherGame } from '../../models/game/BigBrotherGame';
 import { Logger } from '../../utils/logger';
+import { getLoyaltyMultiplier, getBrokenPromisePenaltyMultiplier } from '../../utils/stat-checks';
 
 /**
- * Calculate the relationship impact of a promise based on its type and status
+ * Calculate the relationship impact of a promise based on its type, status, and promisor's Loyalty stat
  * @param promise The promise to calculate impact for
+ * @param loyaltyStat Optional Loyalty stat of the promise maker (1-10), defaults to 5
  * @returns A numeric value representing relationship impact (positive or negative)
  */
-export function getPromiseImpact(promise: Promise): number {
+export function getPromiseImpact(promise: Promise, loyaltyStat: number = 5): number {
   // Base values
   const basePositive = 15;  // Base value for kept promises
   const baseNegative = -25; // Base value for broken promises
@@ -28,9 +30,14 @@ export function getPromiseImpact(promise: Promise): number {
   
   // Calculate impact based on status and type
   if (promise.status === 'fulfilled') {
-    return Math.round(basePositive * impactMultiplier[promise.type]);
+    // High Loyalty = promises carry more weight when kept
+    const loyaltyBonus = getLoyaltyMultiplier(loyaltyStat);
+    return Math.round(basePositive * impactMultiplier[promise.type] * loyaltyBonus);
   } else if (promise.status === 'broken') {
-    return Math.round(baseNegative * impactMultiplier[promise.type]);
+    // High Loyalty = trusted betrayal hurts more
+    // Low Loyalty = people expected it, less damage
+    const betrayalPenalty = getBrokenPromisePenaltyMultiplier(loyaltyStat);
+    return Math.round(baseNegative * impactMultiplier[promise.type] * betrayalPenalty);
   }
   
   // For pending/active/expired promises, no impact yet

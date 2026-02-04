@@ -11,18 +11,27 @@ import type {
 } from '@/models/competition';
 import { COMPETITION_WEIGHTS, getRandomCompetitionName } from '@/models/competition';
 import { v4 as uuidv4 } from 'uuid';
+import { getClutchBonus } from '@/utils/stat-checks';
 
 export interface CompetitionRunnerOptions {
   category?: BBCompetitionCategory;
   type: 'HoH' | 'PoV' | 'FinalHoH1' | 'FinalHoH2' | 'FinalHoH3';
   week: number;
   participants: Houseguest[];
+  nominees?: string[]; // IDs of nominated houseguests for clutch bonus calculation
 }
 
 /**
  * Calculate a houseguest's competition score based on category weights
+ * @param stats The houseguest's stats
+ * @param category The competition category
+ * @param isNominated Whether this houseguest is currently nominated (for clutch bonus)
  */
-function calculateScore(stats: HouseguestStats, category: BBCompetitionCategory): number {
+function calculateScore(
+  stats: HouseguestStats, 
+  category: BBCompetitionCategory,
+  isNominated: boolean = false
+): number {
   const weights = COMPETITION_WEIGHTS[category];
   
   // Base score from weighted stats
@@ -39,24 +48,31 @@ function calculateScore(stats: HouseguestStats, category: BBCompetitionCategory)
   // Additional luck modifier for Crapshoot comps
   const luckBonus = category === 'Crapshoot' ? (Math.random() * 3) : 0;
   
-  return (baseScore * randomFactor) + luckBonus;
+  // Clutch bonus for nominated houseguests (Competition stat)
+  const clutchBonus = getClutchBonus(stats.competition, isNominated);
+  
+  return (baseScore * randomFactor) + luckBonus + clutchBonus;
 }
 
 /**
  * Run a competition and return results
  */
 export function runCompetition(options: CompetitionRunnerOptions): Competition {
-  const { type, week, participants } = options;
+  const { type, week, participants, nominees = [] } = options;
   
   // Select category if not specified
   const category = options.category || selectCategoryForType(type);
   const competitionName = getRandomCompetitionName(category);
   
-  // Calculate scores for each participant
-  const scoredResults: { houseguest: Houseguest; score: number }[] = participants.map(hg => ({
-    houseguest: hg,
-    score: calculateScore(hg.stats, category)
-  }));
+  // Calculate scores for each participant, applying clutch bonus to nominated houseguests
+  const scoredResults: { houseguest: Houseguest; score: number; hadClutchBonus: boolean }[] = participants.map(hg => {
+    const isNominated = nominees.includes(hg.id);
+    return {
+      houseguest: hg,
+      score: calculateScore(hg.stats, category, isNominated),
+      hadClutchBonus: isNominated && hg.stats.competition > 0
+    };
+  });
   
   // Sort by score descending
   scoredResults.sort((a, b) => b.score - a.score);
@@ -69,6 +85,12 @@ export function runCompetition(options: CompetitionRunnerOptions): Competition {
   }));
   
   const winner = scoredResults[0].houseguest;
+  
+  // Log clutch bonus if winner was nominated
+  const winnerResult = scoredResults[0];
+  if (winnerResult.hadClutchBonus) {
+    console.log(`🔥 Clutch performance! ${winner.name} won while on the block (Competition stat: ${winner.stats.competition})`);
+  }
   
   return {
     id: uuidv4(),
