@@ -1,314 +1,770 @@
 
-# Implementation Plan: Enhanced Social, Deals & Alliances System
+# Plan: Three.js Animated "The Sims" Style Avatar System
 
-## Executive Summary
+## Overview
 
-This plan enhances the game's social systems with 5 major improvements:
-1. **Conversation Topics System** - Replace generic "Talk" with meaningful choices
-2. **Alliance Management UI** - Give players control over their alliances
-3. **Relationship Milestones** - Visual celebration of friendship tiers
-4. **Deal Obligation Reminders** - Highlight relevant deals during ceremonies
-5. **Counter-Offer System** - NPCs can propose alternative deals
-
----
-
-## Phase 1: Conversation Topics System
-
-### Current State
-- "Talk to [Name]" action gives a flat +3-7 relationship boost
-- No player choice about conversation type
-- All conversations feel identical
-
-### Enhancement
-Add 5 conversation topic choices when clicking "Talk":
-
-| Topic | Risk | Reward | Effect |
-|-------|------|--------|--------|
-| Small Talk | None | +3-5 | Safe relationship building |
-| Personal Chat | Low | +5-8 | Share personal info, builds trust |
-| Discuss the Game | Medium | +4-10 | Strategic talk, trait-dependent |
-| Vent About Houseguest | High | +8-15 OR -10 | Gossip - risky if they're allied |
-| Share a Secret | High | +10-18 OR -15 | High trust builder OR betrayal risk |
-
-### Files to Create/Modify
-
-**Create: `src/components/dialogs/ConversationTopicDialog.tsx`**
-- Modal that appears after clicking "Talk to [Name]"
-- Shows 5 topic cards with risk/reward indicators
-- Displays target's likely reaction based on traits
-
-**Modify: `src/game-states/social/handlers/talkHandler.ts`**
-- Accept `conversationType` parameter
-- Calculate relationship change based on topic + traits
-- Add betrayal logic for risky topics
-
-**Modify: `src/contexts/reducers/reducers/player-action-reducer.ts`**
-- Handle new `talk_to` with topic parameter
-- Calculate outcomes based on:
-  - Target's traits (e.g., "Sneaky" NPCs love gossip)
-  - Existing relationship level
-  - Whether gossip target is allied with conversation partner
+Revamp the entire avatar system to use 3D animated characters rendered with React Three Fiber (Three.js). Characters will have a stylized "The Sims" aesthetic with:
+- Procedurally generated low-poly humanoid bodies
+- Customizable features (skin tone, hair, clothing colors)
+- Idle animations (breathing, blinking, subtle movements)
+- Status-based animations (celebrating for HoH, nervous for nominees)
+- Mood-reactive expressions and poses
 
 ---
 
-## Phase 2: Alliance Management UI
+## Technical Stack
 
-### Current State
-- Alliances exist in system but player has no management interface
-- No way to name alliances, invite members, or track stability
-- Alliance tab in DealsPanel shows minimal info
-
-### Enhancement
-Create dedicated Alliance Management interface:
-
-**Features:**
-- **Create Alliance**: Name it, select founding members (min 2)
-- **Invite Members**: Propose new member to existing alliance
-- **View Stability**: See stability score (0-100) with breakdown
-- **Hold Meeting**: Action to boost all member relationships +3 and stability +5
-- **Leave/Kick**: Remove yourself or vote to kick a member
-
-### Files to Create/Modify
-
-**Create: `src/components/alliances/AllianceManagementDialog.tsx`**
-- Full alliance management interface
-- Tabs: Overview | Members | Stability | Actions
-
-**Create: `src/components/alliances/CreateAllianceWizard.tsx`**
-- Step 1: Name your alliance
-- Step 2: Select founding members (shows relationship scores)
-- Step 3: Confirm creation
-
-**Create: `src/components/alliances/AllianceMemberCard.tsx`**
-- Shows member avatar, relationship to you, role in alliance
-- "Kick" button if you're founder
-
-**Modify: `src/game-states/SocialInteractionState.ts`**
-- Add alliance management actions:
-  - `create_alliance`
-  - `invite_to_alliance`
-  - `hold_alliance_meeting`
-  - `leave_alliance`
-
-**Modify: `src/systems/alliance-system.ts`**
-- Add `proposeKickMember()` method
-- Add `inviteMember()` with NPC acceptance logic
-- Improve `holdAllianceMeeting()` to give visual feedback
+| Library | Version | Purpose |
+|---------|---------|---------|
+| `three` | `>=0.133` | Core 3D rendering engine |
+| `@react-three/fiber` | `^8.18` | React renderer for Three.js (React 18 compatible) |
+| `@react-three/drei` | `^9.122.0` | Helper utilities (OrbitControls, useAnimations, etc.) |
 
 ---
 
-## Phase 3: Relationship Milestones
+## Part 1: Install Dependencies and Create Base Infrastructure
 
-### Current State
-- `checkRelationshipMilestones()` exists in npc-deal-proposals.ts
-- Triggers NPC proposals at 25, 50, 75 thresholds
-- No visual celebration or player notification
-
-### Enhancement
-Add visual feedback when crossing friendship tiers:
-
-| Threshold | Tier Name | Visual | Unlock |
-|-----------|-----------|--------|--------|
-| 25+ | Acquaintance → Friend | Toast + badge | Info sharing deals |
-| 50+ | Friend → Close Friend | Celebration + badge | Safety pact deals |
-| 75+ | Close Friend → Ally | Confetti + badge | Partnership/F2 deals |
-
-### Files to Create/Modify
-
-**Create: `src/components/feedback/RelationshipMilestoneToast.tsx`**
-- Animated toast with tier icon and NPC avatar
-- "You and [Name] are now Close Friends!"
-- Confetti effect for 75+ threshold
-
-**Create: `src/components/houseguest/RelationshipTierBadge.tsx`**
-- Small badge shown next to relationship score
-- Tiers: Stranger | Acquaintance | Friend | Close Friend | Ally | Rival | Enemy
-
-**Modify: `src/contexts/reducers/reducers/relationship-reducer.ts`**
-- After relationship update, check for milestone crossing
-- Emit `relationship_milestone` event via GameEventBus
-- Store milestone achievements in state
-
-**Modify: `src/components/houseguest/HouseguestDialog.tsx`**
-- Display RelationshipTierBadge next to score
-- Show "milestone unlocked" if crossed during session
-
----
-
-## Phase 4: Deal Obligation Reminders
-
-### Current State
-- Active deals exist but player can accidentally break them
-- No visual reminder during ceremonies
-- Trust score suffers with no warning
-
-### Enhancement
-Show relevant deal obligations during key game moments:
-
-**Reminder Contexts:**
-- **Nomination Ceremony**: "You have a Safety Pact with Morgan - nominating them will break this deal!"
-- **Veto Decision**: "You promised to use the Veto on Alex if they're on the block"
-- **Voting**: "You have a Voting Block deal with Sam - vote with them to keep the deal"
-- **Final Selection**: "Your Final Two deal with Jordan - take them to honor it"
-
-### Files to Create/Modify
-
-**Create: `src/components/deals/DealObligationBanner.tsx`**
-- Warning banner shown during relevant ceremonies
-- Yellow/amber styling with deal icon
-- Shows deal type, partner name, consequence of breaking
-
-**Create: `src/hooks/useDealObligations.ts`**
-- Returns relevant active deals for current game phase
-- Filters by deal type matching phase context
-- Example: During Eviction phase, return `vote_together` deals
-
-**Modify: `src/components/game-phases/NominationPhase.tsx`**
-- Import and render DealObligationBanner
-- Pass nominees-to-be for conflict checking
-
-**Modify: `src/components/game-phases/VetoMeetingPhase.tsx`**
-- Show veto_use obligation if applicable
-
-**Modify: `src/components/game-phases/eviction/PlayerEvictionVoting.tsx`**
-- Show vote_together obligation during vote casting
-
----
-
-## Phase 5: Counter-Offer System
-
-### Current State
-- NPC either accepts or declines player deals
-- Binary response with reasoning text
-- No negotiation possible
-
-### Enhancement
-NPCs can propose alternative deals when declining:
-
-**Counter-Offer Logic:**
-1. Player proposes Final Two deal
-2. NPC declines (relationship too low)
-3. NPC counter-offers: "I'm not ready for that, but how about a Safety Pact instead?"
-4. Player can accept counter-offer or walk away
-
-**Counter-Offer Mapping:**
-| Proposed | Counter-Offer Options |
-|----------|----------------------|
-| Final Two | Partnership, Safety Pact |
-| Partnership | Safety Pact, Information Sharing |
-| Target Agreement | Vote Together (this week) |
-| Veto Use | Safety Pact |
-| Alliance Invite | Partnership |
-
-### Files to Create/Modify
-
-**Modify: `src/systems/deal-system.ts`**
-- Add `generateCounterOffer()` method
-- Returns alternative deal type if NPC would decline original
-- Considers relationship gap needed
-
-**Modify: `src/components/deals/ProposeDealDialog.tsx`**
-- Add `counter_offer` status state
-- Show counter-offer UI with NPC's alternative
-- Buttons: "Accept Counter" | "Decline & Leave"
-
-**Modify: `src/models/deal.ts`**
-- Add counter-offer type definitions
-- Add `counterOfferFor` field to track original proposal
-
----
-
-## Technical Architecture
-
-### Event Flow for Milestones
-
-```text
-Player Action (Talk) 
-    → player-action-reducer 
-    → UPDATE_RELATIONSHIPS 
-    → relationship-reducer 
-    → Check milestone crossing 
-    → Emit 'relationship_milestone' event 
-    → GameEventBus 
-    → UI subscribes → Show toast/confetti
+### New Dependencies
+```json
+{
+  "three": ">=0.133",
+  "@react-three/fiber": "^8.18",
+  "@react-three/drei": "^9.122.0"
+}
 ```
 
-### Deal Obligation Detection
-
-```text
-Phase Changes to Nomination 
-    → useDealObligations hook 
-    → Filter deals where:
-        - type = 'safety_agreement'
-        - partner in potential nominees
-    → Return obligation warnings 
-    → DealObligationBanner renders
+### New Directory Structure
+```
+src/
+├── components/
+│   └── avatar-3d/
+│       ├── SimsAvatar.tsx           # Main 3D avatar component
+│       ├── AvatarCanvas.tsx         # Canvas wrapper for 3D scene
+│       ├── AvatarBody.tsx           # Procedural body mesh generation
+│       ├── AvatarHead.tsx           # Face with expressions
+│       ├── AvatarHair.tsx           # Hair mesh variations
+│       ├── AvatarClothing.tsx       # Outfit rendering
+│       ├── AvatarAnimations.tsx     # Animation controller
+│       ├── hooks/
+│       │   ├── useIdleAnimation.ts  # Breathing, blinking loops
+│       │   ├── useMoodAnimation.ts  # Mood-reactive animations
+│       │   └── useStatusAnimation.ts # Game status animations
+│       ├── utils/
+│       │   ├── avatar-generator.ts  # Procedural mesh generation
+│       │   ├── color-palettes.ts    # Skin, hair, clothing colors
+│       │   └── animation-clips.ts   # Predefined animation data
+│       └── index.ts
+└── models/
+    └── avatar-config.ts              # Avatar customization types
 ```
 
 ---
 
-## File Summary
+## Part 2: Avatar Configuration Model
 
-### New Files (10)
+**Create: `src/models/avatar-config.ts`**
+
+Define the customizable properties for 3D avatars:
+
+```typescript
+export interface Avatar3DConfig {
+  // Body shape
+  bodyType: 'slim' | 'average' | 'athletic' | 'stocky';
+  height: 'short' | 'average' | 'tall';
+  
+  // Skin
+  skinTone: string; // Hex color from palette
+  
+  // Face
+  headShape: 'round' | 'oval' | 'square' | 'heart';
+  eyeShape: 'round' | 'almond' | 'wide' | 'narrow';
+  eyeColor: string;
+  noseType: 'small' | 'medium' | 'large' | 'button';
+  mouthType: 'thin' | 'full' | 'wide' | 'small';
+  
+  // Hair
+  hairStyle: 'short' | 'medium' | 'long' | 'buzz' | 'ponytail' | 'bun' | 'curly' | 'bald';
+  hairColor: string;
+  
+  // Clothing
+  topStyle: 'tshirt' | 'tanktop' | 'blazer' | 'hoodie' | 'dress';
+  topColor: string;
+  bottomStyle: 'pants' | 'shorts' | 'skirt' | 'jeans';
+  bottomColor: string;
+}
+
+// Generate random config from archetype
+export function generateAvatarConfig(archetype: string, seed?: string): Avatar3DConfig;
+
+// Convert houseguest traits to avatar appearance hints
+export function traitsToAvatarHints(traits: string[]): Partial<Avatar3DConfig>;
+```
+
+---
+
+## Part 3: Core 3D Avatar Component
+
+**Create: `src/components/avatar-3d/SimsAvatar.tsx`**
+
+The main component that renders a complete 3D character:
+
+```typescript
+interface SimsAvatarProps {
+  config: Avatar3DConfig;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  mood?: MoodType;
+  status?: AvatarStatus;
+  isPlayer?: boolean;
+  animated?: boolean;
+  showShadow?: boolean;
+  className?: string;
+}
+
+export const SimsAvatar: React.FC<SimsAvatarProps> = ({
+  config,
+  size = 'md',
+  mood = 'Neutral',
+  status = 'none',
+  isPlayer = false,
+  animated = true,
+  showShadow = true,
+  className
+}) => {
+  return (
+    <AvatarCanvas size={size} className={className}>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 5, 5]} intensity={0.8} />
+      
+      <group>
+        <AvatarBody config={config} />
+        <AvatarHead config={config} mood={mood} />
+        <AvatarHair config={config} />
+        <AvatarClothing config={config} />
+        
+        {animated && (
+          <AvatarAnimations 
+            mood={mood} 
+            status={status} 
+            isPlayer={isPlayer}
+          />
+        )}
+      </group>
+      
+      {showShadow && <ContactShadows />}
+    </AvatarCanvas>
+  );
+};
+```
+
+---
+
+## Part 4: Procedural Body Generation
+
+**Create: `src/components/avatar-3d/AvatarBody.tsx`**
+
+Generate a low-poly humanoid body procedurally:
+
+```typescript
+// Sims-style proportions:
+// - Slightly oversized head (cartoonish)
+// - Simplified body shapes
+// - No fingers (mitten hands like original Sims)
+// - Smooth, rounded edges
+
+export const AvatarBody: React.FC<{ config: Avatar3DConfig }> = ({ config }) => {
+  const bodyMesh = useMemo(() => {
+    // Create torso - rounded cylinder/capsule shape
+    const torsoGeometry = createTorsoGeometry(config.bodyType);
+    
+    // Create limbs - simple cylinders with rounded caps
+    const armGeometry = createArmGeometry(config.bodyType);
+    const legGeometry = createLegGeometry(config.bodyType);
+    
+    // Create hands - sphere "mittens"
+    const handGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+    
+    return { torso: torsoGeometry, arms: armGeometry, legs: legGeometry, hands: handGeometry };
+  }, [config.bodyType]);
+
+  return (
+    <group>
+      {/* Torso */}
+      <mesh geometry={bodyMesh.torso}>
+        <meshStandardMaterial color={config.skinTone} />
+      </mesh>
+      
+      {/* Arms */}
+      <mesh position={[-0.3, 0, 0]} geometry={bodyMesh.arms}>
+        <meshStandardMaterial color={config.skinTone} />
+      </mesh>
+      <mesh position={[0.3, 0, 0]} geometry={bodyMesh.arms}>
+        <meshStandardMaterial color={config.skinTone} />
+      </mesh>
+      
+      {/* Legs */}
+      <mesh position={[-0.1, -0.5, 0]} geometry={bodyMesh.legs}>
+        <meshStandardMaterial color={config.skinTone} />
+      </mesh>
+      <mesh position={[0.1, -0.5, 0]} geometry={bodyMesh.legs}>
+        <meshStandardMaterial color={config.skinTone} />
+      </mesh>
+    </group>
+  );
+};
+```
+
+---
+
+## Part 5: Animated Head with Expressions
+
+**Create: `src/components/avatar-3d/AvatarHead.tsx`**
+
+Sims-style head with mood-reactive expressions:
+
+```typescript
+const moodExpressions = {
+  Happy: { eyeScale: 1.1, mouthCurve: 0.3, browRaise: 0.1 },
+  Content: { eyeScale: 1.0, mouthCurve: 0.1, browRaise: 0 },
+  Neutral: { eyeScale: 1.0, mouthCurve: 0, browRaise: 0 },
+  Upset: { eyeScale: 0.9, mouthCurve: -0.2, browRaise: -0.1 },
+  Angry: { eyeScale: 0.8, mouthCurve: -0.3, browRaise: -0.2 }
+};
+
+export const AvatarHead: React.FC<{ config: Avatar3DConfig; mood: MoodType }> = ({ 
+  config, 
+  mood 
+}) => {
+  const expression = moodExpressions[mood];
+  const blinkRef = useRef<THREE.Mesh>(null);
+  
+  // Blinking animation
+  useFrame((state) => {
+    // Blink every 3-5 seconds
+    const blink = Math.sin(state.clock.elapsedTime * 0.5) > 0.99;
+    if (blinkRef.current) {
+      blinkRef.current.scale.y = blink ? 0.1 : expression.eyeScale;
+    }
+  });
+
+  return (
+    <group position={[0, 0.8, 0]}>
+      {/* Head base */}
+      <mesh>
+        <sphereGeometry args={[0.25, 32, 32]} />
+        <meshStandardMaterial color={config.skinTone} />
+      </mesh>
+      
+      {/* Eyes */}
+      <group position={[0, 0.05, 0.2]}>
+        <mesh ref={blinkRef} position={[-0.08, 0, 0]}>
+          <sphereGeometry args={[0.04, 16, 16]} />
+          <meshStandardMaterial color="white" />
+        </mesh>
+        {/* Pupils */}
+        <mesh position={[-0.08, 0, 0.03]}>
+          <sphereGeometry args={[0.02, 16, 16]} />
+          <meshStandardMaterial color={config.eyeColor} />
+        </mesh>
+      </group>
+      
+      {/* Mouth - curved line based on mood */}
+      <MouthShape curve={expression.mouthCurve} />
+    </group>
+  );
+};
+```
+
+---
+
+## Part 6: Animation System
+
+**Create: `src/components/avatar-3d/hooks/useIdleAnimation.ts`**
+
+Subtle idle movements for lifelike feel:
+
+```typescript
+export function useIdleAnimation(groupRef: React.RefObject<THREE.Group>) {
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    
+    const time = state.clock.elapsedTime;
+    
+    // Breathing - subtle chest expansion
+    groupRef.current.scale.x = 1 + Math.sin(time * 1.5) * 0.01;
+    groupRef.current.scale.y = 1 + Math.sin(time * 1.5) * 0.005;
+    
+    // Slight sway
+    groupRef.current.rotation.z = Math.sin(time * 0.5) * 0.02;
+    
+    // Head micro-movements
+    groupRef.current.children[0].rotation.y = Math.sin(time * 0.3) * 0.05;
+  });
+}
+```
+
+**Create: `src/components/avatar-3d/hooks/useStatusAnimation.ts`**
+
+Game-status reactive animations:
+
+```typescript
+export function useStatusAnimation(
+  groupRef: React.RefObject<THREE.Group>,
+  status: AvatarStatus
+) {
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const time = state.clock.elapsedTime;
+    
+    switch (status) {
+      case 'hoh':
+        // Confident pose - slight lean back, chest out
+        groupRef.current.rotation.x = -0.05;
+        // Subtle glow effect via scale pulse
+        const hohPulse = 1 + Math.sin(time * 2) * 0.02;
+        groupRef.current.scale.setScalar(hohPulse);
+        break;
+        
+      case 'nominee':
+        // Nervous - fidgeting, looking around
+        groupRef.current.position.y = Math.sin(time * 4) * 0.02;
+        groupRef.current.rotation.y = Math.sin(time * 2) * 0.1;
+        break;
+        
+      case 'pov':
+        // Confident but alert
+        groupRef.current.rotation.x = -0.03;
+        break;
+        
+      case 'evicted':
+        // Sad pose - slumped shoulders
+        groupRef.current.rotation.x = 0.1;
+        groupRef.current.position.y = -0.05;
+        break;
+    }
+  });
+}
+```
+
+---
+
+## Part 7: Canvas Wrapper with Size Presets
+
+**Create: `src/components/avatar-3d/AvatarCanvas.tsx`**
+
+Responsive canvas wrapper:
+
+```typescript
+const sizeConfig = {
+  sm: { width: 40, height: 40, cameraZ: 3 },
+  md: { width: 64, height: 64, cameraZ: 2.5 },
+  lg: { width: 96, height: 96, cameraZ: 2 },
+  xl: { width: 128, height: 128, cameraZ: 1.8 }
+};
+
+export const AvatarCanvas: React.FC<{
+  size: keyof typeof sizeConfig;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ size, children, className }) => {
+  const config = sizeConfig[size];
+  
+  return (
+    <div 
+      className={cn('relative rounded-full overflow-hidden', className)}
+      style={{ width: config.width, height: config.height }}
+    >
+      <Canvas
+        camera={{ position: [0, 0.3, config.cameraZ], fov: 35 }}
+        gl={{ antialias: true, alpha: true }}
+        dpr={[1, 2]}
+      >
+        <Suspense fallback={null}>
+          {children}
+        </Suspense>
+      </Canvas>
+    </div>
+  );
+};
+```
+
+---
+
+## Part 8: Integration with Existing System
+
+### Replace StatusAvatar
+
+**Modify: `src/components/ui/status-avatar.tsx`**
+
+Add 3D mode while preserving 2D fallback:
+
+```typescript
+interface StatusAvatarProps {
+  name: string;
+  status?: AvatarStatus;
+  size?: AvatarSize;
+  // ... existing props
+  use3D?: boolean;
+  avatarConfig?: Avatar3DConfig;
+}
+
+export const StatusAvatar: React.FC<StatusAvatarProps> = ({
+  use3D = false,
+  avatarConfig,
+  ...props
+}) => {
+  // If 3D mode enabled and config available, render 3D avatar
+  if (use3D && avatarConfig) {
+    return (
+      <div className={cn('status-avatar relative inline-flex', props.className)}>
+        <SimsAvatar
+          config={avatarConfig}
+          size={props.size}
+          status={props.status}
+          mood={/* derive from houseguest */}
+          isPlayer={props.isPlayer}
+          animated={props.animated}
+        />
+        {/* Keep existing badge/indicator overlays */}
+        {props.showBadge && props.status !== 'none' && (
+          <StatusBadge status={props.status} size={props.size} />
+        )}
+        {props.isPlayer && <PlayerIndicator size={props.size} />}
+      </div>
+    );
+  }
+  
+  // Fall back to existing 2D implementation
+  return <StatusAvatar2D {...props} />;
+};
+```
+
+### Add avatarConfig to Houseguest Model
+
+**Modify: `src/models/houseguest/types.ts`**
+
+```typescript
+export interface Houseguest {
+  // ... existing properties
+  avatarConfig?: Avatar3DConfig; // 3D avatar configuration
+}
+```
+
+### Update Character Templates
+
+**Modify: `src/data/character-templates.ts`**
+
+Add 3D configs for existing templates:
+
+```typescript
+export interface CharacterTemplate {
+  // ... existing properties
+  avatar3DConfig: Avatar3DConfig;
+}
+
+export const characterTemplates: CharacterTemplate[] = [
+  {
+    id: 'alex-chen',
+    name: 'Alex Chen',
+    // ... existing
+    avatar3DConfig: {
+      bodyType: 'slim',
+      height: 'average',
+      skinTone: '#E8C4A0',
+      headShape: 'oval',
+      eyeShape: 'almond',
+      eyeColor: '#3B2314',
+      hairStyle: 'short',
+      hairColor: '#1A1A1A',
+      topStyle: 'blazer',
+      topColor: '#2C3E50',
+      bottomStyle: 'pants',
+      bottomColor: '#1A1A1A'
+    }
+  },
+  // ... other templates
+];
+```
+
+---
+
+## Part 9: Avatar Customization UI
+
+**Create: `src/components/avatar-3d/AvatarCustomizer.tsx`**
+
+Interactive 3D avatar editor for player creation:
+
+```typescript
+export const AvatarCustomizer: React.FC<{
+  initialConfig?: Avatar3DConfig;
+  onChange: (config: Avatar3DConfig) => void;
+}> = ({ initialConfig, onChange }) => {
+  const [config, setConfig] = useState(initialConfig || generateDefaultConfig());
+  
+  const updateConfig = (updates: Partial<Avatar3DConfig>) => {
+    const newConfig = { ...config, ...updates };
+    setConfig(newConfig);
+    onChange(newConfig);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Live 3D Preview */}
+      <div className="flex justify-center">
+        <div className="w-64 h-64 rounded-xl overflow-hidden bg-gradient-to-b from-slate-800 to-slate-900">
+          <SimsAvatar config={config} size="xl" animated />
+        </div>
+      </div>
+      
+      {/* Customization Controls */}
+      <div className="space-y-6">
+        {/* Body Type */}
+        <div>
+          <Label>Body Type</Label>
+          <RadioGroup 
+            value={config.bodyType}
+            onValueChange={(v) => updateConfig({ bodyType: v as any })}
+          >
+            {['slim', 'average', 'athletic', 'stocky'].map(type => (
+              <RadioGroupItem key={type} value={type}>{type}</RadioGroupItem>
+            ))}
+          </RadioGroup>
+        </div>
+        
+        {/* Skin Tone Picker */}
+        <div>
+          <Label>Skin Tone</Label>
+          <ColorPalette 
+            colors={SKIN_TONE_PALETTE}
+            value={config.skinTone}
+            onChange={(color) => updateConfig({ skinTone: color })}
+          />
+        </div>
+        
+        {/* Hair Style & Color */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Hair Style</Label>
+            <Select value={config.hairStyle} onValueChange={(v) => updateConfig({ hairStyle: v as any })}>
+              {HAIR_STYLES.map(style => (
+                <SelectItem key={style} value={style}>{style}</SelectItem>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Hair Color</Label>
+            <ColorPalette 
+              colors={HAIR_COLOR_PALETTE}
+              value={config.hairColor}
+              onChange={(color) => updateConfig({ hairColor: color })}
+            />
+          </div>
+        </div>
+        
+        {/* Clothing */}
+        {/* ... similar structure for clothing options */}
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## Part 10: Performance Optimizations
+
+### Geometry Instancing
+For houseguest list views with many avatars:
+
+```typescript
+// Use instanced meshes for shared geometries
+const SharedBodyInstances = ({ houseguests, configs }) => {
+  const bodyGeometry = useMemo(() => createBodyGeometry(), []);
+  const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
+  
+  useEffect(() => {
+    houseguests.forEach((hg, i) => {
+      const matrix = new THREE.Matrix4();
+      matrix.setPosition(i * 0.5, 0, 0);
+      instancedMeshRef.current?.setMatrixAt(i, matrix);
+    });
+    instancedMeshRef.current?.instanceMatrix.needsUpdate = true;
+  }, [houseguests]);
+
+  return (
+    <instancedMesh ref={instancedMeshRef} args={[bodyGeometry, null, houseguests.length]}>
+      <meshStandardMaterial />
+    </instancedMesh>
+  );
+};
+```
+
+### Level of Detail (LOD)
+Reduce polygon count for small avatars:
+
+```typescript
+// sm size: 16 segments, md: 24, lg: 32, xl: 48
+const getSegments = (size: AvatarSize) => ({
+  sm: 12,
+  md: 20,
+  lg: 28,
+  xl: 36
+}[size]);
+```
+
+### Lazy Loading
+Only load 3D canvas when avatar is in viewport:
+
+```typescript
+const LazyAvatar = ({ ...props }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      {isVisible ? <SimsAvatar {...props} /> : <AvatarPlaceholder {...props} />}
+    </div>
+  );
+};
+```
+
+---
+
+## Files Summary
+
+### New Files (15)
 | File | Purpose |
 |------|---------|
-| `src/components/dialogs/ConversationTopicDialog.tsx` | Topic selection for talk actions |
-| `src/components/alliances/AllianceManagementDialog.tsx` | Full alliance management UI |
-| `src/components/alliances/CreateAllianceWizard.tsx` | Alliance creation flow |
-| `src/components/alliances/AllianceMemberCard.tsx` | Individual member display |
-| `src/components/feedback/RelationshipMilestoneToast.tsx` | Milestone celebration toast |
-| `src/components/houseguest/RelationshipTierBadge.tsx` | Tier indicator badge |
-| `src/components/deals/DealObligationBanner.tsx` | Ceremony obligation warnings |
-| `src/hooks/useDealObligations.ts` | Obligation detection logic |
-| `src/models/conversation-topic.ts` | Topic type definitions |
-| `src/models/relationship-tier.ts` | Tier definitions and thresholds |
+| `src/models/avatar-config.ts` | 3D avatar configuration types |
+| `src/components/avatar-3d/index.ts` | Module exports |
+| `src/components/avatar-3d/SimsAvatar.tsx` | Main 3D avatar component |
+| `src/components/avatar-3d/AvatarCanvas.tsx` | Canvas wrapper |
+| `src/components/avatar-3d/AvatarBody.tsx` | Procedural body mesh |
+| `src/components/avatar-3d/AvatarHead.tsx` | Head with expressions |
+| `src/components/avatar-3d/AvatarHair.tsx` | Hair mesh variations |
+| `src/components/avatar-3d/AvatarClothing.tsx` | Clothing rendering |
+| `src/components/avatar-3d/AvatarAnimations.tsx` | Animation controller |
+| `src/components/avatar-3d/AvatarCustomizer.tsx` | Customization UI |
+| `src/components/avatar-3d/hooks/useIdleAnimation.ts` | Idle animation hook |
+| `src/components/avatar-3d/hooks/useMoodAnimation.ts` | Mood animations |
+| `src/components/avatar-3d/hooks/useStatusAnimation.ts` | Status animations |
+| `src/components/avatar-3d/utils/avatar-generator.ts` | Procedural mesh utils |
+| `src/components/avatar-3d/utils/color-palettes.ts` | Color presets |
 
-### Modified Files (12)
+### Modified Files (6)
 | File | Changes |
 |------|---------|
-| `src/game-states/social/handlers/talkHandler.ts` | Add topic parameter support |
-| `src/game-states/SocialInteractionState.ts` | Add alliance management actions |
-| `src/systems/alliance-system.ts` | Add invite, kick, improved meeting logic |
-| `src/systems/deal-system.ts` | Add counter-offer generation |
-| `src/contexts/reducers/reducers/player-action-reducer.ts` | Handle topic-based talk, alliance actions |
-| `src/contexts/reducers/reducers/relationship-reducer.ts` | Milestone detection and event emission |
-| `src/components/deals/ProposeDealDialog.tsx` | Counter-offer UI flow |
-| `src/components/houseguest/HouseguestDialog.tsx` | Add tier badge display |
-| `src/components/game-phases/NominationPhase.tsx` | Add obligation banner |
-| `src/components/game-phases/VetoMeetingPhase.tsx` | Add obligation banner |
-| `src/components/game-phases/eviction/PlayerEvictionVoting.tsx` | Add obligation banner |
-| `src/components/game-phases/social-interaction/sections/ConversationsSection.tsx` | Open topic dialog |
+| `package.json` | Add three, @react-three/fiber, @react-three/drei |
+| `src/components/ui/status-avatar.tsx` | Add 3D mode support |
+| `src/models/houseguest/types.ts` | Add avatarConfig property |
+| `src/data/character-templates.ts` | Add avatar3DConfig to templates |
+| `src/components/game-setup/PlayerForm.tsx` | Integrate AvatarCustomizer |
+| `src/components/game-setup/AvatarPreview.tsx` | Use 3D avatar in preview |
+
+---
+
+## Visual Preview
+
+```text
++--------------------------------------------------+
+|                  3D SIMS AVATAR                   |
+|                                                  |
+|              .-""""""""-.                        |
+|             /   O    O   \     <- Blinking eyes  |
+|            |      <>      |    <- Animated nose  |
+|            |    \____/    |    <- Mood mouth     |
+|             \            /                       |
+|              '-........-'                        |
+|                  |||                             |
+|              .---|||---.     <- Breathing torso  |
+|             /    |||    \                        |
+|            |     |||     |                       |
+|            |   /     \   |   <- Idle arm sway   |
+|            |  /       \  |                       |
+|             \/         \/                        |
+|             ||         ||    <- Standing pose    |
+|             ||         ||                        |
++--------------------------------------------------+
+|  Animation: Idle breathing + blinking + sway     |
+|  Status effects: HoH glow, Nominee nervous       |
++--------------------------------------------------+
+```
 
 ---
 
 ## Implementation Order
 
-1. **Phase 3: Relationship Milestones** (2-3 changes)
-   - Quickest win, adds visual polish
-   - Foundation for other features
+1. **Phase 1: Dependencies & Base** (Foundation)
+   - Install Three.js packages
+   - Create avatar-config model
+   - Set up AvatarCanvas wrapper
 
-2. **Phase 4: Deal Obligation Reminders** (4 changes)
-   - High value for gameplay clarity
-   - Prevents accidental betrayals
+2. **Phase 2: Body Generation** (Core Rendering)
+   - AvatarBody procedural mesh
+   - AvatarHead with basic shapes
+   - Simple static rendering
 
-3. **Phase 1: Conversation Topics** (4 changes)
-   - Core social improvement
-   - Adds meaningful choice
+3. **Phase 3: Expressions & Animation** (Bring to Life)
+   - Idle animation hook
+   - Mood-based expressions
+   - Status animations
 
-4. **Phase 5: Counter-Offers** (3 changes)
-   - Enhances deal negotiation
-   - Builds on existing deal UI
+4. **Phase 4: Customization** (Hair, Clothing)
+   - AvatarHair variations
+   - AvatarClothing rendering
+   - Color palette system
 
-5. **Phase 2: Alliance Management** (5 changes)
-   - Largest feature
-   - Complete social system overhaul
+5. **Phase 5: Integration** (Replace 2D)
+   - Update StatusAvatar with 3D mode
+   - Add avatarConfig to houseguest model
+   - Update character templates
+
+6. **Phase 6: Customizer UI** (Player Creation)
+   - Interactive customization interface
+   - Integrate with PlayerForm
+
+7. **Phase 7: Performance** (Optimization)
+   - Lazy loading
+   - LOD system
+   - Geometry instancing for lists
 
 ---
 
-## Success Metrics
+## Expected Behavior
 
-- Players have 3+ conversation topic choices per houseguest
-- Relationship milestone toasts appear at 25/50/75 thresholds
-- Deal obligations shown during 100% of relevant ceremonies
-- NPCs offer counter-deals in ~40% of declined proposals
-- Alliance management available with create/invite/meeting actions
+1. **Idle State**: Avatars breathe subtly, blink every 3-5 seconds, sway slightly
+2. **HoH Status**: Avatar has confident pose with subtle golden glow pulse
+3. **Nominee Status**: Avatar looks nervous, fidgets, shifts weight
+4. **PoV Status**: Avatar stands tall, alert posture
+5. **Evicted Status**: Sad, slumped posture, desaturated colors
+6. **Mood Happy**: Wide eyes, upturned mouth, bouncy
+7. **Mood Angry**: Furrowed brows, downturned mouth, tense pose
+
+---
+
+## Technical Notes
+
+### Why Procedural Instead of Pre-made Models?
+- Infinite customization possibilities
+- Smaller bundle size (no GLTF files)
+- Consistent art style across all characters
+- Easier to animate programmatically
+- React-native Three.js patterns
+
+### Performance Targets
+- 60 FPS with 16 avatars visible
+- < 5ms render time per avatar
+- < 1MB additional bundle size
+
+### Fallback Strategy
+- 2D avatars remain as fallback
+- `use3D` prop controls mode
+- Can be disabled per-user for low-end devices
