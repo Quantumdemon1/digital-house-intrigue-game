@@ -5,6 +5,7 @@ import { RelationshipSystem } from '../../../systems/relationship';
 import { CompetitionSystem } from '../../../systems/competition-system';
 import { AIIntegrationSystem } from '../../../systems/ai-integration';
 import { DealSystem } from '../../../systems/deal-system';
+import { TrustSystem } from '../../../systems/trust-system';
 import { Logger } from '../../../utils/logger';
 import { GameState } from '../../../models/game-state';
 
@@ -15,6 +16,7 @@ export function useSystems(gameState: GameState) {
   const aiSystemRef = useRef<AIIntegrationSystem | null>(null);
   const promiseSystemRef = useRef<any>(null);
   const dealSystemRef = useRef<DealSystem | null>(null);
+  const trustSystemRef = useRef<TrustSystem | null>(null);
   const recapGeneratorRef = useRef<any>(null);
   const loggerRef = useRef<Logger | null>(null);
   
@@ -25,6 +27,7 @@ export function useSystems(gameState: GameState) {
     // Pass the logger as first parameter and an empty string as the API key for now
     aiSystemRef.current = new AIIntegrationSystem(loggerRef.current, "");
     dealSystemRef.current = new DealSystem(loggerRef.current);
+    trustSystemRef.current = new TrustSystem();
     promiseSystemRef.current = {};
     recapGeneratorRef.current = {};
   }, []);
@@ -50,6 +53,7 @@ export function useSystems(gameState: GameState) {
     aiSystemRef,
     promiseSystemRef,
     dealSystemRef,
+    trustSystemRef,
     recapGeneratorRef,
     loggerRef,
     initializeGameSystems,

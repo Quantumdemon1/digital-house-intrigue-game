@@ -1,19 +1,23 @@
 /**
  * @file src/systems/deal-system.ts
  * @description Core deal management system for the Deals & Alliances feature
+ * Enhanced with deep integration to relationship, alliance, and trust systems
  */
 
 import { Deal, DealStatus, DealType, NPCProposal, DEAL_TYPE_INFO } from '../models/deal';
 import type { BigBrotherGame } from '../models/game/BigBrotherGame';
 import type { Houseguest } from '../models/houseguest';
 import type { Logger } from '../utils/logger';
+import { gameEventBus, GameEventBus } from './game-event-bus';
 
 export class DealSystem {
   private logger: Logger;
   private game: BigBrotherGame | null = null;
+  private eventBus: GameEventBus;
 
   constructor(logger: Logger) {
     this.logger = logger;
+    this.eventBus = gameEventBus;
   }
 
   /**
@@ -94,7 +98,55 @@ export class DealSystem {
       );
     }
 
+    // Track interaction for trust scoring
+    const interactionTracker = (this.game as any)?.aiSystem?.interactionTracker;
+    if (interactionTracker) {
+      interactionTracker.trackInteraction(
+        proposerId,
+        recipientId,
+        'deal_accepted',
+        `Agreed to ${typeInfo.title}`,
+        18
+      );
+    }
+
+    // Emit event for other systems
+    this.eventBus.emit({
+      type: 'deal_accepted',
+      timestamp: Date.now(),
+      week: this.game.week,
+      involvedIds: [proposerId, recipientId],
+      data: { deal, dealType: type }
+    });
+
+    // Check for alliance formation opportunity
+    this.checkAllianceFormationOpportunity(deal);
+
     return deal;
+  }
+
+  /**
+   * Check if multiple deals between houseguests should trigger alliance invite
+   */
+  private checkAllianceFormationOpportunity(deal: Deal): void {
+    if (!this.game || deal.type === 'alliance_invite') return;
+
+    // Count active deals between these houseguests
+    const activeDeals = this.getActiveDeals(deal.proposerId).filter(d =>
+      d.recipientId === deal.recipientId || d.proposerId === deal.recipientId
+    );
+
+    // If 3+ active deals and not in alliance, could suggest upgrading
+    if (activeDeals.length >= 3) {
+      const alreadyAllied = this.game.allianceSystem?.areInSameAlliance(
+        deal.proposerId, deal.recipientId
+      );
+
+      if (!alreadyAllied) {
+        this.logger.info(`Alliance opportunity detected between ${deal.proposerId} and ${deal.recipientId}`);
+        // Could auto-generate an alliance_invite proposal here
+      }
+    }
   }
 
   /**
@@ -208,13 +260,34 @@ export class DealSystem {
     
     // Base acceptance chance from relationship
     let acceptanceChance = 30 + (relationship * 0.5) + ((trustScore - 50) * 0.3);
+    let reasoning = '';
 
-    // Trait modifiers
-    const traitModifiers = this.getTraitDealModifiers(npc.traits, type);
-    acceptanceChance += traitModifiers;
+    // Check player's reputation from broken deals
+    const brokenDeals = this.game.deals?.filter(d => 
+      d.status === 'broken' && 
+      (d.proposerId === player.id || d.recipientId === player.id)
+    ) || [];
+    
+    const reputationPenalty = brokenDeals.length * 15;
+    acceptanceChance -= reputationPenalty;
 
-    // Strategic modifiers based on deal type
+    // Alliance synergy - alliance members more likely to accept
+    const areAllied = this.game.allianceSystem?.areInSameAlliance(npc.id, player.id);
+    if (areAllied) {
+      acceptanceChance += 20;
+      if (['safety_agreement', 'vote_together', 'final_two'].includes(type)) {
+        acceptanceChance += 10; // Extra bonus for alliance-reinforcing deals
+      }
+    }
+
+    // Check if target agreement would target an ally
     if (type === 'target_agreement' && context?.targetHouseguestId) {
+      const targetIsAlly = this.game.allianceSystem?.areInSameAlliance(npc.id, context.targetHouseguestId);
+      if (targetIsAlly) {
+        acceptanceChance -= 40;
+        reasoning = "I can't target someone from my own alliance.";
+      }
+      
       const npcRelToTarget = this.game.relationshipSystem?.getRelationship(npc.id, context.targetHouseguestId) ?? 0;
       if (npcRelToTarget < -20) {
         acceptanceChance += 20; // NPC dislikes the target too
@@ -223,43 +296,48 @@ export class DealSystem {
       }
     }
 
+    // Trait modifiers
+    const traitModifiers = this.getTraitDealModifiers(npc.traits, type);
+    acceptanceChance += traitModifiers;
+
+    // Situational modifiers
     if (type === 'safety_agreement' && npc.isNominated) {
-      acceptanceChance += 25; // Desperate for safety
+      acceptanceChance += 25;
     }
 
     if (type === 'vote_together' && npc.isNominated) {
-      acceptanceChance += 35; // Really needs votes
+      acceptanceChance += 35;
     }
 
     if (type === 'final_two') {
       const activeCount = this.game.getActiveHouseguests().length;
       if (activeCount > 6) {
-        acceptanceChance -= 20; // Too early for final 2
+        acceptanceChance -= 20;
       } else if (relationship < 40) {
-        acceptanceChance -= 25; // Need better relationship for F2
+        acceptanceChance -= 25;
       }
     }
 
-    // Alliance check for partnership
-    if (type === 'partnership') {
-      if (this.game.allianceSystem?.areInSameAlliance(npc.id, player.id)) {
-        acceptanceChance += 15;
-      }
+    if (type === 'partnership' && areAllied) {
+      acceptanceChance += 15;
     }
 
     acceptanceChance = Math.max(5, Math.min(95, acceptanceChance));
 
     const wouldAccept = Math.random() * 100 < acceptanceChance;
     
-    let reasoning = '';
-    if (wouldAccept) {
-      if (relationship > 40) reasoning = `I think we can work well together.`;
-      else if (npc.isNominated) reasoning = `I need all the help I can get right now.`;
-      else reasoning = `This could be beneficial for both of us.`;
-    } else {
-      if (relationship < 20) reasoning = `I don't think I can trust you with that.`;
-      else if (trustScore < 40) reasoning = `Your track record concerns me.`;
-      else reasoning = `I'm not sure this is the right move for me.`;
+    if (!reasoning) {
+      if (wouldAccept) {
+        if (relationship > 40) reasoning = `I think we can work well together.`;
+        else if (npc.isNominated) reasoning = `I need all the help I can get right now.`;
+        else if (areAllied) reasoning = `We're already working together, so this makes sense.`;
+        else reasoning = `This could be beneficial for both of us.`;
+      } else {
+        if (reputationPenalty > 20) reasoning = `I've heard you've broken deals before. I can't trust that.`;
+        else if (relationship < 20) reasoning = `I don't think I can trust you with that.`;
+        else if (trustScore < 40) reasoning = `Your track record concerns me.`;
+        else reasoning = `I'm not sure this is the right move for me.`;
+      }
     }
 
     return { wouldAccept, acceptanceChance, reasoning };
@@ -507,6 +585,9 @@ export class DealSystem {
       critical: 3
     }[deal.trustImpact];
 
+    // Get interaction tracker for trust scoring
+    const interactionTracker = (this.game as any)?.aiSystem?.interactionTracker;
+
     if (status === 'fulfilled') {
       const boost = Math.round(8 * impactMultiplier);
       this.game.relationshipSystem.addRelationshipEvent(
@@ -517,6 +598,30 @@ export class DealSystem {
         boost,
         false
       );
+
+      // Track in interaction system for trust
+      if (interactionTracker) {
+        interactionTracker.trackInteraction(
+          deal.proposerId,
+          deal.recipientId,
+          'deal_fulfilled',
+          `Honored ${deal.title} deal`,
+          Math.round(boost * 1.5)
+        );
+      }
+
+      // Emit event
+      this.eventBus.emit({
+        type: 'deal_fulfilled',
+        timestamp: Date.now(),
+        week: this.game.week,
+        involvedIds: [deal.proposerId, deal.recipientId],
+        data: { deal, impactScore: boost }
+      });
+
+      // Update alliance stability if in same alliance
+      this.updateAllianceStability(deal.proposerId, deal.recipientId, 3);
+
       this.logger.info(`Deal FULFILLED: ${deal.title} between ${proposer.name} and ${recipient.name}`);
     } else if (status === 'broken') {
       const penalty = Math.round(-15 * impactMultiplier);
@@ -528,10 +633,54 @@ export class DealSystem {
         penalty,
         false
       );
+
+      // Track in interaction system - stronger negative impact
+      if (interactionTracker) {
+        interactionTracker.trackInteraction(
+          deal.proposerId,
+          deal.recipientId,
+          'deal_broken',
+          `Broke ${deal.title} deal`,
+          Math.round(penalty * 2)
+        );
+      }
+
+      // Emit event
+      this.eventBus.emit({
+        type: 'deal_broken',
+        timestamp: Date.now(),
+        week: this.game.week,
+        involvedIds: [deal.proposerId, deal.recipientId],
+        data: { deal, impactScore: penalty }
+      });
+
+      // Hurt alliance stability if in same alliance
+      this.updateAllianceStability(deal.proposerId, deal.recipientId, -10);
+
       this.logger.info(`Deal BROKEN: ${deal.title} between ${proposer.name} and ${recipient.name}`);
       
       // Spread betrayal information
       this.spreadBetrayalInfo(deal);
+    }
+  }
+
+  /**
+   * Update alliance stability based on deal outcomes
+   */
+  private updateAllianceStability(guest1Id: string, guest2Id: string, change: number): void {
+    if (!this.game?.allianceSystem) return;
+
+    const areAllied = this.game.allianceSystem.areInSameAlliance(guest1Id, guest2Id);
+    if (!areAllied) return;
+
+    const alliances = this.game.allianceSystem.getAlliances?.() || [];
+    for (const alliance of alliances) {
+      const hasGuest1 = alliance.members?.some((m: any) => m.id === guest1Id || m === guest1Id);
+      const hasGuest2 = alliance.members?.some((m: any) => m.id === guest2Id || m === guest2Id);
+      
+      if (hasGuest1 && hasGuest2 && alliance.stability !== undefined) {
+        alliance.stability = Math.max(0, Math.min(100, alliance.stability + change));
+      }
     }
   }
 

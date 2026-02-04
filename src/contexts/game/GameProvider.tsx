@@ -26,6 +26,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     aiSystemRef, 
     promiseSystemRef,
     dealSystemRef,
+    trustSystemRef,
     recapGeneratorRef,
     initializeGameSystems,
     initializeGame
@@ -46,6 +47,12 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     if (gameRef.current && dealSystemRef.current) {
       dealSystemRef.current.setGame(gameRef.current);
       gameRef.current.dealSystem = dealSystemRef.current;
+    }
+    
+    // Connect trust system to game after initialization
+    if (gameRef.current && trustSystemRef.current) {
+      trustSystemRef.current.setGame(gameRef.current);
+      gameRef.current.trustSystem = trustSystemRef.current;
     }
     
     setLoading(false);

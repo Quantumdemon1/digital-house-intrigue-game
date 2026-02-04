@@ -22,7 +22,7 @@ export {
   getTraitWeights,
   rankHouseguestsByScore,
   calculateAllianceLoyalty,
-  calculatePromiseObligations,
+  calculateDealObligations,
   calculateStrategicValue,
   calculatePersonalityBias,
 } from './npc-decision-engine';
