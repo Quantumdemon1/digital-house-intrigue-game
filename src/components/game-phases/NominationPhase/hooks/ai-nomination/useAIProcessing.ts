@@ -35,6 +35,12 @@ export const useAIProcessing = ({
   
   // Process AI decision for nominations
   const processAIDecision = useCallback(async () => {
+    // Guard: Never process for player HoH
+    if (hoh?.isPlayer) {
+      aiLogger.info("Skipping AI nomination - player is HoH");
+      return;
+    }
+    
     // If no HoH, AI system, or already processing, return
     if (!hoh || !aiSystem || !game || processingRef.current) {
       return;
