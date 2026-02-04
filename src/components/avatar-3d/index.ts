@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/index.ts
- * @description Exports for 3D avatar system
+ * @description Exports for 3D avatar system (RPM-only)
  */
 
 // Main components
@@ -11,23 +11,22 @@ export { ColorPalettePicker } from './ColorPalettePicker';
 export { AvatarOptionSelector } from './AvatarOptionSelector';
 export * from './SimsIcons';
 
-// Ready Player Me components - loaded lazily to avoid build issues
-// Import directly from './RPMAvatar' or './RPMAvatarCreator' if needed
-// export { RPMAvatar, RPMAvatarWithSuspense, preloadRPMAvatar } from './RPMAvatar';
-// export { RPMAvatarCreator, RPMAvatarCreatorInline } from './RPMAvatarCreator';
+// Ready Player Me components
 export { AvatarLoader, AvatarSkeleton, preloadAvatar } from './AvatarLoader';
 export type { AvatarSize } from './AvatarLoader';
 
-// VRM and Preset avatar components
-export { VRMAvatar, preloadVRM } from './VRMAvatar';
-export { PresetAvatar, preloadPresetAvatars, preloadAllPresets, getPresetById, getPresetUrl } from './PresetAvatar';
-export { PresetAvatarSelector } from './PresetAvatarSelector';
-export type { PresetSource } from './PresetAvatarSelector';
+// RPM Creator components
+export { RPMAvatarCreator } from './RPMAvatarCreator';
+export { RPMAvatarCreatorPanel } from './RPMAvatarCreatorPanel';
+export { RPMAvatarGallery } from './RPMAvatarGallery';
+export { RPMAvatar } from './RPMAvatar';
+
+// Thumbnail and screenshot utilities
 export { AvatarThumbnail, captureAvatarThumbnail, ThumbnailCapture, useAvatarThumbnail } from './AvatarThumbnail';
 export { AvatarScreenshotCapture, captureAvatarScreenshot } from './AvatarScreenshotCapture';
 export { AvatarProfilePicture } from './AvatarProfilePicture';
 
-// Body parts
+// Body parts (for legacy/Sims avatar)
 export { AvatarBody } from './AvatarBody';
 export { AvatarHead } from './AvatarHead';
 export { AvatarHair } from './AvatarHair';
