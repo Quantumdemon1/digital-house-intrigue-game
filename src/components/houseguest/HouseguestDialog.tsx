@@ -1,20 +1,26 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from '@/components/ui/badge';
-import { Crown, Award, Target, Heart, HeartOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Crown, Award, Target, Heart, HeartOff, MessageCircle, Handshake, Users, Lock } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 import HouseguestAvatar from './HouseguestAvatar';
 import CustomProgress from '../game-phases/NominationPhase/CustomProgress';
+import ProposeDealDialog from '@/components/deals/ProposeDealDialog';
+import { toast } from 'sonner';
 
 interface HouseguestDialogProps {
   houseguest: Houseguest;
 }
 
 const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
-  const { gameState, getRelationship } = useGame();
+  const { gameState, getRelationship, dispatch } = useGame();
   const player = gameState.houseguests.find(h => h.isPlayer);
+  const [dealDialogOpen, setDealDialogOpen] = useState(false);
+  
+  // Check if social phase is active
+  const isSocialPhase = gameState.phase === 'SocialInteraction';
   
   let relationshipScore = 0;
   let relationshipColor = '';
@@ -32,6 +38,22 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
       relationshipColor = 'text-red-600';
     }
   }
+
+  const handleTalkTo = () => {
+    dispatch({ 
+      type: 'PLAYER_ACTION', 
+      payload: { actionId: 'talk_to', params: { targetId: houseguest.id } }
+    });
+    toast.success(`You had a conversation with ${houseguest.name}`);
+  };
+
+  const handleBuildRelationship = () => {
+    dispatch({ 
+      type: 'PLAYER_ACTION', 
+      payload: { actionId: 'relationship_building', params: { targetId: houseguest.id } }
+    });
+    toast.success(`You spent quality time with ${houseguest.name}`);
+  };
 
   return (
     <DialogContent className="sm:max-w-md">
@@ -84,7 +106,68 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
             </div>
           </div>
         )}
+
+        {/* Social Actions - only for non-player, active houseguests */}
+        {player && !houseguest.isPlayer && houseguest.status === 'Active' && (
+          <div className="border-t pt-4 space-y-3">
+            <h4 className="font-medium text-sm flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Actions
+              {!isSocialPhase && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
+                  <Lock className="h-3 w-3" />
+                  Social Phase Only
+                </span>
+              )}
+            </h4>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTalkTo}
+                disabled={!isSocialPhase}
+                className="flex items-center gap-2"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Talk
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBuildRelationship}
+                disabled={!isSocialPhase}
+                className="flex items-center gap-2"
+              >
+                <Heart className="h-4 w-4" />
+                Bond
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDealDialogOpen(true)}
+                disabled={!isSocialPhase}
+                className="flex items-center gap-2 col-span-2 border-amber-300 hover:bg-amber-50"
+              >
+                <Handshake className="h-4 w-4 text-amber-600" />
+                Propose Deal
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Propose Deal Dialog */}
+      <ProposeDealDialog
+        open={dealDialogOpen}
+        onOpenChange={setDealDialogOpen}
+        params={{
+          targetId: houseguest.id,
+          targetName: houseguest.name
+        }}
+      />
     </DialogContent>
   );
 };
