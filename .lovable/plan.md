@@ -1,182 +1,138 @@
 
-# Plan: Make All Player Stats Meaningful
+# Plan: Fix Relationships, Alliances, and Promises System
 
 ## Overview
 
-This plan adds meaningful mechanical effects for all 8 player stats, transforming them from decorative numbers into impactful gameplay modifiers. Each stat will influence specific game systems with clear, visible feedback.
+The relationship system is broken due to a disconnect between where changes are dispatched and where they're read. Interactions show visual feedback (+5, +10, etc.) but the actual relationship values never persist because:
+
+1. The wrong action type is dispatched
+2. The UI reads from a stale legacy object instead of reducer state
+
+This plan fixes all three systems (relationships, alliances, promises) to use consistent state management.
 
 ---
 
-## Current State Analysis
+## Root Cause Analysis
 
-| Stat | Currently Used For | Player Impact |
-|------|-------------------|---------------|
-| Physical | HoH/PoV competitions (1.5x weight) | Working correctly |
-| Mental | HoH/PoV competitions (1.5x weight) | Working correctly |
-| Endurance | HoH/PoV competitions (1.5x weight) | Working correctly |
-| Social | 10% relationship bonus per point over 5 | Partially working |
-| Luck | Crapshoot competitions | Working correctly |
-| Loyalty | NPC AI decisions only | **No player effect** |
-| Strategic | NPC AI decisions only | **No player effect** |
-| Competition | 0.2x tiny boost (mostly bypassed) | **Effectively unused** |
+### Problem 1: Interactions Dispatch Wrong Action
+`EvictionInteractionDialog` dispatches:
+```tsx
+dispatch({ type: 'PLAYER_ACTION', payload: { actionId: 'update_relationship', ... } })
+```
+But `playerActionReducer` does NOT handle `update_relationship` - it just logs and returns unchanged state.
+
+### Problem 2: InteractionResults Never Persists Changes
+`InteractionResults` calls `addImpact()` for the visual popup but never dispatches `UPDATE_RELATIONSHIPS` to actually save the change.
+
+### Problem 3: getRelationship() Reads from Legacy Object
+```tsx
+// GameProvider.tsx - reads from stale legacy system
+const getRelationship = useCallback((guest1Id, guest2Id) => {
+  return relationshipSystem?.getRelationship(guest1Id, guest2Id) || 0;
+}, [relationshipSystem]);
+```
+This reads from the class-based `RelationshipSystem` which is never synced with reducer state.
+
+### Problem 4: PromiseManager Uses Legacy Object
+```tsx
+// PromiseManager.tsx
+const { game } = useGame();
+// ...
+game.promises.filter(p => p.status === 'pending')
+```
+Should use `gameState.promises` instead.
 
 ---
 
-## Proposed Stat Effects
+## Solution
 
-### 1. Social Stat - Interaction Success Chances
+### Fix 1: Update EvictionInteractionDialog to Dispatch Correct Action
 
-**Current Issue**: `requiredSocialStat` values exist in `InteractionOptions.tsx` but are never checked.
+**File**: `src/components/game-phases/EvictionPhase/EvictionInteractionDialog.tsx`
 
-**Solution**: Add stat-based success calculation to eviction interactions.
-
-- Each interaction shows success probability based on player's Social vs required stat
-- Low Social = risky interactions may backfire (relationship penalty instead of bonus)
-- High Social = unlock "Master Persuader" bonus effects (+50% relationship gains)
-
-**Visible to Player**:
-```text
-+---------------------------------------------+
-| [Heart] Appeal to emotions                  |
-| Requires: Social 5 | Your Social: 7         |
-| Success Chance: 85% | +15 relationship      |
-+---------------------------------------------+
+Replace `PLAYER_ACTION` with `UPDATE_RELATIONSHIPS`:
+```tsx
+dispatch({
+  type: 'UPDATE_RELATIONSHIPS',
+  payload: {
+    guestId1: player.id,
+    guestId2: houseguest.id,
+    change: option.relationshipChange,
+    note: `${player.name} interacted with ${houseguest.name}`
+  }
+});
 ```
 
----
+### Fix 2: Update InteractionResults to Persist Changes
 
-### 2. Strategic Stat - Information Reveals
+**File**: `src/components/game-phases/EvictionPhase/InteractionResults.tsx`
 
-**New Feature**: Higher Strategic stat reveals hidden information during key phases.
+Add `dispatch` and actually persist the relationship change:
+```tsx
+const { gameState, dispatch } = useGame();
 
-**Effects by Strategic Level**:
-- **3+**: See relationship indicators on houseguest cards (likes you / neutral / dislikes you)
-- **5+**: During nominations, see hints about who other houseguests would target
-- **7+**: Before eviction votes, see "vote lean" predictions (likely voting for X)
-- **9+**: See alliance memberships and who is in alliances together
+useEffect(() => {
+  if (actualChange !== 0) {
+    // Visual feedback
+    addImpact(houseguest.id, houseguest.name, actualChange);
+    
+    // Persist to reducer state
+    dispatch({
+      type: 'UPDATE_RELATIONSHIPS',
+      payload: {
+        guestId1: player?.id,
+        guestId2: houseguest.id,
+        change: actualChange,
+        note: succeeded 
+          ? `${selectedOption.text} interaction succeeded`
+          : `${selectedOption.text} interaction backfired`
+      }
+    });
+  }
+}, [...]); // Run once on mount
+```
 
-**Visual Implementation**:
-- Add eye icon with tooltip showing intel based on Strategic level
-- Higher Strategic = more detailed intel revealed
-- Creates meaningful information asymmetry
+### Fix 3: Update getRelationship() to Read from Reducer State
 
----
+**File**: `src/contexts/game/GameProvider.tsx`
 
-### 3. Loyalty Stat - Promise Effectiveness
+Replace legacy system read with reducer state read:
+```tsx
+const getRelationship = useCallback((guest1Id: string, guest2Id: string) => {
+  // Read from reducer state instead of legacy system
+  const guestRelationships = gameState.relationships.get(guest1Id);
+  if (!guestRelationships) return 0;
+  
+  const relationship = guestRelationships.get(guest2Id);
+  return relationship?.score || 0;
+}, [gameState.relationships]);
+```
 
-**New Feature**: Loyalty stat affects promise impact and trustworthiness perception.
+### Fix 4: Update PromiseManager to Use Reducer State
 
-**Effects**:
-- Promises made by player gain bonus relationship impact based on Loyalty
-- Formula: `baseImpact * (1 + (Loyalty - 5) * 0.15)` = up to 75% bonus at Loyalty 10
-- Low Loyalty: Others are skeptical of promises (reduced initial relationship boost)
-- High Loyalty: Promises carry more weight, fulfilling them has amplified positive effect
+**File**: `src/components/promise/PromiseManager.tsx`
 
-**Broken Promise Penalty**:
-- Low Loyalty players take less reputation damage when breaking promises (already expected)
-- High Loyalty players take severe reputation damage (trusted betrayal hurts more)
+Replace `game.promises` with `gameState.promises`:
+```tsx
+const { gameState } = useGame();
 
----
+useEffect(() => {
+  if (!gameState?.promises) return;
+  
+  setActivePromises(
+    gameState.promises.filter(p => p.status === 'pending' || p.status === 'active')
+  );
+  // ...
+}, [gameState.promises]);
+```
 
-### 4. Competition Stat - Clutch Performance Bonus
+Also update houseguest lookups to use `gameState.houseguests.find()` instead of `game.getHouseguestById()`.
 
-**Enhancement**: Competition stat provides a "clutch" bonus in elimination scenarios.
+### Fix 5: Remove Double Dispatch in EvictionInteractionDialog
 
-**Effects**:
-- When player is nominated, Competition stat adds a flat bonus to PoV competition score
-- Formula: `+0.5 points per Competition stat point when on the block`
-- Creates comeback potential for players in danger
-- Also applies a smaller bonus in Final HoH competitions
+Currently `EvictionInteractionDialog` dispatches immediately when an option is selected, then `InteractionResults` shows the result. But with the stat-based success/failure system, the actual change should only be determined in `InteractionResults`.
 
-**Visible to Player**:
-- Show "Clutch Bonus Active!" indicator when competing while nominated
-- Display the bonus percentage in competition preview
-
----
-
-### 5. Enhanced Social Phase Actions
-
-**New Feature**: Stat requirements for social phase actions.
-
-| Action | Required Stat | Threshold | Effect |
-|--------|--------------|-----------|--------|
-| Spread Rumor | Strategic | 6+ | Unlock spreading rumors about other houseguests |
-| Form Alliance | Social | 5+ | Successfully propose alliances |
-| Final 2 Deal | Loyalty | 6+ | Final 2 proposals taken seriously |
-| Intimidate | Physical | 6+ | Intimidation attempts more effective |
-
----
-
-## Implementation Details
-
-### File: `src/components/game-phases/EvictionPhase/InteractionOptionButton.tsx`
-
-Add success chance display and stat requirement check:
-- Show success probability based on player Social vs required stat
-- Disable or mark as "risky" interactions where player stat is too low
-- Add visual indicator for guaranteed success / risky / likely failure
-
-### File: `src/components/game-phases/EvictionPhase/InteractionResults.tsx`
-
-Add stat-based outcome calculation:
-- Roll against success chance to determine if interaction succeeds
-- Failed interactions apply negative relationship change instead
-- Show "Your Social stat helped you succeed!" on lucky saves
-
-### File: `src/systems/promise/promise-effects.ts`
-
-Modify `getPromiseImpact` to factor in Loyalty stat:
-- Lookup player's Loyalty stat when calculating promise impact
-- Apply multiplier based on Loyalty level
-- Increase/decrease broken promise reputation spread based on Loyalty
-
-### File: `src/systems/competition/competition-runner.ts`
-
-Add clutch performance bonus:
-- Check if participant is nominated before competition
-- If nominated, add Competition stat bonus to their score
-- Log the clutch bonus application
-
-### File: `src/components/houseguest/HouseguestCard.tsx` (or new component)
-
-Add Strategic-based information reveals:
-- Check player's Strategic stat
-- Conditionally render relationship indicators, vote predictions, alliance info
-- Use tooltip or subtle icon indicators
-
-### File: `src/components/game-phases/NominationPhase/NomineeSelector.tsx`
-
-Add Strategic intel hints:
-- For Strategic 5+, show threat level indicators on eligible nominees
-- Display subtle hints about house sentiment toward each houseguest
-
-### New File: `src/utils/stat-checks.ts`
-
-Create utility functions for stat-based checks:
-- `calculateSuccessChance(playerStat, requiredStat)`: Returns 0-100% chance
-- `rollStatCheck(playerStat, requiredStat)`: Returns success boolean
-- `getStrategicIntelLevel(strategicStat)`: Returns intel tier (none/basic/advanced/master)
-- `getLoyaltyMultiplier(loyaltyStat)`: Returns promise impact multiplier
-- `getClutchBonus(competitionStat, isNominated)`: Returns competition bonus
-
----
-
-## UI/UX Enhancements
-
-### Stats Selector Tooltips
-
-Update tooltip text to explain actual gameplay effects:
-
-| Stat | New Tooltip Text |
-|------|------------------|
-| Physical | "Boosts performance in Physical competitions. High Physical unlocks Intimidation tactics." |
-| Mental | "Boosts performance in Mental competitions and Final HoH Part 2." |
-| Endurance | "Boosts performance in Endurance competitions and Final HoH Part 1." |
-| Social | "Increases relationship gains and unlocks advanced persuasion options. Affects interaction success rates." |
-| Loyalty | "Amplifies the impact of promises you make and keep. High Loyalty = trusted ally; low = flexible player." |
-| Strategic | "Reveals hidden information about other houseguests' relationships, alliances, and voting intentions." |
-| Luck | "Boosts performance in Crapshoot (random) competitions. May influence tiebreakers." |
-| Competition | "Provides a clutch performance bonus when competing while nominated. Comeback potential." |
+**Solution**: Remove the relationship dispatch from `handleOptionSelected` in `EvictionInteractionDialog` and only dispatch from `InteractionResults` after success/failure is determined.
 
 ---
 
@@ -184,24 +140,49 @@ Update tooltip text to explain actual gameplay effects:
 
 | File | Changes |
 |------|---------|
-| `src/utils/stat-checks.ts` | **NEW** - Create stat check utility functions |
-| `src/components/game-phases/EvictionPhase/InteractionOptionButton.tsx` | Add success chance display, stat requirement warnings |
-| `src/components/game-phases/EvictionPhase/InteractionResults.tsx` | Add stat-based success/failure roll |
-| `src/systems/promise/promise-effects.ts` | Factor Loyalty stat into promise impact calculation |
-| `src/systems/competition/competition-runner.ts` | Add Competition stat clutch bonus for nominated players |
-| `src/components/houseguest/HouseguestCard.tsx` | Add Strategic-based intel displays |
-| `src/components/game-setup/StatsSelector.tsx` | Update tooltips to describe actual effects |
-| `src/components/game-phases/NominationPhase/NomineeSelector.tsx` | Add Strategic intel hints on nominees |
+| `src/components/game-phases/EvictionPhase/EvictionInteractionDialog.tsx` | Remove premature relationship dispatch, let InteractionResults handle it |
+| `src/components/game-phases/EvictionPhase/InteractionResults.tsx` | Add `dispatch` call to persist relationship change with correct action type |
+| `src/contexts/game/GameProvider.tsx` | Update `getRelationship()` to read from `gameState.relationships` instead of legacy system |
+| `src/components/promise/PromiseManager.tsx` | Use `gameState.promises` and `gameState.houseguests.find()` instead of legacy `game` object |
 
 ---
 
-## Summary of New Stat Effects
+## Expected Behavior After Fix
 
-| Stat | New Player Mechanic |
-|------|---------------------|
-| **Social** | Success chance on interactions; unlock advanced persuasion |
-| **Strategic** | Reveal relationship indicators, vote predictions, alliance info |
-| **Loyalty** | Promise impact multiplier (both positive and negative) |
-| **Competition** | Clutch bonus when competing while nominated |
+1. **Interactions persist**: When you talk to a houseguest during eviction, the relationship change (+5, -10, etc.) is saved to reducer state
+2. **UI reflects changes**: `HouseguestCard`, `HouseguestDialog`, and sidebar show updated relationship scores
+3. **Success/failure works**: The stat-based interaction success system properly applies positive or negative changes
+4. **Promises display correctly**: Promise manager shows all promises from reducer state
+5. **State consistency**: All components read from the same source of truth (`gameState`)
 
-These changes transform stats from background numbers into active gameplay decisions, where players must weigh stat allocation against their intended playstyle (competition beast, social butterfly, strategic mastermind, or loyal ally).
+---
+
+## Technical Flow After Fix
+
+```text
+User clicks interaction option
+         |
+         v
+EvictionInteractionDialog shows InteractionResults
+         |
+         v
+InteractionResults calculates success/failure based on Social stat
+         |
+         v
+InteractionResults dispatches UPDATE_RELATIONSHIPS
+         |
+         v
+relationshipReducer updates gameState.relationships
+         |
+         v
+getRelationship() reads from gameState.relationships
+         |
+         v
+HouseguestCard/Dialog shows updated score
+```
+
+---
+
+## Backward Compatibility
+
+The legacy `RelationshipSystem` class will continue to work for AI decisions and other systems that use it directly. We're adding reducer state as the source of truth for UI display without breaking existing functionality.
