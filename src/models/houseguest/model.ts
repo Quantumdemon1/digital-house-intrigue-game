@@ -12,7 +12,8 @@ import {
   MentalState,
   MoodType,
   StressLevelType,
-  NominationCount
+  NominationCount,
+  Avatar3DConfig
 } from './types';
 
 // Main houseguest interface
@@ -41,6 +42,7 @@ export interface Houseguest {
   // Visual representation
   imageUrl?: string;
   avatarUrl?: string;
+  avatarConfig?: Avatar3DConfig; // 3D avatar configuration
   
   // Advanced state for AI
   mentalState?: MentalState;

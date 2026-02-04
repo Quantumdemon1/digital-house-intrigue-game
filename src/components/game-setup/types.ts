@@ -1,5 +1,5 @@
-
 import { PersonalityTrait, HouseguestStats } from '@/models/houseguest';
+import { Avatar3DConfig } from '@/models/avatar-config';
 
 export interface PlayerFormData {
   playerName: string;
@@ -11,6 +11,7 @@ export interface PlayerFormData {
   stats: HouseguestStats;
   remainingPoints: number;
   houseguestCount: number;
-  avatarUrl?: string;      // Selected or generated avatar URL
-  templateId?: string;      // ID of selected character template
+  avatarUrl?: string;         // Selected or generated avatar URL
+  templateId?: string;        // ID of selected character template
+  avatarConfig?: Avatar3DConfig; // 3D avatar configuration
 }

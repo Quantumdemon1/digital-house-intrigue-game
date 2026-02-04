@@ -1,19 +1,25 @@
-
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { PlayerFormData } from './types';
 import { PersonalityTrait } from '@/models/houseguest';
 import { AnimatedBadge } from '@/components/ui/animated-badge';
-import { Briefcase, MapPin } from 'lucide-react';
+import { Briefcase, MapPin, User, Wand2, ArrowLeft } from 'lucide-react';
 import AvatarImageOptions from './AvatarImageOptions';
+import { SimsAvatar } from '@/components/avatar-3d';
+import { AvatarCustomizer } from '@/components/avatar-3d/AvatarCustomizer';
+import { generateDefaultConfig, Avatar3DConfig } from '@/models/avatar-config';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface AvatarPreviewProps {
   formData: PlayerFormData;
   avatarUrl?: string;
   className?: string;
   onAvatarChange?: (url: string) => void;
+  onAvatarConfigChange?: (config: Avatar3DConfig) => void;
   showImageOptions?: boolean;
+  use3D?: boolean;
 }
 
 // Trait-based gradient mappings
@@ -42,9 +48,15 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
   avatarUrl, 
   className,
   onAvatarChange,
-  showImageOptions = false 
+  onAvatarConfigChange,
+  showImageOptions = false,
+  use3D = true
 }) => {
-  const { playerName, selectedTraits, playerOccupation, playerHometown, stats } = formData;
+  const { playerName, selectedTraits, playerOccupation, playerHometown, stats, avatarConfig } = formData;
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [localConfig, setLocalConfig] = useState<Avatar3DConfig>(
+    avatarConfig || generateDefaultConfig()
+  );
   
   // Get gradient based on first selected trait
   const primaryTrait = selectedTraits[0] as PersonalityTrait;
@@ -63,6 +75,17 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
   const maxStats = statKeys.length * 10;
 
   const hasAvatar = avatarUrl && avatarUrl !== '/placeholder.svg';
+  const has3DConfig = avatarConfig || use3D;
+
+  const handleCustomizerChange = (config: Avatar3DConfig) => {
+    setLocalConfig(config);
+    onAvatarConfigChange?.(config);
+  };
+
+  const handleCustomizerComplete = () => {
+    onAvatarConfigChange?.(localConfig);
+    setCustomizerOpen(false);
+  };
 
   return (
     <motion.div 
@@ -95,12 +118,19 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
             'w-32 h-32 rounded-full relative overflow-hidden',
             'shadow-xl'
           )}
-          key={hasAvatar ? avatarUrl : gradient}
+          key={has3DConfig ? 'avatar-3d' : (hasAvatar ? avatarUrl : gradient)}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
-          {hasAvatar ? (
+          {has3DConfig ? (
+            <SimsAvatar 
+              config={avatarConfig || localConfig}
+              size="xl"
+              isPlayer={true}
+              animated={true}
+            />
+          ) : hasAvatar ? (
             <>
               {/* Ornate frame */}
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 p-1">
@@ -156,6 +186,36 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
           YOU
         </motion.div>
       </div>
+
+      {/* Customize Avatar Button */}
+      {use3D && (
+        <Dialog open={customizerOpen} onOpenChange={setCustomizerOpen}>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 gap-2"
+            >
+              <Wand2 className="h-4 w-4" />
+              Customize Avatar
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Create Your Avatar
+              </DialogTitle>
+            </DialogHeader>
+            <AvatarCustomizer
+              initialConfig={avatarConfig || localConfig}
+              onChange={handleCustomizerChange}
+              onComplete={handleCustomizerComplete}
+              showCompleteButton={true}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Player info */}
       <div className="mt-6 text-center space-y-2">
@@ -221,8 +281,8 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
         </span>
       </motion.div>
 
-      {/* Image Options */}
-      {showImageOptions && onAvatarChange && (
+      {/* Image Options - fallback when not using 3D */}
+      {showImageOptions && onAvatarChange && !use3D && (
         <AvatarImageOptions
           onImageGenerated={onAvatarChange}
           onImageUploaded={onAvatarChange}

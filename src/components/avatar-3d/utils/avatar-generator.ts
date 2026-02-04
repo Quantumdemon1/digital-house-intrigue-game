@@ -273,12 +273,14 @@ export function createNoseGeometry(noseType: 'small' | 'medium' | 'large' | 'but
 /**
  * Get polygon count for LOD based on size
  */
-export function getSegmentsForSize(size: 'sm' | 'md' | 'lg' | 'xl'): number {
-  const segments = {
+export function getSegmentsForSize(size: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'full'): number {
+  const segments: Record<string, number> = {
     sm: 12,
     md: 20,
     lg: 28,
-    xl: 36
+    xl: 36,
+    xxl: 40,
+    full: 48
   };
-  return segments[size];
+  return segments[size] || 24;
 }

@@ -106,7 +106,7 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
       
       <div className="grid gap-4">
         <div className="flex flex-col sm:flex-row gap-4">
-          <HouseguestAvatar houseguest={houseguest} size="lg" rounded={false} />
+          <HouseguestAvatar houseguest={houseguest} size="lg" rounded={false} use3D={true} />
           
           <div className="space-y-1">
             <p className="text-sm">Age: {houseguest.age}</p>
