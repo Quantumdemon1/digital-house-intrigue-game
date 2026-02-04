@@ -364,7 +364,7 @@ const FinalHoHPhase: React.FC = () => {
     if (evicted) {
       dispatch({
         type: 'EVICT_HOUSEGUEST',
-        payload: { evictedId: evicted.id, toJury: true }
+        payload: { evicted: evicted, toJury: true }
       });
       
       dispatch({
