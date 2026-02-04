@@ -63,18 +63,18 @@ export const archetypeInfo: Record<Archetype, { label: string; color: string; de
 // RPM avatars require user-created URLs from readyplayer.me - there's no public avatar catalog
 // To enable 3D avatars: Create avatars at demo.readyplayer.me, copy the .glb URL here
 const NPC_RPM_AVATARS: Record<string, string | undefined> = {
-  'alex-chen': undefined,
-  'morgan-lee': undefined,
-  'jordan-taylor': undefined,
-  'casey-wilson': undefined,
-  'riley-johnson': undefined,
-  'jamie-roberts': undefined,
-  'quinn-martinez': undefined,
-  'avery-thompson': undefined,
-  'taylor-kim': undefined,
-  'sam-williams': undefined,
-  'blake-peterson': undefined,
-  'maya-hassan': undefined,
+  'alex-chen': 'https://models.readyplayer.me/6983cec8fcad0d2f33f8d828.glb',
+  'morgan-lee': undefined, // Not provided yet
+  'jordan-taylor': 'https://models.readyplayer.me/6983cdc66eb4878bb838a8e1.glb',
+  'casey-wilson': 'https://models.readyplayer.me/6983d039ea77ff02ffa7d0d5.glb',
+  'riley-johnson': 'https://models.readyplayer.me/6983d0c547a75ab0c803f7c0.glb',
+  'jamie-roberts': 'https://models.readyplayer.me/6983cd7eea77ff02ffa7b78e.glb',
+  'quinn-martinez': 'https://models.readyplayer.me/6983cd3afcad0d2f33f8c9d2.glb',
+  'avery-thompson': 'https://models.readyplayer.me/6983ce4dea77ff02ffa7bef0.glb',
+  'taylor-kim': 'https://models.readyplayer.me/6983d21c47a75ab0c804039e.glb',
+  'sam-williams': 'https://models.readyplayer.me/6983d2e246ee350e50efb69f.glb',
+  'blake-peterson': 'https://models.readyplayer.me/6983cf1b0b547ce9ae23d348.glb',
+  'maya-hassan': 'https://models.readyplayer.me/6983d12446ee350e50efa604.glb',
 };
 
 // Helper to create avatar config for NPCs with RPM 3D avatars
