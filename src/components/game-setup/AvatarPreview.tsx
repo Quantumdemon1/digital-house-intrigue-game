@@ -5,12 +5,15 @@ import { cn } from '@/lib/utils';
 import { PlayerFormData } from './types';
 import { PersonalityTrait } from '@/models/houseguest';
 import { AnimatedBadge } from '@/components/ui/animated-badge';
-import { User, Briefcase, MapPin } from 'lucide-react';
+import { Briefcase, MapPin } from 'lucide-react';
+import AvatarImageOptions from './AvatarImageOptions';
 
 interface AvatarPreviewProps {
   formData: PlayerFormData;
   avatarUrl?: string;
   className?: string;
+  onAvatarChange?: (url: string) => void;
+  showImageOptions?: boolean;
 }
 
 // Trait-based gradient mappings
@@ -34,7 +37,13 @@ const traitGradients: Record<PersonalityTrait, string> = {
   Confrontational: 'from-red-600 via-rose-600 to-pink-600',
 };
 
-export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ formData, avatarUrl, className }) => {
+export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ 
+  formData, 
+  avatarUrl, 
+  className,
+  onAvatarChange,
+  showImageOptions = false 
+}) => {
   const { playerName, selectedTraits, playerOccupation, playerHometown, stats } = formData;
   
   // Get gradient based on first selected trait
@@ -211,6 +220,17 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ formData, avatarUr
           Power: {statTotal}/{maxStats}
         </span>
       </motion.div>
+
+      {/* Image Options */}
+      {showImageOptions && onAvatarChange && (
+        <AvatarImageOptions
+          onImageGenerated={onAvatarChange}
+          onImageUploaded={onAvatarChange}
+          currentAvatarUrl={avatarUrl}
+          playerName={playerName}
+          className="w-full max-w-xs"
+        />
+      )}
     </motion.div>
   );
 };
