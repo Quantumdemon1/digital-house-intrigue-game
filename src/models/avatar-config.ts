@@ -34,6 +34,7 @@ export interface Avatar3DConfig {
   modelUrl?: string;
   presetId?: string;          // For preset-glb/vrm selection
   thumbnailUrl?: string;      // Cached 2D fallback
+  profilePhotoUrl?: string;   // Base64 data URL of captured face screenshot
   
   // Body shape
   bodyType: BodyType;
