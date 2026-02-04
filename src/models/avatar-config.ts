@@ -22,8 +22,8 @@ export type HairStyle = 'short' | 'medium' | 'long' | 'buzz' | 'ponytail' | 'bun
 export type TopStyle = 'tshirt' | 'tanktop' | 'blazer' | 'hoodie' | 'dress';
 export type BottomStyle = 'pants' | 'shorts' | 'skirt' | 'jeans';
 
-// Avatar model source types (simplified to RPM-only)
-export type AvatarModelSource = 'ready-player-me' | 'custom-glb';
+// Avatar model source types
+export type AvatarModelSource = 'ready-player-me' | 'custom-glb' | 'none';
 
 /**
  * Complete 3D avatar configuration
