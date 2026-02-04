@@ -13,6 +13,8 @@ export interface GLBPresetAvatar {
   bodyType?: 'slim' | 'average' | 'athletic' | 'stocky';
   traits?: string[];
   description?: string;
+  /** If true, this is a placeholder entry without actual assets */
+  isPlaceholder?: boolean;
 }
 
 /**
@@ -33,7 +35,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'casual',
     bodyType: 'athletic',
     traits: ['confident', 'competitive'],
-    description: 'Athletic build with a confident stance'
+    description: 'Athletic build with a confident stance',
+    isPlaceholder: true
   },
   {
     id: 'glb-elena',
@@ -43,7 +46,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'professional',
     bodyType: 'slim',
     traits: ['strategic', 'charming'],
-    description: 'Professional attire with elegant posture'
+    description: 'Professional attire with elegant posture',
+    isPlaceholder: true
   },
   {
     id: 'glb-tyler',
@@ -53,7 +57,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'athletic',
     bodyType: 'stocky',
     traits: ['competitive', 'loyal'],
-    description: 'Built for competition'
+    description: 'Built for competition',
+    isPlaceholder: true
   },
   {
     id: 'glb-sophia',
@@ -63,7 +68,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'casual',
     bodyType: 'average',
     traits: ['social', 'observant'],
-    description: 'Approachable and friendly'
+    description: 'Approachable and friendly',
+    isPlaceholder: true
   },
   {
     id: 'glb-jamal',
@@ -73,7 +79,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'formal',
     bodyType: 'slim',
     traits: ['strategic', 'analytical'],
-    description: 'Sharp mind, sharper suit'
+    description: 'Sharp mind, sharper suit',
+    isPlaceholder: true
   },
   {
     id: 'glb-maya',
@@ -83,7 +90,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'fantasy',
     bodyType: 'slim',
     traits: ['mysterious', 'adaptive'],
-    description: 'Otherworldly presence'
+    description: 'Otherworldly presence',
+    isPlaceholder: true
   },
   {
     id: 'glb-derek',
@@ -93,7 +101,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'casual',
     bodyType: 'athletic',
     traits: ['confrontational', 'honest'],
-    description: 'What you see is what you get'
+    description: 'What you see is what you get',
+    isPlaceholder: true
   },
   {
     id: 'glb-luna',
@@ -103,7 +112,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'fantasy',
     bodyType: 'average',
     traits: ['creative', 'unpredictable'],
-    description: 'Expects the unexpected'
+    description: 'Expects the unexpected',
+    isPlaceholder: true
   },
   {
     id: 'glb-carlos',
@@ -113,7 +123,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'professional',
     bodyType: 'average',
     traits: ['diplomatic', 'patient'],
-    description: 'The mediator'
+    description: 'The mediator',
+    isPlaceholder: true
   },
   {
     id: 'glb-zara',
@@ -123,7 +134,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'athletic',
     bodyType: 'athletic',
     traits: ['competitive', 'determined'],
-    description: 'Born to win'
+    description: 'Born to win',
+    isPlaceholder: true
   }
 ];
 

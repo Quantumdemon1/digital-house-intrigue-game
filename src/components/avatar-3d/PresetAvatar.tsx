@@ -62,8 +62,48 @@ export const PresetAvatar: React.FC<PresetAvatarProps> = ({
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const timeRef = useRef(0);
   
-  // Load the GLTF model
-  const gltf = useGLTF(preset?.url || '', true, true);
+  // If preset is a placeholder (no real assets), trigger error immediately
+  useEffect(() => {
+    if (preset?.isPlaceholder) {
+      onError?.(new Error(`Preset "${preset.name}" is a placeholder without assets`));
+    }
+  }, [preset, onError]);
+  
+  // Don't attempt to load placeholder URLs
+  if (!preset || preset.isPlaceholder) {
+    return null;
+  }
+  
+  return <PresetAvatarInner 
+    presetId={presetId}
+    preset={preset} 
+    mood={mood} 
+    scale={scale} 
+    position={position} 
+    onLoaded={onLoaded} 
+    onError={onError} 
+    enableIdleAnimation={enableIdleAnimation} 
+  />;
+};
+
+/**
+ * Inner component that actually loads the GLB (only rendered when preset is valid)
+ */
+const PresetAvatarInner: React.FC<PresetAvatarProps & { preset: GLBPresetAvatar }> = ({
+  preset,
+  mood = 'Neutral',
+  scale = 1,
+  position = [0, -0.8, 0],
+  onLoaded,
+  onError,
+  enableIdleAnimation = true
+}) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const timeRef = useRef(0);
+  
+  // Load the GLTF model - only called for valid presets
+  const gltf = useGLTF(preset.url, true, true);
   
   // Clone scene for instancing
   const clonedScene = useMemo(() => {
@@ -107,13 +147,6 @@ export const PresetAvatar: React.FC<PresetAvatarProps> = ({
       onLoaded?.();
     }
   }, [clonedScene, onLoaded]);
-
-  // Handle missing preset
-  useEffect(() => {
-    if (!preset) {
-      onError?.(new Error(`Preset not found: ${presetId}`));
-    }
-  }, [preset, presetId, onError]);
 
   // Apply mood tinting
   useEffect(() => {
@@ -167,8 +200,8 @@ export const PresetAvatar: React.FC<PresetAvatarProps> = ({
  */
 export const preloadPresetAvatars = (presetIds?: string[]): void => {
   const avatarsToPreload = presetIds 
-    ? PRESET_GLB_AVATARS.filter(p => presetIds.includes(p.id))
-    : PRESET_GLB_AVATARS;
+    ? PRESET_GLB_AVATARS.filter(p => presetIds.includes(p.id) && !p.isPlaceholder)
+    : PRESET_GLB_AVATARS.filter(p => !p.isPlaceholder);
     
   avatarsToPreload.forEach(preset => {
     useGLTF.preload(preset.url);
@@ -179,7 +212,7 @@ export const preloadPresetAvatars = (presetIds?: string[]): void => {
  * Preload all preset avatars on module load (for NPC usage)
  */
 export const preloadAllPresets = (): void => {
-  PRESET_GLB_AVATARS.forEach(preset => {
+  PRESET_GLB_AVATARS.filter(p => !p.isPlaceholder).forEach(preset => {
     useGLTF.preload(preset.url);
   });
 };
