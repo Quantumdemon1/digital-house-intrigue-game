@@ -36,13 +36,39 @@ interface AvatarLoaderProps {
   loadTimeout?: number;
 }
 
-// Size configurations with context mapping
-const SIZE_CONFIG: Record<AvatarSize, { width: string; height: string; scale: number; context: AvatarContext }> = {
-  sm: { width: 'w-12', height: 'h-12', scale: 0.8, context: 'thumbnail' },
-  md: { width: 'w-20', height: 'h-20', scale: 1, context: 'game' },
-  lg: { width: 'w-32', height: 'h-32', scale: 1.2, context: 'game' },
-  xl: { width: 'w-48', height: 'h-48', scale: 1.5, context: 'profile' },
-  full: { width: 'w-full', height: 'h-full', scale: 1, context: 'customizer' },
+// Size configurations with context-aware camera settings
+const SIZE_CONFIG: Record<AvatarSize, { 
+  width: string; 
+  height: string; 
+  scale: number; 
+  context: AvatarContext;
+  camera: { y: number; z: number; fov: number }
+}> = {
+  sm: { 
+    width: 'w-12', height: 'h-12', scale: 0.8, 
+    context: 'thumbnail',
+    camera: { y: 0.55, z: 1.2, fov: 25 }  // Tight head shot
+  },
+  md: { 
+    width: 'w-20', height: 'h-20', scale: 1, 
+    context: 'game',
+    camera: { y: 0.4, z: 2.0, fov: 35 }   // Upper body
+  },
+  lg: { 
+    width: 'w-32', height: 'h-32', scale: 1.2, 
+    context: 'game',
+    camera: { y: 0.4, z: 2.0, fov: 35 }   // Upper body
+  },
+  xl: { 
+    width: 'w-48', height: 'h-48', scale: 1.5, 
+    context: 'profile',
+    camera: { y: 0.55, z: 1.5, fov: 30 }  // Head portrait
+  },
+  full: { 
+    width: 'w-full', height: 'h-full', scale: 1, 
+    context: 'customizer',
+    camera: { y: 0, z: 2.5, fov: 35 }     // Full body
+  },
 };
 
 /**
@@ -85,7 +111,11 @@ const RPMAvatarCanvas: React.FC<{
   mood: MoodType;
   scale: number;
   context: AvatarContext;
-  sizeConfig: { width: string; height: string };
+  sizeConfig: { 
+    width: string; 
+    height: string;
+    camera: { y: number; z: number; fov: number }
+  };
   className?: string;
   onLoaded?: () => void;
   onError?: () => void;
@@ -120,7 +150,10 @@ const RPMAvatarCanvas: React.FC<{
       className
     )}>
       <Canvas
-        camera={{ position: [0, 0, 2.5], fov: 35 }}
+        camera={{ 
+          position: [0, sizeConfig.camera.y, sizeConfig.camera.z], 
+          fov: sizeConfig.camera.fov 
+        }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
         onError={handleError}
       >
