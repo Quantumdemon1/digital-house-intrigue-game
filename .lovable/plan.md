@@ -1,538 +1,636 @@
 
-# Plan: Deals & Alliances System Redesign
+# Plan: Deep Integration of Social, Deals & Relationship Systems
 
 ## Overview
 
-Redesign the current "Promises" feature into an interactive "Deals & Alliances" system that allows players and NPCs to propose strategic agreements, form partnerships, and build alliances. This system will feature:
-
-1. **Interactive Proposals** - NPCs can propose deals to the player during social phases
-2. **Deal Types** - Multiple deal types with specific conditions (targeting, veto use, voting blocks)
-3. **Relationship-Based Acceptance** - NPCs accept/reject deals based on their relationship with the player
-4. **Trust Building & Breaking** - Following through builds trust; breaking deals damages standing
-5. **Partnership → Alliance Progression** - Simple deals can upgrade to partnerships and formal alliances
+Connect the Deal System, Relationship System, Alliance System, and NPC Social Behavior into a unified gameplay experience where all systems reinforce each other. This creates a more dynamic and realistic simulation where deals affect relationships, relationships influence deal acceptance, alliances strengthen deals, and NPC behavior is driven by all these factors.
 
 ---
 
-## Part 1: New Data Models
+## Part 1: Unified Event System
 
-### New File: `src/models/deal.ts`
+### Problem
+Currently, there are multiple overlapping tracking systems:
+- `InteractionTracker` tracks interactions with sentiment/impact
+- `RelationshipEvents` tracks relationship changes
+- `DealSystem` tracks deal outcomes
+- These don't communicate well with each other
 
-Create a comprehensive deal model that replaces the simpler promise system:
+### Solution: Create a Central Event Bus
+
+Create a unified event system that all subsystems subscribe to:
+
+**New File: `src/systems/game-event-bus.ts`**
 
 ```typescript
-export type DealStatus = 'proposed' | 'accepted' | 'active' | 'fulfilled' | 'broken' | 'declined' | 'expired';
+export type GameEventType =
+  // Deal events
+  | 'deal_proposed' | 'deal_accepted' | 'deal_declined' 
+  | 'deal_fulfilled' | 'deal_broken' | 'deal_expired'
+  // Relationship events  
+  | 'relationship_changed' | 'trust_changed'
+  // Alliance events
+  | 'alliance_formed' | 'alliance_broken' | 'member_added' | 'member_removed'
+  // Game action events
+  | 'nomination_made' | 'veto_used' | 'vote_cast' | 'eviction'
+  // Social events
+  | 'conversation' | 'promise_made' | 'promise_kept' | 'promise_broken';
 
-export type DealType = 
-  | 'target_agreement'      // Agree to target specific houseguest if win HoH
-  | 'safety_agreement'      // Agree not to nominate each other
-  | 'vote_together'         // Vote as a block this week
-  | 'veto_use'              // Use veto on partner if they're on block
-  | 'information_sharing'   // Share game intel with each other
-  | 'final_two'             // Take each other to final 2
-  | 'partnership'           // General working together
-  | 'alliance_invite';      // Formal alliance formation
-
-export interface Deal {
-  id: string;
-  type: DealType;
-  title: string;
-  description: string;
-  proposerId: string;        // Who proposed
-  recipientId: string;       // Who received proposal
-  week: number;
-  status: DealStatus;
-  createdAt: number;
-  updatedAt: number;
-  expiresWeek?: number;      // Optional expiration
-  trustImpact: 'low' | 'medium' | 'high' | 'critical';
-  context?: {
-    targetHouseguestId?: string;  // For target agreements
-    allianceId?: string;          // For alliance invites
-    votingPreference?: string;    // For vote together deals
-    upgradeFrom?: string;         // If upgraded from another deal
-  };
-}
-
-export interface NPCProposal {
-  id: string;
-  fromNPC: string;           // NPC proposing
-  toPlayer: boolean;         // Always true for proposals to player
-  deal: Omit<Deal, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
-  reasoning: string;         // Why NPC wants this deal
+export interface GameEvent {
+  type: GameEventType;
   timestamp: number;
-  response?: 'accepted' | 'declined' | 'pending';
+  week: number;
+  involvedIds: string[];
+  data: Record<string, any>;
+}
+
+export class GameEventBus {
+  private listeners: Map<GameEventType, ((event: GameEvent) => void)[]>;
+  
+  emit(event: GameEvent): void;
+  subscribe(type: GameEventType, callback: (event: GameEvent) => void): () => void;
+  subscribeAll(callback: (event: GameEvent) => void): () => void;
 }
 ```
 
 ---
 
-## Part 2: Deal Proposal Dialog (NPC → Player)
+## Part 2: Connect Deal Outcomes to Relationship System
 
-### New File: `src/components/deals/NPCProposalDialog.tsx`
+### Current Gap
+When deals are fulfilled or broken, the relationship impact is applied but not deeply integrated with the trust system.
 
-A dialog that appears when an NPC proposes a deal to the player:
+### Enhancement: Multi-Layer Trust Impact
 
-```
-+--------------------------------------------------+
-|  [NPC Avatar] Morgan wants to make a deal!       |
-+--------------------------------------------------+
-|                                                  |
-|  "I think we should target Riley next week if    |
-|   either of us wins HoH. They're getting too     |
-|   powerful and we need to act now."              |
-|                                                  |
-|  +--------------------------------------------+  |
-|  |  🎯 TARGET AGREEMENT                       |  |
-|  |  Target: Riley Johnson                      |  |
-|  |  Condition: When either wins HoH            |  |
-|  |  Trust Impact: ⚠️ HIGH                      |  |
-|  +--------------------------------------------+  |
-|                                                  |
-|  Your relationship: 💚 +45 (Friendly)           |
-|                                                  |
-|  [Decline]  [Counter-Propose]  [Accept Deal]    |
-+--------------------------------------------------+
-```
+**Modify: `src/systems/deal-system.ts`**
 
-**Features:**
-- Shows NPC's reasoning (AI-generated or fallback)
-- Displays deal terms clearly
-- Shows current relationship status
-- Allows accept, decline, or counter-propose
-
----
-
-## Part 3: Player Proposal Dialog (Player → NPC)
-
-### Modify: `src/components/game-phases/social/MakePromiseDialog.tsx`
-
-Rename and expand to `ProposeDealDialog.tsx`:
-
-**New Deal Options:**
-1. **Target Agreement** - "Let's target [dropdown] next week"
-2. **Safety Pact** - "Promise not to nominate each other"
-3. **Voting Block** - "Let's vote together this week"
-4. **Veto Commitment** - "Use veto on me if I'm on the block"
-5. **Information Sharing** - "Share all game intel with me"
-6. **Final Two Deal** - "Take me to the final 2"
-7. **Form Partnership** - "Work together moving forward"
-8. **Propose Alliance** - "Form an official alliance" (opens alliance creator)
-
-**NPC Response Logic:**
-- Based on relationship score and NPC personality traits
-- High relationship (50+) = likely accept
-- Medium relationship (20-50) = may negotiate or decline
-- Low relationship (<20) = likely decline with reason
-- NPC traits affect acceptance (Loyal NPCs more likely to accept alliance deals)
-
----
-
-## Part 4: Deal System Core Logic
-
-### New File: `src/systems/deal-system.ts`
-
-Replace/extend promise-system with deal-system:
+Add deeper relationship integration:
 
 ```typescript
-export class DealSystem {
-  // Create new deal between houseguests
-  createDeal(proposerId: string, recipientId: string, type: DealType, context?: object): Deal;
+private applyDealOutcome(deal: Deal, status: DealStatus): void {
+  // ... existing relationship event code ...
   
-  // NPC proposes deal to player
-  npcProposeDealToPlayer(npc: Houseguest, dealType: DealType, reasoning: string): NPCProposal;
+  // NEW: Also update interaction tracker for trust scoring
+  if (this.game.interactionTracker) {
+    if (status === 'fulfilled') {
+      this.game.interactionTracker.trackInteraction(
+        deal.proposerId,
+        deal.recipientId,
+        'promise_kept',  // Add new type for deals
+        `Honored ${deal.title} deal`,
+        boost * 1.5  // Deals have stronger trust impact than promises
+      );
+    } else if (status === 'broken') {
+      this.game.interactionTracker.trackInteraction(
+        deal.proposerId,
+        deal.recipientId,
+        'promise_broken',
+        `Broke ${deal.title} deal`,
+        penalty * 2  // Breaking deals has severe trust impact
+      );
+    }
+  }
   
-  // Player responds to NPC proposal
-  respondToProposal(proposalId: string, response: 'accept' | 'decline'): void;
-  
-  // Check if NPC would accept a deal from player
-  evaluatePlayerDeal(npc: Houseguest, dealType: DealType, context?: object): {
-    wouldAccept: boolean;
-    acceptanceChance: number;
-    reasoning: string;
-  };
-  
-  // Evaluate deals based on game actions
-  evaluateDealsForAction(actionType: string, params: any): void;
-  
-  // Get active deals for a houseguest
-  getActiveDeals(houseguestId: string): Deal[];
-  
-  // Check if two houseguests have a specific deal type
-  haveDeal(guest1Id: string, guest2Id: string, type?: DealType): boolean;
-  
-  // Upgrade a deal (e.g., partnership → alliance)
-  upgradeDeal(dealId: string, newType: DealType): Deal;
+  // NEW: Emit event for other systems
+  this.eventBus?.emit({
+    type: status === 'fulfilled' ? 'deal_fulfilled' : 'deal_broken',
+    timestamp: Date.now(),
+    week: this.game.week,
+    involvedIds: [deal.proposerId, deal.recipientId],
+    data: { deal, impactScore: status === 'fulfilled' ? boost : penalty }
+  });
 }
 ```
 
-**Deal Evaluation Logic:**
-- Target Agreement: Fulfilled when HoH winner nominates target; Broken if they nominate partner
-- Safety Pact: Broken if either nominates the other
-- Vote Together: Evaluated at eviction
-- Veto Commitment: Evaluated at PoV meeting
-- Final Two: Evaluated at final selection
+---
+
+## Part 3: Alliance-Deal Synergy
+
+### Current Gap
+Alliances and deals operate independently. Being in an alliance should affect deal dynamics.
+
+### Enhancement: Alliance-Aware Deal Evaluation
+
+**Modify: `src/systems/deal-system.ts` - `evaluatePlayerDeal` method**
+
+```typescript
+// Add alliance-based modifiers
+evaluatePlayerDeal(npc: Houseguest, player: Houseguest, type: DealType, context?: Deal['context']): EvaluationResult {
+  // ... existing code ...
+  
+  // NEW: Alliance synergy
+  const areAllied = this.game.allianceSystem?.areInSameAlliance(npc.id, player.id);
+  
+  if (areAllied) {
+    acceptanceChance += 20; // Alliance members more likely to accept deals
+    
+    // Additional bonus for alliance-reinforcing deals
+    if (['safety_agreement', 'vote_together', 'final_two'].includes(type)) {
+      acceptanceChance += 10;
+    }
+  }
+  
+  // NEW: Check if deal would strengthen or weaken alliance
+  if (type === 'target_agreement' && context?.targetHouseguestId) {
+    const targetIsAlly = this.game.allianceSystem?.areInSameAlliance(npc.id, context.targetHouseguestId);
+    if (targetIsAlly) {
+      acceptanceChance -= 40; // Won't target their own ally
+      reasoning = "I can't target someone from my own alliance.";
+    }
+  }
+  
+  // ... rest of existing logic ...
+}
+```
+
+### Enhancement: Deal-Based Alliance Formation
+
+**Modify: `src/systems/deal-system.ts`**
+
+Add automatic alliance suggestions when partnerships accumulate:
+
+```typescript
+private checkAllianceFormationOpportunity(deal: Deal): void {
+  if (deal.type !== 'partnership') return;
+  
+  // Count active deals between these houseguests
+  const activeDeals = this.getActiveDeals(deal.proposerId).filter(d =>
+    d.recipientId === deal.recipientId || d.proposerId === deal.recipientId
+  );
+  
+  // If 3+ active deals and not in alliance, suggest upgrading to alliance
+  if (activeDeals.length >= 3) {
+    const alreadyAllied = this.game?.allianceSystem?.areInSameAlliance(
+      deal.proposerId, deal.recipientId
+    );
+    
+    if (!alreadyAllied) {
+      // Create an alliance_invite proposal
+      this.createDeal(
+        deal.proposerId,
+        deal.recipientId,
+        'alliance_invite',
+        { upgradeFrom: deal.id }
+      );
+    }
+  }
+}
+```
 
 ---
 
-## Part 5: NPC Deal Generation
+## Part 4: Enhanced NPC Deal Intelligence
 
-### Modify: `src/systems/ai/npc-social-behavior.ts`
+### Current Gap
+NPC deal proposals are somewhat random. They should consider existing deals, alliance memberships, and trust history.
 
-Update to generate proposals directed at the player:
+### Enhancement: Context-Aware NPC Proposals
+
+**Modify: `src/systems/ai/npc-deal-proposals.ts`**
 
 ```typescript
-/**
- * Generate NPC proposals for the player
- */
-export function generateNPCPlayerProposals(
+function generateNPCProposals(
   npc: Houseguest,
+  player: Houseguest,
   game: BigBrotherGame
 ): NPCProposal[] {
   const proposals: NPCProposal[] = [];
-  const player = game.getActiveHouseguests().find(h => h.isPlayer);
-  if (!player) return proposals;
-  
   const relationship = game.relationshipSystem?.getRelationship(npc.id, player.id) ?? 0;
   
-  // Only propose if relationship is decent
-  if (relationship < 15) return proposals;
+  // NEW: Get trust score from deal history
+  const trustScore = game.dealSystem?.calculateTrustScore(player.id) ?? 50;
   
-  // Check various conditions for proposals
+  // NEW: Get existing deals between them
+  const existingDeals = game.deals?.filter(d =>
+    d.status === 'active' &&
+    ((d.proposerId === npc.id && d.recipientId === player.id) ||
+     (d.proposerId === player.id && d.recipientId === npc.id))
+  ) || [];
   
-  // If NPC is on the block - desperate for votes
-  if (npc.isNominated) {
-    proposals.push(createProposal(npc, 'vote_together', 
-      `I need your vote to stay. In return, I'll have your back next week.`));
+  // NEW: Check if player has broken deals with others (reputation)
+  const brokenDeals = game.deals?.filter(d => 
+    d.status === 'broken' && 
+    (d.proposerId === player.id || d.recipientId === player.id)
+  ) || [];
+  
+  // Adjust willingness based on reputation
+  const reputationPenalty = brokenDeals.length * 15;
+  const adjustedRelationship = relationship - reputationPenalty;
+  
+  if (adjustedRelationship < 10) return proposals; // Won't deal with untrustworthy players
+  
+  // NEW: Upgrade existing partnership to alliance
+  const hasPartnership = existingDeals.some(d => d.type === 'partnership');
+  const hasSafetyPact = existingDeals.some(d => d.type === 'safety_agreement');
+  
+  if (hasPartnership && hasSafetyPact && adjustedRelationship > 40) {
+    const alreadyAllied = game.allianceSystem?.areInSameAlliance(npc.id, player.id);
+    if (!alreadyAllied) {
+      proposals.push(createProposal(
+        npc, player, 'alliance_invite',
+        `We've been working well together. I think it's time to make it official.`,
+        game
+      ));
+    }
   }
   
-  // If there's a common threat
-  const commonThreat = findCommonThreat(npc, player, game);
-  if (commonThreat && relationship > 30) {
-    proposals.push(createProposal(npc, 'target_agreement',
-      `${commonThreat.name} is getting too powerful. We should work together to get them out.`,
-      { targetHouseguestId: commonThreat.id }));
-  }
-  
-  // Alliance formation opportunity
-  if (relationship > 45 && !game.allianceSystem?.areInSameAlliance(npc.id, player.id)) {
-    proposals.push(createProposal(npc, 'partnership',
-      `I think we work well together. Want to officially partner up?`));
-  }
-  
-  // Late game final 2 deals
-  const activeCount = game.getActiveHouseguests().length;
-  if (relationship > 60 && activeCount <= 6) {
-    proposals.push(createProposal(npc, 'final_two',
-      `We're getting close to the end. I want you with me in the final 2.`));
-  }
-  
-  return proposals;
+  // ... rest of existing proposal logic ...
 }
 ```
 
 ---
 
-## Part 6: Active Deals UI Panel
+## Part 5: Relationship-Driven Deal Triggers
 
-### New File: `src/components/deals/DealsPanel.tsx`
+### Current Gap
+Relationships change but don't trigger deal opportunities automatically.
 
-Replace the Promises button with a Deals & Alliances button:
+### Enhancement: Relationship Milestone Triggers
 
+**New Function in `src/systems/ai/npc-deal-proposals.ts`**
+
+```typescript
+export function checkRelationshipMilestones(
+  houseguestId: string,
+  otherId: string,
+  oldScore: number,
+  newScore: number,
+  game: BigBrotherGame
+): NPCProposal | null {
+  // Only for NPC -> Player direction
+  const npc = game.getHouseguestById(houseguestId);
+  const other = game.getHouseguestById(otherId);
+  if (!npc || !other || other.isPlayer === false) return null;
+  
+  // Crossed friendship threshold (25+)
+  if (oldScore < 25 && newScore >= 25) {
+    return createProposal(
+      npc, other, 'information_sharing',
+      `I feel like I can trust you now. Let's share what we hear.`,
+      game
+    );
+  }
+  
+  // Crossed close friend threshold (50+)
+  if (oldScore < 50 && newScore >= 50) {
+    return createProposal(
+      npc, other, 'safety_agreement',
+      `You've become one of my closest people here. Let's protect each other.`,
+      game
+    );
+  }
+  
+  // Crossed ally threshold (75+)
+  if (oldScore < 75 && newScore >= 75) {
+    return createProposal(
+      npc, other, 'partnership',
+      `I trust you completely. We should ride this out together.`,
+      game
+    );
+  }
+  
+  return null;
+}
 ```
-+--------------------------------------------------+
-|  DEALS & ALLIANCES                   [Filter ▾]  |
-+--------------------------------------------------+
-|                                                  |
-|  ACTIVE DEALS (3)                               |
-|  +--------------------------------------------+  |
-|  | 🎯 Target Agreement with Morgan            |  |
-|  | Target: Riley | Expires: Week 4            |  |
-|  | Status: ✓ Active                           |  |
-|  +--------------------------------------------+  |
-|  | 🛡️ Safety Pact with Taylor                 |  |
-|  | Neither nominates the other                |  |
-|  | Status: ✓ Active                           |  |
-|  +--------------------------------------------+  |
-|                                                  |
-|  PENDING PROPOSALS (1)                          |
-|  +--------------------------------------------+  |
-|  | ⏳ Casey wants to form a Voting Block      |  |
-|  | [View Details]                             |  |
-|  +--------------------------------------------+  |
-|                                                  |
-|  YOUR ALLIANCES (1)                             |
-|  +--------------------------------------------+  |
-|  | 👥 "The Core Four" (4 members)             |  |
-|  | Stability: 85% | Founded Week 2            |  |
-|  +--------------------------------------------+  |
-|                                                  |
-+--------------------------------------------------+
+
+**Integration Point: `src/systems/relationship/events.ts`**
+
+Call milestone check when relationship updates:
+
+```typescript
+addRelationshipEvent(...): void {
+  const oldScore = relationship.score;
+  // ... update score ...
+  const newScore = relationship.score;
+  
+  // Check for milestone-triggered proposals
+  const milestone = checkRelationshipMilestones(
+    guestId1, guestId2, oldScore, newScore, this.game
+  );
+  
+  if (milestone) {
+    this.game?.pendingNPCProposals?.push(milestone);
+  }
+}
 ```
 
 ---
 
-## Part 7: Trust & Reputation System
+## Part 6: Trust System Unification
 
-### Modify: `src/systems/ai/npc-decision-engine.ts`
+### Current Gap
+Trust is calculated in multiple places:
+- `DealSystem.calculateTrustScore()` - based on deals
+- `InteractionTracker.getTrustScore()` - based on interactions
 
-Add trust score tracking based on deal history:
+### Enhancement: Unified Trust Calculation
+
+**New File: `src/systems/trust-system.ts`**
 
 ```typescript
-/**
- * Calculate trust reputation based on deal history
- */
-export function calculateDealTrust(
-  houseguestId: string,
+export class TrustSystem {
+  calculateTrustScore(houseguestId: string, fromPerspectiveOf?: string): TrustScore {
+    let score = 50; // Neutral baseline
+    
+    // Factor 1: Deal history (40% weight)
+    const dealTrust = this.calculateDealTrust(houseguestId);
+    score += (dealTrust - 50) * 0.4;
+    
+    // Factor 2: Interaction history (30% weight)
+    const interactionTrust = this.calculateInteractionTrust(houseguestId, fromPerspectiveOf);
+    score += (interactionTrust - 50) * 0.3;
+    
+    // Factor 3: Alliance loyalty (20% weight)
+    const allianceTrust = this.calculateAllianceTrust(houseguestId);
+    score += (allianceTrust - 50) * 0.2;
+    
+    // Factor 4: Trait-based modifier (10% weight)
+    const traitModifier = this.getTraitTrustModifier(houseguestId);
+    score += traitModifier * 0.1;
+    
+    return {
+      score: Math.max(0, Math.min(100, score)),
+      reputation: this.getReputationLabel(score),
+      factors: { dealTrust, interactionTrust, allianceTrust, traitModifier }
+    };
+  }
+  
+  getReputationLabel(score: number): string {
+    if (score >= 80) return 'Highly Trustworthy';
+    if (score >= 65) return 'Trustworthy';
+    if (score >= 50) return 'Neutral';
+    if (score >= 35) return 'Questionable';
+    if (score >= 20) return 'Untrustworthy';
+    return 'Notorious Backstabber';
+  }
+}
+```
+
+---
+
+## Part 7: NPC Decision Engine Integration
+
+### Current Gap
+`npc-decision-engine.ts` calculates `promiseObligations` but doesn't factor in deals.
+
+### Enhancement: Deal-Aware Decision Making
+
+**Modify: `src/systems/ai/npc-decision-engine.ts`**
+
+Update `calculatePromiseObligations` to include deals:
+
+```typescript
+export function calculateDealObligations(
+  evaluatorId: string,
+  targetId: string,
   game: BigBrotherGame
-): { trustScore: number; reputation: 'trustworthy' | 'neutral' | 'untrustworthy' } {
+): number {
+  let obligationScore = 0;
+  
+  // Check promises (legacy)
+  const promises = game.promises || [];
+  // ... existing promise logic ...
+  
+  // NEW: Check deals
   const deals = game.deals || [];
-  let trustScore = 50; // Start neutral
   
   deals.forEach(deal => {
-    if (deal.proposerId !== houseguestId && deal.recipientId !== houseguestId) return;
+    const evaluatorInDeal = deal.proposerId === evaluatorId || deal.recipientId === evaluatorId;
+    const targetInDeal = deal.proposerId === targetId || deal.recipientId === targetId;
     
-    if (deal.status === 'fulfilled') {
-      trustScore += deal.trustImpact === 'critical' ? 15 : 
-                    deal.trustImpact === 'high' ? 10 : 
-                    deal.trustImpact === 'medium' ? 5 : 3;
+    if (!evaluatorInDeal || !targetInDeal) return;
+    
+    if (deal.status === 'active') {
+      // Active deals create obligations based on type
+      switch (deal.type) {
+        case 'safety_agreement':
+          obligationScore += 35; // Strong obligation not to nominate
+          break;
+        case 'vote_together':
+          obligationScore += 25; // Should vote the same
+          break;
+        case 'target_agreement':
+          if (deal.context?.targetHouseguestId) {
+            // Slight negative toward target
+            // But positive toward deal partner
+            obligationScore += 15;
+          }
+          break;
+        case 'final_two':
+          obligationScore += 50; // Very strong late-game obligation
+          break;
+        case 'partnership':
+          obligationScore += 20;
+          break;
+        case 'veto_use':
+          obligationScore += 40; // Strong veto commitment
+          break;
+        default:
+          obligationScore += 10;
+      }
     } else if (deal.status === 'broken') {
-      trustScore -= deal.trustImpact === 'critical' ? 30 : 
-                    deal.trustImpact === 'high' ? 20 : 
-                    deal.trustImpact === 'medium' ? 12 : 6;
+      // Broken deals reduce obligation (betrayal)
+      if (deal.proposerId === targetId) {
+        obligationScore -= 30; // They betrayed us
+      }
     }
   });
   
-  trustScore = Math.max(0, Math.min(100, trustScore));
-  
-  return {
-    trustScore,
-    reputation: trustScore >= 65 ? 'trustworthy' : 
-                trustScore <= 35 ? 'untrustworthy' : 'neutral'
-  };
+  return Math.max(-50, Math.min(50, obligationScore));
 }
 ```
 
-NPCs will use this trust score when deciding whether to accept deals from the player.
+Rename `promiseObligations` to `dealObligations` in `DecisionFactors` interface.
 
 ---
 
-## Part 8: NPC Proposal Queue in Social Phase
+## Part 8: Visual Feedback for System Connections
 
-### Modify: `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`
+### Enhancement: Show Deal/Relationship Connections in UI
 
-Add NPC proposal handling:
+**Modify: `src/components/deals/DealCard.tsx`**
+
+Add relationship indicator:
+
+```tsx
+// Show current relationship with deal partner
+const relationship = game.relationshipSystem?.getRelationship(playerId, partnerId) ?? 0;
+const trustScore = game.dealSystem?.calculateTrustScore(partnerId) ?? 50;
+
+<div className="flex items-center gap-2 text-xs text-muted-foreground">
+  <span className={cn(
+    "flex items-center gap-1",
+    relationship > 30 ? "text-green-500" : relationship < 0 ? "text-red-500" : ""
+  )}>
+    <Heart className="h-3 w-3" />
+    {relationship > 0 ? '+' : ''}{relationship}
+  </span>
+  <span className="flex items-center gap-1">
+    <Shield className="h-3 w-3" />
+    Trust: {trustScore}%
+  </span>
+</div>
+```
+
+---
+
+## Part 9: Add New Event Types
+
+### Modify: `src/models/relationship-event.ts`
+
+Add deal-related event types:
 
 ```typescript
-// New state for NPC proposals
-const [pendingProposals, setPendingProposals] = useState<NPCProposal[]>([]);
-const [currentProposal, setCurrentProposal] = useState<NPCProposal | null>(null);
+export type RelationshipEventType = 
+  // ... existing types ...
+  | 'deal_made'
+  | 'deal_fulfilled'
+  | 'deal_broken'
+  | 'deal_declined';
+```
 
-// Generate NPC proposals at start of social phase
-useEffect(() => {
-  if (game?.currentState?.constructor.name === 'SocialInteractionState') {
-    const proposals = generateAllNPCProposals(game);
-    setPendingProposals(proposals);
+### Modify: `src/systems/ai/interaction-tracker.ts`
+
+Add deal-related interaction types:
+
+```typescript
+export type InteractionType =
+  // ... existing types ...
+  | 'deal_proposed'
+  | 'deal_accepted'
+  | 'deal_fulfilled'
+  | 'deal_broken';
+
+export function getInteractionDefaults(type: InteractionType) {
+  switch (type) {
+    // ... existing cases ...
+    case 'deal_proposed':
+      return { sentiment: 'positive', impact: 8, decays: true };
+    case 'deal_accepted':
+      return { sentiment: 'positive', impact: 15, decays: false };
+    case 'deal_fulfilled':
+      return { sentiment: 'positive', impact: 30, decays: false };
+    case 'deal_broken':
+      return { sentiment: 'negative', impact: -45, decays: false };
+  }
+}
+```
+
+---
+
+## Part 10: Weekly System Integration
+
+### Enhancement: End-of-Week Processing
+
+**New Function: `src/systems/deal-system.ts`**
+
+```typescript
+processWeekEnd(): void {
+  if (!this.game) return;
+  
+  // 1. Evaluate all vote_together deals from this week's eviction
+  this.evaluateVotingDeals();
+  
+  // 2. Check for expired deals
+  this.checkExpiredDeals();
+  
+  // 3. Update alliance stability based on deal fulfillment
+  this.updateAllianceFromDeals();
+  
+  // 4. Spread information about broken deals
+  this.processReputationSpread();
+}
+
+private updateAllianceFromDeals(): void {
+  const fulfilledDeals = this.game.deals.filter(d => 
+    d.status === 'fulfilled' && d.updatedAt > Date.now() - 7 * 24 * 60 * 60 * 1000
+  );
+  
+  // Fulfilled deals between alliance members boost stability
+  for (const deal of fulfilledDeals) {
+    const areAllied = this.game.allianceSystem?.areInSameAlliance(
+      deal.proposerId, deal.recipientId
+    );
     
-    // Show first proposal after a delay
-    if (proposals.length > 0) {
-      setTimeout(() => {
-        setCurrentProposal(proposals[0]);
-      }, 2000);
+    if (areAllied) {
+      // Find the alliance and boost stability
+      const alliances = this.game.allianceSystem?.getAlliancesForHouseguest(deal.proposerId) || [];
+      for (const alliance of alliances) {
+        if (alliance.members.some(m => m.id === deal.recipientId)) {
+          alliance.stability = Math.min(100, alliance.stability + 3);
+        }
+      }
     }
   }
-}, [game?.currentState]);
-
-// Render proposal dialog when there's a pending proposal
-{currentProposal && (
-  <NPCProposalDialog
-    proposal={currentProposal}
-    onRespond={handleProposalResponse}
-    onClose={() => handleNextProposal()}
-  />
-)}
-```
-
----
-
-## Part 9: Deal Evaluation Integration
-
-### Modify: `src/contexts/reducers/game-reducer.ts`
-
-Add deal evaluation hooks to game actions:
-
-```typescript
-case 'NOMINATE':
-  // Evaluate deals when nomination happens
-  if (game.dealSystem) {
-    game.dealSystem.evaluateDealsForAction('NOMINATE', {
-      nominatorId: action.payload.hohId,
-      nomineeIds: action.payload.nomineeIds
-    });
-  }
-  break;
-
-case 'CAST_VOTE':
-  // Evaluate vote-related deals
-  if (game.dealSystem) {
-    game.dealSystem.evaluateDealsForAction('CAST_VOTE', {
-      voterId: action.payload.voterId,
-      voteFor: action.payload.voteFor
-    });
-  }
-  break;
-
-case 'VETO_DECISION':
-  // Evaluate veto-related deals
-  if (game.dealSystem) {
-    game.dealSystem.evaluateDealsForAction('VETO_DECISION', {
-      povHolderId: action.payload.povHolderId,
-      savedId: action.payload.savedId,
-      used: action.payload.used
-    });
-  }
-  break;
-```
-
----
-
-## Part 10: Game State Updates
-
-### Modify: `src/models/game-state.ts`
-
-Add deals to game state:
-
-```typescript
-export interface GameState {
-  // ... existing fields
-  deals?: Deal[];
-  pendingNPCProposals?: NPCProposal[];
-  promises?: Promise[]; // Keep for backward compatibility during migration
 }
 ```
 
 ---
 
-## Files to Create
+## Files Summary
 
+### New Files
 | File | Purpose |
 |------|---------|
-| `src/models/deal.ts` | Deal and NPCProposal type definitions |
-| `src/systems/deal-system.ts` | Core deal management logic |
-| `src/components/deals/NPCProposalDialog.tsx` | Dialog for NPC proposals to player |
-| `src/components/deals/ProposeDealDialog.tsx` | Dialog for player proposing deals |
-| `src/components/deals/DealsPanel.tsx` | Main deals overview panel |
-| `src/components/deals/DealCard.tsx` | Individual deal display |
-| `src/components/deals/index.ts` | Exports |
+| `src/systems/game-event-bus.ts` | Central event coordination |
+| `src/systems/trust-system.ts` | Unified trust calculation |
 
-## Files to Modify
-
+### Modified Files
 | File | Changes |
 |------|---------|
-| `src/models/game-state.ts` | Add deals and proposals to state |
-| `src/contexts/reducers/game-reducer.ts` | Add deal evaluation hooks |
-| `src/systems/ai/npc-social-behavior.ts` | Add NPC proposal generation for player |
-| `src/systems/ai/npc-decision-engine.ts` | Add trust score calculations |
-| `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx` | Handle NPC proposals |
-| `src/components/game-screen/GameHeader.tsx` | Replace Promises with Deals button |
-| `src/game-states/SocialInteractionState.ts` | Add propose_deal action |
+| `src/systems/deal-system.ts` | Alliance integration, event emission, enhanced outcomes |
+| `src/systems/ai/npc-deal-proposals.ts` | Trust-aware proposals, relationship milestones, deal upgrades |
+| `src/systems/ai/npc-decision-engine.ts` | Deal obligations in decision factors |
+| `src/systems/ai/interaction-tracker.ts` | New deal-related interaction types |
+| `src/systems/relationship/events.ts` | Milestone triggers, new event types |
+| `src/models/relationship-event.ts` | Deal event types |
+| `src/components/deals/DealCard.tsx` | Show relationship/trust indicators |
+| `src/models/game/BigBrotherGame.ts` | Add event bus and trust system |
 
 ---
 
-## Deal Types Summary
-
-| Deal Type | Trigger Condition | Fulfilled When | Broken When |
-|-----------|------------------|----------------|-------------|
-| Target Agreement | Either wins HoH | Target is nominated | Partner is nominated instead |
-| Safety Pact | Either wins HoH | Neither nominates other | Either nominates the other |
-| Vote Together | Eviction vote | Both vote the same | Vote differently |
-| Veto Commitment | PoV Meeting | Veto used on partner | Veto not used when promised |
-| Information Sharing | Any info learned | Info is shared | Info is withheld/leaked |
-| Final Two | Final selection | Partner taken to F2 | Partner not selected |
-| Partnership | Ongoing | Alliance formed | Betrayal occurs |
-| Alliance Invite | Alliance creation | Alliance formed | Declined/Alliance breaks |
-
----
-
-## NPC Personality Influence on Deals
-
-| Trait | Deal Preferences | Acceptance Modifier |
-|-------|-----------------|---------------------|
-| Strategic | Target agreements, partnerships | +10% for tactical deals |
-| Loyal | Safety pacts, alliances | +20% for loyalty deals, -20% for betrayal requests |
-| Sneaky | Information sharing, short-term deals | +15% for info deals, may break deals more often |
-| Competitive | Target agreements on comp threats | +15% for targeting strong players |
-| Emotional | Final two, partnerships | +25% for relationship-based deals |
-| Paranoid | Safety pacts | +10% for safety, -15% for trusting new allies |
-
----
-
-## User Flow Example
+## Integration Flow Diagram
 
 ```text
-Social Phase begins
-    |
-    v
-NPC evaluates player relationship
-    |
-    +---> Relationship > 30 + NPC sees strategic opportunity
-    |         |
-    |         v
-    |     [NPC Proposal Dialog appears]
-    |     "Morgan wants to target Riley together"
-    |         |
-    |         +---> Player accepts
-    |         |         |
-    |         |         v
-    |         |     Deal created (status: active)
-    |         |     Relationship boost (+8)
-    |         |     
-    |         +---> Player declines
-    |                   |
-    |                   v
-    |               Small relationship penalty (-3)
-    |
-    +---> Player can also initiate deals
-              |
-              v
-          [Propose Deal button on houseguest]
-              |
-              v
-          [ProposeDealDialog opens]
-          Select deal type + target
-              |
-              v
-          NPC evaluates based on:
-          - Relationship score
-          - Personality traits  
-          - Trust history
-          - Strategic value
-              |
-              +---> NPC accepts (relationship + traits favorable)
-              |         |
-              |         v
-              |     Deal created, relationship boost
-              |
-              +---> NPC declines (low trust/relationship)
-                        |
-                        v
-                    "I don't think I can trust you with that"
+Player/NPC Action
+       |
+       v
++----------------+
+|  Event Bus     |  <-- Central coordination
++-------+--------+
+        |
+        +-------+-------+-------+
+        |       |       |       |
+        v       v       v       v
+   +------+ +------+ +------+ +------+
+   |Deal  | |Rela- | |Alli- | |Inter-|
+   |System| |tion- | |ance  | |action|
+   |      | |ship  | |System| |Track |
+   +--+---+ +--+---+ +--+---+ +--+---+
+      |        |        |        |
+      +--------+--------+--------+
+               |
+               v
+      +----------------+
+      | Trust System   | <-- Unified scoring
+      +----------------+
+               |
+               v
+      +----------------+
+      | NPC Decision   | <-- Informed choices
+      | Engine         |
+      +----------------+
 ```
 
 ---
 
-## Technical Notes
+## Expected Behavior Changes
 
-### Backward Compatibility
-- Keep `promises` field in GameState during transition
-- Migrate existing promises to deals on load
-- Eventually deprecate promise system
-
-### Performance
-- NPC proposals generated at phase start, not continuously
-- Maximum 2-3 proposals per social phase to prevent overwhelm
-- Deal evaluations are event-driven, not polling
-
-### Trust Persistence
-- Trust scores persist across weeks
-- Breaking high-impact deals has lasting effects
-- Other houseguests can learn about broken deals (same as current promise betrayal spread)
+1. **NPCs won't propose deals to players with bad reputations**
+2. **Breaking a deal with an alliance member hurts alliance stability**
+3. **Multiple fulfilled deals between two houseguests can trigger alliance invites**
+4. **Relationship milestones (25/50/75) trigger appropriate deal proposals**
+5. **Trust score is unified across all systems**
+6. **NPC decisions weight deal obligations appropriately**
+7. **Deal outcomes immediately affect interaction tracker for trust calculation**
+8. **End-of-week processing evaluates all pending deal conditions**
