@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -8,6 +9,7 @@ import { User, Briefcase, MapPin } from 'lucide-react';
 
 interface AvatarPreviewProps {
   formData: PlayerFormData;
+  avatarUrl?: string;
   className?: string;
 }
 
@@ -32,12 +34,11 @@ const traitGradients: Record<PersonalityTrait, string> = {
   Confrontational: 'from-red-600 via-rose-600 to-pink-600',
 };
 
-export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ formData, className }) => {
+export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ formData, avatarUrl, className }) => {
   const { playerName, selectedTraits, playerOccupation, playerHometown, stats } = formData;
   
   // Get gradient based on first selected trait
   const primaryTrait = selectedTraits[0] as PersonalityTrait;
-  const secondaryTrait = selectedTraits[1] as PersonalityTrait;
   const gradient = primaryTrait 
     ? traitGradients[primaryTrait] 
     : 'from-slate-400 via-slate-500 to-slate-600';
@@ -51,6 +52,8 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ formData, classNam
   const statKeys = ['physical', 'mental', 'endurance', 'social', 'strategic', 'luck'] as const;
   const statTotal = statKeys.reduce((sum, key) => sum + (stats[key] as number || 5), 0);
   const maxStats = statKeys.length * 10;
+
+  const hasAvatar = avatarUrl && avatarUrl !== '/placeholder.svg';
 
   return (
     <motion.div 
@@ -83,36 +86,55 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ formData, classNam
             'w-32 h-32 rounded-full relative overflow-hidden',
             'shadow-xl'
           )}
-          key={gradient}
+          key={hasAvatar ? avatarUrl : gradient}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
-          {/* Gradient background */}
-          <div className={cn('absolute inset-0 bg-gradient-to-br', gradient)} />
-          
-          {/* Lens overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/20" />
-          
-          {/* Scan line effect */}
-          <motion.div
-            className="absolute inset-x-0 h-1/4 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"
-            animate={{ y: ['-100%', '400%'] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-          />
-          
-          {/* Initials */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <motion.span 
-              className="text-4xl font-bold text-white drop-shadow-lg"
-              key={initials}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-            >
-              {initials}
-            </motion.span>
-          </div>
+          {hasAvatar ? (
+            <>
+              {/* Ornate frame */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 p-1">
+                <div className="w-full h-full rounded-full overflow-hidden ring-2 ring-amber-200/50">
+                  <img
+                    src={avatarUrl}
+                    alt={playerName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              {/* Lens overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none" />
+            </>
+          ) : (
+            <>
+              {/* Gradient background */}
+              <div className={cn('absolute inset-0 bg-gradient-to-br', gradient)} />
+              
+              {/* Lens overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/20" />
+              
+              {/* Scan line effect */}
+              <motion.div
+                className="absolute inset-x-0 h-1/4 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"
+                animate={{ y: ['-100%', '400%'] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+              />
+              
+              {/* Initials */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.span 
+                  className="text-4xl font-bold text-white drop-shadow-lg"
+                  key={initials}
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                >
+                  {initials}
+                </motion.span>
+              </div>
+            </>
+          )}
         </motion.div>
 
         {/* "YOU" badge */}

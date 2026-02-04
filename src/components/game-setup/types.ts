@@ -9,6 +9,8 @@ export interface PlayerFormData {
   playerOccupation: string;
   selectedTraits: PersonalityTrait[];
   stats: HouseguestStats;
-  remainingPoints: number; // Points left to allocate
+  remainingPoints: number;
   houseguestCount: number;
+  avatarUrl?: string;      // Selected or generated avatar URL
+  templateId?: string;      // ID of selected character template
 }
