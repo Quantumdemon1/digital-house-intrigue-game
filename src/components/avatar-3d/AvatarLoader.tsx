@@ -34,6 +34,8 @@ interface AvatarLoaderProps {
   className?: string;
   /** Timeout in ms before showing placeholder (default: 8000) */
   loadTimeout?: number;
+  /** Zoom level for camera (1.0 = default, higher = zoomed in) */
+  zoom?: number;
 }
 
 // Size configurations with context-aware camera settings
@@ -119,7 +121,8 @@ const RPMAvatarCanvas: React.FC<{
   className?: string;
   onLoaded?: () => void;
   onError?: () => void;
-}> = ({ avatarUrl, mood, scale, context, sizeConfig, className, onLoaded, onError }) => {
+  zoom?: number;
+}> = ({ avatarUrl, mood, scale, context, sizeConfig, className, onLoaded, onError, zoom = 1.0 }) => {
   const [rpmLoadError, setRpmLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -142,6 +145,10 @@ const RPMAvatarCanvas: React.FC<{
     return null;
   }
 
+  // Apply zoom by adjusting camera Z position (closer = more zoomed)
+  const zoomedZ = sizeConfig.camera.z / zoom;
+  const zoomedY = sizeConfig.camera.y * (zoom > 1 ? 1 + (zoom - 1) * 0.3 : 1);
+
   return (
     <div className={cn(
       sizeConfig.width,
@@ -151,7 +158,7 @@ const RPMAvatarCanvas: React.FC<{
     )}>
       <Canvas
         camera={{ 
-          position: [0, sizeConfig.camera.y, sizeConfig.camera.z], 
+          position: [0, zoomedY, zoomedZ], 
           fov: sizeConfig.camera.fov 
         }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
@@ -230,7 +237,8 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   isPlayer = false,
   animated = true,
   className,
-  loadTimeout = 8000
+  loadTimeout = 8000,
+  zoom = 1.0
 }) => {
   const sizeConfig = SIZE_CONFIG[size];
   const modelSource = avatarConfig?.modelSource;
@@ -290,6 +298,7 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
           className={className}
           onLoaded={() => setModelReady(true)}
           onError={() => setTimedOut(true)}
+          zoom={zoom}
         />
       </Suspense>
     );
