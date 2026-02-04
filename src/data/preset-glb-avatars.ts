@@ -76,8 +76,8 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     style: 'casual',
     bodyType: 'slim',
     category: 'humanoid',
-    traits: ['analytical', 'expressive'],
-    description: 'Face-capture model with expressions',
+    traits: ['analytical', 'calm'],
+    description: 'Stylized male character with smooth animations',
     isPlaceholder: false
   },
   {
