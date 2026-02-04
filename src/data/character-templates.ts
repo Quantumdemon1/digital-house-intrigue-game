@@ -1,6 +1,5 @@
 import { PersonalityTrait } from '@/models/houseguest';
 import { Avatar3DConfig } from '@/models/avatar-config';
-import { PRESET_RPM_AVATARS, getRPMPresetByIndex } from './preset-rpm-avatars';
 
 // Import generated avatars (2D fallback)
 import alexChenAvatar from '@/assets/avatars/alex-chen.jpg';
@@ -60,16 +59,30 @@ export const archetypeInfo: Record<Archetype, { label: string; color: string; de
   }
 };
 
-// Helper to create avatar config with RPM model
-const createRPMAvatarConfig = (index: number, legacyConfig: Partial<Avatar3DConfig>): Avatar3DConfig => {
-  const preset = getRPMPresetByIndex(index);
+// Helper to create avatar config for NPCs (2D only - no external RPM dependencies)
+const createNPCAvatarConfig = (imageUrl: string, legacyConfig: Partial<Avatar3DConfig>): Avatar3DConfig => {
   return {
     ...legacyConfig,
-    modelSource: 'ready-player-me',
-    modelUrl: preset.url,
-    thumbnailUrl: preset.thumbnail,
-    profilePhotoUrl: preset.thumbnail, // Use thumbnail as profile photo
-  } as Avatar3DConfig;
+    modelSource: 'none', // NPCs use 2D images only to avoid external URL dependencies
+    modelUrl: undefined,
+    thumbnailUrl: imageUrl,
+    profilePhotoUrl: imageUrl,
+    // Fill in required fields with defaults
+    bodyType: legacyConfig.bodyType || 'average',
+    height: legacyConfig.height || 'average',
+    skinTone: legacyConfig.skinTone || '#E8C4A0',
+    headShape: 'oval',
+    eyeShape: 'almond',
+    eyeColor: '#5D4037',
+    noseType: 'medium',
+    mouthType: 'full',
+    hairStyle: 'short',
+    hairColor: '#3E2723',
+    topStyle: 'tshirt',
+    topColor: '#2196F3',
+    bottomStyle: 'jeans',
+    bottomColor: '#1565C0',
+  };
 };
 
 export const characterTemplates: CharacterTemplate[] = [
@@ -84,7 +97,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Strategic', 'Social'],
     archetype: 'strategist',
     tagline: 'The Mastermind',
-    avatar3DConfig: createRPMAvatarConfig(0, {
+    avatar3DConfig: createNPCAvatarConfig(alexChenAvatar, {
       bodyType: 'slim',
       height: 'average',
       skinTone: '#E8C4A0',
@@ -101,7 +114,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Competitive', 'Loyal'],
     archetype: 'competitor',
     tagline: 'The Athlete',
-    avatar3DConfig: createRPMAvatarConfig(1, {
+    avatar3DConfig: createNPCAvatarConfig(morganLeeAvatar, {
       bodyType: 'athletic',
       height: 'tall',
       skinTone: '#C4956A',
@@ -118,7 +131,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Social', 'Sneaky'],
     archetype: 'socialite',
     tagline: 'The Charmer',
-    avatar3DConfig: createRPMAvatarConfig(2, {
+    avatar3DConfig: createNPCAvatarConfig(jordanTaylorAvatar, {
       bodyType: 'average',
       height: 'average',
       skinTone: '#D4A574',
@@ -135,7 +148,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Social', 'Strategic'],
     archetype: 'wildcard',
     tagline: 'The Party Animal',
-    avatar3DConfig: createRPMAvatarConfig(3, {
+    avatar3DConfig: createNPCAvatarConfig(caseyWilsonAvatar, {
       bodyType: 'average',
       height: 'short',
       skinTone: '#FFD9B3',
@@ -152,7 +165,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Analytical', 'Strategic'],
     archetype: 'underdog',
     tagline: 'The Brainiac',
-    avatar3DConfig: createRPMAvatarConfig(4, {
+    avatar3DConfig: createNPCAvatarConfig(rileyJohnsonAvatar, {
       bodyType: 'slim',
       height: 'average',
       skinTone: '#FFECD2',
@@ -169,7 +182,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Emotional', 'Strategic'],
     archetype: 'socialite',
     tagline: 'The Caregiver',
-    avatar3DConfig: createRPMAvatarConfig(5, {
+    avatar3DConfig: createNPCAvatarConfig(jamieRobertsAvatar, {
       bodyType: 'average',
       height: 'average',
       skinTone: '#E8C4A0',
@@ -186,7 +199,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Confrontational', 'Social'],
     archetype: 'wildcard',
     tagline: 'The Influencer',
-    avatar3DConfig: createRPMAvatarConfig(6, {
+    avatar3DConfig: createNPCAvatarConfig(quinnMartinezAvatar, {
       bodyType: 'slim',
       height: 'tall',
       skinTone: '#D4A574',
@@ -203,7 +216,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Loyal', 'Competitive'],
     archetype: 'competitor',
     tagline: 'The Protector',
-    avatar3DConfig: createRPMAvatarConfig(7, {
+    avatar3DConfig: createNPCAvatarConfig(averyThompsonAvatar, {
       bodyType: 'stocky',
       height: 'tall',
       skinTone: '#6B4423',
@@ -220,7 +233,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Competitive', 'Confrontational'],
     archetype: 'competitor',
     tagline: 'The Firebrand',
-    avatar3DConfig: createRPMAvatarConfig(8, {
+    avatar3DConfig: createNPCAvatarConfig(taylorKimAvatar, {
       bodyType: 'athletic',
       height: 'average',
       skinTone: '#E8C4A0',
@@ -237,7 +250,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Strategic', 'Loyal'],
     archetype: 'strategist',
     tagline: 'The Leader',
-    avatar3DConfig: createRPMAvatarConfig(9, {
+    avatar3DConfig: createNPCAvatarConfig(samWilliamsAvatar, {
       bodyType: 'stocky',
       height: 'average',
       skinTone: '#A67B5B',
@@ -254,7 +267,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Analytical', 'Sneaky'],
     archetype: 'underdog',
     tagline: 'The Shadow',
-    avatar3DConfig: createRPMAvatarConfig(10, {
+    avatar3DConfig: createNPCAvatarConfig(blakePetersonAvatar, {
       bodyType: 'slim',
       height: 'tall',
       skinTone: '#FFD9B3',
@@ -271,7 +284,7 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Strategic', 'Social'],
     archetype: 'strategist',
     tagline: 'The Diplomat',
-    avatar3DConfig: createRPMAvatarConfig(11, {
+    avatar3DConfig: createNPCAvatarConfig(mayaHassanAvatar, {
       bodyType: 'slim',
       height: 'average',
       skinTone: '#C4956A',
