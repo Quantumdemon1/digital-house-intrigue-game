@@ -4,20 +4,17 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  User, Sparkles, Globe, Users, Star, RotateCcw, ChevronLeft, ChevronRight, Camera, Check
+  User, Sparkles, Globe, Users, Star, RotateCcw, ChevronLeft, ChevronRight, Check
 } from 'lucide-react';
 import { Avatar3DConfig, generateDefaultConfig } from '@/models/avatar-config';
 import { RPMAvatarCreator } from './RPMAvatarCreator';
+import { RPMAvatarCreatorPanel } from './RPMAvatarCreatorPanel';
 import { AvatarLoader } from './AvatarLoader';
-import { PresetAvatarSelector, PresetSource } from './PresetAvatarSelector';
+import { PresetAvatarSelector } from './PresetAvatarSelector';
 import { AvatarScreenshotCapture } from './AvatarScreenshotCapture';
-import { PRESET_GLB_AVATARS } from '@/data/preset-glb-avatars';
-import { PRESET_VRM_AVATARS } from '@/data/preset-vrm-avatars';
 
 interface AvatarCustomizerProps {
   initialConfig?: Avatar3DConfig;
@@ -57,11 +54,12 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
     onChange(newConfig);
   }, [config, onChange]);
 
-  const handleRPMAvatarCreated = useCallback((avatarUrl: string) => {
+  const handleRPMAvatarCreated = useCallback((avatarUrl: string, thumbnailUrl?: string) => {
     updateConfig({
       modelSource: 'ready-player-me',
       modelUrl: avatarUrl,
-      presetId: undefined
+      presetId: undefined,
+      thumbnailUrl: thumbnailUrl
     });
     setAvatarMode('rpm');
   }, [updateConfig]);
@@ -233,16 +231,16 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             </motion.button>
           </div>
 
-          {/* Edit RPM button when in RPM mode */}
-          {avatarMode === 'rpm' && (
+          {/* Quick edit RPM button when in RPM mode with existing avatar */}
+          {avatarMode === 'rpm' && config.modelUrl && (
             <motion.button
               onClick={() => setShowRPMCreator(true)}
-              className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center gap-2"
+              className="mt-2 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-medium flex items-center gap-2 text-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Globe className="w-5 h-5" />
-              Edit Pro Avatar
+              <Globe className="w-4 h-4" />
+              Open Full Editor
             </motion.button>
           )}
 
@@ -276,24 +274,16 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
           transition={{ delay: 0.1 }}
         >
           {avatarMode === 'rpm' && (
-            /* RPM Mode - Show info and option to customize */
-            <div className="sims-panel flex flex-col items-center justify-center h-[400px] text-center">
-              <Globe className="w-16 h-16 text-primary mb-4" />
-              <h3 className="text-xl font-bold text-foreground mb-2">Pro Avatar Active</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm">
-                You're using a Ready Player Me avatar with realistic proportions and expressions.
-              </p>
-              <div className="flex flex-col gap-3">
-                <motion.button
-                  onClick={() => setShowRPMCreator(true)}
-                  className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center gap-2"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Globe className="w-5 h-5" />
-                  Customize Pro Avatar
-                </motion.button>
-              </div>
+            /* RPM Mode - Inline creator panel with gallery */
+            <div className="sims-panel">
+              <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Pro Avatar Creator
+              </h3>
+              <RPMAvatarCreatorPanel
+                onAvatarSelected={handleRPMAvatarCreated}
+                subdomain={rpmSubdomain}
+              />
             </div>
           )}
 
