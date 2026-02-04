@@ -3,20 +3,22 @@
  * @description Ready Player Me avatar creation interface (lazy loaded)
  */
 
-import React, { useState, useCallback, lazy, Suspense, ComponentType } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense, ComponentType } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { optimizeRPMUrl, QUALITY_PRESETS } from '@/utils/rpm-avatar-optimizer';
 import { useGLTF } from '@react-three/drei';
 
-// Generic props interface for the avatar creator
+// Generic props interface for the avatar creator - supports both old and new SDK
 interface AvatarCreatorComponentProps {
   subdomain: string;
+  config?: Record<string, unknown>;
   editorConfig?: Record<string, unknown>;
   avatarConfig?: Record<string, unknown>;
   onAvatarExported?: (event: { data: { url: string } } | string) => void;
   onUserSet?: (event: unknown) => void;
+  style?: React.CSSProperties;
 }
 
 // Lazy load the RPM SDK with proper typing
@@ -24,11 +26,13 @@ const LazyAvatarCreator = lazy(async (): Promise<{ default: ComponentType<Avatar
   try {
     // Try new package first
     const mod = await import('@readyplayerme/react-avatar-creator');
+    console.log('Loaded @readyplayerme/react-avatar-creator');
     return { default: mod.AvatarCreator as ComponentType<AvatarCreatorComponentProps> };
   } catch (e1) {
     try {
       // Fallback to old package
       const mod = await import('@readyplayerme/rpm-react-sdk');
+      console.log('Loaded @readyplayerme/rpm-react-sdk (fallback)');
       return { default: mod.AvatarCreator as ComponentType<AvatarCreatorComponentProps> };
     } catch (e2) {
       console.error('Failed to load any RPM SDK:', e1, e2);
@@ -68,21 +72,35 @@ export const RPMAvatarCreator: React.FC<RPMAvatarCreatorProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const iframeLoadedRef = useRef(false);
 
-  const editorConfig = {
+  // Configuration for the avatar creator
+  const creatorConfig = {
     clearCache: true,
     bodyType,
     quickStart: false,
-    language: 'en' as const,
+    language: 'en',
   };
 
-  // Optimized avatar config for export - use low quality for faster exports
-  // We'll optimize the URL further when storing
-  const avatarConfig = {
-    quality: 'low' as const,
-    morphTargets: ['ARKit'],
-    useDracoCompression: true,
+  // Style for the iframe
+  const iframeStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    border: 'none',
   };
+
+  // Auto-hide loading after a timeout (fallback if onUserSet doesn't fire)
+  useEffect(() => {
+    if (open && isLoading) {
+      const timer = setTimeout(() => {
+        if (!iframeLoadedRef.current) {
+          console.log('Hiding loader via timeout fallback');
+          setIsLoading(false);
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [open, isLoading]);
 
   const handleOnAvatarExported = useCallback((eventOrUrl: { data: { url: string } } | string) => {
     // Extract URL from event object or use directly if string
@@ -120,6 +138,9 @@ export const RPMAvatarCreator: React.FC<RPMAvatarCreatorProps> = ({
             Create Your Avatar
             <ExternalLink className="w-4 h-4 text-muted-foreground" />
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Customize your Ready Player Me avatar
+          </DialogDescription>
         </DialogHeader>
         
         <div className="relative flex-1 min-h-0">
@@ -151,10 +172,14 @@ export const RPMAvatarCreator: React.FC<RPMAvatarCreatorProps> = ({
             }>
               <LazyAvatarCreator
                 subdomain={subdomain}
-                editorConfig={editorConfig}
-                avatarConfig={avatarConfig}
+                config={creatorConfig}
+                editorConfig={creatorConfig}
+                style={iframeStyle}
                 onAvatarExported={handleOnAvatarExported}
-                onUserSet={() => setIsLoading(false)}
+                onUserSet={() => {
+                  iframeLoadedRef.current = true;
+                  setIsLoading(false);
+                }}
               />
             </Suspense>
           </div>
@@ -178,17 +203,17 @@ export const RPMAvatarCreatorInline: React.FC<{
   bodyType = 'halfbody',
   className
 }) => {
-  const editorConfig = {
+  const creatorConfig = {
     clearCache: true,
     bodyType,
     quickStart: false,
-    language: 'en' as const,
+    language: 'en',
   };
 
-  const avatarConfig = {
-    quality: 'low' as const,
-    morphTargets: ['ARKit'],
-    useDracoCompression: true,
+  const iframeStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    border: 'none',
   };
 
   const handleExport = useCallback((eventOrUrl: { data: { url: string } } | string) => {
@@ -220,8 +245,9 @@ export const RPMAvatarCreatorInline: React.FC<{
       }>
         <LazyAvatarCreator
           subdomain={subdomain}
-          editorConfig={editorConfig}
-          avatarConfig={avatarConfig}
+          config={creatorConfig}
+          editorConfig={creatorConfig}
+          style={iframeStyle}
           onAvatarExported={handleExport}
         />
       </Suspense>

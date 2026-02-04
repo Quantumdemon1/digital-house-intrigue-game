@@ -23,13 +23,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-// Generic props interface for the avatar creator
+// Generic props interface for the avatar creator - supports both old and new SDK
 interface AvatarCreatorComponentProps {
   subdomain: string;
+  // New SDK uses 'config', old uses 'editorConfig'
+  config?: Record<string, unknown>;
   editorConfig?: Record<string, unknown>;
   avatarConfig?: Record<string, unknown>;
   onAvatarExported?: (event: { data: { url: string } } | string) => void;
   onUserSet?: (event: unknown) => void;
+  style?: React.CSSProperties;
 }
 
 // Lazy load the RPM Avatar Creator with proper typing
@@ -37,11 +40,13 @@ const LazyAvatarCreator = lazy(async (): Promise<{ default: ComponentType<Avatar
   try {
     // Try new package first
     const mod = await import('@readyplayerme/react-avatar-creator');
+    console.log('Loaded @readyplayerme/react-avatar-creator');
     return { default: mod.AvatarCreator as ComponentType<AvatarCreatorComponentProps> };
   } catch (e1) {
     try {
       // Fallback to old package
       const mod = await import('@readyplayerme/rpm-react-sdk');
+      console.log('Loaded @readyplayerme/rpm-react-sdk (fallback)');
       return { default: mod.AvatarCreator as ComponentType<AvatarCreatorComponentProps> };
     } catch (e2) {
       console.error('Failed to load any RPM SDK:', e1, e2);
@@ -81,6 +86,7 @@ export const RPMAvatarCreatorPanel: React.FC<RPMAvatarCreatorPanelProps> = ({
   const [isCreatorLoading, setIsCreatorLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const creatorContainerRef = useRef<HTMLDivElement>(null);
+  const iframeLoadedRef = useRef(false);
 
   const { 
     avatars, 
@@ -89,19 +95,33 @@ export const RPMAvatarCreatorPanel: React.FC<RPMAvatarCreatorPanelProps> = ({
     isLoading: isStorageLoading 
   } = useRPMAvatarStorage();
 
-  // Editor configuration optimized for game avatars
-  const editorConfig = {
+  // Configuration for the avatar creator - new SDK uses 'config'
+  const creatorConfig = {
     clearCache: false,
-    bodyType: 'halfbody' as const,
+    bodyType: 'halfbody',
     quickStart: false,
-    language: 'en' as const,
+    language: 'en',
   };
 
-  const avatarConfig = {
-    quality: 'low' as const,
-    morphTargets: ['ARKit'],
-    useDracoCompression: true,
+  // Style for the iframe
+  const iframeStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    border: 'none',
   };
+
+  // Auto-hide loading after a timeout (fallback if onUserSet doesn't fire)
+  React.useEffect(() => {
+    if (activeTab === 'create' && isCreatorLoading) {
+      const timer = setTimeout(() => {
+        if (!iframeLoadedRef.current) {
+          console.log('Hiding loader via timeout fallback');
+          setIsCreatorLoading(false);
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, isCreatorLoading]);
 
   // Handle avatar export from RPM creator - supports both old and new SDK event formats
   const handleAvatarExported = useCallback((eventOrUrl: { data: { url: string } } | string) => {
@@ -241,10 +261,14 @@ export const RPMAvatarCreatorPanel: React.FC<RPMAvatarCreatorPanelProps> = ({
             }>
               <LazyAvatarCreator
                 subdomain={subdomain}
-                editorConfig={editorConfig}
-                avatarConfig={avatarConfig}
+                config={creatorConfig}
+                editorConfig={creatorConfig}
+                style={iframeStyle}
                 onAvatarExported={handleAvatarExported}
-                onUserSet={() => setIsCreatorLoading(false)}
+                onUserSet={() => {
+                  iframeLoadedRef.current = true;
+                  setIsCreatorLoading(false);
+                }}
               />
             </Suspense>
           </div>
