@@ -2,7 +2,7 @@ import React from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Houseguest } from '@/models/houseguest';
 import { cn } from '@/lib/utils';
-import { SimsAvatar } from '@/components/avatar-3d';
+import { AvatarLoader } from '@/components/avatar-3d';
 
 interface HouseguestAvatarProps {
   houseguest: Houseguest;
@@ -18,8 +18,8 @@ const sizeClasses = {
   lg: 'w-24 h-24 text-3xl'
 };
 
-// Map our sizes to SimsAvatar sizes
-const simsAvatarSizes: Record<'sm' | 'md' | 'lg', 'sm' | 'md' | 'lg' | 'xl'> = {
+// Map our sizes to AvatarLoader sizes
+const avatarLoaderSizes: Record<'sm' | 'md' | 'lg', 'sm' | 'md' | 'lg' | 'xl'> = {
   sm: 'sm',
   md: 'lg',
   lg: 'xl'
@@ -41,7 +41,7 @@ const HouseguestAvatar: React.FC<HouseguestAvatarProps> = ({
 
   const isActive = houseguest.status === 'Active';
 
-  // Determine avatar status for 3D avatar
+  // Determine avatar status for display
   const getAvatarStatus = () => {
     if (houseguest.isHoH) return 'hoh';
     if (houseguest.isPovHolder) return 'pov';
@@ -50,8 +50,12 @@ const HouseguestAvatar: React.FC<HouseguestAvatarProps> = ({
     return 'none';
   };
 
+  // Check if we should use RPM avatar (GLB model URL exists)
+  const hasRPMAvatar = houseguest.avatarConfig?.modelUrl && 
+    houseguest.avatarConfig?.modelSource === 'ready-player-me';
+
   // Use 3D avatar if config is available and use3D is true
-  if (use3D && houseguest.avatarConfig) {
+  if (use3D && (houseguest.avatarConfig || hasRPMAvatar)) {
     return (
       <div 
         className={cn(
@@ -63,9 +67,10 @@ const HouseguestAvatar: React.FC<HouseguestAvatarProps> = ({
           className
         )}
       >
-        <SimsAvatar
-          config={houseguest.avatarConfig}
-          size={simsAvatarSizes[size]}
+        <AvatarLoader
+          avatarUrl={hasRPMAvatar ? houseguest.avatarConfig?.modelUrl : undefined}
+          avatarConfig={houseguest.avatarConfig}
+          size={avatarLoaderSizes[size]}
           status={getAvatarStatus()}
           mood={houseguest.mood || 'Neutral'}
           isPlayer={houseguest.isPlayer}

@@ -11,9 +11,10 @@ export { ColorPalettePicker } from './ColorPalettePicker';
 export { AvatarOptionSelector } from './AvatarOptionSelector';
 export * from './SimsIcons';
 
-// Ready Player Me components
-export { RPMAvatar, RPMAvatarWithSuspense, preloadRPMAvatar } from './RPMAvatar';
-export { RPMAvatarCreator, RPMAvatarCreatorInline } from './RPMAvatarCreator';
+// Ready Player Me components - loaded lazily to avoid build issues
+// Import directly from './RPMAvatar' or './RPMAvatarCreator' if needed
+// export { RPMAvatar, RPMAvatarWithSuspense, preloadRPMAvatar } from './RPMAvatar';
+// export { RPMAvatarCreator, RPMAvatarCreatorInline } from './RPMAvatarCreator';
 export { AvatarLoader, AvatarSkeleton, preloadAvatar } from './AvatarLoader';
 export type { AvatarSize } from './AvatarLoader';
 
@@ -28,6 +29,7 @@ export { AvatarAnimations, AnimatedAvatarGroup, useAvatarAnimations } from './Av
 export { useIdleAnimation, useHeadIdleAnimation, useBlinkAnimation } from './hooks/useIdleAnimation';
 export { useMoodBodyAnimation, useMoodFaceAnimation, getMoodExpression, getMouthCurve } from './hooks/useMoodAnimation';
 export { useStatusAnimation, usePlayerHighlight, getStatusGlowColor, getStatusParams } from './hooks/useStatusAnimation';
+export { useAvatarPreloader, useAvatarUrlPreloader, preloadRPMModel, preloadRPMModels, extractRPMUrls } from './hooks/useAvatarPreloader';
 
 // Utilities
 export * from './utils/avatar-generator';
