@@ -1,335 +1,243 @@
 
 
-# Plan: Modernize 3D Avatar System - GLB Model Options
+# Plan: Fix Pro Avatar Loading Performance
 
-## Current Situation
+## Problem Analysis
 
-The existing avatar system uses **procedural Three.js primitives** (spheres, capsules, cylinders) with toon shading. While this approach offers full programmatic customization, the results look like basic geometric shapes rather than professional 3D characters.
+The Ready Player Me (RPM) Pro Avatar is loading slowly due to several factors:
 
-The Prompt3D reference you shared demonstrates a much more sophisticated approach using:
-- Professional GLB models created in Blender
-- Real textures (diffuse, normal, roughness, specular maps)
-- Morph targets for facial expressions and lip-sync
-- Skeletal animations for idle/body movement
-
----
-
-## Option Comparison
-
-| Feature | Current (Procedural) | Ready Player Me | Custom GLB Models |
-|---------|---------------------|-----------------|-------------------|
-| Visual Quality | Basic | Excellent | Excellent |
-| Setup Complexity | Already done | Medium | Medium |
-| Customization | Full code control | RPM configurator | Manual in Blender |
-| Expressions | Limited | 52 ARKit blendshapes | Custom blendshapes |
-| Lip-sync | None | Supported via Visage | Supported |
-| File Size | Minimal | ~5-10MB per avatar | 2-5MB per base model |
-| External Dependencies | None | RPM SDK + API | None |
-| Cost | Free | Free tier limited | Free |
+1. **Large GLB File Size**: The current configuration requests `quality: 'medium'` but doesn't optimize for web delivery
+2. **Missing URL Optimization Parameters**: RPM supports URL query parameters like `?quality=low&textureFormat=webp` that dramatically reduce file size
+3. **No Preloading**: Avatars are only loaded when rendered, causing visible delays
+4. **Draco Compression Not Applied**: The SDK config sets `useDracoCompression: true` but this only applies during avatar creation, not when loading existing avatars
+5. **No Progressive Loading**: Users see either nothing or a full avatar - no intermediate state
+6. **Multiple Canvas Instances**: Each avatar creates its own Canvas, which is expensive
 
 ---
 
-## Recommended Approach: Ready Player Me Integration
+## Solution: Multi-Layer Optimization Strategy
 
-Ready Player Me (RPM) offers the best balance of quality and ease of implementation:
+### 1. Optimize Avatar URL Parameters
 
-### Why Ready Player Me?
-
-1. **Professional Quality**: Realistic or stylized avatars with proper rigging
-2. **Built-in Customization**: Users can customize via RPM's polished interface
-3. **React Integration**: Official `@readyplayerme/visage` package for React Three Fiber
-4. **Morph Targets**: 52 ARKit-compatible blendshapes for expressions
-5. **Animation Ready**: Pre-rigged for Mixamo animations
-6. **No 3D Modeling Required**: Skip Blender entirely
-
-### New Dependencies
-
-```json
-{
-  "@readyplayerme/visage": "^5.0.0",
-  "@readyplayerme/react-avatar-creator": "^1.4.0"
-}
-```
-
----
-
-## Implementation Architecture
+When an RPM avatar URL is stored, append optimization parameters to reduce file size by 60-80%:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                    Avatar Creation Flow                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────────┐     ┌───────────────────────┐         │
-│  │  "Create Custom" │────▶│ RPM Avatar Creator    │         │
-│  │      Button      │     │ (iframe widget)       │         │
-│  └──────────────────┘     │                       │         │
-│                           │  - Body type          │         │
-│                           │  - Face customization │         │
-│                           │  - Hair/clothing      │         │
-│                           │  - Accessories        │         │
-│                           └───────────┬───────────┘         │
-│                                       │                      │
-│                                       ▼                      │
-│                           ┌───────────────────────┐         │
-│                           │ Returns: avatar.glb   │         │
-│                           │ URL hosted by RPM     │         │
-│                           └───────────┬───────────┘         │
-│                                       │                      │
-│                                       ▼                      │
-│                           ┌───────────────────────┐         │
-│                           │ Store URL in player   │         │
-│                           │ config (database)     │         │
-│                           └───────────────────────┘         │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+BEFORE (5-10MB):
+https://models.readyplayer.me/abc123.glb
 
-┌─────────────────────────────────────────────────────────────┐
-│                    Avatar Rendering Flow                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────────┐     ┌───────────────────────┐         │
-│  │ HouseguestAvatar │────▶│ @readyplayerme/visage │         │
-│  │   Component      │     │ <Avatar modelSrc=...> │         │
-│  └──────────────────┘     │                       │         │
-│                           │  - Loads GLB model    │         │
-│                           │  - Applies animations │         │
-│                           │  - Handles expressions│         │
-│                           └───────────────────────┘         │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+AFTER (1-2MB):
+https://models.readyplayer.me/abc123.glb?quality=low&textureFormat=webp&morphTargets=ARKit,mouthOpen,mouthSmile,eyeBlinkLeft,eyeBlinkRight&lod=1
 ```
+
+**Key parameters:**
+- `quality=low` - Uses smaller textures (256px) and reduced mesh complexity
+- `textureFormat=webp` - 40% smaller textures than PNG
+- `lod=1` - 50% triangle count reduction
+- `morphTargets=...` - Only include needed blendshapes instead of all 52
+
+### 2. Add URL Optimizer Utility
+
+Create a utility to transform raw RPM URLs into optimized versions:
+
+```typescript
+// src/utils/rpm-avatar-optimizer.ts
+export const optimizeRPMUrl = (url: string, options?: {
+  quality?: 'low' | 'medium' | 'high';
+  morphTargets?: string[];
+  textureFormat?: 'webp' | 'jpeg' | 'png';
+  lod?: 0 | 1 | 2;
+}) => {
+  const baseUrl = url.split('?')[0]; // Remove existing params
+  const params = new URLSearchParams();
+  
+  params.set('quality', options?.quality ?? 'low');
+  params.set('textureFormat', options?.textureFormat ?? 'webp');
+  params.set('lod', String(options?.lod ?? 1));
+  
+  const morphs = options?.morphTargets ?? [
+    'ARKit', 'mouthSmileLeft', 'mouthSmileRight', 
+    'eyeBlinkLeft', 'eyeBlinkRight', 'browInnerUp'
+  ];
+  params.set('morphTargets', morphs.join(','));
+  
+  return `${baseUrl}?${params.toString()}`;
+};
+```
+
+### 3. Implement Aggressive Preloading
+
+Preload avatars as soon as URLs are known, not when components render:
+
+```typescript
+// In RPMAvatarCreator when avatar is created
+const handleAvatarExported = (url: string) => {
+  const optimizedUrl = optimizeRPMUrl(url);
+  
+  // Start preloading immediately
+  useGLTF.preload(optimizedUrl);
+  
+  onAvatarCreated(optimizedUrl); // Store optimized URL
+};
+```
+
+### 4. Add Loading Progress States
+
+Show meaningful progress during avatar load:
+
+```typescript
+const [loadState, setLoadState] = useState<'idle' | 'loading' | 'ready'>('idle');
+const [progress, setProgress] = useState(0);
+
+// Use useProgress from drei
+const { progress } = useProgress();
+```
+
+### 5. Use Shared Canvas for Multiple Avatars
+
+Instead of creating a Canvas per avatar in lists, use a single shared Canvas with portals or render avatars to textures.
+
+### 6. Add Quality Tiers Based on Context
+
+- **Thumbnail/List View**: `quality=low`, `lod=2` (smallest possible)
+- **Profile/Dialog View**: `quality=medium`, `lod=1` (balanced)
+- **Customizer Preview**: `quality=high`, `lod=0` (full quality)
 
 ---
 
 ## File Changes
 
-### New Files (3)
+### New Files (1)
 
 | File | Purpose |
 |------|---------|
-| `src/components/avatar-3d/RPMAvatar.tsx` | Wrapper for Ready Player Me's Avatar component |
-| `src/components/avatar-3d/RPMAvatarCreator.tsx` | Avatar customization widget using RPM's creator |
-| `src/components/avatar-3d/AvatarLoader.tsx` | Smart loader that renders either RPM or fallback |
+| `src/utils/rpm-avatar-optimizer.ts` | URL optimization utilities for RPM avatars |
 
 ### Modified Files (5)
 
 | File | Changes |
 |------|---------|
-| `src/models/avatar-config.ts` | Add `avatarUrl?: string` field for GLB URL storage |
-| `src/models/houseguest/model.ts` | Add `avatarUrl?: string` to Houseguest interface |
-| `src/components/game-setup/PlayerForm.tsx` | Replace custom customizer with RPM creator option |
-| `src/components/houseguest/HouseguestAvatar.tsx` | Render RPM avatar when URL available |
-| `src/components/avatar-3d/AvatarCustomizer.tsx` | Add tab/option to use RPM creator |
+| `src/components/avatar-3d/RPMAvatarCreator.tsx` | Apply URL optimization on export, add loading progress |
+| `src/components/avatar-3d/AvatarLoader.tsx` | Add quality tier support, improve loading states, use preloading |
+| `src/components/avatar-3d/RPMAvatar.tsx` | Add loading callbacks, optimize render loop |
+| `src/components/avatar-3d/hooks/useAvatarPreloader.ts` | Preload optimized URLs, add batch preloading |
+| `src/models/avatar-config.ts` | Add `avatarQuality` preference field |
 
 ---
 
-## RPMAvatar Component
+## Technical Details
+
+### URL Optimization Impact
+
+| Quality | File Size | Load Time (3G) | Use Case |
+|---------|-----------|----------------|----------|
+| High (current) | 8-12 MB | 15-25s | Never for web |
+| Medium | 3-5 MB | 6-10s | Customizer only |
+| Low + WebP | 1-2 MB | 2-4s | All game views |
+| Low + WebP + lod=2 | 0.5-1 MB | 1-2s | Thumbnails |
+
+### Optimized Avatar Config
 
 ```typescript
-// src/components/avatar-3d/RPMAvatar.tsx
-import React from 'react';
-import { Avatar } from '@readyplayerme/visage';
-
-interface RPMAvatarProps {
-  modelSrc: string;
-  animationSrc?: string;
-  emotion?: 'neutral' | 'happy' | 'sad' | 'surprised' | 'angry';
-  style?: React.CSSProperties;
-  onLoaded?: () => void;
-}
-
-export const RPMAvatar: React.FC<RPMAvatarProps> = ({
-  modelSrc,
-  animationSrc = '/animations/idle.fbx',
-  emotion = 'neutral',
-  style,
-  onLoaded
-}) => {
-  return (
-    <Avatar
-      modelSrc={modelSrc}
-      animationSrc={animationSrc}
-      emotion={emotion}
-      style={style}
-      onLoaded={onLoaded}
-      cameraInitDistance={5}
-      effects={{ ambientOcclusion: true }}
-    />
-  );
+const avatarConfig = {
+  quality: 'low' as const,           // Changed from 'medium'
+  morphTargets: [
+    'ARKit',                          // Base expression set
+    'mouthSmileLeft', 'mouthSmileRight',
+    'eyeBlinkLeft', 'eyeBlinkRight',
+    'browInnerUp', 'mouthFrownLeft', 'mouthFrownRight'
+  ],
+  useDracoCompression: true,
+  textureFormat: 'webp',              // New: 40% smaller textures
+  lod: 1,                             // New: 50% fewer triangles
 };
 ```
 
----
-
-## RPMAvatarCreator Component
+### Preloading Strategy
 
 ```typescript
-// src/components/avatar-3d/RPMAvatarCreator.tsx
-import React, { useState } from 'react';
-import { AvatarCreator } from '@readyplayerme/react-avatar-creator';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+// When game starts, preload all RPM avatars
+const houseguests = useGameState(s => s.houseguests);
 
-interface RPMAvatarCreatorProps {
-  open: boolean;
-  onClose: () => void;
-  onAvatarCreated: (avatarUrl: string) => void;
-}
+useEffect(() => {
+  const rpmUrls = houseguests
+    .filter(hg => hg.avatarConfig?.modelSource === 'ready-player-me')
+    .map(hg => optimizeRPMUrl(hg.avatarConfig.modelUrl, { quality: 'low' }));
+  
+  // Preload in background with low priority
+  rpmUrls.forEach(url => useGLTF.preload(url));
+}, [houseguests]);
+```
 
-export const RPMAvatarCreator: React.FC<RPMAvatarCreatorProps> = ({
-  open,
-  onClose,
-  onAvatarCreated
-}) => {
-  const handleAvatarExported = (event: AvatarExportedEvent) => {
-    onAvatarCreated(event.data.url);
-    onClose();
-  };
+### Loading State Component
 
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[80vh]">
-        <AvatarCreator
-          subdomain="lovable-game"  // Would need RPM account
-          config={{
-            bodyType: 'halfbody',
-            quickStart: false,
-            language: 'en',
-          }}
-          style={{ width: '100%', height: '100%' }}
-          onAvatarExported={handleAvatarExported}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-};
+```typescript
+const RPMLoadingState: React.FC<{ progress: number }> = ({ progress }) => (
+  <div className="absolute inset-0 flex flex-col items-center justify-center">
+    <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+    <div className="w-24 h-1 bg-muted rounded-full overflow-hidden">
+      <motion.div 
+        className="h-full bg-primary"
+        initial={{ width: 0 }}
+        animate={{ width: `${progress}%` }}
+      />
+    </div>
+    <p className="text-xs text-muted-foreground mt-1">
+      {progress < 100 ? `Loading ${Math.round(progress)}%` : 'Preparing...'}
+    </p>
+  </div>
+);
 ```
 
 ---
 
-## Smart Avatar Loader
+## Additional Refinements
+
+### 1. Fallback Chain
+If RPM avatar fails or takes >5 seconds, automatically fall back to chibi:
 
 ```typescript
-// src/components/avatar-3d/AvatarLoader.tsx
-import React, { Suspense } from 'react';
-import { SimsAvatar } from './SimsAvatar';
-import { RPMAvatar } from './RPMAvatar';
-import { Avatar3DConfig } from '@/models/avatar-config';
-
-interface AvatarLoaderProps {
-  avatarUrl?: string;        // GLB URL from RPM
-  avatarConfig?: Avatar3DConfig;  // Fallback procedural config
-  size?: 'sm' | 'md' | 'lg';
-  animated?: boolean;
-}
-
-export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
-  avatarUrl,
-  avatarConfig,
-  size = 'md',
-  animated = true
-}) => {
-  // If we have a GLB URL, use Ready Player Me avatar
-  if (avatarUrl) {
-    return (
-      <Suspense fallback={<AvatarSkeleton size={size} />}>
-        <RPMAvatar modelSrc={avatarUrl} />
-      </Suspense>
-    );
-  }
-  
-  // Otherwise, use procedural chibi avatar
-  return (
-    <SimsAvatar 
-      config={avatarConfig} 
-      size={size} 
-      animated={animated} 
-    />
-  );
-};
+useEffect(() => {
+  const timeout = setTimeout(() => {
+    if (loadState !== 'ready') {
+      setForceChibibi(true);
+      console.warn('RPM avatar timeout, using chibi fallback');
+    }
+  }, 5000);
+  return () => clearTimeout(timeout);
+}, []);
 ```
 
----
-
-## Alternative: Self-Hosted GLB Models
-
-If you prefer not to depend on Ready Player Me, we could:
-
-1. **Source Free GLB Models**: Use models from Sketchfab, Mixamo, or create custom ones
-2. **Host in `/public`**: Store base models locally
-3. **Custom Material Swapping**: Modify colors/textures at runtime
-
-### Pros:
-- No external API dependency
-- Full control over appearance
-- Works offline
-
-### Cons:
-- Need 3D modeling skills for new characters
-- Manual rigging for animations
-- More development work
-
----
-
-## Data Model Changes
+### 2. Cache Busting for Updated Avatars
+Store a version timestamp to force refresh when avatar is re-customized:
 
 ```typescript
-// Updated Avatar3DConfig
-export interface Avatar3DConfig {
-  // Existing procedural config...
-  bodyType: BodyType;
-  // ...etc
-  
-  // NEW: GLB model URL (from RPM or custom)
-  modelUrl?: string;
-  
-  // NEW: Source type
-  modelSource?: 'procedural' | 'ready-player-me' | 'custom-glb';
-}
-
-// Updated Houseguest
-export interface Houseguest {
-  // ...existing fields
-  avatarUrl?: string;  // Direct GLB URL for fast loading
-}
+const urlWithCache = `${optimizedUrl}&v=${avatarVersion}`;
 ```
 
----
+### 3. Network-Aware Quality Selection
+Detect connection speed and auto-select quality:
 
-## Migration Strategy
+```typescript
+const connection = navigator.connection;
+const quality = connection?.effectiveType === '4g' ? 'medium' : 'low';
+```
 
-1. **Phase 1**: Add RPM integration as an alternative option
-   - Keep existing chibi avatars working
-   - Add "Use Ready Player Me" button in customizer
-   
-2. **Phase 2**: Store avatar URLs in database
-   - Save GLB URLs when users create RPM avatars
-   - Load from URL during gameplay
+### 4. Lazy Load RPM SDK
+The SDK itself is large - ensure it's only loaded when user clicks "Pro Avatar":
 
-3. **Phase 3**: Optional - Replace all NPCs with RPM
-   - Pre-generate NPC avatars via RPM API
-   - Store URLs for faster loading
+```typescript
+// Already implemented with lazy() but ensure the chunk is small
+const LazyRPMCreator = lazy(() => import('./RPMAvatarCreator'));
+```
 
 ---
 
 ## Expected Results
 
 After implementation:
-- **Professional Quality**: Avatars that look like they belong in a modern game
-- **Rich Expressions**: 52 blendshapes for nuanced emotions
-- **Animation Ready**: Works with Mixamo animation library
-- **User Choice**: Players can use RPM or stick with chibi style
-- **Future-Proof**: Can add lip-sync, full body, VR support later
-
----
-
-## Questions to Consider
-
-1. **RPM Account**: Ready Player Me requires setting up a free account and subdomain - is this acceptable?
-
-2. **Style Preference**: RPM offers realistic or stylized avatars - which fits the game better?
-
-3. **Fallback Strategy**: Should NPCs use RPM too, or stay procedural for faster loading?
-
-4. **Storage**: Where should avatar URLs be stored? (Database, localStorage, or regenerate each session?)
+- **Load time reduction**: From 15-25s to 2-4s (80% faster)
+- **File size reduction**: From 8-12 MB to 1-2 MB (85% smaller)
+- **Better UX**: Progress indicator instead of blank screen
+- **Graceful fallback**: Chibi avatar shown if RPM fails
+- **Preloaded avatars**: Zero wait time for previously seen avatars
 
