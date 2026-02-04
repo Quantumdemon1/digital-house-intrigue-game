@@ -24,6 +24,7 @@ interface PlayerFormProps {
   onSubmit: () => void;
   onBack?: () => void;
   selectedTemplate?: CharacterTemplate | null;
+  onAvatarChange?: (url: string) => void;
 }
 
 const PlayerForm: React.FC<PlayerFormProps> = ({
@@ -34,7 +35,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
   onToggleTrait,
   onSubmit,
   onBack,
-  selectedTemplate
+  selectedTemplate,
+  onAvatarChange
 }) => {
   const {
     playerName,
@@ -156,7 +158,12 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <AvatarPreview formData={formData} avatarUrl={avatarUrl} />
+            <AvatarPreview 
+              formData={formData} 
+              avatarUrl={avatarUrl} 
+              onAvatarChange={onAvatarChange}
+              showImageOptions={true}
+            />
           </motion.div>
         </div>
         

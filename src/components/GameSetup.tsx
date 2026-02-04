@@ -313,6 +313,7 @@ const GameSetup: React.FC = () => {
               onSubmit={handlePlayerCreation}
               onBack={() => setStep(1)}
               selectedTemplate={selectedTemplate}
+              onAvatarChange={(url) => handleFormDataChange('avatarUrl', url)}
             />
           </div>
         </motion.div>
