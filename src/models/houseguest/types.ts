@@ -1,8 +1,12 @@
+import { Avatar3DConfig } from '@/models/avatar-config';
 
 /**
  * @file models/houseguest/types.ts
  * @description Type definitions for houseguests
  */
+
+// Re-export Avatar3DConfig for convenience
+export type { Avatar3DConfig };
 
 // Houseguest Status
 export type HouseguestStatus = 'Active' | 'Evicted' | 'Jury' | 'Winner' | 'Runner-Up';
@@ -69,4 +73,11 @@ export interface MentalState {
     };
   };
   reflections: string[]; // Internal monologue/thoughts
+}
+
+/**
+ * Extended Houseguest interface with 3D avatar support
+ */
+export interface Houseguest3DExtension {
+  avatarConfig?: Avatar3DConfig;
 }

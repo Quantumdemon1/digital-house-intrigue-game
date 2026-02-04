@@ -1,9 +1,13 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Crown, Target, Shield, UserX, Check } from 'lucide-react';
+import { Avatar3DConfig } from '@/models/avatar-config';
+import { MoodType } from '@/models/houseguest/types';
+
+// Lazy load 3D avatar to avoid bundle size impact
+const SimsAvatar = React.lazy(() => import('@/components/avatar-3d/SimsAvatar'));
 
 export type AvatarStatus = 'hoh' | 'nominee' | 'pov' | 'safe' | 'evicted' | 'none';
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -15,9 +19,13 @@ interface StatusAvatarProps {
   showBadge?: boolean;
   className?: string;
   imageUrl?: string;
-  avatarUrl?: string; // Alias for imageUrl to match Houseguest model
+  avatarUrl?: string;
   isPlayer?: boolean;
   animated?: boolean;
+  // 3D avatar props
+  use3D?: boolean;
+  avatarConfig?: Avatar3DConfig;
+  mood?: MoodType;
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
@@ -92,6 +100,43 @@ const statusConfig: Record<AvatarStatus, {
   }
 };
 
+// Map our sizes to 3D avatar sizes
+const size3DMap: Record<AvatarSize, 'sm' | 'md' | 'lg' | 'xl'> = {
+  sm: 'sm',
+  md: 'md',
+  lg: 'lg',
+  xl: 'xl'
+};
+
+/**
+ * 3D Avatar wrapper with status badge overlay
+ */
+const Avatar3DWrapper: React.FC<{
+  config: Avatar3DConfig;
+  size: AvatarSize;
+  status: AvatarStatus;
+  mood: MoodType;
+  isPlayer: boolean;
+  animated: boolean;
+  name: string;
+}> = ({ config, size, status, mood, isPlayer, animated, name }) => {
+  return (
+    <React.Suspense fallback={
+      <div className={cn(sizeClasses[size], 'bg-muted/30 rounded-full animate-pulse')} />
+    }>
+      <SimsAvatar
+        config={config}
+        size={size3DMap[size]}
+        status={status}
+        mood={mood}
+        isPlayer={isPlayer}
+        animated={animated}
+        showShadow={false}
+      />
+    </React.Suspense>
+  );
+};
+
 export const StatusAvatar: React.FC<StatusAvatarProps> = ({
   name,
   status = 'none',
@@ -101,13 +146,18 @@ export const StatusAvatar: React.FC<StatusAvatarProps> = ({
   imageUrl,
   avatarUrl,
   isPlayer = false,
-  animated = true
+  animated = true,
+  use3D = false,
+  avatarConfig,
+  mood = 'Neutral'
 }) => {
   const config = statusConfig[status];
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const actualImageUrl = imageUrl || avatarUrl;
-
   const hasActiveStatus = status !== 'none' && status !== 'evicted';
+
+  // Render 3D avatar if enabled and config available
+  const render3D = use3D && avatarConfig;
 
   return (
     <div className={cn('status-avatar relative inline-flex', className)}>
@@ -139,28 +189,40 @@ export const StatusAvatar: React.FC<StatusAvatarProps> = ({
         )} />
       )}
       
-      {/* Avatar */}
-      <Avatar 
-        className={cn(
-          sizeClasses[size],
-          'border-2 border-background shadow-game-md transition-all duration-300',
-          status === 'evicted' && 'grayscale opacity-60',
-          isPlayer && 'ring-2 ring-bb-green ring-offset-2 ring-offset-background'
-        )}
-      >
-        {actualImageUrl ? (
-          <img src={actualImageUrl} alt={name} className="w-full h-full object-cover rounded-full" />
-        ) : (
-          <AvatarFallback 
-            className={cn(
-              'bg-gradient-to-br from-muted via-muted to-muted-foreground/10 text-foreground font-semibold',
-              textSizeClasses[size]
-            )}
-          >
-            {initials}
-          </AvatarFallback>
-        )}
-      </Avatar>
+      {/* Avatar - 3D or 2D */}
+      {render3D ? (
+        <Avatar3DWrapper
+          config={avatarConfig}
+          size={size}
+          status={status}
+          mood={mood}
+          isPlayer={isPlayer}
+          animated={animated}
+          name={name}
+        />
+      ) : (
+        <Avatar 
+          className={cn(
+            sizeClasses[size],
+            'border-2 border-background shadow-game-md transition-all duration-300',
+            status === 'evicted' && 'grayscale opacity-60',
+            isPlayer && 'ring-2 ring-bb-green ring-offset-2 ring-offset-background'
+          )}
+        >
+          {actualImageUrl ? (
+            <img src={actualImageUrl} alt={name} className="w-full h-full object-cover rounded-full" />
+          ) : (
+            <AvatarFallback 
+              className={cn(
+                'bg-gradient-to-br from-muted via-muted to-muted-foreground/10 text-foreground font-semibold',
+                textSizeClasses[size]
+              )}
+            >
+              {initials}
+            </AvatarFallback>
+          )}
+        </Avatar>
+      )}
 
       {/* Animated status badge */}
       {showBadge && status !== 'none' && (
