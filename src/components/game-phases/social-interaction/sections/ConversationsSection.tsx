@@ -1,12 +1,14 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, User } from 'lucide-react';
+import { MessageSquare, User, Heart } from 'lucide-react';
 import { SocialActionChoice } from '@/game-states/GameStateBase';
 import { useGame } from '@/contexts/GameContext';
 import { useAIThoughtsContext } from '@/components/ai-feedback';
 import AIThoughtDisplay from '../AIThoughtDisplay';
 import { StatusAvatar } from '@/components/ui/status-avatar';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 interface ConversationsSectionProps {
   actions: SocialActionChoice[];
@@ -14,12 +16,32 @@ interface ConversationsSectionProps {
 }
 
 const ConversationsSection: React.FC<ConversationsSectionProps> = ({ actions, onActionClick }) => {
-  const { game } = useGame();
+  const { gameState, getRelationship } = useGame();
   const { addThought } = useAIThoughtsContext();
+  const [recentInteraction, setRecentInteraction] = useState<{
+    targetId: string;
+    change: number;
+  } | null>(null);
+  
+  const player = gameState.houseguests.find(h => h.isPlayer);
+  
+  // Watch for relationship impact changes
+  useEffect(() => {
+    if (gameState.lastRelationshipImpact) {
+      const { targetId, value, timestamp } = gameState.lastRelationshipImpact;
+      // Only show if it's a recent change (within 5 seconds)
+      if (Date.now() - timestamp < 5000) {
+        setRecentInteraction({ targetId, change: value });
+        // Clear after animation
+        const timer = setTimeout(() => setRecentInteraction(null), 2500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [gameState.lastRelationshipImpact]);
   
   const handleActionClick = (actionId: string, params?: any) => {
     if (params?.targetId) {
-      const targetHouseguest = game?.getHouseguestById(params.targetId);
+      const targetHouseguest = gameState.houseguests.find(h => h.id === params.targetId);
       if (targetHouseguest) {
         const personalities = [
           "I wonder what they want to talk about...",
@@ -62,7 +84,8 @@ const ConversationsSection: React.FC<ConversationsSectionProps> = ({ actions, on
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {Object.entries(actionsByTarget).map(([targetId, targetActions]) => {
           const targetName = targetActions[0]?.parameters?.targetName || "Unknown";
-          const targetHouseguest = game?.getHouseguestById(targetId);
+          const targetHouseguest = gameState.houseguests.find(h => h.id === targetId);
+          const relationship = player ? getRelationship(player.id, targetId) : 0;
           
           return (
             <div 
@@ -83,13 +106,41 @@ const ConversationsSection: React.FC<ConversationsSectionProps> = ({ actions, on
                     <User className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}
-                <div>
+                <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-foreground">{targetName}</h4>
                   {targetHouseguest?.occupation && (
                     <p className="text-xs text-muted-foreground">{targetHouseguest.occupation}</p>
                   )}
                 </div>
+                {/* Relationship Score */}
+                <div className={cn(
+                  "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+                  relationship > 30 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : 
+                  relationship > 0 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                  relationship > -20 ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" : 
+                  "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                )}>
+                  <Heart className="h-3 w-3" />
+                  {relationship >= 0 ? '+' : ''}{relationship}
+                </div>
               </div>
+              
+              {/* Relationship Feedback Animation */}
+              <AnimatePresence>
+                {recentInteraction?.targetId === targetId && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                    className="mb-3 px-3 py-2 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800"
+                  >
+                    <span className="text-green-700 dark:text-green-400 text-sm font-medium flex items-center gap-1">
+                      <Heart className="h-3 w-3 fill-current" />
+                      +{recentInteraction.change} relationship
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               {/* AI Thought Display */}
               <AIThoughtDisplay targetId={targetId} />
