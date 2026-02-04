@@ -1,333 +1,320 @@
 
-# Plan: Complete UI/UX Visual Revamp
+
+# Plan: Avatar Selector with AI-Generated Character Templates
 
 ## Overview
 
-This plan transforms the game's visual identity from a generic look to a polished, immersive "Big Brother Digital House" experience with enhanced avatars, modern animations, a settings system with dark mode toggle, and a more dramatic aesthetic throughout.
+Create a character selection system inspired by the Survivor game reference image, featuring premade houseguest templates with AI-generated realistic portraits. Players can browse through pre-designed characters in a visually appealing carousel/grid interface, select one as their template, and then customize the details.
 
 ---
 
-## Part 1: Settings System with Dark Mode
+## Part 1: AI Image Generation Service
 
-### New File: `src/components/settings/SettingsProvider.tsx`
+### New File: `src/services/avatar-generator.ts`
 
-Create a settings context that persists preferences to localStorage:
+Create a service to generate realistic character portraits using the Lovable AI image generation API (Nano banana model):
 
 ```typescript
-interface GameSettings {
-  theme: 'light' | 'dark' | 'system';
-  animationSpeed: 'slow' | 'normal' | 'fast';
-  soundEnabled: boolean;
-  showAIThoughts: boolean;
-  compactMode: boolean;
+interface GeneratedAvatar {
+  id: string;
+  imageUrl: string;
+  name: string;
+  description: string;
+}
+
+// Generate character portrait based on description
+async function generateCharacterPortrait(
+  description: string,
+  style: 'realistic' | 'stylized'
+): Promise<string>
+
+// Batch generate multiple character portraits
+async function generateHouseguestPortraits(
+  count: number
+): Promise<GeneratedAvatar[]>
+```
+
+The prompts will request:
+- High quality, realistic portrait headshots
+- Diverse ages, ethnicities, and appearances
+- Professional lighting, neutral background
+- Suitable for a reality TV game show contestant
+
+---
+
+## Part 2: Premade Character Templates
+
+### Modify: `src/components/game-setup/defaultHouseguests.ts`
+
+Expand the default houseguests with more detailed character profiles and placeholder avatar URLs that will be replaced with generated images:
+
+```typescript
+interface CharacterTemplate {
+  id: string;
+  name: string;
+  age: number;
+  occupation: string;
+  hometown: string;
+  bio: string;
+  imageUrl: string;          // Will store generated image
+  traits: PersonalityTrait[];
+  
+  // New fields for character selection
+  archetype: 'strategist' | 'competitor' | 'socialite' | 'wildcard' | 'underdog';
+  tagline: string;           // Short catchy description
+  appearance: {              // For AI generation prompts
+    gender: 'male' | 'female' | 'non-binary';
+    ageRange: string;
+    features: string;
+  };
 }
 ```
 
-### New File: `src/components/settings/SettingsDialog.tsx`
-
-A modal dialog accessible from the header with:
-- Dark/Light/System theme toggle with preview
-- Animation speed control
-- Sound toggle (for future use)
-- AI thought bubble visibility toggle
-- Compact mode toggle for mobile
-
-### Modify: `src/App.tsx`
-
-Wrap the app with `ThemeProvider` from `next-themes` to enable dark mode:
-
-```typescript
-import { ThemeProvider } from 'next-themes';
-
-<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-  {/* existing providers */}
-</ThemeProvider>
-```
-
-### Modify: `src/components/game-screen/GameHeader.tsx`
-
-Add a settings gear icon button next to the profile button that opens the settings dialog.
+Create 16+ diverse character templates representing different archetypes:
+- **Strategists**: Calculating, always planning
+- **Competitors**: Physical threats, win competitions
+- **Socialites**: Charm everyone, alliance builders
+- **Wildcards**: Unpredictable, make big moves
+- **Underdogs**: Quiet threats, fly under radar
 
 ---
 
-## Part 2: Enhanced Avatar System
+## Part 3: Avatar Selection Component
 
-### New File: `src/components/houseguest/EnhancedAvatar.tsx`
+### New File: `src/components/game-setup/AvatarSelector.tsx`
 
-Create a more visually striking avatar component:
+Create a visually striking avatar selection grid inspired by the Survivor reference:
 
-- **Gradient Backgrounds**: Dynamic gradient based on houseguest personality traits
-- **Status Rings**: Animated glowing rings for HoH (gold pulse), Nominee (red pulse), PoV (gold shimmer)
-- **Initials with Style**: Better typography with text shadows and gradient fills
-- **Hover Effects**: Scale + glow on hover with tooltip
-- **Player Indicator**: Special "You" badge with green accent
-- **Mood Indicator**: Small emoji or color dot showing current mood state
+**Visual Elements:**
+- Circular portrait frames with decorative borders (like the reference)
+- Gold/bronze ornate frame design around selected avatar
+- Name plates below each character
+- Smooth hover animations with scale and glow effects
+- Selected state with animated ring pulse
+
+**Layout:**
+- Horizontal scrollable carousel on mobile
+- 3x4 or 4x4 grid on desktop
+- Large preview of selected character on the side
 
 ```typescript
-interface EnhancedAvatarProps {
-  houseguest: Houseguest;
-  size: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  showMood?: boolean;
-  showStatus?: boolean;
-  animated?: boolean;
-  onClick?: () => void;
+interface AvatarSelectorProps {
+  templates: CharacterTemplate[];
+  selectedId: string | null;
+  onSelect: (template: CharacterTemplate) => void;
+  isLoading?: boolean;
 }
 ```
 
-### Trait-Based Avatar Colors
+### Component Structure:
 
-Map personality traits to gradient color schemes:
-- **Strategic**: Blue-purple gradient
-- **Social**: Pink-orange gradient
-- **Competitive**: Red-orange gradient
-- **Loyal**: Green-teal gradient
-- **Sneaky**: Purple-dark gradient
-- **Emotional**: Pink-red gradient
-
-### Modify: `src/components/ui/status-avatar.tsx`
-
-Upgrade with:
-- Framer Motion animations for status changes
-- Particle effects on status badge
-- Better shadow system with colored glows
-- Smooth transitions between states
+```
++--------------------------------------------------+
+|  Choose Your Houseguest                          |
++--------------------------------------------------+
+|                                                  |
+|  +--------+  +--------+  +--------+  +--------+  |
+|  |  [img] |  |  [img] |  |  [img] |  |  [img] |  |
+|  |  Alex  |  |  Morgan|  |  Jordan|  |  Casey |  |
+|  +--------+  +--------+  +--------+  +--------+  |
+|                                                  |
+|  +--------+  +--------+  +--------+  +--------+  |
+|  |  [img] |  |  [img] |  |  [img] |  |  [img] |  |
+|  |  Riley |  |  Jamie |  |  Quinn |  |  Avery |  |
+|  +--------+  +--------+  +--------+  +--------+  |
+|                                                  |
+|  [Generate New Characters]  [Create Custom]      |
++--------------------------------------------------+
+```
 
 ---
 
-## Part 3: Animation System Overhaul
+## Part 4: Character Portrait Frame Component
 
-### Modify: `tailwind.config.ts`
+### New File: `src/components/game-setup/CharacterFrame.tsx`
 
-Add new dramatic keyframes:
+A decorative frame component matching the Survivor aesthetic:
+
+**Visual Features:**
+- Circular image container with gradient border
+- Ornate frame decoration (gold/bronze metallic look)
+- Name plate with styled background
+- Status indicators (Selected, Locked, etc.)
+- Hover state with glow effect
+- Click animation
 
 ```typescript
-keyframes: {
-  // Dramatic entrance for key moments
-  'dramatic-enter': {
-    '0%': { opacity: '0', transform: 'scale(0.8) translateY(20px)', filter: 'blur(10px)' },
-    '100%': { opacity: '1', transform: 'scale(1) translateY(0)', filter: 'blur(0)' }
-  },
-  
-  // Glowing pulse for important elements
-  'glow-pulse': {
-    '0%, 100%': { boxShadow: '0 0 20px var(--glow-color)' },
-    '50%': { boxShadow: '0 0 40px var(--glow-color), 0 0 60px var(--glow-color)' }
-  },
-  
-  // Spotlight effect for reveals
-  'spotlight': {
-    '0%': { clipPath: 'circle(0% at 50% 50%)' },
-    '100%': { clipPath: 'circle(100% at 50% 50%)' }
-  },
-  
-  // Card flip for vote reveals
-  'card-flip': {
-    '0%': { transform: 'rotateY(180deg)', opacity: '0' },
-    '100%': { transform: 'rotateY(0deg)', opacity: '1' }
-  },
-  
-  // Shimmer effect for loading states
-  'shimmer-sweep': {
-    '0%': { backgroundPosition: '-200% 0' },
-    '100%': { backgroundPosition: '200% 0' }
-  },
-  
-  // Bounce in for notifications
-  'bounce-in': {
-    '0%': { transform: 'scale(0)', opacity: '0' },
-    '50%': { transform: 'scale(1.1)' },
-    '100%': { transform: 'scale(1)', opacity: '1' }
-  }
+interface CharacterFrameProps {
+  template: CharacterTemplate;
+  isSelected: boolean;
+  isHovered?: boolean;
+  size: 'sm' | 'md' | 'lg';
+  onClick: () => void;
+  showName?: boolean;
+  showTraits?: boolean;
 }
 ```
 
-### New Framer Motion Variants
+**Styling Details:**
+- Frame border: Gradient from amber-500 to orange-600
+- Selected state: Animated gold glow pulse
+- Name plate: Dark background with contrasting text
+- Trait badges below name
 
-Create reusable animation variants for consistent motion:
+---
 
-```typescript
-// src/lib/motion-variants.ts
-export const cardVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.95 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: 'easeOut' } },
-  exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.2 } }
-};
+## Part 5: Character Detail Panel
 
-export const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-};
+### New File: `src/components/game-setup/CharacterDetailPanel.tsx`
 
-export const dramaticReveal = {
-  hidden: { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
-  visible: { opacity: 1, scale: 1, filter: 'blur(0)', transition: { duration: 0.6, ease: 'easeOut' } }
-};
+Shows expanded details of the selected character:
+
+```
++----------------------------------+
+|     [Large Portrait Image]       |
+|                                  |
+|     "ALEX CHEN"                  |
+|     The Mastermind               |
+|                                  |
+|     Age: 28                      |
+|     Occupation: Marketing Exec   |
+|     Hometown: San Francisco, CA  |
+|                                  |
+|     "Strategic player who        |
+|      excels at social            |
+|      manipulation."              |
+|                                  |
+|     [Strategic] [Social]         |
+|                                  |
+|     Stats Preview:               |
+|     Mental: ████████░░  8/10     |
+|     Social: ███████░░░  7/10     |
+|     Physical: █████░░░░  5/10    |
+|                                  |
+|     [Select This Character]      |
++----------------------------------+
 ```
 
 ---
 
-## Part 4: Component Visual Upgrades
+## Part 6: Integrate into Game Setup Flow
 
-### Modify: `src/components/ui/game-card.tsx`
+### Modify: `src/components/GameSetup.tsx`
 
-Enhanced game cards with:
-- Glassmorphism effect option
-- Gradient borders
-- Animated hover states using Framer Motion
-- Inner glow effects
-- Better shadow layering
+Add a new step before the player form for character selection:
+
+**Updated Flow:**
+1. **Step 1 (NEW)**: Avatar Selection - Choose a premade character template
+2. **Step 2**: Customize Character - Modify name, bio, traits, stats
+3. **Step 3**: Review Cast - See all houseguests before entering
 
 ```typescript
-const variantClasses = {
-  default: 'bg-card/95 backdrop-blur-sm border-border/50',
-  glass: 'bg-white/10 dark:bg-black/20 backdrop-blur-lg border-white/20 dark:border-white/10',
-  primary: 'bg-gradient-to-br from-bb-blue to-bb-blue-dark border-bb-blue/50',
-  danger: 'bg-gradient-to-br from-bb-red to-bb-red-dark border-bb-red/50',
-  gold: 'bg-gradient-to-br from-bb-gold to-amber-600 border-bb-gold/50',
-  success: 'bg-gradient-to-br from-bb-green to-emerald-600 border-bb-green/50'
+const [step, setStep] = useState<1 | 2 | 3>(1);
+const [selectedTemplate, setSelectedTemplate] = useState<CharacterTemplate | null>(null);
+
+// When template selected, pre-fill form data
+const handleTemplateSelect = (template: CharacterTemplate) => {
+  setSelectedTemplate(template);
+  setPlayerFormData({
+    ...playerFormData,
+    playerName: template.name,
+    playerAge: template.age,
+    playerOccupation: template.occupation,
+    playerHometown: template.hometown,
+    playerBio: template.bio,
+    selectedTraits: template.traits,
+  });
+  setStep(2);
 };
 ```
 
-### Modify: `src/components/ui/button.tsx`
+### Modify: `src/components/game-setup/PlayerForm.tsx`
 
-Add new button variants:
-- `glow`: Button with animated glow effect
-- `gradient`: Gradient background button
-- `glass`: Glassmorphism button
-- `dramatic`: Extra large with shadow and animation
-
-### New File: `src/components/ui/animated-badge.tsx`
-
-Badges with entrance animations and optional pulse effects for status indicators.
+Update to show the selected avatar image instead of just initials:
+- Display the generated portrait in the avatar preview
+- Allow "Change Avatar" to go back to selection
+- Keep all customization options available
 
 ---
 
-## Part 5: Auth Page Redesign
+## Part 7: Generate Character Portraits on Demand
 
-### Modify: `src/components/auth/AuthPage.tsx`
+### New File: `src/hooks/useAvatarGeneration.ts`
 
-Transform from generic form to immersive entry:
-- Full-screen gradient background with animated particles
-- "Big Brother eye" logo animation
-- Glassmorphism card for login/signup
-- Animated text effects for title
-- Subtle surveillance camera scan animation in background
-- Smooth tab transitions with Framer Motion
+Hook to manage avatar generation state:
 
----
-
-## Part 6: Game Setup Screen Redesign
-
-### Modify: `src/components/GameSetup.tsx` and `src/components/game-setup/PlayerForm.tsx`
-
-Major visual overhaul:
-- Step indicator with animated progress
-- Character creation with live avatar preview
-- Trait selection as interactive cards with hover effects
-- Stats displayed as animated circular progress or radar chart
-- "Enter the House" dramatic button with glow effect
-- Background with subtle animated grid pattern
-
-### New Component: `src/components/game-setup/AvatarPreview.tsx`
-
-Live preview of the player's avatar that updates as they select traits:
-- Shows initials with trait-based gradient
-- Displays selected traits as small badges
-- Animated stats display around the avatar
-
----
-
-## Part 7: Game Screen Polish
-
-### Modify: `src/components/game-screen/GameScreen.tsx`
-
-- Animated background patterns that subtly shift
-- Better spacing and visual hierarchy
-- Smoother transitions between phases
-
-### Modify: `src/components/game-screen/GameHeader.tsx`
-
-- More dramatic title treatment with gradient text
-- Animated week counter with flip effect
-- Settings button with gear icon
-- Better responsive design for mobile
-
-### Modify: `src/components/game-screen/GameSidebar.tsx`
-
-- Collapsible sections with smooth animations
-- Better status card designs
-- Houseguest list with staggered entrance animations
-- Visual improvements for power holders display
-
----
-
-## Part 8: Phase-Specific Visual Enhancements
-
-### Competition Phases (HoH, PoV)
-
-- Dramatic title card entrance
-- Competitor cards with animated borders
-- Winner reveal with confetti and spotlight animation
-- Progress bars with gradient fills
-
-### Nomination Phase
-
-- Key ceremony animation (keys turning/clicking)
-- Dramatic nominee reveal with red glow
-- Tension-building visual effects
-
-### Eviction Phase
-
-- Vote counter with flip animation for each vote
-- Split-screen nominee comparison
-- Evicted houseguest grayscale transition
-- "Goodbye" message fade effect
-
-### Social Phase
-
-- Location cards with ambient animations
-- Houseguest cards with relationship color borders
-- Action buttons with hover glow effects
-- NPC activity feed with smooth entry animations
-
----
-
-## Part 9: Color System Enhancement
-
-### Modify: `src/index.css`
-
-Enhanced color palette for dark mode with better contrast:
-
-```css
-.dark {
-  /* Richer dark background */
-  --background: 222 47% 6%;
-  --foreground: 210 40% 96%;
-  
-  /* Enhanced card surfaces */
-  --card: 222 47% 10%;
-  --card-foreground: 210 40% 96%;
-  
-  /* Brighter accent colors for dark mode */
-  --bb-blue: 210 100% 55%;
-  --bb-red: 6 100% 65%;
-  --bb-gold: 36 100% 55%;
-  --bb-green: 145 100% 45%;
-  
-  /* Stronger glows */
-  --shadow-glow-primary: 0 0 30px hsl(210 100% 55% / 0.6);
-  --shadow-glow-gold: 0 0 30px hsl(36 100% 55% / 0.6);
+```typescript
+interface UseAvatarGenerationResult {
+  avatars: GeneratedAvatar[];
+  isGenerating: boolean;
+  error: string | null;
+  generateAvatars: (count: number) => Promise<void>;
+  regenerateAvatar: (id: string) => Promise<void>;
 }
 ```
 
-Add CSS custom properties for glow colors that can be used in animations:
+**Generation Strategy:**
+1. Start with placeholder images initially
+2. "Generate New Looks" button triggers AI generation
+3. Generated images are stored in state
+4. Option to regenerate individual characters
+5. Loading states with skeleton UI
 
-```css
-:root {
-  --glow-primary: hsl(var(--bb-blue) / 0.5);
-  --glow-danger: hsl(var(--bb-red) / 0.5);
-  --glow-gold: hsl(var(--bb-gold) / 0.5);
-  --glow-success: hsl(var(--bb-green) / 0.5);
+---
+
+## Part 8: Character Template Data
+
+### New File: `src/data/character-templates.ts`
+
+Comprehensive character template data:
+
+```typescript
+export const characterTemplates: CharacterTemplate[] = [
+  {
+    id: 'strategist-1',
+    name: 'Alex Chen',
+    archetype: 'strategist',
+    tagline: 'The Mastermind',
+    age: 28,
+    occupation: 'Marketing Executive',
+    hometown: 'San Francisco, CA',
+    bio: 'Strategic player who excels at social manipulation and long-term planning.',
+    traits: ['Strategic', 'Social'],
+    appearance: {
+      gender: 'male',
+      ageRange: '25-30',
+      features: 'East Asian, confident expression, professional look'
+    },
+    imageUrl: '/placeholder.svg'
+  },
+  // ... 15 more diverse characters
+];
+```
+
+**Character Diversity:**
+- Mix of genders, ages, ethnicities
+- Various occupations and backgrounds
+- Different play style archetypes
+- Unique personality combinations
+
+---
+
+## Part 9: Custom Avatar Creation Mode
+
+### New File: `src/components/game-setup/CustomAvatarCreator.tsx`
+
+For players who want fully custom characters:
+
+**Features:**
+- Text input for appearance description
+- "Generate My Look" button to create custom portrait
+- Regenerate option if not satisfied
+- Fallback to gradient avatar if generation fails
+
+```typescript
+interface CustomAvatarCreatorProps {
+  onAvatarGenerated: (imageUrl: string) => void;
+  onCancel: () => void;
 }
 ```
 
@@ -337,65 +324,127 @@ Add CSS custom properties for glow colors that can be used in animations:
 
 | File | Purpose |
 |------|---------|
-| `src/components/settings/SettingsProvider.tsx` | Settings context with persistence |
-| `src/components/settings/SettingsDialog.tsx` | Settings modal UI |
-| `src/components/settings/index.ts` | Exports |
-| `src/components/houseguest/EnhancedAvatar.tsx` | New avatar component |
-| `src/components/game-setup/AvatarPreview.tsx` | Live avatar preview |
-| `src/lib/motion-variants.ts` | Reusable Framer Motion variants |
-| `src/components/ui/animated-badge.tsx` | Animated badge component |
+| `src/services/avatar-generator.ts` | AI image generation service |
+| `src/components/game-setup/AvatarSelector.tsx` | Main avatar selection grid |
+| `src/components/game-setup/CharacterFrame.tsx` | Decorative portrait frame |
+| `src/components/game-setup/CharacterDetailPanel.tsx` | Selected character details |
+| `src/components/game-setup/CustomAvatarCreator.tsx` | Custom avatar generation |
+| `src/hooks/useAvatarGeneration.ts` | Avatar generation hook |
+| `src/data/character-templates.ts` | Premade character data |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/App.tsx` | Add ThemeProvider wrapper |
-| `src/index.css` | Enhanced dark mode colors, new utility classes |
-| `tailwind.config.ts` | New keyframes and animations |
-| `src/components/ui/game-card.tsx` | Glassmorphism, better variants |
-| `src/components/ui/button.tsx` | New glow/gradient variants |
-| `src/components/ui/status-avatar.tsx` | Framer Motion animations |
-| `src/components/auth/AuthPage.tsx` | Full redesign with animations |
-| `src/components/GameSetup.tsx` | Visual overhaul |
-| `src/components/game-setup/PlayerForm.tsx` | Enhanced styling |
-| `src/components/game-screen/GameHeader.tsx` | Settings button, polish |
-| `src/components/game-screen/GameScreen.tsx` | Background improvements |
-| `src/components/game-screen/GameSidebar.tsx` | Animation polish |
-| `src/components/houseguest/HouseguestCard.tsx` | Use EnhancedAvatar |
+| `src/components/GameSetup.tsx` | Add character selection step |
+| `src/components/game-setup/PlayerForm.tsx` | Show selected avatar, add change button |
+| `src/components/game-setup/AvatarPreview.tsx` | Support showing generated images |
+| `src/components/game-setup/defaultHouseguests.ts` | Enhanced character data |
+| `src/components/game-setup/HouseguestList.tsx` | Display generated portraits |
+| `src/components/game-setup/types.ts` | Add avatar URL to form data |
+| `src/config.ts` | Add avatar generation settings |
 
 ---
 
-## Technical Considerations
+## Technical Details
 
-### Performance
-- Use CSS animations where possible for performance
-- Implement `AnimatePresence` with exit animations only where needed
-- Lazy load heavy animation components
-- Respect `prefers-reduced-motion` media query
+### AI Image Generation Prompts
 
-### Accessibility
-- Ensure color contrast meets WCAG AA standards
-- Provide motion alternatives for users who prefer reduced motion
-- Maintain keyboard navigation
-- Add proper ARIA labels
+For generating realistic character portraits:
 
-### Responsive Design
-- All animations scale appropriately for mobile
-- Settings dialog works on small screens
-- Avatar sizes adapt to container
+```typescript
+const generatePrompt = (character: CharacterTemplate) => `
+  Professional headshot portrait of a ${character.appearance.ageRange} year old 
+  ${character.appearance.gender} for a reality TV show contestant.
+  ${character.appearance.features}.
+  High quality, studio lighting, neutral gray background.
+  Confident, friendly expression. Shoulders and face visible.
+  Photorealistic style, 4K quality.
+`;
+```
+
+### Character Frame Styling
+
+```css
+.character-frame {
+  /* Ornate border gradient */
+  background: linear-gradient(135deg, 
+    hsl(36 100% 50%) 0%, 
+    hsl(28 100% 45%) 50%, 
+    hsl(36 100% 40%) 100%
+  );
+  
+  /* Metallic effect */
+  box-shadow: 
+    inset 0 2px 4px rgba(255,255,255,0.3),
+    inset 0 -2px 4px rgba(0,0,0,0.2),
+    0 4px 12px rgba(0,0,0,0.3);
+}
+
+.character-frame.selected {
+  animation: glow-pulse-ring 2s ease-in-out infinite;
+}
+```
+
+### Form Data Type Update
+
+```typescript
+interface PlayerFormData {
+  // ... existing fields
+  avatarUrl?: string;        // Generated or selected avatar URL
+  templateId?: string;       // ID of selected template
+}
+```
 
 ---
 
-## Summary of Visual Changes
+## UI/UX Flow
 
-| Area | Before | After |
-|------|--------|-------|
-| Theme | Light only | Light/Dark/System with toggle |
-| Avatars | Simple initials | Gradient backgrounds, glowing rings, mood indicators |
-| Cards | Flat borders | Glassmorphism, gradient borders, hover glows |
-| Animations | Basic fades | Dramatic reveals, stagger effects, card flips |
-| Auth Page | Generic form | Immersive full-screen experience |
-| Setup Page | Standard form | Interactive character creator with preview |
-| Colors | Muted | Vibrant with proper dark mode contrast |
-| Buttons | Standard | Glow effects, gradient options |
-| Status Indicators | Static badges | Animated pulses and shimmer effects |
+```text
+App Start
+    |
+    v
+[Character Selection Screen]
+    |
+    +---> Browse premade characters
+    |
+    +---> Click character to see details
+    |
+    +---> Select character or "Create Custom"
+    |
+    v
+[Customization Screen]
+    |
+    +---> Modify name, bio, traits
+    |
+    +---> Adjust stats with point allocation
+    |
+    +---> "Change Avatar" returns to selection
+    |
+    v
+[Cast Review Screen]
+    |
+    +---> See all houseguests with portraits
+    |
+    +---> "Enter the House"
+    |
+    v
+[Game Begins]
+```
+
+---
+
+## Expected Visual Result
+
+The avatar selector will feature:
+- **Decorative circular frames** with gold/bronze metallic borders
+- **High-quality portraits** generated by AI (realistic style)
+- **Stylish name plates** below each character
+- **Smooth hover animations** with scale and glow
+- **Selected state** with animated pulsing ring
+- **Character archetype badges** (Strategist, Competitor, etc.)
+- **Large detail panel** showing full character info
+- **Generate buttons** to create new character looks
+
+This matches the Survivor reference with its circular portrait frames, name plates, and polished game show aesthetic, but adapted for the Big Brother theme with the existing blue/gold color scheme.
+
