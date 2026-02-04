@@ -1,138 +1,357 @@
 
 
-# Plan: Slow Down NPC Decision Display Timing
+# Plan: Autonomous NPC Social Actions and Enhanced Promise/Alliance System
 
-## Problem
+## Overview
 
-When NPC houseguests are shown making decisions (voting, thinking, etc.), the thoughts and decision displays move too quickly between them, making it hard for players to read and understand each character's reasoning.
-
-## Root Causes
-
-Multiple timing values throughout the codebase are set too low:
-
-| File | Current Value | Issue |
-|------|---------------|-------|
-| `useVotingLogic.ts` line 114 | 300ms | AI votes transition to next voter almost instantly |
-| `useAIProcessing.ts` lines 54-55 | 1000-2000ms | Nomination processing time is short |
-| Various animation durations | 0.3s | Fade animations complete quickly |
-
-## Solution
-
-Create centralized timing constants in `config.ts` and update all NPC decision display timings to use longer, more readable intervals.
+This plan adds two major features:
+1. **Autonomous NPC Actions** - NPCs will perform social actions during the social phase (forming alliances, talking, making promises)
+2. **Enhanced Tracking System** - Track positive/negative interactions between all houseguests with memory that influences decisions
 
 ---
 
-## Technical Changes
+## Part 1: Autonomous NPC Social Actions
 
-### 1. Add Timing Constants to Config (`src/config.ts`)
+### New File: `src/systems/ai/npc-social-behavior.ts`
 
-Add new constants for NPC decision display timings:
+Create a system that generates and executes NPC actions during social phases:
 
-```typescript
-// NPC Decision Display Timing (in milliseconds)
-NPC_VOTE_DISPLAY_TIME: 2500,           // Time to show each NPC's vote decision
-NPC_VOTE_TRANSITION_DELAY: 1500,       // Delay before moving to next voter
-NPC_THOUGHT_DISPLAY_TIME: 3000,        // Time to show AI thought bubbles
-NPC_DECISION_PROCESSING_MIN: 2000,     // Minimum AI decision "thinking" time
-NPC_DECISION_PROCESSING_MAX: 4000,     // Maximum AI decision "thinking" time
-NPC_NOMINATION_REVEAL_DELAY: 2500,     // Delay when revealing nomination decisions
+```text
++---------------------------+
+|   NPC Social Behavior     |
++---------------------------+
+| - generateNPCActions()    |
+| - executeNPCActions()     |
+| - evaluateAllianceDesire()|
+| - selectTalkTarget()      |
+| - considerPromise()       |
++---------------------------+
+           |
+           v
++---------------------------+
+|  Action Types             |
++---------------------------+
+| - Talk to houseguest      |
+| - Form alliance           |
+| - Make promise            |
+| - Hold alliance meeting   |
+| - Spread information      |
++---------------------------+
 ```
 
-### 2. Update Voting Logic (`src/components/game-phases/EvictionPhase/useVotingLogic.ts`)
+Key functions:
+- **generateNPCActions(npc, game)**: Returns a list of actions an NPC wants to take based on their personality, relationships, and game state
+- **executeNPCActions(game)**: Runs during social phase to have NPCs perform actions with visible feedback
+- **evaluateAllianceDesire(npc, potentialAlly, game)**: Determines if an NPC wants to form an alliance based on:
+  - Relationship score (minimum threshold of +25)
+  - Shared threats (people they both dislike)
+  - Alliance count (max 2-3 alliances per person)
+  - Personality traits (Strategic NPCs seek alliances earlier)
 
-Change the vote transition timeout from 300ms to use the config value:
+### NPC Action Logic
 
-**Before (line 110-114):**
 ```typescript
-setTimeout(() => {
-  setShowVote(false);
-  setIsVoting(false);
-  nextVoter();
-}, 300); // Fast voting for AI players
+interface NPCAction {
+  type: 'talk' | 'alliance_propose' | 'promise' | 'alliance_meeting' | 'spread_info';
+  actor: Houseguest;
+  target: Houseguest;
+  reasoning: string;
+  priority: number; // Higher = more important
+}
 ```
 
-**After:**
+**Action Selection Rules:**
+
+| Trait | Preferred Actions |
+|-------|-------------------|
+| Strategic | Alliance proposals, Strategic talks |
+| Loyal | Alliance meetings, Keep promises |
+| Sneaky | Spread information, Manipulate |
+| Social | Talk frequently, Build relationships |
+| Competitive | Target threats, Power alliances |
+| Paranoid | Avoid alliances, Gather information |
+
+---
+
+## Part 2: Interaction Tracking System
+
+### New File: `src/systems/ai/interaction-tracker.ts`
+
+Create a comprehensive system to track all interactions:
+
 ```typescript
-setTimeout(() => {
-  setShowVote(false);
-  setIsVoting(false);
-  nextVoter();
-}, config.NPC_VOTE_DISPLAY_TIME); // Slower to let players read
+interface TrackedInteraction {
+  id: string;
+  week: number;
+  type: InteractionType;
+  fromId: string;
+  toId: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  impact: number; // -100 to 100
+  description: string;
+  decaysAt?: number; // Week when impact starts fading
+}
+
+type InteractionType = 
+  | 'conversation'
+  | 'strategic_discussion'
+  | 'promise_made'
+  | 'promise_kept'
+  | 'promise_broken'
+  | 'nominated'
+  | 'saved_with_veto'
+  | 'voted_against'
+  | 'voted_for'
+  | 'alliance_formed'
+  | 'alliance_betrayed'
+  | 'rumor_spread'
+  | 'defended'
+  | 'attacked';
 ```
 
-Also update the player vote display time at line 132 from 1000ms to 2000ms.
+### Modify: `src/systems/ai/memory-manager.ts`
 
-### 3. Update AI Processing Timing (`src/components/game-phases/NominationPhase/hooks/ai-nomination/useAIProcessing.ts`)
+Upgrade memories to be interaction-based:
 
-Change processing time calculation from 1-2 seconds to 2-4 seconds:
-
-**Before (lines 54-55):**
 ```typescript
-const processingTime = 1000 + Math.random() * 1000;
+interface StructuredMemory {
+  id: string;
+  week: number;
+  type: InteractionType;
+  importance: number; // 1-10
+  involvedIds: string[];
+  description: string;
+  emotionalImpact: number; // -100 to 100
+  decaysAt?: number;
+}
 ```
 
-**After:**
+**Memory Prioritization for Decisions:**
+- Betrayals: Always relevant, never decay
+- Alliance events: Relevant for voting decisions
+- Promise events: Relevant for trust decisions
+- Conversations: Minor weight, decay after 2 weeks
+
+---
+
+## Part 3: Enhanced Promise System with Alliances
+
+### Modify: `src/systems/promise/promise-core.ts`
+
+Add alliance-related promise types and NPC promise tracking:
+
 ```typescript
-const processingTime = config.NPC_DECISION_PROCESSING_MIN + 
-  Math.random() * (config.NPC_DECISION_PROCESSING_MAX - config.NPC_DECISION_PROCESSING_MIN);
+// New promise types
+type PromiseType = 
+  | 'safety'          // Won't nominate/vote against
+  | 'vote'            // Will vote a certain way
+  | 'final_2'         // Take to final 2
+  | 'alliance_loyalty'// Loyalty to alliance
+  | 'information'     // Share information
+  | 'veto_use'        // Use veto on someone (NEW)
+  | 'hoh_protection'; // If win HoH, won't target (NEW)
 ```
 
-### 4. Update POV Fast Forward Timing (`src/components/game-phases/POVMeeting/hooks/ai-decision/useFastForward.ts`)
+### New: NPC Promise Creation
 
-Add delays to AI decision reveals to make them readable.
-
-### 5. Add Thought Display Duration to AI Thoughts Hook (`src/hooks/useAIThoughts.tsx`)
-
-Add auto-removal of thoughts after the configured display time:
+NPCs will autonomously make promises when:
+1. They need safety (on the block or feel threatened)
+2. Building an alliance (mutual protection promises)
+3. Strategic positioning (making deals with HoH)
+4. Reciprocating (someone made a promise to them)
 
 ```typescript
-const addThought = (houseguest: Houseguest, thought: string, type: 'thought' | 'decision' | 'strategy' = 'thought') => {
-  setThoughts(prev => ({
-    ...prev,
-    [houseguest.id]: {
-      houseguestId: houseguest.id,
-      thought,
-      timestamp: Date.now(),
-      type
-    }
-  }));
+function shouldNPCMakePromise(
+  npc: Houseguest, 
+  target: Houseguest, 
+  game: BigBrotherGame
+): { shouldPromise: boolean; type: PromiseType; reason: string } {
+  // Check if NPC is in danger
+  if (npc.isNominated) {
+    return { shouldPromise: true, type: 'vote', reason: 'seeking safety while on block' };
+  }
   
-  // Auto-remove thought after display time
-  setTimeout(() => {
-    removeThought(houseguest.id);
-  }, config.NPC_THOUGHT_DISPLAY_TIME);
-};
+  // Check if target is HoH
+  if (target.isHoH && !game.allianceSystem.areInSameAlliance(npc.id, target.id)) {
+    return { shouldPromise: true, type: 'safety', reason: 'securing safety with HoH' };
+  }
+  
+  // Check for alliance formation opportunity
+  const relationship = game.relationshipSystem.getRelationship(npc.id, target.id);
+  if (relationship > 40 && !game.allianceSystem.areInSameAlliance(npc.id, target.id)) {
+    return { shouldPromise: true, type: 'alliance_loyalty', reason: 'building alliance foundation' };
+  }
+  
+  return { shouldPromise: false, type: 'safety', reason: '' };
+}
 ```
 
 ---
+
+## Part 4: UI Integration
+
+### Modify: `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`
+
+Add NPC activity feed to show what NPCs are doing:
+
+```typescript
+interface NPCActivityItem {
+  npcName: string;
+  action: string;
+  targetName?: string;
+  timestamp: number;
+}
+
+// Display component showing NPC activities
+<NPCActivityFeed activities={npcActivities} />
+```
+
+### New Component: `src/components/game-phases/social-interaction/NPCActivityFeed.tsx`
+
+Shows real-time NPC actions with AI thought bubbles:
+- "[NPC Name] approached [Target] for a conversation"
+- "[NPC Name] proposed an alliance with [Target]"
+- "[NPC Name] made a promise to [Target]"
+
+---
+
+## Part 5: Alliance Improvements for Player
+
+### Modify: `src/components/alliance/AllianceManager.tsx`
+
+Add features:
+1. **View Alliance Status**: See all active alliances and their stability
+2. **Alliance Promises**: Auto-create loyalty promises when forming alliance
+3. **Alliance Notifications**: Alert when NPC alliances form
+
+### New: Alliance Promise Integration
+
+When an alliance is formed:
+1. All members automatically gain implicit `alliance_loyalty` promises
+2. These promises affect voting decisions
+3. Breaking alliance = breaking promise = major relationship penalty
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/systems/ai/npc-social-behavior.ts` | NPC autonomous action system |
+| `src/systems/ai/interaction-tracker.ts` | Comprehensive interaction tracking |
+| `src/components/game-phases/social-interaction/NPCActivityFeed.tsx` | UI for NPC activities |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/config.ts` | Add NPC timing constants |
-| `src/components/game-phases/EvictionPhase/useVotingLogic.ts` | Increase vote transition delay from 300ms to 2500ms |
-| `src/components/game-phases/NominationPhase/hooks/ai-nomination/useAIProcessing.ts` | Increase processing time range to 2-4 seconds |
-| `src/hooks/useAIThoughts.tsx` | Add auto-removal timer with 3-second delay |
-| `src/components/game-phases/POVMeeting/hooks/ai-decision/useFastForward.ts` | Add delay before AI decision completion |
+| `src/config.ts` | Add NPC social behavior timing constants |
+| `src/systems/ai/memory-manager.ts` | Upgrade to structured memories |
+| `src/systems/promise/promise-core.ts` | Add new promise types and NPC promise logic |
+| `src/systems/alliance-system.ts` | Add autonomous alliance formation logic |
+| `src/game-states/SocialInteractionState.ts` | Trigger NPC actions during social phase |
+| `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx` | Display NPC activity feed |
+| `src/systems/ai/npc-decision-engine.ts` | Factor in interaction history |
+| `src/models/promise.ts` | Add new promise types |
 
 ---
 
-## Expected Behavior After Fix
+## Technical Details
 
-1. **Eviction Voting**: Each NPC's vote will be visible for 2.5 seconds before transitioning to the next voter
-2. **AI Nominations**: The HoH's decision process will take 2-4 seconds to "think" before revealing
-3. **AI Thoughts**: Thought bubbles will remain visible for 3 seconds before fading
-4. **POV Decisions**: AI veto decisions will have time for players to see the reasoning
+### Config Additions
+
+```typescript
+// NPC Social Behavior
+NPC_ALLIANCE_MIN_RELATIONSHIP: 25,     // Min relationship to propose alliance
+NPC_ALLIANCE_MAX_PER_PERSON: 3,        // Max alliances an NPC will join
+NPC_PROMISE_THRESHOLD: 30,             // Relationship threshold for promises
+NPC_ACTION_DELAY_MS: 1500,             // Delay between NPC actions for visibility
+NPC_ACTIVITY_DISPLAY_TIME: 4000,       // How long to show NPC activity in feed
+```
+
+### NPC Action Execution Flow
+
+```text
+Social Phase Start
+       |
+       v
++-------------------+
+| For each NPC:     |
+| 1. Generate actions|
+| 2. Prioritize     |
+| 3. Execute top 2  |
++-------------------+
+       |
+       v
++-------------------+
+| Show in UI:       |
+| - Activity feed   |
+| - AI thought      |
+| - Relationship    |
+|   impact toast    |
++-------------------+
+       |
+       v
++-------------------+
+| Update State:     |
+| - Relationships   |
+| - Promises        |
+| - Alliances       |
+| - Interactions    |
++-------------------+
+```
+
+### NPC Alliance Formation Logic
+
+```typescript
+function evaluateAllianceProposal(npc: Houseguest, target: Houseguest, game): boolean {
+  const factors = {
+    relationship: game.relationshipSystem.getRelationship(npc.id, target.id),
+    sharedThreats: countSharedThreats(npc, target, game),
+    currentAlliances: game.allianceSystem.getAlliancesForHouseguest(npc.id).length,
+    targetValue: calculateStrategicValue(npc, target, game),
+    trustworthiness: calculateTrustworthiness(target, game), // Based on promise history
+  };
+  
+  // Decision formula
+  const score = 
+    (factors.relationship * 0.3) +
+    (factors.sharedThreats * 10) +
+    (factors.targetValue * 0.2) +
+    (factors.trustworthiness * 0.2) -
+    (factors.currentAlliances * 15); // Penalty for having many alliances
+  
+  return score > 30;
+}
+```
 
 ---
 
-## Summary of Timing Changes
+## Expected Behavior After Implementation
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| NPC vote to next voter | 300ms | 2500ms |
-| Player vote display | 1000ms | 2000ms |
-| AI nomination thinking | 1-2 sec | 2-4 sec |
-| AI thought bubble display | Until replaced | 3 sec then auto-fade |
+### During Social Phase:
+1. Player takes their actions (unchanged)
+2. After each player action, NPCs perform 1-2 actions each
+3. Activity feed shows what NPCs are doing in real-time
+4. AI thought bubbles appear showing NPC reasoning
+5. Notifications when alliances form or promises are made
+
+### NPC Decision Making:
+- NPCs consider past interactions when making decisions
+- Positive history = more likely to work together
+- Negative history = more likely to target each other
+- Promise history affects trust and alliance decisions
+- Betrayals are remembered and affect future votes
+
+### Alliance Formation:
+- NPCs will propose alliances to houseguests they like (relationship > 25)
+- Strategic NPCs prioritize strong competitors as allies
+- Loyal NPCs stay committed to existing alliances
+- Alliance proposals can be rejected based on target's evaluation
+
+### Promise Behavior:
+- NPCs make promises when threatened or building relationships
+- Promises create tracking obligations
+- Broken promises spread through the house
+- Promise history affects voting and alliance decisions
 
