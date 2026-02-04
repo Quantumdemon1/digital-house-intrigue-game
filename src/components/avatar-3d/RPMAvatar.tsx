@@ -98,12 +98,25 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   animationSrc,
   mood = 'Neutral',
   scale = 1,
-  position = [0, -0.65, 0],
+  position,
   context = 'game',
   onLoaded,
   onError
 }) => {
   const group = useRef<THREE.Group>(null);
+  
+  // Context-aware default positions (head-centered for portraits, full-body for customizer)
+  const getDefaultPosition = (ctx: AvatarContext): [number, number, number] => {
+    switch (ctx) {
+      case 'customizer': return [0, -1.5, 0];   // Full body view
+      case 'profile': return [0, -0.55, 0];     // Head portrait
+      case 'thumbnail': return [0, -0.5, 0];    // Tight head shot
+      case 'game': 
+      default: return [0, -0.7, 0];             // Upper body
+    }
+  };
+  
+  const effectivePosition = position ?? getDefaultPosition(context);
   
   // Map context to quality preset - 'customizer' -> 'profile', keep others
   const getQualityContext = (ctx: AvatarContext): 'thumbnail' | 'game' | 'profile' => {
@@ -203,7 +216,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   }, [onLoaded]);
 
   return (
-    <group ref={group} position={position} scale={scale}>
+    <group ref={group} position={effectivePosition} scale={scale}>
       <primitive object={clone} />
     </group>
   );
