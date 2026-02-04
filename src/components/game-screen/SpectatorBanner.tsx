@@ -1,8 +1,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Users, SkipForward, Eye } from 'lucide-react';
+import { Users, SkipForward, Eye, Loader2 } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { useFastForward } from '@/hooks/useFastForward';
+import { cn } from '@/lib/utils';
 
 const SpectatorBanner: React.FC = () => {
   const { gameState } = useGame();
@@ -44,10 +45,22 @@ const SpectatorBanner: React.FC = () => {
         size="sm" 
         onClick={handleFastForward}
         disabled={isProcessing}
-        className="bg-white/10 hover:bg-white/20 text-white border-white/20 shrink-0"
+        className={cn(
+          "bg-white/10 hover:bg-white/20 text-white border-white/20 shrink-0",
+          isProcessing && "opacity-50 cursor-not-allowed"
+        )}
       >
-        <SkipForward className="h-4 w-4 mr-1" />
-        Skip to Next Phase
+        {isProcessing ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <SkipForward className="h-4 w-4 mr-1" />
+            Skip to Next Phase
+          </>
+        )}
       </Button>
     </div>
   );

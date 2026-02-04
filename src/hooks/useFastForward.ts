@@ -1,5 +1,5 @@
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { useGame } from '@/contexts/game';
 import { useGameControl } from '@/contexts/GameControlContext';
 import { handleHouseguestEviction, completeEvictionProcess } from '@/utils/eviction-utils';
@@ -9,14 +9,42 @@ export function useFastForward() {
   const { isProcessing, fastForward } = useGameControl();
   const [internalProcessing, setInternalProcessing] = useState(false);
   
+  // Use ref to always have access to fresh state (avoids stale closure issues)
+  const gameStateRef = useRef(gameState);
+  
+  // Keep ref updated with latest state
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+  
   const handleFastForward = useCallback(() => {
     // Prevent duplicate fast forwards
     if (internalProcessing) {
+      logger?.info("Fast forward blocked: already processing");
       return;
     }
     
+    // Get fresh state from ref
+    const currentState = gameStateRef.current;
+    
     setInternalProcessing(true);
-    logger?.info("Fast forward triggered, current phase:", gameState.phase);
+    logger?.info("Fast forward triggered, current phase:", currentState.phase);
+    
+    // CRITICAL: Validate eviction phase has nominees before allowing fast-forward
+    if (currentState.phase === 'Eviction') {
+      if (!currentState.nominees || currentState.nominees.length < 2) {
+        logger?.warn("Fast-forward blocked: Eviction phase has no/insufficient nominees", {
+          nominees: currentState.nominees?.length || 0
+        });
+        setInternalProcessing(false);
+        return; // Block the fast-forward entirely
+      }
+      
+      // Also check if eviction already happened this week
+      if (currentState.evictionCompletedThisWeek) {
+        logger?.info("Eviction already completed this week, proceeding to next phase");
+      }
+    }
     
     // Trigger the fast forward in the game control context
     fastForward();
@@ -26,29 +54,28 @@ export function useFastForward() {
       type: 'PLAYER_ACTION',
       payload: {
         actionId: 'fast_forward',
-        params: { currentPhase: gameState.phase }
+        params: { currentPhase: currentState.phase }
       }
     });
 
     // Create and dispatch a custom event for component listeners
-    // This is the critical part that triggers component-specific fast forward handling
     logger?.info("Dispatching game:fastForward event");
     const fastForwardEvent = new Event('game:fastForward');
     document.dispatchEvent(fastForwardEvent);
 
     // Special handling for Eviction phase
-    if (gameState.phase === 'Eviction') {
+    if (currentState.phase === 'Eviction') {
       logger?.info("Fast-forwarding Eviction phase");
       
-      if (gameState.nominees && gameState.nominees.length > 0) {
-        const evictedNominee = gameState.nominees[0];
+      if (currentState.nominees && currentState.nominees.length > 0) {
+        const evictedNominee = currentState.nominees[0];
         
         // Use the shared utility to handle eviction
         handleHouseguestEviction(
           dispatch, 
           evictedNominee, 
-          gameState.week >= 5,
-          gameState.week
+          currentState.week >= 5,
+          currentState.week
         );
         
         // Complete the eviction process
@@ -60,11 +87,11 @@ export function useFastForward() {
     }
     
     // For other phases, try a direct phase transition as a backup
-    // This is a failsafe in case the event listener doesn't work
-    if (gameState.phase === 'HoH') {
+    if (currentState.phase === 'HoH') {
       logger?.info("Backup phase transition for HoH phase");
       setTimeout(() => {
-        if (gameState.phase === 'HoH') {
+        const freshState = gameStateRef.current;
+        if (freshState.phase === 'HoH') {
           logger?.info("Attempting direct phase change as backup");
           dispatch({
             type: 'SET_PHASE',
@@ -74,12 +101,12 @@ export function useFastForward() {
       }, 1000);
     }
     
-    // Reset processing state after delay
+    // Reset processing state after longer delay to prevent rapid clicks
     setTimeout(() => {
       setInternalProcessing(false);
       logger?.info("Fast forward processing complete, state reset");
-    }, 1500);
-  }, [gameState.phase, gameState.nominees, gameState.week, dispatch, fastForward, logger, internalProcessing]);
+    }, 3000); // Increased from 1500ms to 3000ms
+  }, [dispatch, fastForward, logger, internalProcessing]);
 
   return {
     handleFastForward,

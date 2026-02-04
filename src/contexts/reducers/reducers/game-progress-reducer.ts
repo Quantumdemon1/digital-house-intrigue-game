@@ -123,7 +123,8 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
         nominees: [],
         houseguests: resetHouseguests,
         evictionVotes: {},
-        isFinalStage
+        isFinalStage,
+        evictionCompletedThisWeek: false, // Reset for new week
       };
       
     case 'END_GAME': {

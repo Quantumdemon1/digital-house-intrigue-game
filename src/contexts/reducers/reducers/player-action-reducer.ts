@@ -406,6 +406,12 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         const actionName = payload.actionId === 'eviction_complete' ? 'Eviction complete' : 'Advancing week';
         console.log(`${actionName}, checking houseguest count for final stages`);
         
+        // CRITICAL: Don't advance if we're in eviction phase but no eviction happened
+        if (state.phase === 'Eviction' && !state.evictionCompletedThisWeek) {
+          console.warn('Blocking week advance: No eviction completed this week');
+          return state; // Don't advance - eviction must happen first
+        }
+        
         // Count active houseguests
         const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
         console.log(`Active houseguests: ${activeCount}`);
@@ -419,7 +425,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             phase: 'JuryQuestioning' as GamePhase,
             isFinalStage: true,
             nominees: [],
-            evictionVotes: {}
+            evictionVotes: {},
+            evictionCompletedThisWeek: false, // Reset for next week
           };
         }
         
@@ -432,7 +439,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             phase: 'FinalHoH' as GamePhase,
             isFinalStage: true,
             nominees: [],
-            evictionVotes: {}
+            evictionVotes: {},
+            evictionCompletedThisWeek: false, // Reset for next week
           };
         }
         
@@ -447,7 +455,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
           week: state.week + 1,
           phase: 'HoH' as GamePhase,
           nominees: [],
-          evictionVotes: {}
+          evictionVotes: {},
+          evictionCompletedThisWeek: false, // Reset for next week
         };
       }
         
