@@ -154,47 +154,31 @@ const SaveLoadButton: React.FC<SaveLoadButtonProps> = ({
             <TabsContent value="load" className="py-4">
               {savedGames.length > 0 ? (
                 <div className="space-y-2">
-                  {savedGames.map(save => {
-                    // Extract user-entered name (before timestamp)
-                    const displayName = save.name.includes('_') 
-                      ? save.name.split('_').slice(0, -1).join('_') 
-                      : save.name;
-                    
-                    // Format date nicely
-                    const displayDate = new Date(save.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
-                    
-                    return (
-                      <div 
-                        key={save.name}
-                        className="flex justify-between items-center border rounded-md p-3 hover:bg-accent cursor-pointer"
-                        onClick={() => handleLoadGame(save.name)}
-                      >
-                        <div>
-                          <p className="font-medium">{displayName}</p>
-                          <p className="text-xs text-muted-foreground">{displayDate}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="ghost">
-                            <Upload className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={(e) => handleOpenDeleteDialog(save.name, e)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                  {savedGames.map(save => (
+                    <div 
+                      key={save.name}
+                      className="flex justify-between items-center border rounded-md p-3 hover:bg-accent cursor-pointer"
+                      onClick={() => handleLoadGame(save.name)}
+                    >
+                      <div>
+                        <p className="font-medium">{save.name}</p>
+                        <p className="text-xs text-muted-foreground">{save.date}</p>
                       </div>
-                    );
-                  })}
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost">
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={(e) => handleOpenDeleteDialog(save.name, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground">

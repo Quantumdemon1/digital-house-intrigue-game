@@ -1,13 +1,8 @@
 
 import { toast } from "sonner";
 import { GameState } from "../../../models/game-state";
-import { GameAction } from "../../types/game-context-types";
 
-export function useSaveLoadFunctions(
-  user: any, 
-  gameState: GameState, 
-  dispatch: React.Dispatch<GameAction>
-) {
+export function useSaveLoadFunctions(user: any, gameState: GameState) {
   const saveGame = async (saveName: string): Promise<void> => {
     try {
       if (!gameState) {
@@ -54,11 +49,7 @@ export function useSaveLoadFunctions(
         throw new Error(`Save '${saveName}' not found`);
       }
       
-      // Dispatch the loaded state to the reducer
-      dispatch({
-        type: 'LOAD_GAME',
-        payload: saveToLoad.data
-      });
+      // Note: dispatch is handled by the caller
       
       toast.success(`Game loaded: ${saveName}`);
     } catch (error) {

@@ -1,200 +1,123 @@
 
-# Plan: Fix Weekly Status Tracker UI and Refactor Save System
+
+# Plan: Fix Competition Results UI Overlapping
 
 ## Problem Summary
 
-### Issue 1: Save System Not Working
-The save/load feature is **completely broken**. The `loadGame` function finds the saved game data from localStorage but **never dispatches it to the reducer**. The code has a comment "Note: dispatch is handled by the caller" but no caller ever does this.
+When a houseguest wins a competition (HoH or PoV), the results screen has severe overlapping UI elements:
 
-### Issue 2: Phase Indicator UI Overlapping
-The weekly status tracker in the header has overlapping icons because:
-- Circle elements are too large relative to the gap spacing
-- The active circle's glow shadow extends beyond its container
-- No minimum width constraints on the phase step containers
+1. The winner avatar is positioned outside its container using absolute positioning with `-bottom-8`, causing it to overlap with the "Wins!" text inside the CompetitionVisual
+2. An extra Crown/Trophy icon is placed above the avatar at `-top-3`, overlapping with the avatar's own status badge
+3. The winner's name appears in 3 places: CompetitionVisual, the overlaid avatar, and the text section below - creating visual redundancy
 
----
+## Root Cause
 
-## Technical Solution
+The layout uses `position: absolute` with negative offsets to position the avatar partially outside its parent container. This creates a stacking conflict where:
+- CompetitionVisual shows "{name} Wins!" text
+- StatusAvatar with initials overlays on top of that text
+- Additional Crown icon overlays on the avatar badge
+- Status badge from StatusAvatar (HoH crown/PoV shield) adds yet another icon layer
 
-### Part 1: Fix Save/Load System
+## Solution
 
-The fix requires restructuring how `loadGame` works. Instead of expecting the caller to handle dispatch (which it doesn't), the hook should receive `dispatch` and handle it internally.
+Restructure the layout to avoid negative positioning and remove redundant elements:
 
-**File: `src/contexts/game/hooks/useSaveLoadFunctions.ts`**
-
-```typescript
-import { toast } from "sonner";
-import { GameState } from "../../../models/game-state";
-import { GameAction } from "../../types/game-context-types";
-
-export function useSaveLoadFunctions(
-  user: any, 
-  gameState: GameState, 
-  dispatch: React.Dispatch<GameAction>  // Add dispatch parameter
-) {
-  // ... saveGame stays the same ...
-  
-  const loadGame = async (saveName: string): Promise<void> => {
-    try {
-      const userId = user?.id || 'guest';
-      const saveKey = `bb_save_${userId}`;
-      
-      const existingSavesStr = localStorage.getItem(saveKey) || '[]';
-      const existingSaves = JSON.parse(existingSavesStr);
-      
-      const saveToLoad = existingSaves.find((save: any) => save.name === saveName);
-      
-      if (!saveToLoad) {
-        toast.error(`Save '${saveName}' not found`);
-        throw new Error(`Save '${saveName}' not found`);
-      }
-      
-      // Actually dispatch the loaded state to the reducer
-      dispatch({
-        type: 'LOAD_GAME',
-        payload: saveToLoad.data
-      });
-      
-      toast.success(`Game loaded: ${saveName}`);
-    } catch (error) {
-      console.error('Failed to load game:', error);
-      toast.error('Failed to load game');
-      throw error;
-    }
-  };
-  
-  // ... rest stays the same ...
-}
-```
-
-**File: `src/contexts/game/GameProvider.tsx`**
-
-Update the hook call to pass `dispatch`:
-
-```typescript
-const {
-  saveGame,
-  loadGame,
-  deleteSavedGame,
-  getSavedGames
-} = useSaveLoadFunctions(user, gameState, dispatch);  // Add dispatch
-```
+1. **Remove the overlapping avatar from CompetitionVisual area** - place it below in a proper flow layout
+2. **Remove the extra Crown/Trophy icon** - the StatusAvatar already has a status badge
+3. **Simplify the winner display** - show avatar and name in a single, clean section
 
 ---
 
-### Part 2: Fix Phase Indicator UI
+## Technical Changes
 
-The overlapping is caused by inadequate spacing and glow effects extending beyond containers.
+### File: `src/components/game-phases/HOHCompetition/CompetitionResults.tsx`
 
-**File: `src/index.css`** - Update phase indicator styles:
-
-```css
-.phase-indicator {
-  @apply flex items-center gap-3 md:gap-5 overflow-x-auto py-2 px-2;
-}
-
-.phase-step {
-  @apply flex flex-col items-center gap-1 transition-all duration-300 shrink-0;
-  min-width: 3rem;
-}
-
-.phase-step-circle {
-  @apply w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300;
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-}
-
-.phase-step-circle.active {
-  background: var(--gradient-primary);
-  color: white;
-  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
-  animation: none;  /* Remove pulse that can cause layout shift */
-}
-
-.phase-step-connector {
-  @apply w-6 md:w-10 h-0.5 transition-all duration-300 shrink-0;
-  background: hsl(var(--border));
-}
-```
-
-**File: `src/components/ui/phase-indicator.tsx`** - Fix layout structure:
-
+**Before (problematic layout):**
 ```tsx
-return (
-  <div className={cn('phase-indicator', className)}>
-    {weeklyPhases.map((phase, index) => {
-      const config = getPhaseConfig(phase);
-      const isCompleted = currentIndex > index;
-      const isActive = normalizedCurrent === phase;
-      const Icon = config.icon;
-
-      return (
-        <React.Fragment key={phase}>
-          {index > 0 && (
-            <div 
-              className={cn(
-                'phase-step-connector',
-                isCompleted && 'completed'
-              )}
-            />
-          )}
-          <div 
-            className="phase-step"
-            title={config.label}  // Move tooltip to container
-          >
-            <div 
-              className={cn(
-                'phase-step-circle',
-                isCompleted && 'completed',
-                isActive && 'active'
-              )}
-            >
-              {isCompleted ? (
-                <Check className="w-3.5 h-3.5" />
-              ) : (
-                <Icon className="w-3.5 h-3.5" />
-              )}
-            </div>
-            {!compact && (
-              <span 
-                className={cn(
-                  'phase-step-label text-center',
-                  isActive && 'active'
-                )}
-              >
-                {config.shortLabel}
-              </span>
-            )}
-          </div>
-        </React.Fragment>
-      );
-    })}
+<div className="relative">
+  <CompetitionVisual type={...} status="complete" winner={winner.name} />
+  
+  {/* Avatar OVERLAPPING the visual with negative positioning */}
+  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+    <StatusAvatar ... />
+    <div className="absolute -top-3">  {/* Extra crown OVERLAPPING avatar */}
+      <Crown ... />
+    </div>
   </div>
-);
+</div>
 ```
+
+**After (clean layout):**
+```tsx
+{/* Competition Visual - no avatar overlay */}
+<CompetitionVisual type={...} status="complete" winner={winner.name} />
+
+{/* Winner Section - properly positioned below */}
+<div className="flex flex-col items-center pt-4 space-y-4">
+  <StatusAvatar 
+    name={winner.name}
+    status="hoh"
+    size="xl"
+    isPlayer={winner.isPlayer}
+    showBadge={true}
+    className="animate-celebrate-winner"
+  />
+  
+  <div className="text-center space-y-1">
+    <h3 className="text-sm font-medium text-muted-foreground uppercase">
+      New Head of Household
+    </h3>
+    <p className="text-3xl font-bold font-display text-bb-gold">
+      {winner.name}
+    </p>
+    <p className="text-sm text-muted-foreground">
+      {winner.isPlayer 
+        ? "Congratulations! You are the new HoH!" 
+        : `${winner.name} has won!`}
+    </p>
+  </div>
+</div>
+```
+
+### File: `src/components/game-phases/POVCompetition/CompetitionResults.tsx`
+
+Apply the same fix - remove absolute positioning and extra trophy icon.
 
 ---
 
-### Part 3: Additional Save System Improvements
+## Layout Comparison
 
-**Display Improvements for SaveLoadButton**
+### Current Layout (Broken)
+```text
++----------------------------------+
+|      CompetitionVisual           |
+|   +-----------------------+      |
+|   |    [Trophy Icon]      |      |
+|   |   "Taylor Kim Wins!"  |      |
+|   |      [TK Avatar]      |  <- OVERLAPPING here!
+|   |   [Crown] [Crown]     |  <- Two icons!
+|   +-----------------------+      |
+|                                  |
+|   NEW HEAD OF HOUSEHOLD          |
+|      Taylor Kim                  |  <- Name shown 3 times
++----------------------------------+
+```
 
-Format the save name and date for better UX:
-
-```tsx
-// In SaveLoadButton.tsx - parse and display cleaner save names
-
-// Extract just the user-entered name (before the timestamp)
-const displayName = save.name.split('_').slice(0, -1).join('_') || save.name;
-
-// Format the date nicely
-const displayDate = new Date(save.date).toLocaleDateString('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-});
+### Fixed Layout (Clean)
+```text
++----------------------------------+
+|      CompetitionVisual           |
+|   +-----------------------+      |
+|   |    [Trophy Icon]      |      |
+|   |   "Taylor Kim Wins!"  |      |
+|   +-----------------------+      |
+|                                  |
+|         [TK Avatar]              |  <- Properly below
+|         [HoH Badge]              |  <- Single status badge
+|                                  |
+|   NEW HEAD OF HOUSEHOLD          |
+|      Taylor Kim                  |
++----------------------------------+
 ```
 
 ---
@@ -203,37 +126,26 @@ const displayDate = new Date(save.date).toLocaleDateString('en-US', {
 
 | File | Changes |
 |------|---------|
-| `src/contexts/game/hooks/useSaveLoadFunctions.ts` | Add `dispatch` parameter, dispatch `LOAD_GAME` action in `loadGame` |
-| `src/contexts/game/GameProvider.tsx` | Pass `dispatch` to `useSaveLoadFunctions` |
-| `src/index.css` | Fix phase indicator spacing, reduce circle sizes, remove pulse animation |
-| `src/components/ui/phase-indicator.tsx` | Reduce icon sizes, improve structure |
-| `src/components/game-screen/SaveLoadButton.tsx` | Improve display of save names and dates |
+| `src/components/game-phases/HOHCompetition/CompetitionResults.tsx` | Remove absolute positioning on avatar, remove extra Crown icon, clean up layout |
+| `src/components/game-phases/POVCompetition/CompetitionResults.tsx` | Apply same fixes - remove absolute positioning and extra Trophy icon |
 
 ---
 
-## Visual Comparison
+## Additional Improvements
 
-### Phase Indicator Before (Broken)
-```text
-[HoH]--[Nom]--[PoV]--[Vet]--[Evict]  <- Icons overlapping
-  ^glow effect extends into neighbors
-```
-
-### Phase Indicator After (Fixed)
-```text
-[HoH] -- [Nom] -- [PoV] -- [Vet] -- [Evict]
-         proper spacing, contained effects
-```
+1. **Reduce avatar size** from `xl` to `lg` if needed for better proportions
+2. **Add proper spacing** using Tailwind gap utilities instead of negative margins
+3. **Consider reducing CompetitionVisual height** on completion state since the avatar no longer overlaps
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Click Save/Load button in game header
-- [ ] Enter a save name and click "Save Game" - verify toast appears
-- [ ] Switch to "Load Game" tab - verify your save appears
-- [ ] Click on a save to load it - verify game state changes
-- [ ] Verify phase indicator icons are properly spaced and don't overlap
-- [ ] Test on mobile viewport to ensure responsive layout
-- [ ] Delete a saved game and verify it disappears from the list
+- [ ] Play through an HoH competition and verify results screen has no overlapping elements
+- [ ] Verify the winner avatar displays below the competition visual, not on top
+- [ ] Verify only ONE status badge (crown for HoH) appears, not duplicate icons
+- [ ] Play through a PoV competition and verify same clean layout
+- [ ] Test on mobile viewport to ensure layout is responsive
+- [ ] Verify animations still work smoothly (celebrate-winner animation)
+
