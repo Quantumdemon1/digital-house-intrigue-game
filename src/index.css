@@ -642,6 +642,37 @@
   animation: shake 0.5s ease-in-out;
 }
 
+.animate-eviction-reveal {
+  animation: eviction-reveal 0.6s ease-out;
+}
+
+.animate-stat-bounce {
+  animation: stat-bounce 0.3s ease-out;
+}
+
+@keyframes eviction-reveal {
+  0% { 
+    opacity: 0; 
+    transform: scale(0.8);
+  }
+  50% { 
+    transform: scale(1.1);
+  }
+  100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+}
+
+@keyframes stat-bounce {
+  0%, 100% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(1.2);
+  }
+}
+
 /* Responsive Utilities */
 @layer utilities {
   .scrollbar-hide {
