@@ -44,7 +44,6 @@ const CATEGORY_OPTIONS: { value: GLBCategory | 'all'; label: string; icon: React
   { value: 'all', label: 'All', icon: User },
   { value: 'humanoid', label: 'Human', icon: User },
   { value: 'robot', label: 'Robot', icon: Bot },
-  { value: 'creature', label: 'Creature', icon: Cat },
   { value: 'demo', label: 'Demo', icon: Beaker }
 ];
 
