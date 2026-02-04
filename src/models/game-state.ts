@@ -72,6 +72,7 @@ export function getOrCreateRelationship(
 
 // Import Promise type
 import { Promise } from './promise';
+import { PlayerPerceptions } from './player-perception';
 
 // Define GameState interface - explicitly export this
 export interface GameState {
@@ -97,6 +98,7 @@ export interface GameState {
   evictionVotes: Record<string, string>;
   gameLog: GameEvent[];
   promises?: Promise[];
+  playerPerceptions?: PlayerPerceptions; // Player's custom tracking of relationships
   finalHoHWinners?: {part1: string | null, part2: string | null, part3: string | null}; // Added to track final HoH winners
   isFinalStage: boolean; // Added to track when we're in the final stages
   isSpectatorMode: boolean; // True when player is evicted but game continues (jury spectating)

@@ -3,11 +3,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useGame } from '@/contexts/GameContext';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import ProfileButton from '../auth/ProfileButton';
 import { SettingsDialog } from '@/components/settings';
 import { PhaseIndicator, WeekIndicator } from '@/components/ui/phase-indicator';
+import { Network } from 'lucide-react';
+interface GameHeaderProps {
+  onShowSocialNetwork?: () => void;
+}
 
-const GameHeader: React.FC = () => {
+const GameHeader: React.FC<GameHeaderProps> = ({ onShowSocialNetwork }) => {
   const { gameState } = useGame();
   
   return (
@@ -40,8 +45,19 @@ const GameHeader: React.FC = () => {
             <WeekIndicator week={gameState.week} className="hidden md:flex" />
           </div>
           
-          {/* Right side: Settings and Profile */}
+          {/* Right side: Social, Settings and Profile */}
           <div className="flex items-center gap-1 sm:gap-2">
+            {onShowSocialNetwork && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onShowSocialNetwork}
+                className="flex items-center gap-1.5"
+              >
+                <Network className="h-4 w-4" />
+                <span className="hidden sm:inline">Social</span>
+              </Button>
+            )}
             <SettingsDialog />
             <ProfileButton />
           </div>

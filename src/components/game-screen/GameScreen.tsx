@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGame } from '@/contexts/GameContext';
 import PhaseContent from './PhaseContent';
@@ -7,10 +7,15 @@ import GameSidebar from './GameSidebar';
 import GameHeader from './GameHeader';
 import GameStatusIndicator from './GameStatusIndicator';
 import SpectatorBanner from './SpectatorBanner';
+import { SocialNetworkDialog } from '@/components/social-network';
 
 const GameScreen: React.FC = () => {
   const { gameState } = useGame();
+  const [showSocialNetwork, setShowSocialNetwork] = useState(false);
   
+  // Only show social network when there's an active player in the game
+  const player = gameState.houseguests.find(h => h.isPlayer);
+  const canShowSocial = player && gameState.phase !== 'Setup' && gameState.phase !== 'GameOver';
   return (
     <div className="min-h-screen bg-background">
       {/* Animated background */}
@@ -36,7 +41,9 @@ const GameScreen: React.FC = () => {
         <SpectatorBanner />
         
         {/* Header */}
-        <GameHeader />
+        <GameHeader 
+          onShowSocialNetwork={canShowSocial ? () => setShowSocialNetwork(true) : undefined}
+        />
         
         {/* Status Indicator */}
         <GameStatusIndicator />
@@ -68,6 +75,12 @@ const GameScreen: React.FC = () => {
           </motion.div>
         </div>
       </motion.div>
+      
+      {/* Social Network Dialog */}
+      <SocialNetworkDialog
+        open={showSocialNetwork}
+        onOpenChange={setShowSocialNetwork}
+      />
     </div>
   );
 };
