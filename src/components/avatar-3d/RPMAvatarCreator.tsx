@@ -3,34 +3,48 @@
  * @description Ready Player Me avatar creation interface (lazy loaded)
  */
 
-import React, { useState, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useCallback, lazy, Suspense, ComponentType } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { optimizeRPMUrl, QUALITY_PRESETS } from '@/utils/rpm-avatar-optimizer';
 import { useGLTF } from '@react-three/drei';
 
-// Lazy load the RPM SDK to prevent build issues
-const LazyAvatarCreator = lazy(async () => {
+// Generic props interface for the avatar creator
+interface AvatarCreatorComponentProps {
+  subdomain: string;
+  editorConfig?: Record<string, unknown>;
+  avatarConfig?: Record<string, unknown>;
+  onAvatarExported?: (event: { data: { url: string } } | string) => void;
+  onUserSet?: (event: unknown) => void;
+}
+
+// Lazy load the RPM SDK with proper typing
+const LazyAvatarCreator = lazy(async (): Promise<{ default: ComponentType<AvatarCreatorComponentProps> }> => {
   try {
-    const { AvatarCreator } = await import('@readyplayerme/rpm-react-sdk');
-    return { default: AvatarCreator };
-  } catch (error) {
-    console.error('Failed to load RPM SDK:', error);
-    // Return a fallback component
-    return {
-      default: () => (
+    // Try new package first
+    const mod = await import('@readyplayerme/react-avatar-creator');
+    return { default: mod.AvatarCreator as ComponentType<AvatarCreatorComponentProps> };
+  } catch (e1) {
+    try {
+      // Fallback to old package
+      const mod = await import('@readyplayerme/rpm-react-sdk');
+      return { default: mod.AvatarCreator as ComponentType<AvatarCreatorComponentProps> };
+    } catch (e2) {
+      console.error('Failed to load any RPM SDK:', e1, e2);
+      const FallbackComponent: React.FC<AvatarCreatorComponentProps> = () => (
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
           <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">
             Avatar Creator Unavailable
           </h3>
           <p className="text-muted-foreground text-sm">
-            The Ready Player Me SDK couldn't be loaded. Please use the Chibi style avatar instead.
+            The Ready Player Me SDK couldn&apos;t be loaded. Please use the other avatar styles instead.
           </p>
         </div>
-      )
-    };
+      );
+      return { default: FallbackComponent };
+    }
   }
 });
 
@@ -70,7 +84,17 @@ export const RPMAvatarCreator: React.FC<RPMAvatarCreatorProps> = ({
     useDracoCompression: true,
   };
 
-  const handleOnAvatarExported = useCallback((url: string) => {
+  const handleOnAvatarExported = useCallback((eventOrUrl: { data: { url: string } } | string) => {
+    // Extract URL from event object or use directly if string
+    const url = typeof eventOrUrl === 'string' 
+      ? eventOrUrl 
+      : eventOrUrl?.data?.url || '';
+    
+    if (!url) {
+      console.warn('No URL received from avatar export');
+      return;
+    }
+    
     console.log('Avatar exported (raw):', url);
     
     // Optimize the URL for game use
@@ -167,7 +191,14 @@ export const RPMAvatarCreatorInline: React.FC<{
     useDracoCompression: true,
   };
 
-  const handleExport = useCallback((url: string) => {
+  const handleExport = useCallback((eventOrUrl: { data: { url: string } } | string) => {
+    // Extract URL from event object or use directly if string
+    const url = typeof eventOrUrl === 'string' 
+      ? eventOrUrl 
+      : eventOrUrl?.data?.url || '';
+    
+    if (!url) return;
+    
     const optimizedUrl = optimizeRPMUrl(url, QUALITY_PRESETS.game);
     
     // Start preloading immediately
