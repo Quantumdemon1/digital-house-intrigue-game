@@ -1,260 +1,295 @@
 
+# Plan: Transform Avatar Customizer into Authentic Sims-Style UI
 
-# Plan: 3D Avatar Customization Screen & System-Wide 3D Avatars
+## Current Issues Identified
 
-## Overview
+Looking at the current implementation, several elements feel "generic" rather than capturing The Sims' distinctive aesthetic:
 
-This plan updates the player creation flow to feature a full "Sims-style" 3D avatar customizer and enables 3D avatars throughout the game UI.
-
----
-
-## Part 1: Create Sims-Style Avatar Customizer Component
-
-### New Component: `AvatarCustomizer.tsx`
-
-A dedicated full-screen customization interface inspired by The Sims' character creation:
-
-**Layout Structure:**
-- **Left Side**: Large 3D avatar preview (rotating, interactive)
-- **Right Side**: Categorized customization panels
-
-**Customization Categories (Tabbed):**
-
-| Tab | Options |
-|-----|---------|
-| **Body** | Body Type (4 options), Height (3 options) |
-| **Skin** | Skin Tone picker (12 diverse colors) |
-| **Face** | Head Shape (4), Eye Shape (4), Eye Color (6+), Nose Type (4), Mouth Type (4) |
-| **Hair** | Hair Style (8 styles), Hair Color (natural + fantasy colors) |
-| **Clothing** | Top Style (5), Top Color, Bottom Style (4), Bottom Color |
-
-**UI Components:**
-- Visual icon-based selectors (not just dropdowns)
-- Color swatches for skin/hair/clothing
-- Live 3D preview updates as user selects options
-- "Randomize" button per category
-- "Randomize All" button
+1. **Plain dark background** - Lacks the signature Sims blue/teal gradient
+2. **Basic tab buttons** - Missing The Sims' iconic pill/capsule shaped category tabs
+3. **Simple option buttons** - Text-only, no visual previews or silhouettes
+4. **No personality** - Missing playful animations, sound-like visual feedback
+5. **Missing turntable feel** - Avatar preview should feel like a mannequin on a rotating platform
+6. **Generic controls** - Rotation arrows and randomize buttons lack Sims flair
 
 ---
 
-## Part 2: Add Larger Canvas Size for Customizer
+## Design Transformation
 
-### Modify: `AvatarCanvas.tsx`
+### Color Palette Shift (Sims 4 Inspired)
 
-Add new sizes for the customization screen:
+| Element | Current | Sims-Style |
+|---------|---------|------------|
+| Background | Dark slate gradient | Deep teal/navy gradient with subtle pattern |
+| Accent | Generic blue | Sims green (#3DDC84) + teal highlights |
+| Panel BG | Muted dark | Glassmorphism with teal tint |
+| Buttons | Primary blue | Rounded white/teal with hover glow |
 
+### UI Element Upgrades
+
+**1. Avatar Preview Platform**
+- Add a circular "turntable" base with subtle glow
+- Radial gradient spotlight effect from above
+- Animated platform rotation on drag (not just button clicks)
+- Add faint grid/stage floor pattern
+
+**2. Category Tabs (Sims-Style)**
+- Horizontal capsule/pill buttons with icons
+- Bouncy selection animation
+- Glowing underline for active tab
+- Icons should be more playful/rounded
+
+**3. Option Selectors**
+- Add silhouette previews for body types (slim/athletic/stocky outlines)
+- Hair styles should show mini hair shape icons
+- Clothing should show garment silhouettes
+- Hover animation: slight bounce + tooltip
+
+**4. Color Swatches**
+- Add 3D "paint drop" effect with shadows
+- Satisfying pop animation on select
+- Group colors with subtle dividers (natural vs fantasy)
+
+**5. Randomize Button**
+- Add dice icon with shake animation on click
+- Plumbob (Sims diamond) accent somewhere
+
+---
+
+## Technical Implementation
+
+### New CSS Classes (Add to index.css)
+
+```css
+/* Sims-style turntable platform */
+.sims-turntable {
+  @apply relative;
+  background: radial-gradient(ellipse at center bottom, rgba(61, 220, 132, 0.3) 0%, transparent 70%);
+}
+
+.sims-turntable::after {
+  content: "";
+  @apply absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-4 rounded-[50%];
+  background: linear-gradient(to right, transparent, rgba(61, 220, 132, 0.4), transparent);
+  filter: blur(8px);
+}
+
+/* Sims category tab */
+.sims-tab {
+  @apply relative px-4 py-2 rounded-full font-medium transition-all duration-300;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+}
+
+.sims-tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.sims-tab.active {
+  background: rgba(61, 220, 132, 0.2);
+  border-color: #3DDC84;
+  box-shadow: 0 4px 20px rgba(61, 220, 132, 0.4);
+}
+
+/* Sims option card with silhouette */
+.sims-option-card {
+  @apply relative flex flex-col items-center p-3 rounded-xl cursor-pointer transition-all duration-200;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.sims-option-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+  border-color: rgba(61, 220, 132, 0.5);
+}
+
+.sims-option-card.selected {
+  background: rgba(61, 220, 132, 0.15);
+  border-color: #3DDC84;
+  box-shadow: 0 0 15px rgba(61, 220, 132, 0.3);
+}
+
+/* Sims color swatch 3D effect */
+.sims-swatch {
+  @apply relative rounded-full cursor-pointer transition-all duration-200;
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.sims-swatch:hover {
+  transform: scale(1.15) translateY(-2px);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.4);
+}
+```
+
+### File Changes
+
+**Modify: `AvatarCustomizer.tsx`**
+
+1. Replace background with Sims-style gradient:
 ```typescript
-const SIZE_CONFIG = {
-  // ... existing sizes
-  xxl: { width: 200, height: 200, cameraZ: 1.4, cameraY: 0.35 },
-  full: { width: 280, height: 280, cameraZ: 1.2, cameraY: 0.3 }
+// New background container
+<div className="sims-cas-background relative overflow-hidden">
+  {/* Subtle animated pattern overlay */}
+  <div className="absolute inset-0 opacity-5 bg-grid-pattern" />
+  
+  {/* Teal gradient overlay */}
+  <div className="absolute inset-0 bg-gradient-to-br from-[#0a2a3a] via-[#0d3445] to-[#061820]" />
+```
+
+2. Add turntable platform to preview area:
+```typescript
+<div className="sims-turntable relative flex flex-col items-center">
+  {/* Spotlight cone */}
+  <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-radial from-white/5 to-transparent pointer-events-none" />
+  
+  {/* Avatar with rotate-on-drag */}
+  <motion.div 
+    className="relative cursor-grab active:cursor-grabbing"
+    drag="x"
+    dragConstraints={{ left: 0, right: 0 }}
+    onDrag={(e, info) => setRotation(r => r + info.delta.x)}
+  >
+    <SimsAvatar ... />
+  </motion.div>
+  
+  {/* Turntable base */}
+  <div className="w-40 h-3 mt-2 rounded-full bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent blur-sm" />
+</div>
+```
+
+3. Replace tabs with Sims-style capsule buttons:
+```typescript
+<div className="flex items-center justify-center gap-2 mb-6">
+  {tabConfig.map(tab => (
+    <motion.button
+      key={tab.id}
+      onClick={() => setActiveTab(tab.id)}
+      className={cn(
+        "sims-tab flex items-center gap-2",
+        activeTab === tab.id && "active"
+      )}
+      whileTap={{ scale: 0.95 }}
+    >
+      <tab.icon className="w-5 h-5" />
+      <span>{tab.label}</span>
+    </motion.button>
+  ))}
+</div>
+```
+
+**Modify: `AvatarOptionSelector.tsx`**
+
+1. Add silhouette icons for body/hair options:
+```typescript
+// Map options to SVG silhouettes
+const OPTION_ICONS: Record<string, Record<string, React.ReactNode>> = {
+  bodyType: {
+    slim: <SlimBodyIcon />,
+    average: <AverageBodyIcon />,
+    athletic: <AthleticBodyIcon />,
+    stocky: <StockyBodyIcon />
+  },
+  hairStyle: {
+    short: <ShortHairIcon />,
+    // ...etc
+  }
 };
 ```
 
-This allows a large, detailed view of the avatar during customization.
+2. Replace button styling with `sims-option-card` class
+3. Add hover tooltip with option name
+
+**Modify: `ColorPalettePicker.tsx`**
+
+1. Apply `sims-swatch` class for 3D paint-drop effect
+2. Add satisfying "pop" animation with sound-like visual pulse
+3. Group colors with subtle labels ("Natural", "Fashion")
+
+**Create: `SimsIcons.tsx`** (new file)
+
+Collection of playful silhouette icons for:
+- Body types (simplified human outlines)
+- Hair styles (hair shape outlines)  
+- Clothing items (shirt/pants shapes)
+- Facial features (eye/nose/mouth shapes)
 
 ---
 
-## Part 3: Integrate Customizer into Player Creation Flow
+## Visual Preview
 
-### Modify: `PlayerForm.tsx`
-
-Replace the current `AvatarPreview` section with:
-- A button to "Customize Avatar" that opens the full customizer
-- Or embed a compact version of the customizer directly
-
-### Modify: `AvatarPreview.tsx`
-
-Update to display the 3D avatar instead of initials/gradient:
-- Use `SimsAvatar` component with the player's avatar config
-- Show the 3D animated avatar as the main preview
-
-### Modify: `types.ts`
-
-Add `avatarConfig` to `PlayerFormData`:
-
-```typescript
-export interface PlayerFormData {
-  // ... existing fields
-  avatarConfig?: Avatar3DConfig;  // 3D avatar configuration
-}
+```
++------------------------------------------------------------------+
+|  ← CREATE YOUR SIM                                    [X]        |
++------------------------------------------------------------------+
+|                                                                   |
+|  +---------------------------+  +------------------------------+  |
+|  |    [spotlight cone]       |  |                              |  |
+|  |         ___               |  |  ● Body  ● Skin  ●Hair  ●Face  ●Clothes |
+|  |        /   \              |  |  ════════                    |  |
+|  |       | 3D  |             |  |                              |  |
+|  |       |Sim! |             |  |  BODY TYPE                   |  |
+|  |       \_____/             |  |  ╭──────╮ ╭──────╮ ╭──────╮  |  |
+|  |     ════════════          |  |  │  🧍  │ │  🧍  │ │  🧍  │  |  |
+|  |     [turntable glow]      |  |  │ Slim │ │ Avg  │ │ Athl │  |  |
+|  |                           |  |  ╰──────╯ ╰──────╯ ╰──────╯  |  |
+|  |   [← drag to rotate →]    |  |                              |  |
+|  |                           |  |  HEIGHT                      |  |
+|  |   [🎲 Randomize All]      |  |  ○ Short  ● Average  ○ Tall  |  |
+|  +---------------------------+  +------------------------------+  |
+|                                                                   |
+|              [✨ Continue with this Sim ✨]                       |
++------------------------------------------------------------------+
 ```
 
 ---
 
-## Part 4: Update Character Frame to Show 3D Avatars
+## Animation Enhancements
 
-### Modify: `CharacterFrame.tsx`
-
-Replace the 2D template image with 3D avatar when `avatar3DConfig` is available:
-
-```typescript
-// If template has 3D config, render SimsAvatar
-{template.avatar3DConfig ? (
-  <SimsAvatar 
-    config={template.avatar3DConfig} 
-    size="lg" 
-    animated={false}
-  />
-) : (
-  <img src={template.imageUrl} ... />
-)}
-```
+| Interaction | Animation |
+|-------------|-----------|
+| Tab switch | Bouncy scale + glow pulse |
+| Option select | Pop scale (1.1 → 1) + ring pulse |
+| Color select | Squish (0.8 → 1) + ripple |
+| Randomize click | Dice shake + confetti burst |
+| Avatar rotate | Smooth spring physics |
+| Panel appear | Slide up + fade in |
 
 ---
 
-## Part 5: Enable 3D Avatars in Game UI
+## Implementation Summary
 
-### Modify: `HouseguestAvatar.tsx`
-
-Update to support 3D mode:
-
-```typescript
-interface HouseguestAvatarProps {
-  houseguest: Houseguest;
-  size?: 'sm' | 'md' | 'lg';
-  use3D?: boolean;  // New prop
-}
-
-// If houseguest has avatarConfig and use3D is true, render SimsAvatar
-```
-
-### Modify: `HouseguestDialog.tsx`
-
-Pass `use3D={true}` to `HouseguestAvatar` when the houseguest has an avatar config.
-
----
-
-## Part 6: Create Color Palette Picker Component
-
-### New Component: `ColorPalettePicker.tsx`
-
-A reusable swatch-based color picker:
-
-```typescript
-interface ColorPalettePickerProps {
-  colors: string[];
-  value: string;
-  onChange: (color: string) => void;
-  size?: 'sm' | 'md' | 'lg';
-  label?: string;
-}
-```
-
-- Grid of clickable color swatches
-- Selected state with ring/checkmark
-- Optional category labels
-
----
-
-## Part 7: Create Option Selector Components
-
-### New Component: `AvatarOptionSelector.tsx`
-
-A visual selector for non-color options (body type, hair style, etc.):
-
-```typescript
-interface AvatarOptionSelectorProps<T extends string> {
-  options: T[];
-  value: T;
-  onChange: (value: T) => void;
-  renderOption: (option: T, isSelected: boolean) => React.ReactNode;
-  columns?: number;
-}
-```
-
-- Grid layout with visual icons/previews
-- Selected state with border highlight
-
----
-
-## Files Summary
-
-### New Files (4)
-
-| File | Purpose |
-|------|---------|
-| `src/components/avatar-3d/AvatarCustomizer.tsx` | Full Sims-style customization UI |
-| `src/components/avatar-3d/ColorPalettePicker.tsx` | Color swatch picker component |
-| `src/components/avatar-3d/AvatarOptionSelector.tsx` | Visual option selector |
-| `src/components/avatar-3d/AvatarCustomizerPreview.tsx` | Large 3D preview with controls |
-
-### Modified Files (8)
+### Modified Files (4)
 
 | File | Changes |
 |------|---------|
-| `src/components/avatar-3d/AvatarCanvas.tsx` | Add `xxl` and `full` size presets |
-| `src/components/game-setup/types.ts` | Add `avatarConfig` to `PlayerFormData` |
-| `src/components/game-setup/PlayerForm.tsx` | Integrate avatar customizer |
-| `src/components/game-setup/AvatarPreview.tsx` | Use 3D avatar in preview |
-| `src/components/game-setup/CharacterFrame.tsx` | Render 3D avatars for templates |
-| `src/components/houseguest/HouseguestAvatar.tsx` | Add 3D mode support |
-| `src/components/houseguest/HouseguestDialog.tsx` | Enable 3D avatars |
-| `src/models/avatar-config.ts` | Export all type arrays for selectors |
+| `src/components/avatar-3d/AvatarCustomizer.tsx` | Full visual overhaul with Sims-style layout, turntable, tabs |
+| `src/components/avatar-3d/AvatarOptionSelector.tsx` | Add silhouette icons, Sims card styling |
+| `src/components/avatar-3d/ColorPalettePicker.tsx` | 3D swatch effect, color grouping |
+| `src/index.css` | Add Sims-specific CSS classes |
+
+### New Files (1)
+
+| File | Purpose |
+|------|---------|
+| `src/components/avatar-3d/SimsIcons.tsx` | SVG silhouette icons for options |
 
 ---
 
-## UI Design: Avatar Customizer Screen
+## Expected Result
 
-```text
-+------------------------------------------------------------------+
-|  < Back                     CREATE YOUR AVATAR                    |
-+------------------------------------------------------------------+
-|                                                                   |
-|  +---------------------------+  +------------------------------+  |
-|  |                           |  |  [Body] [Skin] [Face] [Hair] [Clothes] |
-|  |     +--------------+      |  +------------------------------+  |
-|  |     |              |      |  |                              |  |
-|  |     |   3D AVATAR  |      |  |  Body Type:                  |  |
-|  |     |   (Rotating) |      |  |  [Slim] [Average] [Athletic] [Stocky] |
-|  |     |   (Large)    |      |  |                              |  |
-|  |     |              |      |  |  Height:                     |  |
-|  |     +--------------+      |  |  [Short] [Average] [Tall]    |  |
-|  |                           |  |                              |  |
-|  |     [Rotate Left/Right]   |  |  [Randomize Body]            |  |
-|  |     [Randomize All]       |  |                              |  |
-|  +---------------------------+  +------------------------------+  |
-|                                                                   |
-|                         [Continue with this Avatar]               |
-+------------------------------------------------------------------+
-```
-
----
-
-## Implementation Steps
-
-1. **Create `ColorPalettePicker` component** - Reusable color swatch picker
-2. **Create `AvatarOptionSelector` component** - Visual option grid selector
-3. **Extend `AvatarCanvas` sizes** - Add larger preview sizes
-4. **Create `AvatarCustomizer` component** - Main customization UI with tabs
-5. **Update `PlayerFormData` type** - Add avatarConfig field
-6. **Modify `PlayerForm`** - Add customizer integration
-7. **Update `AvatarPreview`** - Show 3D avatar preview
-8. **Update `CharacterFrame`** - Render 3D for templates
-9. **Update `HouseguestAvatar`** - Add 3D rendering mode
-10. **Update `HouseguestDialog`** - Enable 3D avatars in dialogs
-
----
-
-## Expected Behavior
-
-1. **Create Custom Character flow**: Opens full-screen Sims-style customizer
-2. **Live preview**: 3D avatar updates instantly as options are changed
-3. **Tabbed navigation**: Easy switching between Body, Skin, Face, Hair, Clothes
-4. **Visual selectors**: Icon-based selectors instead of plain dropdowns
-5. **Color palettes**: Swatch grids for skin/hair/clothing colors
-6. **Randomize options**: Per-category and global randomize buttons
-7. **Game UI**: All houseguest avatars render as 3D when config available
-8. **Status animations**: 3D avatars show HoH glow, nominee nervousness, etc.
-
----
-
-## Visual Style Guide
-
-- **Background**: Dark slate gradient to make 3D avatar pop
-- **Category tabs**: Pill-shaped buttons with icons
-- **Option cards**: Rounded cards with hover effects
-- **Color swatches**: Circular swatches in grid layout
-- **Selected state**: Ring highlight + subtle glow
-- **Animations**: Smooth transitions between selections
-
+The avatar customizer will transform from a generic dark modal into an authentic Sims-style Create-a-Sim experience with:
+- Signature teal/green color scheme
+- Playful, bouncy animations
+- Visual silhouette option cards
+- 3D paint-drop color swatches
+- Turntable preview with drag-to-rotate
+- Spotlight and stage effects
+- Overall "game-like" personality
