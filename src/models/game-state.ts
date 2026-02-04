@@ -107,6 +107,8 @@ export interface GameState {
   isSpectatorMode: boolean;
   // Track out-of-phase social actions (resets on entering SocialInteraction phase)
   outOfPhaseSocialActionsUsed: number;
+  // Track if eviction happened this week (prevents skipping evictions)
+  evictionCompletedThisWeek: boolean;
   // UI feedback for relationship changes
   lastRelationshipImpact?: {
     targetId: string;
@@ -141,6 +143,7 @@ export function createInitialGameState(): GameState {
     isFinalStage: false,
     isSpectatorMode: false,
     outOfPhaseSocialActionsUsed: 0,
+    evictionCompletedThisWeek: false,
     lastRelationshipImpact: undefined
   };
 }

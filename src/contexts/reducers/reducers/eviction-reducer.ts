@@ -60,6 +60,7 @@ export function evictionReducer(state: GameState, action: GameAction): GameState
         juryMembers: updatedJury,
         evictionVotes: {}, // Clear votes after eviction
         isSpectatorMode: isPlayerEvicted ? true : state.isSpectatorMode,
+        evictionCompletedThisWeek: true, // Mark eviction as complete for this week
       };
     }
     
