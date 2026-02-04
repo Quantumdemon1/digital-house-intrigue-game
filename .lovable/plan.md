@@ -1,218 +1,336 @@
 
+# Plan: Enhance NPC Behavior and Intelligence
 
-# Plan: Fix Player HoH Nomination Control
+## Current System Analysis
 
-## Problem
+The game currently has foundational systems for NPC decision-making, but several areas can be significantly improved to make NPCs feel more intelligent and strategic.
 
-When the player wins Head of Household, they are not given the opportunity to manually select nominees. Instead, the AI takes over and makes the nominations automatically.
+### Existing Components
+- **AI Integration System**: Uses Gemini API with fallback to relationship-based decisions
+- **Fallback Generator**: Makes decisions based on relationship scores when AI fails
+- **Memory Manager**: Stores basic memories for each houseguest
+- **Mental State Tracking**: Mood and stress levels that affect decision-making
+- **Personality Traits**: 17 traits that influence behavior
+- **Relationship System**: Tracks relationships with decay, events, and group dynamics
 
-## Root Cause
+### Current Limitations
+1. **No autonomous NPC actions** during social phases - only player can interact
+2. **Memory system is basic** - only 10 memories, simple text format
+3. **Voting logic is simplistic** - only considers direct relationship scores
+4. **No strategic threat assessment** - NPCs don't evaluate who is a competition threat
+5. **Limited trait influence** - traits affect prompts but not fallback logic significantly
+6. **NPCs don't form alliances autonomously**
+7. **No betrayal detection or revenge mechanics** in decision-making
+8. **Jury votes don't consider gameplay respect** - only relationships
 
-The AI nomination hook (`useAINomination`) runs its decision process **immediately on component mount** without waiting for the ceremony to be explicitly started. The condition check includes `!hoh.isPlayer`, but:
+---
 
-1. **Missing ceremony start check**: The `isNominating` flag is in the dependency array but is NOT checked in the condition
-2. **Race condition potential**: The AI effect can run before the component has fully confirmed the HoH is the player
-3. **No explicit player guard**: There's no early return in the hook for player-controlled HoH scenarios
+## Proposed Enhancements
 
-The AI nomination effect at `useAINomination.ts` lines 52-66:
+### Phase 1: Enhanced Decision Weighting System
+
+Create a sophisticated scoring system that NPCs use for all major decisions.
+
+**New File: `src/systems/ai/npc-decision-engine.ts`**
+
 ```typescript
-useEffect(() => {
-  if (
-    hoh && 
-    !hoh.isPlayer &&         // This check exists BUT...
-    !ceremonyComplete && 
-    !aiProcessed && 
-    !processingRef.current
-  ) {
-    // AI runs IMMEDIATELY on mount if conditions met
-    // isNominating is NOT checked here!
-    processAIDecision();
-  }
-}, [hoh, isNominating, ...]);  // isNominating is a dependency but unused
+interface DecisionFactors {
+  relationship: number;        // -100 to 100
+  threatLevel: number;         // 0 to 100 (competition threat)
+  allianceLoyalty: number;     // 0 to 100
+  reciprocity: number;         // -1 to 1
+  recentEvents: number;        // -50 to 50 (recent positive/negative events)
+  personalityBias: number;     // -20 to 20 based on traits
+  strategicValue: number;      // 0 to 100 (how useful is this person)
+  promiseObligations: number;  // -30 to 30 based on active promises
+}
 ```
 
-## Solution
+**Trait-Specific Decision Modifiers:**
+- **Strategic**: Weighs threat level higher, less emotional decisions
+- **Loyal**: Heavily weighs alliance membership and promises
+- **Competitive**: Targets strong competitors
+- **Emotional**: Weighs recent events and relationship more heavily
+- **Sneaky**: Lower penalty for backstabbing, higher strategic value weight
+- **Confrontational**: More likely to make bold moves against disliked players
 
-### Fix 1: Add `isNominating` Check to AI Hook
+---
 
-Modify the AI nomination effect to only run after the ceremony has been explicitly started:
+### Phase 2: Threat Assessment System
 
-```typescript
-// useAINomination.ts
-useEffect(() => {
-  if (
-    hoh && 
-    !hoh.isPlayer && 
-    isNominating &&           // ADD: Only after ceremony starts
-    !ceremonyComplete && 
-    !aiProcessed && 
-    !processingRef.current
-  ) {
-    setAiProcessed(true);
-    processAIDecision();
-  }
-  // ...cleanup
-}, [hoh, isNominating, ceremonyComplete, aiProcessed, ...]);
-```
+**New File: `src/systems/ai/threat-assessment.ts`**
 
-### Fix 2: Add Early Return for Player HoH
-
-Add an early return in the `useAINomination` hook when the player is HoH:
+NPCs evaluate other houseguests as threats based on:
+- Competition wins (HoH, PoV count)
+- Social connections (average relationship score with house)
+- Alliance memberships (number and size of alliances)
+- Previous nominations/targets
 
 ```typescript
-// useAINomination.ts
-export const useAINomination = ({ hoh, isNominating, ... }) => {
-  // If player is HoH, don't set up any AI processing at all
-  const isPlayerHoH = hoh?.isPlayer ?? false;
+calculateThreatLevel(evaluator: Houseguest, target: Houseguest): number {
+  let threat = 0;
   
-  useEffect(() => {
-    // Skip ALL AI processing if player is HoH
-    if (isPlayerHoH) return;
-    
-    if (hoh && isNominating && !ceremonyComplete && !aiProcessed && !processingRef.current) {
-      setAiProcessed(true);
-      processAIDecision();
+  // Competition threat (0-40 points)
+  threat += (target.competitionsWon.hoh * 8);
+  threat += (target.competitionsWon.pov * 6);
+  
+  // Social threat - average relationship with house (0-30 points)
+  const avgRelationship = getAverageRelationship(target.id);
+  threat += Math.max(0, (avgRelationship + 50) * 0.3);
+  
+  // Alliance threat (0-20 points)
+  const allianceCount = getAlliancesForHouseguest(target.id).length;
+  threat += allianceCount * 7;
+  
+  // Stat-based potential threat (0-10 points)
+  threat += (target.stats.competition / 10) * 5;
+  threat += (target.stats.strategic / 10) * 5;
+  
+  return Math.min(100, threat);
+}
+```
+
+---
+
+### Phase 3: Enhanced Voting Logic
+
+**File: `src/components/game-phases/EvictionPhase/useVotingLogic.ts`**
+
+Replace simple relationship comparison with multi-factor decision:
+
+```typescript
+function calculateVoteScore(voter: Houseguest, nominee: Houseguest): number {
+  let keepScore = 0;
+  
+  // Relationship factor (weight: 30%)
+  keepScore += relationship * 0.3;
+  
+  // Alliance loyalty factor (weight: 25%)
+  if (areInSameAlliance(voter.id, nominee.id)) {
+    keepScore += 40;
+  }
+  
+  // Threat level factor - want to evict threats (weight: 25%)
+  const threat = calculateThreatLevel(voter, nominee);
+  keepScore -= threat * 0.25;
+  
+  // Promise obligations (weight: 10%)
+  const promises = getPromisesBetween(voter.id, nominee.id);
+  promises.forEach(p => {
+    if (p.type === 'safety' && p.status === 'pending') {
+      keepScore += 30; // Strong incentive to honor safety promises
     }
-    // ...
-  }, [isPlayerHoH, hoh, isNominating, ...]);
+  });
   
-  // Return early with empty state if player is HoH
-  if (isPlayerHoH) {
-    return { 
-      aiProcessed: false,
-      showAIDecision: false,
-      aiDecision: null,
-      handleCloseAIDecision: () => {}
-    };
-  }
-  // ...
-};
+  // Personality modifier (weight: 10%)
+  keepScore += getPersonalityVoteModifier(voter, nominee);
+  
+  return keepScore;
+}
 ```
 
-### Fix 3: Ensure NominationPhase UI Logic
+---
 
-Verify the player-selection stage is correctly triggered in `NominationPhase/index.tsx`:
+### Phase 4: Autonomous NPC Social Actions
+
+**New File: `src/systems/ai/npc-social-behavior.ts`**
+
+NPCs perform their own social actions during social phases:
 
 ```typescript
-// When starting ceremony for player HoH
-const handleStartCeremony = useCallback(() => {
-  startCeremony();
-  if (isPlayerHoH) {
-    setStage('player-selection');  // This exists but verify it runs
+interface NPCAction {
+  type: 'talk' | 'strategy' | 'alliance_propose' | 'alliance_meeting' | 'spread_info';
+  targetId: string;
+  reasoning: string;
+}
+
+function generateNPCActions(npc: Houseguest, game: BigBrotherGame): NPCAction[] {
+  const actions: NPCAction[] = [];
+  
+  // Strengthen existing alliances
+  const allies = getAllAlliesForHouseguest(npc.id);
+  if (allies.length > 0) {
+    const weakestAlly = findWeakestRelationshipAlly(npc, allies);
+    actions.push({
+      type: 'talk',
+      targetId: weakestAlly.id,
+      reasoning: `Maintaining alliance relationship`
+    });
   }
-  // AI nominations are handled by the hook ONLY for non-player HoH
-}, [startCeremony, isPlayerHoH]);
-```
-
-The current code at line 53-58 already has this logic, but we need to ensure the AI hook doesn't interfere.
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/components/game-phases/NominationPhase/hooks/ai-nomination/useAINomination.ts` | Add `isNominating` check to effect condition; add early return for player HoH |
-| `src/components/game-phases/NominationPhase/hooks/ai-nomination/useAIProcessing.ts` | Add player check guard at the start of `processAIDecision` |
-
-## Technical Details
-
-### useAINomination.ts Changes
-
-```typescript
-export const useAINomination = ({
-  hoh,
-  potentialNominees,
-  isNominating,
-  ceremonyComplete,
-  confirmNominations,
-  setNominees,
-}: UseAINominationProps): UseAINominationReturn => {
-  // Early detection of player HoH
-  const isPlayerHoH = hoh?.isPlayer ?? false;
   
-  const [aiProcessed, setAiProcessed] = useState(false);
-  const [showAIDecision, setShowAIDecision] = useState(false);
-  const [aiDecision, setAIDecision] = useState<AIDecision | null>(null);
-  
-  // ... hook initialization ...
-
-  // AI nomination logic - ONLY for AI HoH after ceremony starts
-  useEffect(() => {
-    // Explicit guard: never run for player HoH
-    if (isPlayerHoH) {
-      return;
+  // Strategic: Consider forming new alliances
+  if (npc.traits.includes('Strategic') && allies.length < 3) {
+    const potentialAlly = findBestPotentialAlly(npc);
+    if (potentialAlly && getRelationship(npc.id, potentialAlly.id) > 25) {
+      actions.push({
+        type: 'alliance_propose',
+        targetId: potentialAlly.id,
+        reasoning: `Strategic alliance opportunity`
+      });
     }
-    
-    // Only process if ceremony has started and conditions are met
-    if (
-      hoh && 
-      !hoh.isPlayer && 
-      isNominating &&          // NEW: Must have started ceremony
-      !ceremonyComplete && 
-      !aiProcessed && 
-      !processingRef.current
-    ) {
-      setAiProcessed(true);
-      processAIDecision();
-    }
-    
-    return () => {
-      if (aiTimeoutRef.current) {
-        clearTimeout(aiTimeoutRef.current);
-      }
-    };
-  }, [isPlayerHoH, hoh, isNominating, ceremonyComplete, aiProcessed, ...]);
-
-  return { aiProcessed, showAIDecision, aiDecision, handleCloseAIDecision };
-};
-```
-
-### useAIProcessing.ts Changes
-
-Add a guard at the start of `processAIDecision`:
-
-```typescript
-const processAIDecision = useCallback(async () => {
-  // Guard: Never process for player HoH
-  if (hoh?.isPlayer) {
-    aiLogger.info("Skipping AI nomination - player is HoH");
-    return;
   }
   
-  // Existing logic...
-  if (!hoh || !aiSystem || !game || processingRef.current) {
-    return;
+  // Sneaky: Spread information about enemies
+  if (npc.traits.includes('Sneaky') || npc.traits.includes('Manipulative')) {
+    const enemy = findWorstRelationship(npc);
+    const friend = findBestRelationship(npc);
+    if (enemy && friend) {
+      actions.push({
+        type: 'spread_info',
+        targetId: friend.id,
+        reasoning: `Turning ally against enemy`
+      });
+    }
   }
-  // ...
-}, [hoh, ...]);
+  
+  return actions;
+}
 ```
 
-## Expected Behavior After Fix
+---
 
-1. Player wins HoH competition
-2. Phase transitions to Nomination
-3. NominationPhase mounts with `stage = 'pre-ceremony'`
-4. Player sees "Start Nomination Ceremony" button
-5. Player clicks button -> `isNominating = true`, `stage = 'player-selection'`
-6. Player sees NomineeSelector grid to pick 2 nominees
-7. Player confirms -> Key Ceremony animation plays
-8. Nominations complete -> Continue to PoV
+### Phase 5: Enhanced Memory System
 
-For AI HoH:
-1. AI wins HoH competition
-2. Phase transitions to Nomination
-3. NominationPhase mounts
-4. Spectator mode auto-starts ceremony after delay
-5. `isNominating = true` triggers AI nomination hook
-6. AI selects nominees with delay animation
-7. Key Ceremony plays automatically
-8. Continue to PoV
+**File: `src/systems/ai/memory-manager.ts`**
 
-## Testing
+Upgrade memories to be more structured and impactful:
 
-After implementation, test the following scenarios:
-1. Player wins HoH in Week 1 -> verify nomination selector appears
-2. Player wins HoH after eviction -> verify selector still works
-3. AI wins HoH -> verify AI makes nominations correctly
-4. Fast-forward through player HoH nomination -> verify no AI interference
-5. Spectator mode (player evicted) -> verify AI handles nominations
+```typescript
+interface StructuredMemory {
+  id: string;
+  week: number;
+  type: 'betrayal' | 'alliance' | 'competition' | 'vote' | 'promise' | 'social';
+  importance: number; // 1-10
+  involvedIds: string[];
+  description: string;
+  emotionalImpact: number; // -100 to 100
+  decaysAt?: number; // Week when this memory fades
+}
 
+// Memory prioritization for decisions
+function getRelevantMemories(houseguestId: string, decisionType: string): StructuredMemory[] {
+  const allMemories = memories.get(houseguestId) || [];
+  
+  // Filter by relevance to decision type
+  return allMemories
+    .filter(m => {
+      // Betrayal memories always relevant for trust decisions
+      if (m.type === 'betrayal') return true;
+      // Alliance memories relevant for voting
+      if (decisionType === 'eviction_vote' && m.type === 'alliance') return true;
+      // Promise memories for nominations
+      if (decisionType === 'nomination' && m.type === 'promise') return true;
+      return m.importance >= 7;
+    })
+    .sort((a, b) => b.importance - a.importance)
+    .slice(0, 8); // Top 8 most relevant memories
+}
+```
+
+---
+
+### Phase 6: Jury Vote Intelligence
+
+**File: `src/systems/ai/prompts/game-decision-prompts.ts`**
+
+Improve jury voting to consider gameplay respect:
+
+```typescript
+function calculateJuryVoteFactors(juror: Houseguest, finalist: Houseguest): number {
+  let score = 0;
+  
+  // Personal relationship (30% weight)
+  score += getRelationship(juror.id, finalist.id) * 0.3;
+  
+  // Gameplay respect (40% weight)
+  const gameplayRespect = calculateGameplayRespect(juror, finalist);
+  score += gameplayRespect * 0.4;
+  
+  // How they were evicted (30% weight)
+  const evictionBitterness = getEvictionBitterness(juror, finalist);
+  score -= evictionBitterness * 0.3;
+  
+  return score;
+}
+
+function calculateGameplayRespect(juror: Houseguest, finalist: Houseguest): number {
+  let respect = 0;
+  
+  // Competition performance
+  respect += finalist.competitionsWon.hoh * 5;
+  respect += finalist.competitionsWon.pov * 4;
+  
+  // Big moves (nominations, veto uses that changed game)
+  respect += countBigMoves(finalist) * 8;
+  
+  // Survived nominations (resilience)
+  respect += finalist.nominations.times * 3;
+  
+  // Social game (avoided being targeted)
+  const weeksActive = /* calculate */;
+  const targetRate = finalist.nominations.times / weeksActive;
+  respect += (1 - targetRate) * 20;
+  
+  return Math.min(100, respect);
+}
+```
+
+---
+
+## Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/systems/ai/npc-decision-engine.ts` | Create | Core NPC decision weighting system |
+| `src/systems/ai/threat-assessment.ts` | Create | Competition and social threat evaluation |
+| `src/systems/ai/npc-social-behavior.ts` | Create | Autonomous NPC social actions |
+| `src/systems/ai/memory-manager.ts` | Modify | Upgrade to structured memories |
+| `src/systems/ai/fallback-generator.ts` | Modify | Use new decision engine for fallbacks |
+| `src/components/game-phases/EvictionPhase/useVotingLogic.ts` | Modify | Multi-factor voting decisions |
+| `src/systems/ai/prompts/game-decision-prompts.ts` | Modify | Enhanced jury vote logic |
+| `src/config.ts` | Modify | Add NPC behavior tuning constants |
+
+---
+
+## Implementation Priority
+
+1. **High Priority** - Decision Engine + Enhanced Voting (immediate gameplay improvement)
+2. **High Priority** - Threat Assessment (makes nominations and votes smarter)
+3. **Medium Priority** - Enhanced Memory System (improves context for decisions)
+4. **Medium Priority** - Jury Vote Intelligence (better finale experience)
+5. **Lower Priority** - Autonomous NPC Social Actions (adds passive gameplay depth)
+
+---
+
+## Technical Considerations
+
+### Config Additions
+```typescript
+// NPC Behavior settings
+NPC_THREAT_WEIGHT: 0.25,          // How much threat level affects decisions
+NPC_LOYALTY_WEIGHT: 0.25,         // How much alliance loyalty matters
+NPC_RELATIONSHIP_WEIGHT: 0.3,     // Base relationship importance
+NPC_PROMISE_WEIGHT: 0.1,          // Promise obligation weight
+NPC_PERSONALITY_WEIGHT: 0.1,      // Personality bias weight
+
+// Autonomous actions
+NPC_AUTONOMOUS_ACTIONS_ENABLED: true,
+NPC_ACTIONS_PER_SOCIAL_PHASE: 2,  // How many actions each NPC takes
+```
+
+### Performance
+- All calculations are synchronous and lightweight
+- Memory queries are O(n) where n = memory count per houseguest
+- Threat assessments can be cached per week
+
+---
+
+## Expected Outcomes
+
+After implementation:
+- NPCs will target competition threats, not just disliked houseguests
+- Alliance members will vote together unless there's a compelling reason not to
+- Jury votes will respect strong gameplay, not just friendships
+- NPCs will form and maintain alliances strategically
+- Betrayals will have lasting consequences through memory system
+- Different personality types will make noticeably different decisions
