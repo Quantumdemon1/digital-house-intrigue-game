@@ -6,14 +6,17 @@ import { Houseguest, PersonalityTrait, createHouseguest, HouseguestStats, TRAIT_
 import { useGame } from '@/contexts/GameContext';
 import PlayerForm from './game-setup/PlayerForm';
 import HouseguestList from './game-setup/HouseguestList';
-import { defaultHouseguests, personalityTraits } from './game-setup/defaultHouseguests';
+import { AvatarSelector } from './game-setup/AvatarSelector';
+import { characterTemplates, CharacterTemplate } from '@/data/character-templates';
+import { personalityTraits } from './game-setup/defaultHouseguests';
 import { PlayerFormData } from './game-setup/types';
 import { GamePhase } from '@/models/game-state';
 import { staggerContainer, cardVariants } from '@/lib/motion-variants';
 
 const GameSetup: React.FC = () => {
   const { dispatch } = useGame();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [selectedTemplate, setSelectedTemplate] = useState<CharacterTemplate | null>(null);
   const [playerFormData, setPlayerFormData] = useState<PlayerFormData>({
     playerName: '',
     playerAge: 25,
@@ -32,7 +35,9 @@ const GameSetup: React.FC = () => {
       loyalty: 5
     },
     remainingPoints: 5,
-    houseguestCount: 8
+    houseguestCount: 8,
+    avatarUrl: undefined,
+    templateId: undefined
   });
   const [finalHouseguests, setFinalHouseguests] = useState<Houseguest[]>([]);
   
@@ -102,6 +107,93 @@ const GameSetup: React.FC = () => {
       handleFormDataChange('stats', newStats);
     }
   };
+
+  // Handle selecting a character template directly (play as this character)
+  const handleTemplateSelect = (template: CharacterTemplate) => {
+    setSelectedTemplate(template);
+    setPlayerFormData(prev => ({
+      ...prev,
+      playerName: template.name,
+      playerAge: template.age,
+      playerOccupation: template.occupation,
+      playerHometown: template.hometown,
+      playerBio: template.bio,
+      selectedTraits: template.traits,
+      avatarUrl: template.imageUrl,
+      templateId: template.id
+    }));
+    // Skip customization, go directly to cast review
+    handlePlayerCreationWithTemplate(template);
+  };
+
+  // Handle customizing a template
+  const handleTemplateCustomize = (template: CharacterTemplate) => {
+    setSelectedTemplate(template);
+    setPlayerFormData(prev => ({
+      ...prev,
+      playerName: template.name,
+      playerAge: template.age,
+      playerOccupation: template.occupation,
+      playerHometown: template.hometown,
+      playerBio: template.bio,
+      selectedTraits: template.traits,
+      avatarUrl: template.imageUrl,
+      templateId: template.id
+    }));
+    setStep(2);
+  };
+
+  // Handle creating custom character (no template)
+  const handleCreateCustom = () => {
+    setSelectedTemplate(null);
+    setPlayerFormData(prev => ({
+      ...prev,
+      avatarUrl: undefined,
+      templateId: undefined
+    }));
+    setStep(2);
+  };
+
+  // Create player from template and generate NPCs
+  const handlePlayerCreationWithTemplate = (template: CharacterTemplate) => {
+    const playerGuest = createHouseguest(
+      uuidv4(),
+      template.name,
+      template.age,
+      template.occupation,
+      template.hometown,
+      template.bio,
+      template.imageUrl,
+      template.traits,
+      {},
+      true
+    );
+
+    // Get other character templates as NPCs (excluding selected one)
+    const availableNPCs = characterTemplates.filter(t => t.id !== template.id);
+    const shuffled = [...availableNPCs]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, playerFormData.houseguestCount - 1);
+
+    const npcs = shuffled.map(guest =>
+      createHouseguest(
+        uuidv4(),
+        guest.name,
+        guest.age,
+        guest.occupation,
+        guest.hometown,
+        guest.bio,
+        guest.imageUrl,
+        guest.traits,
+        {},
+        false
+      )
+    );
+
+    const allHouseguests = [playerGuest, ...npcs];
+    setFinalHouseguests(allHouseguests);
+    setStep(3);
+  };
   
   const handlePlayerCreation = () => {
     if (!playerFormData.playerName) return;
@@ -114,7 +206,8 @@ const GameSetup: React.FC = () => {
       playerBio, 
       selectedTraits, 
       stats, 
-      houseguestCount 
+      houseguestCount,
+      avatarUrl
     } = playerFormData;
     
     const playerGuest = createHouseguest(
@@ -124,13 +217,18 @@ const GameSetup: React.FC = () => {
       playerOccupation,
       playerHometown,
       playerBio,
-      '/placeholder.svg',
+      avatarUrl || '/placeholder.svg',
       selectedTraits,
       stats,
       true
     );
     
-    const shuffled = [...defaultHouseguests]
+    // Use character templates for NPCs
+    const availableNPCs = selectedTemplate
+      ? characterTemplates.filter(t => t.id !== selectedTemplate.id)
+      : characterTemplates;
+    
+    const shuffled = [...availableNPCs]
       .sort(() => 0.5 - Math.random())
       .slice(0, houseguestCount - 1);
       
@@ -151,7 +249,7 @@ const GameSetup: React.FC = () => {
     
     const allHouseguests = [playerGuest, ...npcs];
     setFinalHouseguests(allHouseguests);
-    setStep(2);
+    setStep(3);
   };
   
   const startGame = () => {
@@ -173,25 +271,39 @@ const GameSetup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-surveillance-pattern opacity-[0.02]" />
-        <div className="absolute inset-0 bg-gradient-to-br from-bb-blue/[0.03] via-transparent to-bb-gold/[0.03]" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-radial from-bb-blue/10 via-transparent to-transparent rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-radial from-bb-gold/10 via-transparent to-transparent rounded-full blur-3xl" />
-      </div>
-      
-      <AnimatePresence mode="wait">
-        {step === 1 ? (
-          <motion.div 
-            key="step1"
-            className="relative container max-w-2xl mx-auto py-8 px-4"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.4 }}
-          >
+    <AnimatePresence mode="wait">
+      {step === 1 ? (
+        <motion.div 
+          key="step1"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 0.4 }}
+        >
+          <AvatarSelector
+            onSelect={handleTemplateSelect}
+            onCustomize={handleTemplateCustomize}
+            onCreateCustom={handleCreateCustom}
+          />
+        </motion.div>
+      ) : step === 2 ? (
+        <motion.div 
+          key="step2"
+          className="min-h-screen bg-background relative overflow-hidden"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 0.4 }}
+        >
+          {/* Background effects */}
+          <div className="fixed inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-surveillance-pattern opacity-[0.02]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-bb-blue/[0.03] via-transparent to-bb-gold/[0.03]" />
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-radial from-bb-blue/10 via-transparent to-transparent rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-radial from-bb-gold/10 via-transparent to-transparent rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative container max-w-2xl mx-auto py-8 px-4">
             <PlayerForm 
               formData={playerFormData}
               personalityTraits={personalityTraits}
@@ -199,26 +311,36 @@ const GameSetup: React.FC = () => {
               onStatsChange={handleStatsChange}
               onToggleTrait={toggleTrait}
               onSubmit={handlePlayerCreation}
+              onBack={() => setStep(1)}
+              selectedTemplate={selectedTemplate}
             />
-          </motion.div>
-        ) : (
-          <motion.div 
-            key="step2"
-            className="relative container max-w-4xl mx-auto py-8 px-4"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 50 }}
-            transition={{ duration: 0.4 }}
-          >
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div 
+          key="step3"
+          className="min-h-screen bg-background relative overflow-hidden"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 50 }}
+          transition={{ duration: 0.4 }}
+        >
+          {/* Background effects */}
+          <div className="fixed inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-surveillance-pattern opacity-[0.02]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-bb-blue/[0.03] via-transparent to-bb-gold/[0.03]" />
+          </div>
+
+          <div className="relative container max-w-4xl mx-auto py-8 px-4">
             <HouseguestList 
               finalHouseguests={finalHouseguests}
-              onBack={() => setStep(1)}
+              onBack={() => setStep(selectedTemplate ? 1 : 2)}
               onStartGame={startGame}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

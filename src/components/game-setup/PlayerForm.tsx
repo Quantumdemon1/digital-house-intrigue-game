@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -6,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { PersonalityTrait, TRAIT_STAT_BOOSTS } from '@/models/houseguest';
 import { PlayerFormData } from './types';
-import { Camera, AlertCircle, HelpCircle, Info, Sparkles, ArrowRight } from 'lucide-react';
+import { Camera, AlertCircle, HelpCircle, Info, Sparkles, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
 import PersonalityTraitSelector from './PersonalityTraitSelector';
 import StatsSelector from './StatsSelector';
 import AvatarPreview from './AvatarPreview';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent, GameCardFooter } from '@/components/ui/game-card';
+import { CharacterTemplate } from '@/data/character-templates';
 
 interface PlayerFormProps {
   formData: PlayerFormData;
@@ -20,6 +22,8 @@ interface PlayerFormProps {
   onStatsChange: (stat: keyof PlayerFormData["stats"], value: number) => void;
   onToggleTrait: (trait: PersonalityTrait) => void;
   onSubmit: () => void;
+  onBack?: () => void;
+  selectedTemplate?: CharacterTemplate | null;
 }
 
 const PlayerForm: React.FC<PlayerFormProps> = ({
@@ -28,7 +32,9 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
   onFormDataChange,
   onStatsChange,
   onToggleTrait,
-  onSubmit
+  onSubmit,
+  onBack,
+  selectedTemplate
 }) => {
   const {
     playerName,
@@ -39,14 +45,21 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
     selectedTraits,
     houseguestCount,
     stats,
-    remainingPoints
+    remainingPoints,
+    avatarUrl
   } = formData;
 
   return (
     <GameCard variant="primary" className="border-2" hoverable={false}>
       <GameCardHeader variant="primary" icon={Camera}>
-        <GameCardTitle className="text-xl sm:text-2xl">Big Brother: The Digital House</GameCardTitle>
-        <GameCardDescription className="text-white/80">Create Your Houseguest</GameCardDescription>
+        <GameCardTitle className="text-xl sm:text-2xl">
+          {selectedTemplate ? 'Customize Character' : 'Create Your Houseguest'}
+        </GameCardTitle>
+        <GameCardDescription className="text-white/80">
+          {selectedTemplate 
+            ? `Based on ${selectedTemplate.name} - ${selectedTemplate.tagline}` 
+            : 'Build your custom houseguest from scratch'}
+        </GameCardDescription>
       </GameCardHeader>
       
       <GameCardContent className="space-y-6">
@@ -143,7 +156,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <AvatarPreview formData={formData} />
+            <AvatarPreview formData={formData} avatarUrl={avatarUrl} />
           </motion.div>
         </div>
         
@@ -235,17 +248,29 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
       </GameCardContent>
       
       <GameCardFooter>
-        <div className="text-sm text-muted-foreground">
-          {selectedTraits.length < 2 && (
-            <motion.div 
-              className="flex items-center text-bb-red"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <Button 
+              onClick={onBack} 
+              variant="outline"
+              className="gap-2"
             >
-              <AlertCircle className="w-4 h-4 mr-1" />
-              <span>Please select 2 personality traits</span>
-            </motion.div>
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
           )}
+          <div className="text-sm text-muted-foreground">
+            {selectedTraits.length < 2 && (
+              <motion.div 
+                className="flex items-center text-bb-red"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <AlertCircle className="w-4 h-4 mr-1" />
+                <span>Select 2 traits</span>
+              </motion.div>
+            )}
+          </div>
         </div>
         <Button 
           onClick={onSubmit} 
@@ -255,7 +280,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
           className="gap-2"
         >
           <Sparkles className="w-4 h-4" />
-          Enter the House
+          Continue
           <ArrowRight className="w-4 h-4" />
         </Button>
       </GameCardFooter>
