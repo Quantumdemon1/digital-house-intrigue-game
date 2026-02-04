@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/AvatarLoader.tsx
- * @description Smart avatar loader with multi-source routing, optimization and fallbacks
+ * @description Smart avatar loader for Ready Player Me avatars with optimization and fallbacks
  */
 
 import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
@@ -16,15 +16,9 @@ import { AvatarThumbnail } from './AvatarThumbnail';
 import { getAvatarCacheKey } from '@/utils/avatar-cache';
 import type { AvatarContext } from './RPMAvatar';
 
-// Lazy load components to prevent build issues
+// Lazy load RPM avatar component
 const LazyRPMAvatar = lazy(() => 
   import('./RPMAvatar').then(mod => ({ default: mod.RPMAvatar }))
-);
-const LazyVRMAvatar = lazy(() => 
-  import('./VRMAvatar').then(mod => ({ default: mod.VRMAvatar }))
-);
-const LazyPresetAvatar = lazy(() => 
-  import('./PresetAvatar').then(mod => ({ default: mod.PresetAvatar }))
 );
 
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -84,7 +78,7 @@ const useLoadingProgress = () => {
 };
 
 /**
- * RPM Avatar Canvas - Only loaded when RPM avatar URL is provided
+ * RPM Avatar Canvas - Primary renderer for Ready Player Me avatars
  */
 const RPMAvatarCanvas: React.FC<{
   avatarUrl: string;
@@ -115,7 +109,7 @@ const RPMAvatarCanvas: React.FC<{
   }, [onError]);
 
   if (rpmLoadError) {
-    return null; // Will trigger fallback to SimsAvatar
+    return null;
   }
 
   return (
@@ -174,90 +168,6 @@ const ProgressTracker: React.FC<{ onProgress: (p: number) => void }> = ({ onProg
 };
 
 /**
- * VRM Avatar Canvas
- */
-const VRMAvatarCanvas: React.FC<{
-  modelSrc: string;
-  mood: MoodType;
-  scale: number;
-  sizeConfig: { width: string; height: string };
-  className?: string;
-  onLoaded?: () => void;
-  onError?: () => void;
-}> = ({ modelSrc, mood, scale, sizeConfig, className, onLoaded, onError }) => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  return (
-    <div className={cn(sizeConfig.width, sizeConfig.height, 'relative overflow-hidden rounded-lg', className)}>
-      <Canvas camera={{ position: [0, 0, 2.5], fov: 35 }} gl={{ preserveDrawingBuffer: true, antialias: true }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[2, 3, 4]} intensity={0.8} />
-        <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
-        
-        <Suspense fallback={null}>
-          <LazyVRMAvatar
-            modelSrc={modelSrc}
-            mood={mood}
-            scale={scale}
-            onLoaded={() => { setIsLoading(false); onLoaded?.(); }}
-            onError={(err) => { console.error(err); onError?.(); }}
-          />
-        </Suspense>
-        
-        <OrbitControls enableZoom={false} enablePan={false} />
-      </Canvas>
-      {isLoading && <RPMLoadingState progress={50} />}
-    </div>
-  );
-};
-
-/**
- * Preset GLB Avatar Canvas
- */
-const PresetAvatarCanvas: React.FC<{
-  presetId: string;
-  mood: MoodType;
-  scale: number;
-  sizeConfig: { width: string; height: string };
-  className?: string;
-  onLoaded?: () => void;
-  onError?: () => void;
-}> = ({ presetId, mood, scale, sizeConfig, className, onLoaded, onError }) => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  return (
-    <div className={cn(sizeConfig.width, sizeConfig.height, 'relative overflow-hidden rounded-lg', className)}>
-      <Canvas 
-        camera={{ position: [0, 0.3, 2.0], fov: 40 }} 
-        gl={{ preserveDrawingBuffer: true, antialias: true }}
-      >
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[2, 3, 4]} intensity={0.9} />
-        <directionalLight position={[-2, 2, -3]} intensity={0.4} color="#e0f0ff" />
-        
-        <Suspense fallback={null}>
-          <LazyPresetAvatar
-            presetId={presetId}
-            mood={mood}
-            scale={scale}
-            onLoaded={() => { setIsLoading(false); onLoaded?.(); }}
-            onError={(err) => { console.error(err); onError?.(); }}
-          />
-        </Suspense>
-        
-        <OrbitControls 
-          enableZoom={false} 
-          enablePan={false}
-          minPolarAngle={Math.PI / 2.5}
-          maxPolarAngle={Math.PI / 1.8}
-        />
-      </Canvas>
-      {isLoading && <RPMLoadingState progress={50} />}
-    </div>
-  );
-};
-
-/**
  * Placeholder avatar state when no valid avatar is loaded
  */
 const PlaceholderAvatarState: React.FC<{ size: AvatarSize; className?: string }> = ({ size, className }) => {
@@ -276,8 +186,7 @@ const PlaceholderAvatarState: React.FC<{ size: AvatarSize; className?: string }>
 };
 
 /**
- * AvatarLoader - Smart router for multiple avatar sources
- * Supports: preset-glb, vrm, ready-player-me, custom-glb
+ * AvatarLoader - Smart router for Ready Player Me and custom GLB avatars
  */
 export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   avatarUrl,
@@ -296,10 +205,9 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   const [modelReady, setModelReady] = useState(false);
 
   // Check if we have a valid model to load
+  const modelUrl = avatarUrl || avatarConfig?.modelUrl;
   const hasValidModel = Boolean(
-    (modelSource === 'ready-player-me' || modelSource === 'custom-glb') && (avatarUrl || avatarConfig?.modelUrl) ||
-    modelSource === 'vrm' && avatarConfig?.modelUrl ||
-    modelSource === 'preset-glb' && avatarConfig?.presetId
+    (modelSource === 'ready-player-me' || modelSource === 'custom-glb') && modelUrl
   );
 
   // Timeout fallback
@@ -317,7 +225,7 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   }, [hasValidModel, modelReady, loadTimeout]);
 
   // Get avatar ID for thumbnail caching
-  const avatarId = getAvatarCacheKey(avatarUrl || avatarConfig?.modelUrl, avatarConfig?.presetId);
+  const avatarId = getAvatarCacheKey(modelUrl, avatarConfig?.presetId);
 
   // Show placeholder if timed out or no valid model
   if (timedOut || !hasValidModel) {
@@ -336,64 +244,22 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
     )
   );
 
-  // Route to appropriate renderer
-  switch (modelSource) {
-    case 'vrm':
-      if (avatarConfig?.modelUrl) {
-        return (
-          <Suspense fallback={<FallbackWithThumbnail />}>
-            <VRMAvatarCanvas
-              modelSrc={avatarConfig.modelUrl}
-              mood={mood}
-              scale={sizeConfig.scale}
-              sizeConfig={sizeConfig}
-              className={className}
-              onLoaded={() => setModelReady(true)}
-              onError={() => setTimedOut(true)}
-            />
-          </Suspense>
-        );
-      }
-      break;
-
-    case 'preset-glb':
-      if (avatarConfig?.presetId) {
-        return (
-          <Suspense fallback={<FallbackWithThumbnail />}>
-            <PresetAvatarCanvas
-              presetId={avatarConfig.presetId}
-              mood={mood}
-              scale={sizeConfig.scale}
-              sizeConfig={sizeConfig}
-              className={className}
-              onLoaded={() => setModelReady(true)}
-              onError={() => setTimedOut(true)}
-            />
-          </Suspense>
-        );
-      }
-      break;
-
-    case 'ready-player-me':
-    case 'custom-glb':
-      const modelUrl = avatarUrl || avatarConfig?.modelUrl;
-      if (modelUrl) {
-        return (
-          <Suspense fallback={<FallbackWithThumbnail />}>
-            <RPMAvatarCanvas
-              avatarUrl={modelUrl}
-              mood={mood}
-              scale={sizeConfig.scale}
-              context={sizeConfig.context}
-              sizeConfig={sizeConfig}
-              className={className}
-              onLoaded={() => setModelReady(true)}
-              onError={() => setTimedOut(true)}
-            />
-          </Suspense>
-        );
-      }
-      break;
+  // Route to RPM renderer for both ready-player-me and custom-glb sources
+  if ((modelSource === 'ready-player-me' || modelSource === 'custom-glb') && modelUrl) {
+    return (
+      <Suspense fallback={<FallbackWithThumbnail />}>
+        <RPMAvatarCanvas
+          avatarUrl={modelUrl}
+          mood={mood}
+          scale={sizeConfig.scale}
+          context={sizeConfig.context}
+          sizeConfig={sizeConfig}
+          className={className}
+          onLoaded={() => setModelReady(true)}
+          onError={() => setTimedOut(true)}
+        />
+      </Suspense>
+    );
   }
 
   // Default: show placeholder since we have no valid model
