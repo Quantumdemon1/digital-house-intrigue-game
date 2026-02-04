@@ -1,235 +1,335 @@
 
-
-# Plan: Autonomous NPC Social Actions and Enhanced Promise/Alliance System
+# Plan: Complete UI/UX Visual Revamp
 
 ## Overview
 
-This plan adds two major features:
-1. **Autonomous NPC Actions** - NPCs will perform social actions during the social phase (forming alliances, talking, making promises)
-2. **Enhanced Tracking System** - Track positive/negative interactions between all houseguests with memory that influences decisions
+This plan transforms the game's visual identity from a generic look to a polished, immersive "Big Brother Digital House" experience with enhanced avatars, modern animations, a settings system with dark mode toggle, and a more dramatic aesthetic throughout.
 
 ---
 
-## Part 1: Autonomous NPC Social Actions
+## Part 1: Settings System with Dark Mode
 
-### New File: `src/systems/ai/npc-social-behavior.ts`
+### New File: `src/components/settings/SettingsProvider.tsx`
 
-Create a system that generates and executes NPC actions during social phases:
-
-```text
-+---------------------------+
-|   NPC Social Behavior     |
-+---------------------------+
-| - generateNPCActions()    |
-| - executeNPCActions()     |
-| - evaluateAllianceDesire()|
-| - selectTalkTarget()      |
-| - considerPromise()       |
-+---------------------------+
-           |
-           v
-+---------------------------+
-|  Action Types             |
-+---------------------------+
-| - Talk to houseguest      |
-| - Form alliance           |
-| - Make promise            |
-| - Hold alliance meeting   |
-| - Spread information      |
-+---------------------------+
-```
-
-Key functions:
-- **generateNPCActions(npc, game)**: Returns a list of actions an NPC wants to take based on their personality, relationships, and game state
-- **executeNPCActions(game)**: Runs during social phase to have NPCs perform actions with visible feedback
-- **evaluateAllianceDesire(npc, potentialAlly, game)**: Determines if an NPC wants to form an alliance based on:
-  - Relationship score (minimum threshold of +25)
-  - Shared threats (people they both dislike)
-  - Alliance count (max 2-3 alliances per person)
-  - Personality traits (Strategic NPCs seek alliances earlier)
-
-### NPC Action Logic
+Create a settings context that persists preferences to localStorage:
 
 ```typescript
-interface NPCAction {
-  type: 'talk' | 'alliance_propose' | 'promise' | 'alliance_meeting' | 'spread_info';
-  actor: Houseguest;
-  target: Houseguest;
-  reasoning: string;
-  priority: number; // Higher = more important
+interface GameSettings {
+  theme: 'light' | 'dark' | 'system';
+  animationSpeed: 'slow' | 'normal' | 'fast';
+  soundEnabled: boolean;
+  showAIThoughts: boolean;
+  compactMode: boolean;
 }
 ```
 
-**Action Selection Rules:**
+### New File: `src/components/settings/SettingsDialog.tsx`
 
-| Trait | Preferred Actions |
-|-------|-------------------|
-| Strategic | Alliance proposals, Strategic talks |
-| Loyal | Alliance meetings, Keep promises |
-| Sneaky | Spread information, Manipulate |
-| Social | Talk frequently, Build relationships |
-| Competitive | Target threats, Power alliances |
-| Paranoid | Avoid alliances, Gather information |
+A modal dialog accessible from the header with:
+- Dark/Light/System theme toggle with preview
+- Animation speed control
+- Sound toggle (for future use)
+- AI thought bubble visibility toggle
+- Compact mode toggle for mobile
+
+### Modify: `src/App.tsx`
+
+Wrap the app with `ThemeProvider` from `next-themes` to enable dark mode:
+
+```typescript
+import { ThemeProvider } from 'next-themes';
+
+<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+  {/* existing providers */}
+</ThemeProvider>
+```
+
+### Modify: `src/components/game-screen/GameHeader.tsx`
+
+Add a settings gear icon button next to the profile button that opens the settings dialog.
 
 ---
 
-## Part 2: Interaction Tracking System
+## Part 2: Enhanced Avatar System
 
-### New File: `src/systems/ai/interaction-tracker.ts`
+### New File: `src/components/houseguest/EnhancedAvatar.tsx`
 
-Create a comprehensive system to track all interactions:
+Create a more visually striking avatar component:
 
-```typescript
-interface TrackedInteraction {
-  id: string;
-  week: number;
-  type: InteractionType;
-  fromId: string;
-  toId: string;
-  sentiment: 'positive' | 'negative' | 'neutral';
-  impact: number; // -100 to 100
-  description: string;
-  decaysAt?: number; // Week when impact starts fading
-}
-
-type InteractionType = 
-  | 'conversation'
-  | 'strategic_discussion'
-  | 'promise_made'
-  | 'promise_kept'
-  | 'promise_broken'
-  | 'nominated'
-  | 'saved_with_veto'
-  | 'voted_against'
-  | 'voted_for'
-  | 'alliance_formed'
-  | 'alliance_betrayed'
-  | 'rumor_spread'
-  | 'defended'
-  | 'attacked';
-```
-
-### Modify: `src/systems/ai/memory-manager.ts`
-
-Upgrade memories to be interaction-based:
+- **Gradient Backgrounds**: Dynamic gradient based on houseguest personality traits
+- **Status Rings**: Animated glowing rings for HoH (gold pulse), Nominee (red pulse), PoV (gold shimmer)
+- **Initials with Style**: Better typography with text shadows and gradient fills
+- **Hover Effects**: Scale + glow on hover with tooltip
+- **Player Indicator**: Special "You" badge with green accent
+- **Mood Indicator**: Small emoji or color dot showing current mood state
 
 ```typescript
-interface StructuredMemory {
-  id: string;
-  week: number;
-  type: InteractionType;
-  importance: number; // 1-10
-  involvedIds: string[];
-  description: string;
-  emotionalImpact: number; // -100 to 100
-  decaysAt?: number;
+interface EnhancedAvatarProps {
+  houseguest: Houseguest;
+  size: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  showMood?: boolean;
+  showStatus?: boolean;
+  animated?: boolean;
+  onClick?: () => void;
 }
 ```
 
-**Memory Prioritization for Decisions:**
-- Betrayals: Always relevant, never decay
-- Alliance events: Relevant for voting decisions
-- Promise events: Relevant for trust decisions
-- Conversations: Minor weight, decay after 2 weeks
+### Trait-Based Avatar Colors
+
+Map personality traits to gradient color schemes:
+- **Strategic**: Blue-purple gradient
+- **Social**: Pink-orange gradient
+- **Competitive**: Red-orange gradient
+- **Loyal**: Green-teal gradient
+- **Sneaky**: Purple-dark gradient
+- **Emotional**: Pink-red gradient
+
+### Modify: `src/components/ui/status-avatar.tsx`
+
+Upgrade with:
+- Framer Motion animations for status changes
+- Particle effects on status badge
+- Better shadow system with colored glows
+- Smooth transitions between states
 
 ---
 
-## Part 3: Enhanced Promise System with Alliances
+## Part 3: Animation System Overhaul
 
-### Modify: `src/systems/promise/promise-core.ts`
+### Modify: `tailwind.config.ts`
 
-Add alliance-related promise types and NPC promise tracking:
-
-```typescript
-// New promise types
-type PromiseType = 
-  | 'safety'          // Won't nominate/vote against
-  | 'vote'            // Will vote a certain way
-  | 'final_2'         // Take to final 2
-  | 'alliance_loyalty'// Loyalty to alliance
-  | 'information'     // Share information
-  | 'veto_use'        // Use veto on someone (NEW)
-  | 'hoh_protection'; // If win HoH, won't target (NEW)
-```
-
-### New: NPC Promise Creation
-
-NPCs will autonomously make promises when:
-1. They need safety (on the block or feel threatened)
-2. Building an alliance (mutual protection promises)
-3. Strategic positioning (making deals with HoH)
-4. Reciprocating (someone made a promise to them)
+Add new dramatic keyframes:
 
 ```typescript
-function shouldNPCMakePromise(
-  npc: Houseguest, 
-  target: Houseguest, 
-  game: BigBrotherGame
-): { shouldPromise: boolean; type: PromiseType; reason: string } {
-  // Check if NPC is in danger
-  if (npc.isNominated) {
-    return { shouldPromise: true, type: 'vote', reason: 'seeking safety while on block' };
-  }
+keyframes: {
+  // Dramatic entrance for key moments
+  'dramatic-enter': {
+    '0%': { opacity: '0', transform: 'scale(0.8) translateY(20px)', filter: 'blur(10px)' },
+    '100%': { opacity: '1', transform: 'scale(1) translateY(0)', filter: 'blur(0)' }
+  },
   
-  // Check if target is HoH
-  if (target.isHoH && !game.allianceSystem.areInSameAlliance(npc.id, target.id)) {
-    return { shouldPromise: true, type: 'safety', reason: 'securing safety with HoH' };
-  }
+  // Glowing pulse for important elements
+  'glow-pulse': {
+    '0%, 100%': { boxShadow: '0 0 20px var(--glow-color)' },
+    '50%': { boxShadow: '0 0 40px var(--glow-color), 0 0 60px var(--glow-color)' }
+  },
   
-  // Check for alliance formation opportunity
-  const relationship = game.relationshipSystem.getRelationship(npc.id, target.id);
-  if (relationship > 40 && !game.allianceSystem.areInSameAlliance(npc.id, target.id)) {
-    return { shouldPromise: true, type: 'alliance_loyalty', reason: 'building alliance foundation' };
-  }
+  // Spotlight effect for reveals
+  'spotlight': {
+    '0%': { clipPath: 'circle(0% at 50% 50%)' },
+    '100%': { clipPath: 'circle(100% at 50% 50%)' }
+  },
   
-  return { shouldPromise: false, type: 'safety', reason: '' };
+  // Card flip for vote reveals
+  'card-flip': {
+    '0%': { transform: 'rotateY(180deg)', opacity: '0' },
+    '100%': { transform: 'rotateY(0deg)', opacity: '1' }
+  },
+  
+  // Shimmer effect for loading states
+  'shimmer-sweep': {
+    '0%': { backgroundPosition: '-200% 0' },
+    '100%': { backgroundPosition: '200% 0' }
+  },
+  
+  // Bounce in for notifications
+  'bounce-in': {
+    '0%': { transform: 'scale(0)', opacity: '0' },
+    '50%': { transform: 'scale(1.1)' },
+    '100%': { transform: 'scale(1)', opacity: '1' }
+  }
 }
 ```
 
----
+### New Framer Motion Variants
 
-## Part 4: UI Integration
-
-### Modify: `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`
-
-Add NPC activity feed to show what NPCs are doing:
+Create reusable animation variants for consistent motion:
 
 ```typescript
-interface NPCActivityItem {
-  npcName: string;
-  action: string;
-  targetName?: string;
-  timestamp: number;
-}
+// src/lib/motion-variants.ts
+export const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: 'easeOut' } },
+  exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.2 } }
+};
 
-// Display component showing NPC activities
-<NPCActivityFeed activities={npcActivities} />
+export const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+export const dramaticReveal = {
+  hidden: { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
+  visible: { opacity: 1, scale: 1, filter: 'blur(0)', transition: { duration: 0.6, ease: 'easeOut' } }
+};
 ```
-
-### New Component: `src/components/game-phases/social-interaction/NPCActivityFeed.tsx`
-
-Shows real-time NPC actions with AI thought bubbles:
-- "[NPC Name] approached [Target] for a conversation"
-- "[NPC Name] proposed an alliance with [Target]"
-- "[NPC Name] made a promise to [Target]"
 
 ---
 
-## Part 5: Alliance Improvements for Player
+## Part 4: Component Visual Upgrades
 
-### Modify: `src/components/alliance/AllianceManager.tsx`
+### Modify: `src/components/ui/game-card.tsx`
 
-Add features:
-1. **View Alliance Status**: See all active alliances and their stability
-2. **Alliance Promises**: Auto-create loyalty promises when forming alliance
-3. **Alliance Notifications**: Alert when NPC alliances form
+Enhanced game cards with:
+- Glassmorphism effect option
+- Gradient borders
+- Animated hover states using Framer Motion
+- Inner glow effects
+- Better shadow layering
 
-### New: Alliance Promise Integration
+```typescript
+const variantClasses = {
+  default: 'bg-card/95 backdrop-blur-sm border-border/50',
+  glass: 'bg-white/10 dark:bg-black/20 backdrop-blur-lg border-white/20 dark:border-white/10',
+  primary: 'bg-gradient-to-br from-bb-blue to-bb-blue-dark border-bb-blue/50',
+  danger: 'bg-gradient-to-br from-bb-red to-bb-red-dark border-bb-red/50',
+  gold: 'bg-gradient-to-br from-bb-gold to-amber-600 border-bb-gold/50',
+  success: 'bg-gradient-to-br from-bb-green to-emerald-600 border-bb-green/50'
+};
+```
 
-When an alliance is formed:
-1. All members automatically gain implicit `alliance_loyalty` promises
-2. These promises affect voting decisions
-3. Breaking alliance = breaking promise = major relationship penalty
+### Modify: `src/components/ui/button.tsx`
+
+Add new button variants:
+- `glow`: Button with animated glow effect
+- `gradient`: Gradient background button
+- `glass`: Glassmorphism button
+- `dramatic`: Extra large with shadow and animation
+
+### New File: `src/components/ui/animated-badge.tsx`
+
+Badges with entrance animations and optional pulse effects for status indicators.
+
+---
+
+## Part 5: Auth Page Redesign
+
+### Modify: `src/components/auth/AuthPage.tsx`
+
+Transform from generic form to immersive entry:
+- Full-screen gradient background with animated particles
+- "Big Brother eye" logo animation
+- Glassmorphism card for login/signup
+- Animated text effects for title
+- Subtle surveillance camera scan animation in background
+- Smooth tab transitions with Framer Motion
+
+---
+
+## Part 6: Game Setup Screen Redesign
+
+### Modify: `src/components/GameSetup.tsx` and `src/components/game-setup/PlayerForm.tsx`
+
+Major visual overhaul:
+- Step indicator with animated progress
+- Character creation with live avatar preview
+- Trait selection as interactive cards with hover effects
+- Stats displayed as animated circular progress or radar chart
+- "Enter the House" dramatic button with glow effect
+- Background with subtle animated grid pattern
+
+### New Component: `src/components/game-setup/AvatarPreview.tsx`
+
+Live preview of the player's avatar that updates as they select traits:
+- Shows initials with trait-based gradient
+- Displays selected traits as small badges
+- Animated stats display around the avatar
+
+---
+
+## Part 7: Game Screen Polish
+
+### Modify: `src/components/game-screen/GameScreen.tsx`
+
+- Animated background patterns that subtly shift
+- Better spacing and visual hierarchy
+- Smoother transitions between phases
+
+### Modify: `src/components/game-screen/GameHeader.tsx`
+
+- More dramatic title treatment with gradient text
+- Animated week counter with flip effect
+- Settings button with gear icon
+- Better responsive design for mobile
+
+### Modify: `src/components/game-screen/GameSidebar.tsx`
+
+- Collapsible sections with smooth animations
+- Better status card designs
+- Houseguest list with staggered entrance animations
+- Visual improvements for power holders display
+
+---
+
+## Part 8: Phase-Specific Visual Enhancements
+
+### Competition Phases (HoH, PoV)
+
+- Dramatic title card entrance
+- Competitor cards with animated borders
+- Winner reveal with confetti and spotlight animation
+- Progress bars with gradient fills
+
+### Nomination Phase
+
+- Key ceremony animation (keys turning/clicking)
+- Dramatic nominee reveal with red glow
+- Tension-building visual effects
+
+### Eviction Phase
+
+- Vote counter with flip animation for each vote
+- Split-screen nominee comparison
+- Evicted houseguest grayscale transition
+- "Goodbye" message fade effect
+
+### Social Phase
+
+- Location cards with ambient animations
+- Houseguest cards with relationship color borders
+- Action buttons with hover glow effects
+- NPC activity feed with smooth entry animations
+
+---
+
+## Part 9: Color System Enhancement
+
+### Modify: `src/index.css`
+
+Enhanced color palette for dark mode with better contrast:
+
+```css
+.dark {
+  /* Richer dark background */
+  --background: 222 47% 6%;
+  --foreground: 210 40% 96%;
+  
+  /* Enhanced card surfaces */
+  --card: 222 47% 10%;
+  --card-foreground: 210 40% 96%;
+  
+  /* Brighter accent colors for dark mode */
+  --bb-blue: 210 100% 55%;
+  --bb-red: 6 100% 65%;
+  --bb-gold: 36 100% 55%;
+  --bb-green: 145 100% 45%;
+  
+  /* Stronger glows */
+  --shadow-glow-primary: 0 0 30px hsl(210 100% 55% / 0.6);
+  --shadow-glow-gold: 0 0 30px hsl(36 100% 55% / 0.6);
+}
+```
+
+Add CSS custom properties for glow colors that can be used in animations:
+
+```css
+:root {
+  --glow-primary: hsl(var(--bb-blue) / 0.5);
+  --glow-danger: hsl(var(--bb-red) / 0.5);
+  --glow-gold: hsl(var(--bb-gold) / 0.5);
+  --glow-success: hsl(var(--bb-green) / 0.5);
+}
+```
 
 ---
 
@@ -237,121 +337,65 @@ When an alliance is formed:
 
 | File | Purpose |
 |------|---------|
-| `src/systems/ai/npc-social-behavior.ts` | NPC autonomous action system |
-| `src/systems/ai/interaction-tracker.ts` | Comprehensive interaction tracking |
-| `src/components/game-phases/social-interaction/NPCActivityFeed.tsx` | UI for NPC activities |
+| `src/components/settings/SettingsProvider.tsx` | Settings context with persistence |
+| `src/components/settings/SettingsDialog.tsx` | Settings modal UI |
+| `src/components/settings/index.ts` | Exports |
+| `src/components/houseguest/EnhancedAvatar.tsx` | New avatar component |
+| `src/components/game-setup/AvatarPreview.tsx` | Live avatar preview |
+| `src/lib/motion-variants.ts` | Reusable Framer Motion variants |
+| `src/components/ui/animated-badge.tsx` | Animated badge component |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/config.ts` | Add NPC social behavior timing constants |
-| `src/systems/ai/memory-manager.ts` | Upgrade to structured memories |
-| `src/systems/promise/promise-core.ts` | Add new promise types and NPC promise logic |
-| `src/systems/alliance-system.ts` | Add autonomous alliance formation logic |
-| `src/game-states/SocialInteractionState.ts` | Trigger NPC actions during social phase |
-| `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx` | Display NPC activity feed |
-| `src/systems/ai/npc-decision-engine.ts` | Factor in interaction history |
-| `src/models/promise.ts` | Add new promise types |
+| `src/App.tsx` | Add ThemeProvider wrapper |
+| `src/index.css` | Enhanced dark mode colors, new utility classes |
+| `tailwind.config.ts` | New keyframes and animations |
+| `src/components/ui/game-card.tsx` | Glassmorphism, better variants |
+| `src/components/ui/button.tsx` | New glow/gradient variants |
+| `src/components/ui/status-avatar.tsx` | Framer Motion animations |
+| `src/components/auth/AuthPage.tsx` | Full redesign with animations |
+| `src/components/GameSetup.tsx` | Visual overhaul |
+| `src/components/game-setup/PlayerForm.tsx` | Enhanced styling |
+| `src/components/game-screen/GameHeader.tsx` | Settings button, polish |
+| `src/components/game-screen/GameScreen.tsx` | Background improvements |
+| `src/components/game-screen/GameSidebar.tsx` | Animation polish |
+| `src/components/houseguest/HouseguestCard.tsx` | Use EnhancedAvatar |
 
 ---
 
-## Technical Details
+## Technical Considerations
 
-### Config Additions
+### Performance
+- Use CSS animations where possible for performance
+- Implement `AnimatePresence` with exit animations only where needed
+- Lazy load heavy animation components
+- Respect `prefers-reduced-motion` media query
 
-```typescript
-// NPC Social Behavior
-NPC_ALLIANCE_MIN_RELATIONSHIP: 25,     // Min relationship to propose alliance
-NPC_ALLIANCE_MAX_PER_PERSON: 3,        // Max alliances an NPC will join
-NPC_PROMISE_THRESHOLD: 30,             // Relationship threshold for promises
-NPC_ACTION_DELAY_MS: 1500,             // Delay between NPC actions for visibility
-NPC_ACTIVITY_DISPLAY_TIME: 4000,       // How long to show NPC activity in feed
-```
+### Accessibility
+- Ensure color contrast meets WCAG AA standards
+- Provide motion alternatives for users who prefer reduced motion
+- Maintain keyboard navigation
+- Add proper ARIA labels
 
-### NPC Action Execution Flow
-
-```text
-Social Phase Start
-       |
-       v
-+-------------------+
-| For each NPC:     |
-| 1. Generate actions|
-| 2. Prioritize     |
-| 3. Execute top 2  |
-+-------------------+
-       |
-       v
-+-------------------+
-| Show in UI:       |
-| - Activity feed   |
-| - AI thought      |
-| - Relationship    |
-|   impact toast    |
-+-------------------+
-       |
-       v
-+-------------------+
-| Update State:     |
-| - Relationships   |
-| - Promises        |
-| - Alliances       |
-| - Interactions    |
-+-------------------+
-```
-
-### NPC Alliance Formation Logic
-
-```typescript
-function evaluateAllianceProposal(npc: Houseguest, target: Houseguest, game): boolean {
-  const factors = {
-    relationship: game.relationshipSystem.getRelationship(npc.id, target.id),
-    sharedThreats: countSharedThreats(npc, target, game),
-    currentAlliances: game.allianceSystem.getAlliancesForHouseguest(npc.id).length,
-    targetValue: calculateStrategicValue(npc, target, game),
-    trustworthiness: calculateTrustworthiness(target, game), // Based on promise history
-  };
-  
-  // Decision formula
-  const score = 
-    (factors.relationship * 0.3) +
-    (factors.sharedThreats * 10) +
-    (factors.targetValue * 0.2) +
-    (factors.trustworthiness * 0.2) -
-    (factors.currentAlliances * 15); // Penalty for having many alliances
-  
-  return score > 30;
-}
-```
+### Responsive Design
+- All animations scale appropriately for mobile
+- Settings dialog works on small screens
+- Avatar sizes adapt to container
 
 ---
 
-## Expected Behavior After Implementation
+## Summary of Visual Changes
 
-### During Social Phase:
-1. Player takes their actions (unchanged)
-2. After each player action, NPCs perform 1-2 actions each
-3. Activity feed shows what NPCs are doing in real-time
-4. AI thought bubbles appear showing NPC reasoning
-5. Notifications when alliances form or promises are made
-
-### NPC Decision Making:
-- NPCs consider past interactions when making decisions
-- Positive history = more likely to work together
-- Negative history = more likely to target each other
-- Promise history affects trust and alliance decisions
-- Betrayals are remembered and affect future votes
-
-### Alliance Formation:
-- NPCs will propose alliances to houseguests they like (relationship > 25)
-- Strategic NPCs prioritize strong competitors as allies
-- Loyal NPCs stay committed to existing alliances
-- Alliance proposals can be rejected based on target's evaluation
-
-### Promise Behavior:
-- NPCs make promises when threatened or building relationships
-- Promises create tracking obligations
-- Broken promises spread through the house
-- Promise history affects voting and alliance decisions
-
+| Area | Before | After |
+|------|--------|-------|
+| Theme | Light only | Light/Dark/System with toggle |
+| Avatars | Simple initials | Gradient backgrounds, glowing rings, mood indicators |
+| Cards | Flat borders | Glassmorphism, gradient borders, hover glows |
+| Animations | Basic fades | Dramatic reveals, stagger effects, card flips |
+| Auth Page | Generic form | Immersive full-screen experience |
+| Setup Page | Standard form | Interactive character creator with preview |
+| Colors | Muted | Vibrant with proper dark mode contrast |
+| Buttons | Standard | Glow effects, gradient options |
+| Status Indicators | Static badges | Animated pulses and shimmer effects |
