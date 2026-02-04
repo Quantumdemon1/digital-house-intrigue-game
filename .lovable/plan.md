@@ -1,196 +1,197 @@
 
+# Plan: Deep Integration of Ready Player Me Avatar Customization
 
-# Plan: Replace Non-Human Avatars with Proper Humanoid Characters
+## Current State Analysis
 
-## Problem Summary
+### Existing RPM Components
+1. **`RPMAvatarCreator.tsx`** - Dialog wrapper using deprecated `@readyplayerme/rpm-react-sdk`
+2. **`RPMAvatar.tsx`** - 3D renderer with facial expressions (ARKit blendshapes)
+3. **`AvatarCustomizer.tsx`** - Main UI with 3-mode toggle (Preset/VRM/RPM)
+4. **`preset-rpm-avatars.ts`** - Placeholder NPC avatar data (not populated with real URLs)
 
-Based on the screenshots provided, the current avatar system has major issues:
-
-| Avatar | Current Model | Problem |
-|--------|--------------|---------|
-| **Elena** | Michelle (Three.js) | Works perfectly - proper human character |
-| **Sophia** | Soldier | Too large - shows only torso/armor |
-| **Tyler** | Xbot | Robot mannequin - fills entire frame |
-| **Marcus** | RiggedFigure | Basic skeleton - head cut off |
-| **Jamal** | RiggedSimple | Giant green triangle shape |
-| **Maya** | RobotExpressive | Shows only robot legs/underside |
-| **Derek** | CesiumMan | Works okay - astronaut in suit |
-| **Luna** | Fox | Animal - not a humanoid character |
-| **Zara** | Horse | Animal - not a humanoid character |
-
-**Root Causes:**
-1. Most models have vastly different scales and aren't normalized
-2. Camera positioning assumes human proportions but models vary wildly
-3. Non-humanoid models (animals, robots) don't fit the avatar use case
+### Current Issues
+1. **Deprecated SDK** - Using `@readyplayerme/rpm-react-sdk` which has been deprecated in favor of `@readyplayerme/react-avatar-creator`
+2. **Limited Integration** - RPM is only accessible via a button that opens an external dialog
+3. **No Inline Customization** - Users must click "Pro" then navigate to external iframe
+4. **Placeholder Data** - `preset-rpm-avatars.ts` has fake URLs that don't load
+5. **No Saved Avatars** - Users can't save/manage multiple RPM avatars
+6. **Missing Features** - No access to RPM's photo booth, outfit changes, or animation options
 
 ---
 
-## Solution: Replace with Properly Scaled Human Characters
+## Proposed Solution
 
-### Strategy: Use Three.js Official Models + Sketchfab Free Characters
+### Phase 1: Upgrade to New RPM Package
 
-Replace all problematic avatars with verified human-proportioned GLB models from:
-1. **Three.js Examples** - Michelle, Soldier, Kira (verified working)
-2. **ReadyPlayerMe sample** - Available in Three.js examples as `readyplayer.me.glb`
+**Install new package:**
+```bash
+npm install @readyplayerme/react-avatar-creator
+```
 
-### New Avatar Roster (10 Characters)
+**Update `RPMAvatarCreator.tsx` to use new package:**
+- Replace `@readyplayerme/rpm-react-sdk` import with `@readyplayerme/react-avatar-creator`
+- Use new event-based API (`AvatarExportedEvent`)
+- Maintain backward compatibility with existing `onAvatarCreated` callback
 
-| Name | New Model URL | Description | Style |
-|------|---------------|-------------|-------|
-| **Elena** | `/avatars/glb/elena.glb` (Michelle) | Keep - works great | Casual/Stylized |
-| **Marcus** | `threejs.org/.../Soldier.glb` | Military tactical character | Formal |
-| **Sophia** | `threejs.org/.../kira.glb` | Anime-style female | Casual |
-| **Tyler** | `threejs.org/.../readyplayer.me.glb` | Ready Player Me sample | Athletic |
-| **Jamal** | `threejs.org/.../facecap.glb` | Face capture model with expressions | Casual |
-| **Maya** | Re-download Michelle variant | Duplicate of Elena with different name | Fantasy |
-| **Derek** | Keep CesiumMan | Astronaut character - works ok | Casual |
-| Remove | Luna (Fox) | Not humanoid - remove from list | - |
-| Remove | Zara (Horse) | Not humanoid - remove from list | - |
-| Add | **Nadia** | New character from verified source | Professional |
-| Add | **Carlos** | New character from verified source | Athletic |
+### Phase 2: Enhanced Inline RPM Experience
 
----
+**Create `RPMAvatarCreatorPanel.tsx`** - Embedded creator (not just dialog)
 
-## Implementation Steps
+Features:
+- Full-width embedded RPM iframe in customizer panel
+- Avatar gallery below showing previously created RPM avatars
+- Quick-switch between creation and selection
+- Live preview updating as user customizes
 
-### Step 1: Download Verified Human GLB Models
-
-Download these models from Three.js examples (proven to work):
-
+**New UI Flow:**
 ```text
-https://threejs.org/examples/models/gltf/Michelle.glb      → elena.glb (keep)
-https://threejs.org/examples/models/gltf/Soldier.glb       → marcus.glb (replace)
-https://threejs.org/examples/models/gltf/kira.glb          → sophia.glb (replace)
-https://threejs.org/examples/models/gltf/readyplayer.me.glb → tyler.glb (replace)
-https://threejs.org/examples/models/gltf/facecap.glb       → jamal.glb (replace)
-https://threejs.org/examples/models/gltf/CesiumMan/CesiumMan.glb → derek.glb (keep if working)
+┌─────────────────────────────────────────────────────────────┐
+│  [Realistic]  [Anime]  [Pro Custom]                        │
+└─────────────────────────────────────────────────────────────┘
+
+When "Pro Custom" is selected:
+┌──────────────┐  ┌──────────────────────────────────────────┐
+│   Preview    │  │   RPM Avatar Creator (Embedded)          │
+│   ┌──────┐   │  │                                          │
+│   │ 3D   │   │  │   [Full RPM iframe with all options]     │
+│   │Avatar│   │  │                                          │
+│   └──────┘   │  │   - Body type selection                  │
+│              │  │   - Face customization                   │
+│ [📷 Photo]   │  │   - Outfit selection                     │
+│              │  │   - Accessories                          │
+├──────────────┤  ├──────────────────────────────────────────┤
+│Your Avatars  │  │ [Create New] or select from gallery:    │
+│ ┌──┐ ┌──┐    │  │  ○ Avatar 1  ○ Avatar 2  ○ Avatar 3     │
+│ │A1│ │A2│    │  │                                          │
+│ └──┘ └──┘    │  └──────────────────────────────────────────┘
+└──────────────┘
 ```
 
-### Step 2: Update preset-glb-avatars.ts
+### Phase 3: RPM Avatar Gallery & Management
 
-Remove Luna, Zara (animals), and Carlos placeholder. Update metadata for replaced models:
+**Create `RPMAvatarGallery.tsx`** component:
 
+- Display previously created RPM avatars as selectable cards
+- Store avatar URLs in localStorage or Supabase (if authenticated)
+- Allow deletion of saved avatars
+- Show loading thumbnails generated from the RPM API
+
+**Avatar storage structure:**
 ```typescript
-export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
-  {
-    id: 'glb-elena',
-    name: 'Elena',
-    url: '/avatars/glb/elena.glb',
-    style: 'casual',
-    bodyType: 'slim',
-    category: 'humanoid',
-    traits: ['graceful', 'charming'],
-    description: 'Stylized female with expressive animations',
-    isPlaceholder: false
-  },
-  {
-    id: 'glb-marcus',
-    name: 'Marcus',
-    url: '/avatars/glb/marcus.glb',
-    style: 'formal',
-    bodyType: 'athletic',
-    category: 'humanoid',
-    traits: ['confident', 'tactical'],
-    description: 'Military tactical character',
-    isPlaceholder: false
-  },
-  // ... 6-8 more verified human characters
-];
+interface SavedRPMAvatar {
+  id: string;
+  url: string;          // The RPM GLB URL
+  thumbnail?: string;   // Captured screenshot or RPM render URL
+  createdAt: Date;
+  name?: string;        // User-given nickname
+}
 ```
 
-### Step 3: Add Model Scaling Logic to PresetAvatar Component
+### Phase 4: RPM Configuration Options
 
-Add per-model scale adjustments since different models have different native sizes:
+**Enhance editor config with game-appropriate defaults:**
 
 ```typescript
-// In PresetAvatar.tsx
-const MODEL_SCALE_OVERRIDES: Record<string, number> = {
-  'glb-marcus': 0.5,    // Soldier is large
-  'glb-sophia': 2.0,    // Kira is small
-  'glb-tyler': 1.2,     // RPM sample
-  'glb-jamal': 0.8,     // Facecap model
-  'glb-derek': 1.5,     // CesiumMan
-  'glb-elena': 1.0,     // Michelle - reference size
+const gameEditorConfig: AvatarCreatorConfig = {
+  clearCache: false,          // Keep user's previous work
+  bodyType: 'fullbody',       // Full body for game rendering
+  quickStart: false,          // Show full customization
+  language: 'en',
+  
+  // Custom for Big Brother game theme:
+  // - Hide certain outfit categories if desired
+  // - Pre-select casual clothing styles
 };
-
-const effectiveScale = (MODEL_SCALE_OVERRIDES[preset.id] || 1) * scale;
 ```
 
-### Step 4: Update Camera/Framing in AvatarLoader
+**Add RPM URL optimization panel:**
+- Quality slider (Low/Medium/High)
+- Show estimated file size
+- Preview loading time
 
-Adjust camera position to better frame humanoid characters:
+### Phase 5: Pre-populated RPM Gallery
 
-```typescript
-// In PresetAvatarCanvas
-<Canvas 
-  camera={{ 
-    position: [0, 0.3, 2.0],  // Slightly higher and closer
-    fov: 40                    // Narrower FOV for portrait framing
-  }}
->
-```
+**Populate `preset-rpm-avatars.ts` with real avatars:**
+
+Create 10-15 diverse pre-made RPM avatars by:
+1. Using RPM's public demo to create characters
+2. Extracting the avatar URLs
+3. Adding them to the preset gallery
+
+These serve as:
+- Quick-start options for users who don't want to customize
+- NPC avatars for AI houseguests
+- Examples of what's possible
 
 ---
 
-## File Changes Summary
+## Technical Implementation
 
-### Files to Modify
+### File Changes
 
 | File | Changes |
 |------|---------|
-| `public/avatars/glb/marcus.glb` | Replace with Soldier.glb from Three.js |
-| `public/avatars/glb/sophia.glb` | Replace with kira.glb from Three.js |
-| `public/avatars/glb/tyler.glb` | Replace with readyplayer.me.glb |
-| `public/avatars/glb/jamal.glb` | Replace with facecap.glb |
-| `public/avatars/glb/maya.glb` | Remove or replace |
-| `public/avatars/glb/luna.glb` | Delete (animal) |
-| `public/avatars/glb/zara.glb` | Delete (animal) |
-| `src/data/preset-glb-avatars.ts` | Update roster, remove animals |
-| `src/components/avatar-3d/PresetAvatar.tsx` | Add model-specific scale overrides |
-| `src/components/avatar-3d/AvatarLoader.tsx` | Adjust camera framing |
+| **NEW** `src/components/avatar-3d/RPMAvatarCreatorPanel.tsx` | Embedded inline RPM creator with gallery |
+| **NEW** `src/components/avatar-3d/RPMAvatarGallery.tsx` | Saved avatar management |
+| **NEW** `src/hooks/useRPMAvatarStorage.ts` | LocalStorage/Supabase persistence hook |
+| `src/components/avatar-3d/RPMAvatarCreator.tsx` | Upgrade to new SDK package |
+| `src/components/avatar-3d/AvatarCustomizer.tsx` | Replace RPM mode with inline panel |
+| `src/data/preset-rpm-avatars.ts` | Populate with real avatar URLs |
+| `src/models/avatar-config.ts` | Add `savedRPMAvatars` array field |
+| `package.json` | Add `@readyplayerme/react-avatar-creator` |
 
----
-
-## Fallback: If Models Still Have Issues
-
-If after downloading the new models there are still scaling issues, implement automatic bounding box normalization:
+### New Hook: `useRPMAvatarStorage`
 
 ```typescript
-// Auto-scale based on bounding box
-useEffect(() => {
-  if (!clonedScene) return;
-  
-  const box = new THREE.Box3().setFromObject(clonedScene);
-  const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  
-  // Normalize to ~2 units tall
-  const normalizeScale = 2 / maxDim;
-  groupRef.current?.scale.setScalar(normalizeScale * scale);
-  
-  // Center vertically
-  const center = box.getCenter(new THREE.Vector3());
-  groupRef.current?.position.y = -center.y * normalizeScale;
-}, [clonedScene, scale]);
+interface UseRPMAvatarStorage {
+  avatars: SavedRPMAvatar[];
+  addAvatar: (url: string, thumbnail?: string) => SavedRPMAvatar;
+  removeAvatar: (id: string) => void;
+  updateAvatar: (id: string, updates: Partial<SavedRPMAvatar>) => void;
+  isLoading: boolean;
+}
+```
+
+### Updated AvatarCustomizer Flow
+
+```typescript
+// In AvatarCustomizer.tsx
+{avatarMode === 'rpm' && (
+  <RPMAvatarCreatorPanel
+    onAvatarSelected={(avatar: SavedRPMAvatar) => {
+      updateConfig({
+        modelSource: 'ready-player-me',
+        modelUrl: avatar.url,
+        thumbnailUrl: avatar.thumbnail
+      });
+    }}
+    onAvatarCreated={(url: string) => {
+      // Auto-capture thumbnail and save to gallery
+      handleProfilePhotoCaptured(thumbnail);
+      handleRPMAvatarCreated(url);
+    }}
+    savedAvatars={savedRPMAvatars}
+    subdomain={rpmSubdomain}
+  />
+)}
 ```
 
 ---
 
-## Expected Outcome
+## Implementation Order
 
-After implementation:
-- All 8 avatars will be properly proportioned humanoid characters
-- Characters will fit within the avatar preview window
-- Face/upper body will be visible for all characters
-- No more animal or abstract shapes in the selection
+1. **Package upgrade** - Install new RPM SDK, update imports
+2. **RPM Gallery component** - Display/manage saved avatars
+3. **Storage hook** - Persist avatars to localStorage
+4. **Inline panel** - Embed RPM creator in customizer
+5. **Real preset data** - Populate preset-rpm-avatars.ts
+6. **Polish** - Add transitions, loading states, error handling
 
 ---
 
-## Technical Notes
+## Notes
 
-- Three.js example models are MIT licensed and safe to use
-- Michelle.glb (Elena) is the reference - all other models should match her visual scale
-- The `facecap.glb` model has facial morph targets for expressions
-- CesiumMan and Soldier include idle animations
-- We'll keep Derek as-is if the astronaut style is acceptable
-
+- The new `@readyplayerme/react-avatar-creator` package uses event-based callbacks
+- RPM avatars include 52 ARKit blendshapes for facial expressions (already supported in `RPMAvatar.tsx`)
+- Subdomain "demo" works for development; production apps should register at studio.readyplayer.me
+- File sizes can be reduced 60-80% using the existing `rpm-avatar-optimizer.ts` utilities
