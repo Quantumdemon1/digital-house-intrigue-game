@@ -64,7 +64,7 @@ export const archetypeInfo: Record<Archetype, { label: string; color: string; de
 // To enable 3D avatars: Create avatars at demo.readyplayer.me, copy the .glb URL here
 const NPC_RPM_AVATARS: Record<string, string | undefined> = {
   'alex-chen': 'https://models.readyplayer.me/6983cec8fcad0d2f33f8d828.glb',
-  'morgan-lee': undefined, // Not provided yet
+  'morgan-lee': 'https://models.readyplayer.me/6983d669fcad0d2f33f923fd.glb',
   'jordan-taylor': 'https://models.readyplayer.me/6983cdc66eb4878bb838a8e1.glb',
   'casey-wilson': 'https://models.readyplayer.me/6983d039ea77ff02ffa7d0d5.glb',
   'riley-johnson': 'https://models.readyplayer.me/6983d0c547a75ab0c803f7c0.glb',
