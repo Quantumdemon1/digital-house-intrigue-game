@@ -9,6 +9,8 @@ import { Houseguest } from './model';
 import { PersonalityTrait, HouseguestStats } from './types';
 import { TRAIT_STAT_BOOSTS, TRAIT_BOOST_VALUES } from './traits';
 
+import { Avatar3DConfig } from '@/models/avatar-config';
+
 /**
  * Creates a new houseguest
  */
@@ -22,7 +24,8 @@ export function createHouseguest(
   imageUrl: string = "",
   traits: PersonalityTrait[] = [],
   statsOverrides: Partial<HouseguestStats> = {},
-  isPlayer: boolean = false
+  isPlayer: boolean = false,
+  avatarConfig?: Avatar3DConfig
 ): Houseguest {
   // Generate base stats (1-10 scale)
   const baseStats: HouseguestStats = {
@@ -71,7 +74,8 @@ export function createHouseguest(
     nominations: { times: 0, receivedOn: [] }, // Always initialize as a proper object
     timesVetoed: 0,
     imageUrl,
-    avatarUrl: imageUrl, // Set avatarUrl to the same as imageUrl initially
+    avatarUrl: avatarConfig?.profilePhotoUrl || imageUrl, // Use profile photo if available
+    avatarConfig, // Include the full 3D avatar config
     mentalState: {
       feelings: {},
       goals: [],
