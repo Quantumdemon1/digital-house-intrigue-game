@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -7,13 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { PersonalityTrait, TRAIT_STAT_BOOSTS } from '@/models/houseguest';
 import { PlayerFormData } from './types';
-import { Camera, AlertCircle, HelpCircle, Info, Sparkles, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Camera, AlertCircle, HelpCircle, Info, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
 import PersonalityTraitSelector from './PersonalityTraitSelector';
 import StatsSelector from './StatsSelector';
 import AvatarPreview from './AvatarPreview';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent, GameCardFooter } from '@/components/ui/game-card';
 import { CharacterTemplate } from '@/data/character-templates';
+import { Avatar3DConfig } from '@/models/avatar-config';
 
 interface PlayerFormProps {
   formData: PlayerFormData;
@@ -25,6 +25,7 @@ interface PlayerFormProps {
   onBack?: () => void;
   selectedTemplate?: CharacterTemplate | null;
   onAvatarChange?: (url: string) => void;
+  onAvatarConfigChange?: (config: Avatar3DConfig) => void;
 }
 
 const PlayerForm: React.FC<PlayerFormProps> = ({
@@ -36,7 +37,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
   onSubmit,
   onBack,
   selectedTemplate,
-  onAvatarChange
+  onAvatarChange,
+  onAvatarConfigChange
 }) => {
   const {
     playerName,
@@ -48,8 +50,14 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
     houseguestCount,
     stats,
     remainingPoints,
-    avatarUrl
+    avatarUrl,
+    avatarConfig
   } = formData;
+
+  const handleAvatarConfigChange = (config: Avatar3DConfig) => {
+    onFormDataChange('avatarConfig', config);
+    onAvatarConfigChange?.(config);
+  };
 
   return (
     <GameCard variant="primary" className="border-2" hoverable={false}>
@@ -162,7 +170,9 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
               formData={formData} 
               avatarUrl={avatarUrl} 
               onAvatarChange={onAvatarChange}
-              showImageOptions={true}
+              onAvatarConfigChange={handleAvatarConfigChange}
+              showImageOptions={!selectedTemplate?.avatar3DConfig}
+              use3D={true}
             />
           </motion.div>
         </div>

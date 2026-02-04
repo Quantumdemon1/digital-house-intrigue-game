@@ -6,6 +6,11 @@
 // Main components
 export { SimsAvatar } from './SimsAvatar';
 export { AvatarCanvas } from './AvatarCanvas';
+export { AvatarCustomizer } from './AvatarCustomizer';
+export { ColorPalettePicker } from './ColorPalettePicker';
+export { AvatarOptionSelector } from './AvatarOptionSelector';
+
+// Body parts
 export { AvatarBody } from './AvatarBody';
 export { AvatarHead } from './AvatarHead';
 export { AvatarHair } from './AvatarHair';

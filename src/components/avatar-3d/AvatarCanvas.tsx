@@ -7,7 +7,7 @@ import React, { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { cn } from '@/lib/utils';
 
-export type AvatarCanvasSize = 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarCanvasSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'full';
 
 interface SizeConfig {
   width: number;
@@ -20,7 +20,9 @@ const SIZE_CONFIG: Record<AvatarCanvasSize, SizeConfig> = {
   sm: { width: 40, height: 40, cameraZ: 2.2, cameraY: 0.2 },
   md: { width: 56, height: 56, cameraZ: 2.0, cameraY: 0.25 },
   lg: { width: 80, height: 80, cameraZ: 1.8, cameraY: 0.3 },
-  xl: { width: 112, height: 112, cameraZ: 1.6, cameraY: 0.35 }
+  xl: { width: 112, height: 112, cameraZ: 1.6, cameraY: 0.35 },
+  xxl: { width: 160, height: 160, cameraZ: 1.4, cameraY: 0.35 },
+  full: { width: 256, height: 256, cameraZ: 1.2, cameraY: 0.3 }
 };
 
 interface AvatarCanvasProps {
