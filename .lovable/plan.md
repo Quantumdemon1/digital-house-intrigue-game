@@ -1,220 +1,173 @@
 
-# Plan: Fix Final 4 Flow
+# Plan: Fix Final 4 Glitch Between HoH and Final HoH
 
-## Problem Summary
+## Problem Diagnosis
 
-The game incorrectly skips from Final 4 directly to Final 3 HoH. At Final 4, the game should run a **normal week** with special voting rules, not immediately transition to the Final HoH competition. The issues are:
+The game is oscillating between `HoH` and `FinalHoH` phases at Final 4 due to inconsistent houseguest counting:
 
-1. Game transitions to `FinalHoH` when 4 houseguests remain instead of running a normal week
-2. At Final 4, only 1 person (non-HoH, non-nominee) should vote to evict
-3. The evicted person should join the jury
-4. Final 3 HoH should only trigger when exactly 3 houseguests remain
-
-## Correct Big Brother Final 4 Flow
+1. **`HOHCompetition` counts 3 participants** (4 active minus outgoing HoH = 3) and redirects to `FinalHoH`
+2. **`FinalHoHPhase` counts 4 active houseguests** (doesn't exclude outgoing HoH) and redirects back to `HoH`
+3. This creates an infinite redirect loop
 
 ```text
-FINAL 4 WEEK (4 active houseguests):
-  HoH Competition (4 compete) → 1 becomes HoH
-       ↓
-  Nominations → HoH picks 2 nominees (1 person off the block)
-       ↓
-  PoV Player Selection → All 4 play (standard Final 4)
-       ↓
-  PoV Competition → Winner gets veto
-       ↓
-  PoV Meeting → Special rules:
-    - If off-block person wins: keep noms same OR use veto (puts themselves on block)
-    - If HoH or nominee wins: normal veto rules
-       ↓
-  Eviction → ONLY the 1 non-HoH, non-nominee votes
-       ↓
-  Evicted → Joins jury (now 7-9 jurors)
-
-FINAL 3 (3 active houseguests):
-  Final HoH Part 1 (Endurance) → All 3 compete
-       ↓
-  Final HoH Part 2 (Skill) → 2 losers compete
-       ↓
-  Final HoH Part 3 (Q&A) → Part 1 + Part 2 winners compete
-       ↓
-  Final HoH → Evicts 1 of the other 2 → Joins jury
-       ↓
-  FINAL 2 → Proceed to Jury Questioning
+HOHCompetition (activeHouseguests = 3 excluding HoH)
+       │
+       ▼ "length === 3 → redirect to FinalHoH"
+       │
+FinalHoHPhase (finalThree.length = 4 total active)
+       │
+       ▼ "length > 3 → redirect back to HoH"
+       │
+HOHCompetition (loop repeats)
 ```
+
+## Root Cause
+
+The `useCompetitionState` hook excludes the outgoing HoH from `activeHouseguests`:
+
+```typescript
+// useCompetitionState.ts line 52-59
+const activeHouseguests = useMemo(() => {
+  const active = gameState.houseguests.filter(h => h.status === 'Active');
+  const outgoingHohId = gameState.hohWinner?.id;
+  return outgoingHohId 
+    ? active.filter(h => h.id !== outgoingHohId)  // ← Excludes 1 houseguest
+    : active;
+}, [gameState.houseguests, gameState.hohWinner]);
+```
+
+This is correct for determining competition participants, but **incorrect for detecting Final 4 vs Final 3**.
 
 ---
 
-## Technical Changes
+## Solution
 
-### 1. Fix Phase Detection Logic
+Use **two separate counts**:
+1. **Participants count** (excluding outgoing HoH) - for competition mechanics
+2. **Total active count** (all active) - for phase detection logic
 
-**Files**: 
-- `src/contexts/reducers/reducers/player-action-reducer.ts`
-- `src/contexts/reducers/reducers/game-progress-reducer.ts`
-- `src/components/game-phases/HOHCompetition/index.tsx`
+### Changes Required
 
-**Change**: Trigger `FinalHoH` only when exactly 3 houseguests remain, not when "3 or fewer" remain.
+### 1. Fix `HOHCompetition/index.tsx` - Use total active count for phase detection
 
-**Current (broken):**
 ```typescript
-if (activeCount <= 3) {
-  // Go to FinalHoH
-}
-```
+// Add a separate count that includes ALL active houseguests
+const totalActiveCount = gameState.houseguests.filter(h => h.status === 'Active').length;
 
-**Fixed:**
-```typescript
-if (activeCount === 3) {
-  // Go to FinalHoH
-}
-if (activeCount === 2) {
-  // Go to JuryQuestioning (shouldn't happen normally)
-}
-```
-
-### 2. Add Final 4 Detection Flag
-
-**File**: `src/models/game-state.ts`
-
-Add a new flag to track when we're at Final 4:
-```typescript
-isFinal4: boolean; // True when 4 houseguests remain - affects voting rules
-```
-
-### 3. Handle Final 4 Voting Rules
-
-**File**: `src/components/game-phases/EvictionPhase/useEvictionPhase.ts`
-
-Add special voting logic for Final 4:
-```typescript
-const isFinal4 = activeHouseguests.length === 4;
-
-// At Final 4, only 1 person votes (non-HoH, non-nominee)
-const nonNominees = isFinal4
-  ? activeHouseguests.filter(
-      guest => !nominees.some(n => n.id === guest.id) && !guest.isHoH
-    )
-  : activeHouseguests.filter(
-      guest => !nominees.some(n => n.id === guest.id) && !guest.isHoH
-    );
-```
-
-The current logic already does this correctly, but we need to display messaging about Final 4 rules.
-
-### 4. Add Final 4 UI Messaging
-
-**File**: `src/components/game-phases/EvictionPhase.tsx`
-
-Add special UI for Final 4 eviction:
-```typescript
-if (isFinal4) {
-  return (
-    <div className="text-center">
-      <h3>Final 4 Eviction</h3>
-      <p>Only {soleVoter.name} can vote to evict.</p>
-      {/* Show nominees */}
-      {/* Single voter casts deciding vote */}
-    </div>
-  );
-}
-```
-
-### 5. Fix PoV Meeting at Final 4
-
-**File**: `src/components/game-phases/POVMeeting/hooks/usePOVMeeting.ts`
-
-Add special rule for when the off-block person wins veto at Final 4:
-```typescript
-const getEligibleReplacements = () => {
-  const isFinal4 = activeHouseguests.length === 4;
+// Change the redirect check from:
+if (activeHouseguests.length === 3 && !gameState.isFinalStage) {
   
-  // At Final 4, if the off-block person wins veto and uses it,
-  // they put themselves on the block
-  if (isFinal4 && povHolder && !nominees.some(n => n.id === povHolder.id) && !povHolder.isHoH) {
-    // The only replacement option is themselves
-    return [povHolder];
-  }
-  
-  // Normal rules
-  return activeHouseguests.filter(houseguest => 
-    !houseguest.isHoH && 
-    !houseguest.isNominated && 
-    houseguest.id !== savedNominee?.id &&
-    !houseguest.isPovHolder
-  );
-};
+// To:
+if (totalActiveCount === 3 && !gameState.isFinalStage) {
 ```
 
-### 6. Fix Final 3 HoH Logic
+### 2. Fix `NominationPhase/index.tsx` - Change `<=` to `<` for 3 houseguests
 
-**File**: `src/components/game-phases/FinalHoHPhase.tsx`
+Current logic redirects when `length <= 3`, but Final 4 nomination (with 4 houseguests) should work normally. The check should only redirect when there are fewer than 3 active houseguests (edge case protection).
 
-The current logic correctly handles Final 3, but we need to ensure it only triggers with exactly 3 houseguests. Add a guard:
 ```typescript
-// Redirect if not exactly 3 active houseguests
-useEffect(() => {
-  if (finalThree.length !== 3) {
-    if (finalThree.length > 3) {
-      dispatch({ type: 'SET_PHASE', payload: 'HoH' }); // Go back to normal week
-    } else if (finalThree.length === 2) {
-      dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
-    }
-  }
-}, [finalThree.length]);
+// Change from:
+if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+  dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+}
+
+// To:
+if (activeHouseguests.length === 3 && !gameState.isFinalStage) {
+  dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+} else if (activeHouseguests.length < 3) {
+  dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
+}
 ```
 
-### 7. Fix Final 3 Eviction (HoH Choice)
+### 3. Fix `POVCompetition/index.tsx` and `POVMeeting/index.tsx` - Same pattern
 
-**File**: `src/components/game-phases/EvictionPhase.tsx`
+Both files have the same `<= 3` condition that could cause issues. Update them to only redirect when exactly 3 houseguests remain.
 
-The current `isFinal3` check is correct, but we need to ensure the evicted houseguest is properly added to jury:
-```typescript
-const handleFinal3Eviction = (evicted: Houseguest) => {
-  dispatch({
-    type: 'EVICT_HOUSEGUEST',
-    payload: { evicted, toJury: true }
-  });
-  // Then proceed to JuryQuestioning
-};
-```
+### 4. Ensure `hohWinner` is properly cleared on week advance
 
-Wait, looking at the code, the Final 3 decision is in `FinalHoHPhase.tsx` (the HoH chooses who to take to Final 2), not in `EvictionPhase.tsx`. The current code in `chooseFinalist()` correctly handles this.
+Check if `ADVANCE_WEEK` action properly clears `hohWinner` to `null`, so the outgoing HoH exclusion doesn't affect the next week's count.
 
 ---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/contexts/reducers/reducers/player-action-reducer.ts` | Change `<= 3` to `=== 3` for FinalHoH detection; add `=== 4` handling |
-| `src/contexts/reducers/reducers/game-progress-reducer.ts` | Change `<= 3` to `=== 3` for FinalHoH detection |
-| `src/components/game-phases/HOHCompetition/index.tsx` | Change `<= 3` to `=== 3` for redirect check |
-| `src/components/game-phases/EvictionPhase/useEvictionPhase.ts` | Add `isFinal4` flag and pass to component |
-| `src/components/game-phases/EvictionPhase.tsx` | Add Final 4 UI messaging for single-voter scenario |
-| `src/components/game-phases/POVMeeting/hooks/usePOVMeeting.ts` | Add Final 4 veto replacement logic |
-| `src/components/game-phases/FinalHoHPhase.tsx` | Add guard for exactly 3 houseguests |
-| `src/models/game-state.ts` | (Optional) Add `isFinal4` flag if needed for state tracking |
+| File | Change |
+|------|--------|
+| `src/components/game-phases/HOHCompetition/index.tsx` | Add separate `totalActiveCount` for phase detection; keep `activeHouseguests` for competition participants |
+| `src/components/game-phases/NominationPhase/index.tsx` | Change `<= 3` to `=== 3` for FinalHoH redirect |
+| `src/components/game-phases/POVCompetition/index.tsx` | Change `<= 3` to `=== 3` for FinalHoH redirect |
+| `src/components/game-phases/POVMeeting/index.tsx` | Change `<= 3` to `=== 3` for FinalHoH redirect |
+| `src/contexts/reducers/reducers/game-progress-reducer.ts` | Verify `ADVANCE_WEEK` properly resets `hohWinner` to null |
+
+---
+
+## Technical Details
+
+### HOHCompetition/index.tsx Changes
+
+```typescript
+// Line 12 - Add direct count from gameState
+const totalActiveCount = gameState.houseguests.filter(h => h.status === 'Active').length;
+
+// Line 33-40 - Update the phase detection
+useEffect(() => {
+  // Use totalActiveCount (not participants count) for phase detection
+  if (totalActiveCount === 3 && !gameState.isFinalStage) {
+    logger?.info(`Exactly 3 houseguests total - redirecting to Final HoH`);
+    dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+  }
+}, [totalActiveCount, gameState.isFinalStage, dispatch, logger]);
+```
+
+### NominationPhase/index.tsx Changes
+
+```typescript
+// Line 108-111 - Update redirect logic
+useEffect(() => {
+  const activeCount = activeHouseguests.length;
+  
+  if (activeCount <= 2) {
+    dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
+  } else if (activeCount === 3 && !gameState.isFinalStage) {
+    dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+  }
+  // 4+ houseguests = normal nomination week (including Final 4)
+}, [gameState.houseguests, gameState.isFinalStage, dispatch]);
+```
+
+### POVCompetition/index.tsx and POVMeeting/index.tsx Changes
+
+Same pattern - use `=== 3` instead of `<= 3`:
+
+```typescript
+if (activeHouseguests.length === 3 && !gameState.isFinalStage) {
+  dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
+} else if (activeHouseguests.length < 3) {
+  dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
+}
+```
 
 ---
 
 ## Expected Behavior After Fix
 
-1. **Final 4**: Normal week runs (HoH → Nom → PoV → Meeting → Eviction)
-2. **Final 4 Voting**: Only 1 person (non-HoH, non-nominee) votes
-3. **Final 4 Veto**: If off-block person wins and uses veto, they go on the block
-4. **Final 4 Eviction**: Evicted person joins jury correctly
-5. **Final 3 HoH**: Only triggers when exactly 3 houseguests remain
-6. **Final 3 Decision**: HoH picks from 2 other houseguests (not 3)
-7. **Jury**: All evicted houseguests after jury starts are added to jury
-8. **Final 2**: Two finalists proceed to Jury Questioning
+| Scenario | Active Count | Expected Phase |
+|----------|-------------|----------------|
+| Final 4 week | 4 | Normal HoH → Nom → PoV → Meeting → Eviction |
+| After Final 4 eviction | 3 | FinalHoH (3-part competition) |
+| After Final 3 eviction | 2 | JuryQuestioning |
+
+The game will no longer oscillate between phases at Final 4 because:
+- Phase detection uses **total active count** (includes outgoing HoH)
+- Competition mechanics use **participant count** (excludes outgoing HoH)
+- These two counts are now properly separated
 
 ---
 
-## Summary of Phase Transitions
+## Summary
 
-| Active Count | Next Phase |
-|--------------|------------|
-| 5+ | Normal HoH competition |
-| 4 | Normal HoH competition (Final 4 week) |
-| 3 | Final HoH (3-part competition) |
-| 2 | Jury Questioning (should only happen from Final HoH) |
+The fix involves a simple separation of concerns:
+1. **Competition participants** = Active houseguests minus outgoing HoH (for who competes)
+2. **Phase detection** = All active houseguests (for which phase to run)
+
+This ensures Final 4 (4 houseguests) runs a normal week, and only when exactly 3 remain does the game transition to FinalHoH.
