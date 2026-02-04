@@ -55,6 +55,20 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         const targetId = payload.params?.targetId;
         
         if (playerId && targetId) {
+          const isSocialPhase = state.phase === 'SocialInteraction';
+          
+          // Check if out-of-phase action limit is reached
+          if (!isSocialPhase) {
+            const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
+            const maxActions = Math.floor(activeCount / 3);
+            const usedActions = state.outOfPhaseSocialActionsUsed ?? 0;
+            
+            if (usedActions >= maxActions) {
+              console.log('Out-of-phase action limit reached');
+              return state; // Don't allow action
+            }
+          }
+          
           const improvement = Math.floor(Math.random() * 5) + 3; // 3-7 points
           console.log(`Talk to: ${targetId}, improvement: +${improvement}`);
           
@@ -71,7 +85,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               ...newState.gameLog,
               {
                 week: state.week,
-                phase: 'SocialInteraction',
+                phase: state.phase,
                 type: 'CONVERSATION',
                 description: `${playerName} had a conversation with ${targetName} (+${improvement} relationship)`,
                 involvedHouseguests: [playerId, targetId],
@@ -84,7 +98,11 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               targetName,
               value: improvement,
               timestamp: Date.now()
-            }
+            },
+            // Increment counter only if NOT in social phase
+            outOfPhaseSocialActionsUsed: isSocialPhase 
+              ? state.outOfPhaseSocialActionsUsed 
+              : (state.outOfPhaseSocialActionsUsed ?? 0) + 1
           };
         }
         break;
@@ -95,6 +113,20 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         const targetId = payload.params?.targetId;
         
         if (playerId && targetId) {
+          const isSocialPhase = state.phase === 'SocialInteraction';
+          
+          // Check if out-of-phase action limit is reached
+          if (!isSocialPhase) {
+            const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
+            const maxActions = Math.floor(activeCount / 3);
+            const usedActions = state.outOfPhaseSocialActionsUsed ?? 0;
+            
+            if (usedActions >= maxActions) {
+              console.log('Out-of-phase action limit reached');
+              return state; // Don't allow action
+            }
+          }
+          
           const improvement = Math.floor(Math.random() * 8) + 5; // 5-12 points (stronger than talk_to)
           console.log(`Build relationship with: ${targetId}, improvement: +${improvement}`);
           
@@ -109,7 +141,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               ...newState.gameLog,
               {
                 week: state.week,
-                phase: 'SocialInteraction',
+                phase: state.phase,
                 type: 'RELATIONSHIP_BUILDING',
                 description: `${playerName} spent quality time with ${targetName} (+${improvement} relationship)`,
                 involvedHouseguests: [playerId, targetId],
@@ -121,7 +153,11 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               targetName,
               value: improvement,
               timestamp: Date.now()
-            }
+            },
+            // Increment counter only if NOT in social phase
+            outOfPhaseSocialActionsUsed: isSocialPhase 
+              ? state.outOfPhaseSocialActionsUsed 
+              : (state.outOfPhaseSocialActionsUsed ?? 0) + 1
           };
         }
         break;
@@ -132,6 +168,20 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         const targetId = payload.params?.targetId;
         
         if (playerId && targetId) {
+          const isSocialPhase = state.phase === 'SocialInteraction';
+          
+          // Check if out-of-phase action limit is reached
+          if (!isSocialPhase) {
+            const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
+            const maxActions = Math.floor(activeCount / 3);
+            const usedActions = state.outOfPhaseSocialActionsUsed ?? 0;
+            
+            if (usedActions >= maxActions) {
+              console.log('Out-of-phase action limit reached');
+              return state; // Don't allow action
+            }
+          }
+          
           // Strategic discussion has moderate relationship impact
           const improvement = Math.floor(Math.random() * 4) + 2; // 2-5 points
           console.log(`Strategic discussion with: ${targetId}, improvement: +${improvement}`);
@@ -147,7 +197,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               ...newState.gameLog,
               {
                 week: state.week,
-                phase: 'SocialInteraction',
+                phase: state.phase,
                 type: 'STRATEGIC_DISCUSSION',
                 description: `${playerName} discussed strategy with ${targetName} (+${improvement} relationship)`,
                 involvedHouseguests: [playerId, targetId],
@@ -159,7 +209,11 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               targetName,
               value: improvement,
               timestamp: Date.now()
-            }
+            },
+            // Increment counter only if NOT in social phase
+            outOfPhaseSocialActionsUsed: isSocialPhase 
+              ? state.outOfPhaseSocialActionsUsed 
+              : (state.outOfPhaseSocialActionsUsed ?? 0) + 1
           };
         }
         break;

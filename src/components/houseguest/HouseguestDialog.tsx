@@ -9,6 +9,7 @@ import HouseguestAvatar from './HouseguestAvatar';
 import CustomProgress from '../game-phases/NominationPhase/CustomProgress';
 import ProposeDealDialog from '@/components/deals/ProposeDealDialog';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface HouseguestDialogProps {
   houseguest: Houseguest;
@@ -19,8 +20,13 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
   const player = gameState.houseguests.find(h => h.isPlayer);
   const [dealDialogOpen, setDealDialogOpen] = useState(false);
   
-  // Check if social phase is active
+  // Calculate action availability
   const isSocialPhase = gameState.phase === 'SocialInteraction';
+  const activeCount = gameState.houseguests.filter(h => h.status === 'Active').length;
+  const maxOutOfPhaseActions = Math.floor(activeCount / 3);
+  const usedActions = gameState.outOfPhaseSocialActionsUsed ?? 0;
+  const remainingActions = isSocialPhase ? Infinity : maxOutOfPhaseActions - usedActions;
+  const canAct = remainingActions > 0;
   
   let relationshipScore = 0;
   let relationshipColor = '';
@@ -40,6 +46,10 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
   }
 
   const handleTalkTo = () => {
+    if (!canAct) {
+      toast.error('No actions remaining. Wait for Social Phase.');
+      return;
+    }
     dispatch({ 
       type: 'PLAYER_ACTION', 
       payload: { actionId: 'talk_to', params: { targetId: houseguest.id } }
@@ -48,11 +58,23 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
   };
 
   const handleBuildRelationship = () => {
+    if (!canAct) {
+      toast.error('No actions remaining. Wait for Social Phase.');
+      return;
+    }
     dispatch({ 
       type: 'PLAYER_ACTION', 
       payload: { actionId: 'relationship_building', params: { targetId: houseguest.id } }
     });
     toast.success(`You spent quality time with ${houseguest.name}`);
+  };
+
+  const handleProposeDeal = () => {
+    if (!canAct) {
+      toast.error('No actions remaining. Wait for Social Phase.');
+      return;
+    }
+    setDealDialogOpen(true);
   };
 
   return (
@@ -114,9 +136,26 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
               <Users className="h-4 w-4" />
               Actions
               {!isSocialPhase && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
-                  <Lock className="h-3 w-3" />
-                  Social Phase Only
+                <span className={cn(
+                  "text-xs flex items-center gap-1 ml-auto",
+                  remainingActions > 0 ? "text-blue-500" : "text-muted-foreground"
+                )}>
+                  {remainingActions > 0 ? (
+                    <>
+                      <MessageCircle className="h-3 w-3" />
+                      {remainingActions} action{remainingActions !== 1 ? 's' : ''} left
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-3 w-3" />
+                      Wait for Social Phase
+                    </>
+                  )}
+                </span>
+              )}
+              {isSocialPhase && (
+                <span className="text-xs text-green-500 ml-auto">
+                  Unlimited
                 </span>
               )}
             </h4>
@@ -126,7 +165,7 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
                 variant="outline"
                 size="sm"
                 onClick={handleTalkTo}
-                disabled={!isSocialPhase}
+                disabled={!canAct}
                 className="flex items-center gap-2"
               >
                 <MessageCircle className="h-4 w-4" />
@@ -137,7 +176,7 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
                 variant="outline"
                 size="sm"
                 onClick={handleBuildRelationship}
-                disabled={!isSocialPhase}
+                disabled={!canAct}
                 className="flex items-center gap-2"
               >
                 <Heart className="h-4 w-4" />
@@ -147,8 +186,8 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setDealDialogOpen(true)}
-                disabled={!isSocialPhase}
+                onClick={handleProposeDeal}
+                disabled={!canAct}
                 className="flex items-center gap-2 col-span-2 border-amber-300 hover:bg-amber-50"
               >
                 <Handshake className="h-4 w-4 text-amber-600" />
