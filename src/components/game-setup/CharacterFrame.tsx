@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { CharacterTemplate, archetypeInfo } from '@/data/character-templates';
-import { SimsAvatar } from '@/components/avatar-3d';
+import { AvatarLoader, AvatarSize } from '@/components/avatar-3d';
 
 interface CharacterFrameProps {
   template: CharacterTemplate;
@@ -75,9 +75,9 @@ export const CharacterFrame: React.FC<CharacterFrameProps> = ({
           )}>
             {/* Character image or 3D avatar */}
             {has3DConfig ? (
-              <SimsAvatar
-                config={template.avatar3DConfig}
-                size={config.avatarSize}
+              <AvatarLoader
+                avatarConfig={template.avatar3DConfig}
+                size={config.avatarSize as AvatarSize}
                 animated={false}
               />
             ) : (

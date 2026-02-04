@@ -28,7 +28,7 @@ interface AvatarLoaderProps {
   avatarConfig?: Avatar3DConfig;
   size?: AvatarSize;
   mood?: MoodType;
-  status?: 'none' | 'hoh' | 'pov' | 'nominee' | 'evicted';
+  status?: 'none' | 'hoh' | 'pov' | 'nominee' | 'safe' | 'evicted';
   isPlayer?: boolean;
   animated?: boolean;
   className?: string;

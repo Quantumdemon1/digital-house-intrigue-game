@@ -4,14 +4,13 @@
  */
 
 // Main components
-export { SimsAvatar } from './SimsAvatar';
 export { AvatarCanvas } from './AvatarCanvas';
 export { AvatarCustomizer } from './AvatarCustomizer';
 export { ColorPalettePicker } from './ColorPalettePicker';
 export { AvatarOptionSelector } from './AvatarOptionSelector';
 export * from './SimsIcons';
 
-// Ready Player Me components
+// Ready Player Me components (PRIMARY)
 export { AvatarLoader, AvatarSkeleton, preloadAvatar } from './AvatarLoader';
 export type { AvatarSize } from './AvatarLoader';
 
@@ -28,17 +27,7 @@ export type { ScreenshotOptions } from './AvatarScreenshotCapture';
 export { AutoCaptureProfilePhoto } from './AutoCaptureProfilePhoto';
 export { AvatarProfilePicture } from './AvatarProfilePicture';
 
-// Body parts (for legacy/Sims avatar)
-export { AvatarBody } from './AvatarBody';
-export { AvatarHead } from './AvatarHead';
-export { AvatarHair } from './AvatarHair';
-export { AvatarClothing } from './AvatarClothing';
-export { AvatarAnimations, AnimatedAvatarGroup, useAvatarAnimations } from './AvatarAnimations';
-
 // Hooks
-export { useIdleAnimation, useHeadIdleAnimation, useBlinkAnimation } from './hooks/useIdleAnimation';
-export { useMoodBodyAnimation, useMoodFaceAnimation, getMoodExpression, getMouthCurve } from './hooks/useMoodAnimation';
-export { useStatusAnimation, usePlayerHighlight, getStatusGlowColor, getStatusParams } from './hooks/useStatusAnimation';
 export { useAvatarPreloader, useAvatarUrlPreloader, preloadRPMModel, preloadRPMModels, extractRPMUrls } from './hooks/useAvatarPreloader';
 
 // Utilities
