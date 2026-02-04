@@ -7,11 +7,10 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   User, Palette, Eye, Scissors, Shirt, 
-  Shuffle, RotateCcw, ChevronLeft, ChevronRight,
+  RotateCcw, ChevronLeft, ChevronRight,
   Sparkles
 } from 'lucide-react';
 import { 
@@ -22,9 +21,17 @@ import {
   SKIN_TONE_PALETTE, HAIR_COLOR_PALETTE, CLOTHING_COLOR_PALETTE
 } from '@/models/avatar-config';
 import { SimsAvatar } from './SimsAvatar';
-import { AvatarCanvas } from './AvatarCanvas';
 import { ColorPalettePicker } from './ColorPalettePicker';
 import { AvatarOptionSelector } from './AvatarOptionSelector';
+import { 
+  PlumbobIcon, 
+  DiceIcon,
+  BODY_TYPE_ICONS,
+  HAIR_STYLE_ICONS,
+  TOP_STYLE_ICONS,
+  BOTTOM_STYLE_ICONS,
+  HEAD_SHAPE_ICONS
+} from './SimsIcons';
 
 // Option arrays
 const BODY_TYPES: readonly BodyType[] = ['slim', 'average', 'athletic', 'stocky'] as const;
@@ -47,6 +54,16 @@ interface AvatarCustomizerProps {
   className?: string;
 }
 
+type TabId = 'body' | 'skin' | 'face' | 'hair' | 'clothing';
+
+const tabConfig: { id: TabId; label: string; icon: React.FC<{ className?: string }> }[] = [
+  { id: 'body', label: 'Body', icon: User },
+  { id: 'skin', label: 'Skin', icon: Palette },
+  { id: 'face', label: 'Face', icon: Eye },
+  { id: 'hair', label: 'Hair', icon: Scissors },
+  { id: 'clothing', label: 'Clothes', icon: Shirt },
+];
+
 export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   initialConfig,
   onChange,
@@ -56,7 +73,8 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
 }) => {
   const [config, setConfig] = useState<Avatar3DConfig>(initialConfig || generateDefaultConfig());
   const [rotation, setRotation] = useState(0);
-  const [activeTab, setActiveTab] = useState('body');
+  const [activeTab, setActiveTab] = useState<TabId>('body');
+  const [isDragging, setIsDragging] = useState(false);
 
   const updateConfig = useCallback((updates: Partial<Avatar3DConfig>) => {
     const newConfig = { ...config, ...updates };
@@ -109,321 +127,408 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
     }
   };
 
-  const tabConfig = [
-    { id: 'body', label: 'Body', icon: User },
-    { id: 'skin', label: 'Skin', icon: Palette },
-    { id: 'face', label: 'Face', icon: Eye },
-    { id: 'hair', label: 'Hair', icon: Scissors },
-    { id: 'clothing', label: 'Clothes', icon: Shirt },
-  ];
+  const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: { delta: { x: number } }) => {
+    setRotation(r => r + info.delta.x * 0.5);
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'body':
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="sims-section-title">Body Type</h3>
+              <button 
+                onClick={() => randomizeCategory('body')}
+                className="sims-randomize text-xs"
+              >
+                <DiceIcon className="w-4 h-4 sims-dice" />
+                Random
+              </button>
+            </div>
+            
+            <AvatarOptionSelector
+              options={BODY_TYPES}
+              value={config.bodyType}
+              onChange={(v) => updateConfig({ bodyType: v })}
+              columns={4}
+              getIcon={(option) => {
+                const IconComponent = BODY_TYPE_ICONS[option];
+                return IconComponent ? <IconComponent className="w-8 h-10" /> : null;
+              }}
+            />
+            
+            <div className="sims-divider" />
+            
+            <h3 className="sims-section-title">Height</h3>
+            <AvatarOptionSelector
+              options={HEIGHTS}
+              value={config.height}
+              onChange={(v) => updateConfig({ height: v })}
+              columns={3}
+            />
+          </div>
+        );
+
+      case 'skin':
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="sims-section-title">Skin Tone</h3>
+              <button 
+                onClick={() => randomizeCategory('skin')}
+                className="sims-randomize text-xs"
+              >
+                <DiceIcon className="w-4 h-4 sims-dice" />
+                Random
+              </button>
+            </div>
+            
+            <ColorPalettePicker
+              colors={SKIN_TONE_PALETTE}
+              value={config.skinTone}
+              onChange={(color) => updateConfig({ skinTone: color })}
+              size="lg"
+            />
+          </div>
+        );
+
+      case 'face':
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="sims-section-title">Facial Features</h3>
+              <button 
+                onClick={() => randomizeCategory('face')}
+                className="sims-randomize text-xs"
+              >
+                <DiceIcon className="w-4 h-4 sims-dice" />
+                Random
+              </button>
+            </div>
+            
+            <AvatarOptionSelector
+              options={HEAD_SHAPES}
+              value={config.headShape}
+              onChange={(v) => updateConfig({ headShape: v })}
+              label="Head Shape"
+              columns={4}
+              getIcon={(option) => {
+                const IconComponent = HEAD_SHAPE_ICONS[option];
+                return IconComponent ? <IconComponent className="w-6 h-6" /> : null;
+              }}
+            />
+            
+            <div className="sims-divider" />
+            
+            <AvatarOptionSelector
+              options={EYE_SHAPES}
+              value={config.eyeShape}
+              onChange={(v) => updateConfig({ eyeShape: v })}
+              label="Eye Shape"
+              columns={4}
+            />
+            
+            <ColorPalettePicker
+              colors={EYE_COLORS}
+              value={config.eyeColor}
+              onChange={(color) => updateConfig({ eyeColor: color })}
+              size="md"
+              label="Eye Color"
+            />
+            
+            <div className="sims-divider" />
+            
+            <AvatarOptionSelector
+              options={NOSE_TYPES}
+              value={config.noseType}
+              onChange={(v) => updateConfig({ noseType: v })}
+              label="Nose Type"
+              columns={4}
+            />
+            
+            <AvatarOptionSelector
+              options={MOUTH_TYPES}
+              value={config.mouthType}
+              onChange={(v) => updateConfig({ mouthType: v })}
+              label="Mouth Type"
+              columns={4}
+            />
+          </div>
+        );
+
+      case 'hair':
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="sims-section-title">Hair Style</h3>
+              <button 
+                onClick={() => randomizeCategory('hair')}
+                className="sims-randomize text-xs"
+              >
+                <DiceIcon className="w-4 h-4 sims-dice" />
+                Random
+              </button>
+            </div>
+            
+            <AvatarOptionSelector
+              options={HAIR_STYLES}
+              value={config.hairStyle}
+              onChange={(v) => updateConfig({ hairStyle: v })}
+              columns={4}
+              getIcon={(option) => {
+                const IconComponent = HAIR_STYLE_ICONS[option];
+                return IconComponent ? <IconComponent className="w-6 h-6" /> : null;
+              }}
+            />
+            
+            <div className="sims-divider" />
+            
+            <h3 className="sims-section-title">Hair Color</h3>
+            <p className="text-xs text-white/50 mb-3">Natural</p>
+            <ColorPalettePicker
+              colors={HAIR_COLOR_PALETTE.slice(0, 9)}
+              value={config.hairColor}
+              onChange={(color) => updateConfig({ hairColor: color })}
+              size="md"
+            />
+            <p className="text-xs text-white/50 mb-3 mt-4">Fantasy</p>
+            <ColorPalettePicker
+              colors={HAIR_COLOR_PALETTE.slice(9)}
+              value={config.hairColor}
+              onChange={(color) => updateConfig({ hairColor: color })}
+              size="md"
+            />
+          </div>
+        );
+
+      case 'clothing':
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="sims-section-title">Outfit</h3>
+              <button 
+                onClick={() => randomizeCategory('clothing')}
+                className="sims-randomize text-xs"
+              >
+                <DiceIcon className="w-4 h-4 sims-dice" />
+                Random
+              </button>
+            </div>
+            
+            <AvatarOptionSelector
+              options={TOP_STYLES}
+              value={config.topStyle}
+              onChange={(v) => updateConfig({ topStyle: v })}
+              label="Top"
+              columns={5}
+              getIcon={(option) => {
+                const IconComponent = TOP_STYLE_ICONS[option];
+                return IconComponent ? <IconComponent className="w-6 h-6" /> : null;
+              }}
+            />
+            
+            <ColorPalettePicker
+              colors={CLOTHING_COLOR_PALETTE}
+              value={config.topColor}
+              onChange={(color) => updateConfig({ topColor: color })}
+              size="md"
+              label="Top Color"
+            />
+            
+            <div className="sims-divider" />
+            
+            <AvatarOptionSelector
+              options={BOTTOM_STYLES}
+              value={config.bottomStyle}
+              onChange={(v) => updateConfig({ bottomStyle: v })}
+              label="Bottom"
+              columns={4}
+              getIcon={(option) => {
+                const IconComponent = BOTTOM_STYLE_ICONS[option];
+                return IconComponent ? <IconComponent className="w-6 h-6" /> : null;
+              }}
+            />
+            
+            <ColorPalettePicker
+              colors={CLOTHING_COLOR_PALETTE}
+              value={config.bottomColor}
+              onChange={(color) => updateConfig({ bottomColor: color })}
+              size="md"
+              label="Bottom Color"
+            />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className={cn('flex flex-col lg:flex-row gap-6', className)}>
-      {/* Left: 3D Preview */}
-      <motion.div 
-        className="flex flex-col items-center gap-4 lg:w-1/3"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-      >
-        <div className="relative">
-          {/* Decorative background */}
-          <div className="absolute inset-0 -m-4 rounded-2xl bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 blur-sm" />
-          
-          {/* Avatar container */}
-          <motion.div 
-            className="relative w-48 h-48 lg:w-64 lg:h-64 rounded-2xl overflow-hidden"
-            style={{ 
-              background: 'linear-gradient(135deg, hsl(var(--muted)) 0%, hsl(var(--background)) 100%)'
-            }}
-            animate={{ rotateY: rotation }}
-            transition={{ type: 'spring', stiffness: 100 }}
-          >
-            <SimsAvatar 
-              config={config} 
-              size="full"
-              animated={true}
-            />
-          </motion.div>
-        </div>
-
-        {/* Rotation controls */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setRotation(r => r - 45)}
-            className="h-8 w-8"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setRotation(0)}
-            className="gap-1"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Reset
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setRotation(r => r + 45)}
-            className="h-8 w-8"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Randomize All */}
-        <Button
-          variant="secondary"
-          onClick={randomizeAll}
-          className="gap-2 w-full max-w-xs"
+    <div className={cn(
+      'sims-cas-background sims-cas-pattern min-h-[500px] rounded-2xl overflow-hidden',
+      className
+    )}>
+      <div className="flex flex-col lg:flex-row gap-6 p-6">
+        {/* Left: 3D Preview */}
+        <motion.div 
+          className="flex flex-col items-center gap-4 lg:w-2/5"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
         >
-          <Shuffle className="h-4 w-4" />
-          Randomize All
-        </Button>
-      </motion.div>
-
-      {/* Right: Customization Panels */}
-      <motion.div 
-        className="flex-1 lg:w-2/3"
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-5 mb-4">
-            {tabConfig.map(tab => (
-              <TabsTrigger 
-                key={tab.id} 
-                value={tab.id}
-                className="flex items-center gap-1.5 text-xs sm:text-sm"
+          {/* Plumbob */}
+          <div className="sims-plumbob w-6 h-8 text-emerald-400">
+            <PlumbobIcon className="w-full h-full" />
+          </div>
+          
+          {/* Avatar Preview with Turntable */}
+          <div className="sims-turntable relative">
+            {/* Spotlight */}
+            <div className="sims-spotlight" />
+            
+            {/* Avatar container */}
+            <motion.div 
+              className={cn(
+                "relative w-56 h-56 lg:w-72 lg:h-72 rounded-2xl overflow-hidden",
+                isDragging ? "cursor-grabbing" : "cursor-grab"
+              )}
+              style={{ 
+                background: 'radial-gradient(ellipse at center 30%, hsl(200 30% 20%) 0%, hsl(200 40% 10%) 100%)'
+              }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0}
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              onDrag={(e, info) => handleDrag(e, info)}
+            >
+              <motion.div
+                animate={{ rotateY: rotation }}
+                transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+                className="w-full h-full"
               >
-                <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <SimsAvatar 
+                  config={config} 
+                  size="full"
+                  animated={true}
+                />
+              </motion.div>
+              
+              {/* Drag hint */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-white/40 pointer-events-none">
+                ← drag to rotate →
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Rotation controls */}
+          <div className="flex items-center gap-3 mt-2">
+            <motion.button
+              onClick={() => setRotation(r => r - 45)}
+              className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:bg-white/20 hover:text-white transition-all"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </motion.button>
+            
+            <motion.button
+              onClick={() => setRotation(0)}
+              className="px-4 py-2 rounded-full bg-white/10 border border-white/20 flex items-center gap-2 text-white/70 text-sm hover:bg-white/20 hover:text-white transition-all"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </motion.button>
+            
+            <motion.button
+              onClick={() => setRotation(r => r + 45)}
+              className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:bg-white/20 hover:text-white transition-all"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+          </div>
+
+          {/* Randomize All */}
+          <motion.button
+            onClick={randomizeAll}
+            className="sims-randomize mt-2"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <DiceIcon className="w-5 h-5 sims-dice" />
+            Randomize All
+          </motion.button>
+        </motion.div>
+
+        {/* Right: Customization Panels */}
+        <motion.div 
+          className="flex-1 lg:w-3/5"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          {/* Sims-style Tabs */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+            {tabConfig.map((tab) => (
+              <motion.button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "sims-tab text-sm",
+                  activeTab === tab.id && "active"
+                )}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <tab.icon className="w-4 h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
+              </motion.button>
             ))}
-          </TabsList>
+          </div>
 
-          <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
-            <ScrollArea className="h-[300px] lg:h-[350px] pr-4">
-              {/* Body Tab */}
-              <TabsContent value="body" className="m-0 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold">Body Shape</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => randomizeCategory('body')}
-                    className="gap-1 text-xs"
-                  >
-                    <Shuffle className="h-3 w-3" />
-                    Random
-                  </Button>
-                </div>
-                
-                <AvatarOptionSelector
-                  options={BODY_TYPES}
-                  value={config.bodyType}
-                  onChange={(v) => updateConfig({ bodyType: v })}
-                  label="Body Type"
-                  columns={4}
-                />
-                
-                <AvatarOptionSelector
-                  options={HEIGHTS}
-                  value={config.height}
-                  onChange={(v) => updateConfig({ height: v })}
-                  label="Height"
-                  columns={3}
-                />
-              </TabsContent>
-
-              {/* Skin Tab */}
-              <TabsContent value="skin" className="m-0 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold">Skin Tone</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => randomizeCategory('skin')}
-                    className="gap-1 text-xs"
-                  >
-                    <Shuffle className="h-3 w-3" />
-                    Random
-                  </Button>
-                </div>
-                
-                <ColorPalettePicker
-                  colors={SKIN_TONE_PALETTE}
-                  value={config.skinTone}
-                  onChange={(color) => updateConfig({ skinTone: color })}
-                  size="lg"
-                  label="Choose your skin tone"
-                />
-              </TabsContent>
-
-              {/* Face Tab */}
-              <TabsContent value="face" className="m-0 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold">Facial Features</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => randomizeCategory('face')}
-                    className="gap-1 text-xs"
-                  >
-                    <Shuffle className="h-3 w-3" />
-                    Random
-                  </Button>
-                </div>
-                
-                <AvatarOptionSelector
-                  options={HEAD_SHAPES}
-                  value={config.headShape}
-                  onChange={(v) => updateConfig({ headShape: v })}
-                  label="Head Shape"
-                  columns={4}
-                />
-                
-                <AvatarOptionSelector
-                  options={EYE_SHAPES}
-                  value={config.eyeShape}
-                  onChange={(v) => updateConfig({ eyeShape: v })}
-                  label="Eye Shape"
-                  columns={4}
-                />
-                
-                <ColorPalettePicker
-                  colors={EYE_COLORS}
-                  value={config.eyeColor}
-                  onChange={(color) => updateConfig({ eyeColor: color })}
-                  size="md"
-                  label="Eye Color"
-                />
-                
-                <AvatarOptionSelector
-                  options={NOSE_TYPES}
-                  value={config.noseType}
-                  onChange={(v) => updateConfig({ noseType: v })}
-                  label="Nose Type"
-                  columns={4}
-                />
-                
-                <AvatarOptionSelector
-                  options={MOUTH_TYPES}
-                  value={config.mouthType}
-                  onChange={(v) => updateConfig({ mouthType: v })}
-                  label="Mouth Type"
-                  columns={4}
-                />
-              </TabsContent>
-
-              {/* Hair Tab */}
-              <TabsContent value="hair" className="m-0 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold">Hair Style</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => randomizeCategory('hair')}
-                    className="gap-1 text-xs"
-                  >
-                    <Shuffle className="h-3 w-3" />
-                    Random
-                  </Button>
-                </div>
-                
-                <AvatarOptionSelector
-                  options={HAIR_STYLES}
-                  value={config.hairStyle}
-                  onChange={(v) => updateConfig({ hairStyle: v })}
-                  label="Style"
-                  columns={4}
-                />
-                
-                <ColorPalettePicker
-                  colors={HAIR_COLOR_PALETTE}
-                  value={config.hairColor}
-                  onChange={(color) => updateConfig({ hairColor: color })}
-                  size="md"
-                  label="Hair Color"
-                />
-              </TabsContent>
-
-              {/* Clothing Tab */}
-              <TabsContent value="clothing" className="m-0 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold">Outfit</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => randomizeCategory('clothing')}
-                    className="gap-1 text-xs"
-                  >
-                    <Shuffle className="h-3 w-3" />
-                    Random
-                  </Button>
-                </div>
-                
-                <AvatarOptionSelector
-                  options={TOP_STYLES}
-                  value={config.topStyle}
-                  onChange={(v) => updateConfig({ topStyle: v })}
-                  label="Top"
-                  columns={5}
-                />
-                
-                <ColorPalettePicker
-                  colors={CLOTHING_COLOR_PALETTE}
-                  value={config.topColor}
-                  onChange={(color) => updateConfig({ topColor: color })}
-                  size="md"
-                  label="Top Color"
-                />
-                
-                <AvatarOptionSelector
-                  options={BOTTOM_STYLES}
-                  value={config.bottomStyle}
-                  onChange={(v) => updateConfig({ bottomStyle: v })}
-                  label="Bottom"
-                  columns={4}
-                />
-                
-                <ColorPalettePicker
-                  colors={CLOTHING_COLOR_PALETTE}
-                  value={config.bottomColor}
-                  onChange={(color) => updateConfig({ bottomColor: color })}
-                  size="md"
-                  label="Bottom Color"
-                />
-              </TabsContent>
+          {/* Panel Content */}
+          <div className="sims-panel">
+            <ScrollArea className="h-[320px] lg:h-[380px] pr-4">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {renderTabContent()}
+                </motion.div>
+              </AnimatePresence>
             </ScrollArea>
           </div>
-        </Tabs>
 
-        {/* Complete Button */}
-        {showCompleteButton && onComplete && (
-          <motion.div 
-            className="mt-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Button
-              onClick={onComplete}
-              variant="dramatic"
-              size="lg"
-              className="w-full gap-2"
+          {/* Complete Button */}
+          {showCompleteButton && onComplete && (
+            <motion.div 
+              className="mt-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
             >
-              <Sparkles className="h-4 w-4" />
-              Continue with this Avatar
-            </Button>
-          </motion.div>
-        )}
-      </motion.div>
+              <motion.button
+                onClick={onComplete}
+                className="sims-button w-full flex items-center justify-center gap-2 text-lg"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Sparkles className="w-5 h-5" />
+                Continue with this Sim
+              </motion.button>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 };

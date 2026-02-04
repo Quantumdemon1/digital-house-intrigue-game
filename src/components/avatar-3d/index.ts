@@ -9,6 +9,7 @@ export { AvatarCanvas } from './AvatarCanvas';
 export { AvatarCustomizer } from './AvatarCustomizer';
 export { ColorPalettePicker } from './ColorPalettePicker';
 export { AvatarOptionSelector } from './AvatarOptionSelector';
+export * from './SimsIcons';
 
 // Body parts
 export { AvatarBody } from './AvatarBody';

@@ -746,3 +746,277 @@
     @apply max-w-full overflow-hidden;
   }
 }
+
+/* ========================================
+   SIMS-STYLE AVATAR CUSTOMIZER
+   ======================================== */
+
+/* Sims CAS Background */
+.sims-cas-background {
+  background: linear-gradient(135deg, 
+    hsl(195 80% 8%) 0%, 
+    hsl(190 70% 12%) 30%,
+    hsl(185 60% 10%) 60%,
+    hsl(200 70% 6%) 100%
+  );
+}
+
+.sims-cas-pattern {
+  background-image: 
+    radial-gradient(circle at 20% 80%, hsl(160 80% 40% / 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, hsl(180 80% 50% / 0.05) 0%, transparent 40%),
+    linear-gradient(180deg, transparent 0%, hsl(160 80% 40% / 0.02) 100%);
+}
+
+/* Sims Turntable Platform */
+.sims-turntable {
+  position: relative;
+}
+
+.sims-turntable::before {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 20px;
+  background: radial-gradient(ellipse at center, hsl(160 80% 50% / 0.4) 0%, transparent 70%);
+  filter: blur(8px);
+  border-radius: 50%;
+}
+
+.sims-turntable::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 8px;
+  background: linear-gradient(90deg, transparent, hsl(160 80% 50% / 0.6), transparent);
+  border-radius: 50%;
+}
+
+/* Spotlight Effect */
+.sims-spotlight {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  background: conic-gradient(
+    from 180deg at 50% 0%,
+    transparent 35%,
+    hsl(0 0% 100% / 0.03) 45%,
+    hsl(0 0% 100% / 0.05) 50%,
+    hsl(0 0% 100% / 0.03) 55%,
+    transparent 65%
+  );
+  pointer-events: none;
+}
+
+/* Sims Category Tab */
+.sims-tab {
+  @apply relative px-4 py-2.5 rounded-full font-medium transition-all duration-300 flex items-center gap-2;
+  background: hsl(0 0% 100% / 0.08);
+  border: 2px solid hsl(0 0% 100% / 0.1);
+  color: hsl(0 0% 100% / 0.7);
+}
+
+.sims-tab:hover {
+  background: hsl(0 0% 100% / 0.12);
+  transform: translateY(-2px);
+  color: hsl(0 0% 100% / 0.9);
+}
+
+.sims-tab.active {
+  background: hsl(160 70% 45% / 0.25);
+  border-color: hsl(160 70% 50%);
+  color: hsl(160 70% 70%);
+  box-shadow: 
+    0 4px 20px hsl(160 70% 50% / 0.4),
+    inset 0 1px 0 hsl(0 0% 100% / 0.1);
+}
+
+.sims-tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 3px;
+  background: hsl(160 70% 50%);
+  border-radius: 2px;
+  box-shadow: 0 0 10px hsl(160 70% 50%);
+}
+
+/* Sims Option Card */
+.sims-option-card {
+  @apply relative flex flex-col items-center justify-center p-3 rounded-xl cursor-pointer transition-all duration-200;
+  background: hsl(0 0% 100% / 0.05);
+  border: 2px solid hsl(0 0% 100% / 0.1);
+  min-height: 70px;
+}
+
+.sims-option-card:hover {
+  background: hsl(0 0% 100% / 0.1);
+  transform: scale(1.05) translateY(-2px);
+  border-color: hsl(160 70% 50% / 0.5);
+}
+
+.sims-option-card.selected {
+  background: hsl(160 70% 45% / 0.2);
+  border-color: hsl(160 70% 50%);
+  box-shadow: 
+    0 0 20px hsl(160 70% 50% / 0.3),
+    inset 0 1px 0 hsl(0 0% 100% / 0.1);
+}
+
+.sims-option-card.selected::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, hsl(160 70% 60%), hsl(160 70% 40%));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Sims Color Swatch */
+.sims-swatch {
+  @apply relative rounded-full cursor-pointer transition-all duration-200;
+  box-shadow: 
+    inset 0 3px 6px hsl(0 0% 100% / 0.3),
+    inset 0 -3px 6px hsl(0 0% 0% / 0.3),
+    0 2px 4px hsl(0 0% 0% / 0.4);
+}
+
+.sims-swatch::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  left: 20%;
+  width: 30%;
+  height: 20%;
+  background: hsl(0 0% 100% / 0.4);
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+.sims-swatch:hover {
+  transform: scale(1.2) translateY(-4px);
+  box-shadow: 
+    inset 0 3px 6px hsl(0 0% 100% / 0.3),
+    inset 0 -3px 6px hsl(0 0% 0% / 0.3),
+    0 6px 16px hsl(0 0% 0% / 0.5);
+}
+
+.sims-swatch.selected {
+  transform: scale(1.15);
+  box-shadow: 
+    inset 0 3px 6px hsl(0 0% 100% / 0.3),
+    inset 0 -3px 6px hsl(0 0% 0% / 0.3),
+    0 0 0 3px hsl(160 70% 50%),
+    0 0 20px hsl(160 70% 50% / 0.5);
+}
+
+/* Sims Panel */
+.sims-panel {
+  @apply rounded-2xl p-4 backdrop-blur-sm;
+  background: hsl(200 50% 10% / 0.8);
+  border: 1px solid hsl(160 50% 50% / 0.2);
+  box-shadow: 
+    inset 0 1px 0 hsl(0 0% 100% / 0.05),
+    0 10px 40px hsl(0 0% 0% / 0.3);
+}
+
+/* Sims Button */
+.sims-button {
+  @apply px-6 py-3 rounded-full font-semibold transition-all duration-300;
+  background: linear-gradient(135deg, hsl(160 70% 45%), hsl(160 70% 35%));
+  color: white;
+  border: none;
+  box-shadow: 
+    0 4px 15px hsl(160 70% 40% / 0.4),
+    inset 0 1px 0 hsl(0 0% 100% / 0.2);
+}
+
+.sims-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 20px hsl(160 70% 40% / 0.5),
+    inset 0 1px 0 hsl(0 0% 100% / 0.2);
+}
+
+.sims-button:active {
+  transform: translateY(0);
+}
+
+/* Sims Randomize Button */
+.sims-randomize {
+  @apply px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2;
+  background: hsl(0 0% 100% / 0.1);
+  border: 1px solid hsl(0 0% 100% / 0.2);
+  color: hsl(0 0% 100% / 0.8);
+}
+
+.sims-randomize:hover {
+  background: hsl(0 0% 100% / 0.15);
+  transform: scale(1.05);
+}
+
+.sims-randomize:active .sims-dice {
+  animation: dice-shake 0.5s ease-in-out;
+}
+
+@keyframes dice-shake {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(-15deg); }
+  20% { transform: rotate(15deg); }
+  30% { transform: rotate(-10deg); }
+  40% { transform: rotate(10deg); }
+  50% { transform: rotate(-5deg); }
+  60% { transform: rotate(5deg); }
+  70% { transform: rotate(-3deg); }
+  80% { transform: rotate(3deg); }
+  90% { transform: rotate(-1deg); }
+}
+
+/* Sims Plumbob Animation */
+@keyframes plumbob-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(-2deg);
+  }
+}
+
+.sims-plumbob {
+  animation: plumbob-float 4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px hsl(160 70% 50% / 0.5));
+}
+
+/* Section Heading */
+.sims-section-title {
+  @apply text-sm font-semibold uppercase tracking-wider mb-3;
+  color: hsl(160 60% 60%);
+}
+
+/* Divider */
+.sims-divider {
+  @apply my-4 h-px;
+  background: linear-gradient(90deg, transparent, hsl(160 50% 50% / 0.3), transparent);
+}

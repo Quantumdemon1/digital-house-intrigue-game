@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/ColorPalettePicker.tsx
- * @description Swatch-based color picker for avatar customization
+ * @description Sims-style swatch-based color picker for avatar customization
  */
 
 import React from 'react';
@@ -28,20 +28,16 @@ export const ColorPalettePicker: React.FC<ColorPalettePickerProps> = ({
   value,
   onChange,
   size = 'md',
-  label,
-  columns = 6
+  label
 }) => {
   const config = sizeConfig[size];
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {label && (
-        <label className="text-sm font-medium text-foreground">{label}</label>
+        <label className="text-xs font-medium text-white/60 uppercase tracking-wider">{label}</label>
       )}
-      <div 
-        className="flex flex-wrap gap-2"
-        style={{ maxWidth: `${(parseInt(config.swatch.split('-')[1]) * 4 + 8) * columns}px` }}
-      >
+      <div className="flex flex-wrap gap-2">
         {colors.map((color, index) => {
           const isSelected = value === color;
           return (
@@ -51,37 +47,38 @@ export const ColorPalettePicker: React.FC<ColorPalettePickerProps> = ({
               onClick={() => onChange(color)}
               className={cn(
                 config.swatch,
-                'rounded-full relative transition-all duration-200',
-                'ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                isSelected && 'ring-2 ring-primary ring-offset-2'
+                'sims-swatch',
+                isSelected && 'selected'
               )}
               style={{ backgroundColor: color }}
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, scale: 0 }}
+              whileHover={{ scale: 1.2, y: -4 }}
+              whileTap={{ scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.02 }}
+              transition={{ 
+                delay: index * 0.02,
+                type: 'spring',
+                stiffness: 400,
+                damping: 20
+              }}
             >
               {isSelected && (
                 <motion.div
                   className="absolute inset-0 flex items-center justify-center"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 500 }}
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
                 >
                   <Check 
                     className={cn(
                       config.check,
-                      'drop-shadow-md',
-                      // Determine text color based on background brightness
+                      'drop-shadow-lg',
                       isLightColor(color) ? 'text-gray-800' : 'text-white'
                     )} 
+                    strokeWidth={3}
                   />
                 </motion.div>
               )}
-              
-              {/* Shine effect */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/30 via-transparent to-black/20 pointer-events-none" />
             </motion.button>
           );
         })}
