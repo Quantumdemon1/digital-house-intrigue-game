@@ -105,6 +105,8 @@ export interface GameState {
   finalHoHWinners?: {part1: string | null, part2: string | null, part3: string | null};
   isFinalStage: boolean;
   isSpectatorMode: boolean;
+  // Track out-of-phase social actions (resets on entering SocialInteraction phase)
+  outOfPhaseSocialActionsUsed: number;
   // UI feedback for relationship changes
   lastRelationshipImpact?: {
     targetId: string;
@@ -138,6 +140,7 @@ export function createInitialGameState(): GameState {
     finalHoHWinners: {part1: null, part2: null, part3: null},
     isFinalStage: false,
     isSpectatorMode: false,
+    outOfPhaseSocialActionsUsed: 0,
     lastRelationshipImpact: undefined
   };
 }

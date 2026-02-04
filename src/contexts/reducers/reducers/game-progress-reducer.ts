@@ -83,6 +83,7 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
         return {
           ...state,
           phase: 'SocialInteraction' as GamePhase,
+          outOfPhaseSocialActionsUsed: 0, // Reset action counter on entering social phase
         };
       }
       
