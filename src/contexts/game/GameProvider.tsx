@@ -24,7 +24,8 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     relationshipSystemRef, 
     competitionSystemRef, 
     aiSystemRef, 
-    promiseSystemRef, 
+    promiseSystemRef,
+    dealSystemRef,
     recapGeneratorRef,
     initializeGameSystems,
     initializeGame
@@ -40,6 +41,13 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     initializeGameSystems();
     initializeGame();
+    
+    // Connect deal system to game after initialization
+    if (gameRef.current && dealSystemRef.current) {
+      dealSystemRef.current.setGame(gameRef.current);
+      gameRef.current.dealSystem = dealSystemRef.current;
+    }
+    
     setLoading(false);
     
     const isAuthBypass = localStorage.getItem('bypass-auth') === 'true';
@@ -59,6 +67,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   const competitionSystem = useMemo(() => competitionSystemRef.current!, []);
   const aiSystem = useMemo(() => aiSystemRef.current!, []);
   const promiseSystem = useMemo(() => promiseSystemRef.current!, []);
+  const dealSystem = useMemo(() => dealSystemRef.current!, []);
   const recapGenerator = useMemo(() => recapGeneratorRef.current!, []);
   const logger = useMemo(() => loggerRef.current!, []);
   
@@ -113,6 +122,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     competitionSystem,
     aiSystem,
     promiseSystem,
+    dealSystem,
     recapGenerator,
     logger,
     dispatch,

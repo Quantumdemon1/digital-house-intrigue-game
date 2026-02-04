@@ -4,6 +4,7 @@ import { RelationshipSystem } from '../../systems/relationship';
 import { CompetitionSystem } from '../../systems/competition-system';
 import { AIIntegrationSystem as AISystem } from '../../systems/ai/ai-integration-system';
 import { PromiseSystem } from '../../systems/promise';
+import { DealSystem } from '../../systems/deal-system';
 import { GameRecapGenerator } from '../../utils/recap/recap-generator';
 import { Logger } from '../../utils/logger';
 import { GameState } from '../../models/game-state';
@@ -25,6 +26,7 @@ export interface GameContextType {
   competitionSystem: CompetitionSystem | null;
   aiSystem: AISystem | null;
   promiseSystem: PromiseSystem | null;
+  dealSystem: DealSystem | null;
   recapGenerator: GameRecapGenerator | null;
   logger: Logger | null;
   dispatch: React.Dispatch<GameAction>;

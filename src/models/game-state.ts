@@ -72,6 +72,7 @@ export function getOrCreateRelationship(
 
 // Import Promise type
 import { Promise } from './promise';
+import { Deal, NPCProposal } from './deal';
 import { PlayerPerceptions } from './player-perception';
 
 // Define GameState interface - explicitly export this
@@ -97,11 +98,13 @@ export interface GameState {
   }>>;
   evictionVotes: Record<string, string>;
   gameLog: GameEvent[];
-  promises?: Promise[];
-  playerPerceptions?: PlayerPerceptions; // Player's custom tracking of relationships
-  finalHoHWinners?: {part1: string | null, part2: string | null, part3: string | null}; // Added to track final HoH winners
-  isFinalStage: boolean; // Added to track when we're in the final stages
-  isSpectatorMode: boolean; // True when player is evicted but game continues (jury spectating)
+  promises?: Promise[]; // Legacy - being replaced by deals
+  deals?: Deal[];
+  pendingNPCProposals?: NPCProposal[];
+  playerPerceptions?: PlayerPerceptions;
+  finalHoHWinners?: {part1: string | null, part2: string | null, part3: string | null};
+  isFinalStage: boolean;
+  isSpectatorMode: boolean;
 }
 
 // Create initial game state
@@ -122,7 +125,9 @@ export function createInitialGameState(): GameState {
     relationships: new Map(),
     evictionVotes: {},
     gameLog: [],
-    promises: [], // Initialize empty promises array
+    promises: [],
+    deals: [],
+    pendingNPCProposals: [],
     finalHoHWinners: {part1: null, part2: null, part3: null},
     isFinalStage: false,
     isSpectatorMode: false

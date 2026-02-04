@@ -4,6 +4,7 @@ import { BigBrotherGame } from '../../../models/game/BigBrotherGame';
 import { RelationshipSystem } from '../../../systems/relationship';
 import { CompetitionSystem } from '../../../systems/competition-system';
 import { AIIntegrationSystem } from '../../../systems/ai-integration';
+import { DealSystem } from '../../../systems/deal-system';
 import { Logger } from '../../../utils/logger';
 import { GameState } from '../../../models/game-state';
 
@@ -13,6 +14,7 @@ export function useSystems(gameState: GameState) {
   const competitionSystemRef = useRef<CompetitionSystem | null>(null);
   const aiSystemRef = useRef<AIIntegrationSystem | null>(null);
   const promiseSystemRef = useRef<any>(null);
+  const dealSystemRef = useRef<DealSystem | null>(null);
   const recapGeneratorRef = useRef<any>(null);
   const loggerRef = useRef<Logger | null>(null);
   
@@ -22,6 +24,7 @@ export function useSystems(gameState: GameState) {
     competitionSystemRef.current = new CompetitionSystem(loggerRef.current);
     // Pass the logger as first parameter and an empty string as the API key for now
     aiSystemRef.current = new AIIntegrationSystem(loggerRef.current, "");
+    dealSystemRef.current = new DealSystem(loggerRef.current);
     promiseSystemRef.current = {};
     recapGeneratorRef.current = {};
   }, []);
@@ -46,6 +49,7 @@ export function useSystems(gameState: GameState) {
     competitionSystemRef,
     aiSystemRef,
     promiseSystemRef,
+    dealSystemRef,
     recapGeneratorRef,
     loggerRef,
     initializeGameSystems,
