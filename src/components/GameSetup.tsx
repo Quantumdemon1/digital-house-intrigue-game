@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
 import { Houseguest, PersonalityTrait, createHouseguest, HouseguestStats, TRAIT_STAT_BOOSTS, TRAIT_BOOST_VALUES, NominationCount } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
@@ -8,6 +9,7 @@ import HouseguestList from './game-setup/HouseguestList';
 import { defaultHouseguests, personalityTraits } from './game-setup/defaultHouseguests';
 import { PlayerFormData } from './game-setup/types';
 import { GamePhase } from '@/models/game-state';
+import { staggerContainer, cardVariants } from '@/lib/motion-variants';
 
 const GameSetup: React.FC = () => {
   const { dispatch } = useGame();
@@ -29,7 +31,7 @@ const GameSetup: React.FC = () => {
       strategic: 5,
       loyalty: 5
     },
-    remainingPoints: 5, // Starting with 5 points to distribute
+    remainingPoints: 5,
     houseguestCount: 8
   });
   const [finalHouseguests, setFinalHouseguests] = useState<Houseguest[]>([]);
@@ -42,18 +44,15 @@ const GameSetup: React.FC = () => {
   };
 
   const handleStatsChange = (stat: keyof HouseguestStats, value: number) => {
-    // Skip if the stat is nominations which should be handled separately
     if (stat === 'nominations') return;
     
     const currentValue = playerFormData.stats[stat] as number;
     const difference = value - currentValue;
     
-    // Check if we have enough points to increase the stat
     if (difference > 0 && playerFormData.remainingPoints < difference) {
-      return; // Not enough points
+      return;
     }
     
-    // Calculate new remaining points
     const newRemainingPoints = playerFormData.remainingPoints - difference;
     
     setPlayerFormData(prev => ({
@@ -70,14 +69,11 @@ const GameSetup: React.FC = () => {
     const { selectedTraits, stats } = playerFormData;
     
     if (selectedTraits.includes(trait)) {
-      // Remove trait and its stat boosts
       const newTraits = selectedTraits.filter(t => t !== trait);
       const newStats = { ...stats };
       
-      // Remove the boosts
       const boost = TRAIT_STAT_BOOSTS[trait];
       
-      // Skip if the stat is nominations which should be handled separately
       if (boost.primary !== 'nominations' && typeof newStats[boost.primary] === 'number') {
         newStats[boost.primary] = Math.max(1, (newStats[boost.primary] as number) - TRAIT_BOOST_VALUES.primary);
       }
@@ -89,14 +85,11 @@ const GameSetup: React.FC = () => {
       handleFormDataChange('selectedTraits', newTraits);
       handleFormDataChange('stats', newStats);
     } else if (selectedTraits.length < 2) {
-      // Add trait and its stat boosts
       const newTraits = [...selectedTraits, trait];
       const newStats = { ...stats };
       
-      // Apply the boosts
       const boost = TRAIT_STAT_BOOSTS[trait];
       
-      // Skip if the stat is nominations which should be handled separately
       if (boost.primary !== 'nominations' && typeof newStats[boost.primary] === 'number') {
         newStats[boost.primary] = Math.min(10, (newStats[boost.primary] as number) + TRAIT_BOOST_VALUES.primary);
       }
@@ -124,7 +117,6 @@ const GameSetup: React.FC = () => {
       houseguestCount 
     } = playerFormData;
     
-    // Create player houseguest
     const playerGuest = createHouseguest(
       uuidv4(),
       playerName,
@@ -132,18 +124,16 @@ const GameSetup: React.FC = () => {
       playerOccupation,
       playerHometown,
       playerBio,
-      '/placeholder.svg', // placeholder avatar
+      '/placeholder.svg',
       selectedTraits,
       stats,
-      true // isPlayer = true
+      true
     );
     
-    // Randomly select other houseguests
     const shuffled = [...defaultHouseguests]
       .sort(() => 0.5 - Math.random())
       .slice(0, houseguestCount - 1);
       
-    // Create actual houseguest objects
     const npcs = shuffled.map(guest => 
       createHouseguest(
         uuidv4(),
@@ -154,25 +144,22 @@ const GameSetup: React.FC = () => {
         guest.bio,
         guest.imageUrl,
         guest.traits,
-        {}, // random stats with trait boosts applied in createHouseguest
-        false // isPlayer = false
+        {},
+        false
       )
     );
     
-    // Combine player with NPCs
     const allHouseguests = [playerGuest, ...npcs];
     setFinalHouseguests(allHouseguests);
     setStep(2);
   };
   
   const startGame = () => {
-    // Convert to PLAYER_ACTION with the appropriate parameters for the new game action system
     dispatch({ 
       type: 'START_GAME', 
       payload: finalHouseguests
     });
     
-    // Create initial game event log entry
     dispatch({ 
       type: 'LOG_EVENT', 
       payload: {
@@ -185,28 +172,52 @@ const GameSetup: React.FC = () => {
     });
   };
 
-  if (step === 1) {
-    return (
-      <div className="container max-w-2xl mx-auto py-8 px-4">
-        <PlayerForm 
-          formData={playerFormData}
-          personalityTraits={personalityTraits}
-          onFormDataChange={handleFormDataChange}
-          onStatsChange={handleStatsChange}
-          onToggleTrait={toggleTrait}
-          onSubmit={handlePlayerCreation}
-        />
-      </div>
-    );
-  }
-  
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <HouseguestList 
-        finalHouseguests={finalHouseguests}
-        onBack={() => setStep(1)}
-        onStartGame={startGame}
-      />
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background effects */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-surveillance-pattern opacity-[0.02]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-bb-blue/[0.03] via-transparent to-bb-gold/[0.03]" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-radial from-bb-blue/10 via-transparent to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-radial from-bb-gold/10 via-transparent to-transparent rounded-full blur-3xl" />
+      </div>
+      
+      <AnimatePresence mode="wait">
+        {step === 1 ? (
+          <motion.div 
+            key="step1"
+            className="relative container max-w-2xl mx-auto py-8 px-4"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.4 }}
+          >
+            <PlayerForm 
+              formData={playerFormData}
+              personalityTraits={personalityTraits}
+              onFormDataChange={handleFormDataChange}
+              onStatsChange={handleStatsChange}
+              onToggleTrait={toggleTrait}
+              onSubmit={handlePlayerCreation}
+            />
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="step2"
+            className="relative container max-w-4xl mx-auto py-8 px-4"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50 }}
+            transition={{ duration: 0.4 }}
+          >
+            <HouseguestList 
+              finalHouseguests={finalHouseguests}
+              onBack={() => setStep(1)}
+              onStartGame={startGame}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

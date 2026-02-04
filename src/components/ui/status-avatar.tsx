@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Crown, Target, Shield, UserX, Check } from 'lucide-react';
@@ -15,6 +16,7 @@ interface StatusAvatarProps {
   className?: string;
   imageUrl?: string;
   isPlayer?: boolean;
+  animated?: boolean;
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
@@ -22,6 +24,13 @@ const sizeClasses: Record<AvatarSize, string> = {
   md: 'w-14 h-14',
   lg: 'w-20 h-20',
   xl: 'w-28 h-28'
+};
+
+const textSizeClasses: Record<AvatarSize, string> = {
+  sm: 'text-xs',
+  md: 'text-sm',
+  lg: 'text-lg',
+  xl: 'text-2xl'
 };
 
 const badgeSizeClasses: Record<AvatarSize, string> = {
@@ -36,42 +45,49 @@ const statusConfig: Record<AvatarStatus, {
   badgeClass: string;
   BadgeIcon: React.ElementType;
   label: string;
+  glowColor: string;
 }> = {
   hoh: {
-    ringClass: 'status-avatar-ring hoh',
-    badgeClass: 'bg-bb-gold text-white',
+    ringClass: 'ring-bb-gold',
+    badgeClass: 'bg-gradient-to-br from-bb-gold to-amber-600 text-white',
     BadgeIcon: Crown,
-    label: 'Head of Household'
+    label: 'Head of Household',
+    glowColor: 'hsl(var(--bb-gold) / 0.5)'
   },
   nominee: {
-    ringClass: 'status-avatar-ring nominee',
-    badgeClass: 'bg-bb-red text-white',
+    ringClass: 'ring-bb-red',
+    badgeClass: 'bg-gradient-to-br from-bb-red to-red-700 text-white',
     BadgeIcon: Target,
-    label: 'Nominee'
+    label: 'Nominee',
+    glowColor: 'hsl(var(--bb-red) / 0.5)'
   },
   pov: {
-    ringClass: 'status-avatar-ring pov',
-    badgeClass: 'bg-bb-gold text-white',
+    ringClass: 'ring-bb-gold',
+    badgeClass: 'bg-gradient-to-br from-bb-gold to-amber-600 text-white',
     BadgeIcon: Shield,
-    label: 'PoV Holder'
+    label: 'PoV Holder',
+    glowColor: 'hsl(var(--bb-gold) / 0.5)'
   },
   safe: {
-    ringClass: 'status-avatar-ring safe',
-    badgeClass: 'bg-bb-green text-white',
+    ringClass: 'ring-bb-green',
+    badgeClass: 'bg-gradient-to-br from-bb-green to-emerald-600 text-white',
     BadgeIcon: Check,
-    label: 'Safe'
+    label: 'Safe',
+    glowColor: 'hsl(var(--bb-green) / 0.5)'
   },
   evicted: {
-    ringClass: 'status-avatar-ring evicted',
+    ringClass: 'ring-muted',
     badgeClass: 'bg-muted text-muted-foreground',
     BadgeIcon: UserX,
-    label: 'Evicted'
+    label: 'Evicted',
+    glowColor: 'transparent'
   },
   none: {
     ringClass: '',
     badgeClass: '',
     BadgeIcon: () => null,
-    label: ''
+    label: '',
+    glowColor: 'transparent'
   }
 };
 
@@ -82,37 +98,60 @@ export const StatusAvatar: React.FC<StatusAvatarProps> = ({
   showBadge = true,
   className,
   imageUrl,
-  isPlayer = false
+  isPlayer = false,
+  animated = true
 }) => {
   const config = statusConfig[status];
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+  const hasActiveStatus = status !== 'none' && status !== 'evicted';
+
   return (
     <div className={cn('status-avatar relative inline-flex', className)}>
-      {/* Status ring */}
-      {status !== 'none' && (
-        <div className={cn('absolute inset-0 rounded-full', config.ringClass)} />
+      {/* Animated glow ring for active statuses */}
+      {hasActiveStatus && animated && (
+        <motion.div
+          className={cn(
+            'absolute inset-0 rounded-full',
+            config.ringClass,
+            'ring-[3px] ring-offset-2 ring-offset-background'
+          )}
+          animate={{
+            boxShadow: [
+              `0 0 10px ${config.glowColor}`,
+              `0 0 25px ${config.glowColor}`,
+              `0 0 10px ${config.glowColor}`,
+            ]
+          }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+
+      {/* Static ring for non-animated */}
+      {hasActiveStatus && !animated && (
+        <div className={cn(
+          'absolute inset-0 rounded-full',
+          config.ringClass,
+          'ring-[3px] ring-offset-2 ring-offset-background'
+        )} />
       )}
       
       {/* Avatar */}
       <Avatar 
         className={cn(
           sizeClasses[size],
-          'border-2 border-background shadow-game-md transition-transform duration-300',
+          'border-2 border-background shadow-game-md transition-all duration-300',
           status === 'evicted' && 'grayscale opacity-60',
-          isPlayer && 'ring-2 ring-primary ring-offset-2'
+          isPlayer && 'ring-2 ring-bb-green ring-offset-2 ring-offset-background'
         )}
       >
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+          <img src={imageUrl} alt={name} className="w-full h-full object-cover rounded-full" />
         ) : (
           <AvatarFallback 
             className={cn(
-              'camera-lens bg-muted text-foreground font-semibold',
-              size === 'sm' && 'text-xs',
-              size === 'md' && 'text-sm',
-              size === 'lg' && 'text-lg',
-              size === 'xl' && 'text-2xl'
+              'bg-gradient-to-br from-muted via-muted to-muted-foreground/10 text-foreground font-semibold',
+              textSizeClasses[size]
             )}
           >
             {initials}
@@ -120,18 +159,33 @@ export const StatusAvatar: React.FC<StatusAvatarProps> = ({
         )}
       </Avatar>
 
-      {/* Status badge */}
+      {/* Animated status badge */}
       {showBadge && status !== 'none' && (
-        <div 
+        <motion.div 
           className={cn(
-            'absolute rounded-full flex items-center justify-center shadow-game-md',
+            'absolute rounded-full flex items-center justify-center shadow-lg',
             badgeSizeClasses[size],
             config.badgeClass
           )}
           title={config.label}
+          initial={animated ? { scale: 0 } : undefined}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 15 }}
         >
           <config.BadgeIcon className="w-3/5 h-3/5" />
-        </div>
+        </motion.div>
+      )}
+
+      {/* Player indicator */}
+      {isPlayer && (
+        <motion.div
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-bb-green text-white text-[8px] font-bold shadow-md"
+          initial={animated ? { y: 5, opacity: 0 } : undefined}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          YOU
+        </motion.div>
       )}
     </div>
   );

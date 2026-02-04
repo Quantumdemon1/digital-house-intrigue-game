@@ -1,15 +1,18 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { PersonalityTrait, TRAIT_STAT_BOOSTS } from '@/models/houseguest';
 import { PlayerFormData } from './types';
-import { Camera, AlertCircle, HelpCircle, Info } from 'lucide-react';
+import { Camera, AlertCircle, HelpCircle, Info, Sparkles, ArrowRight } from 'lucide-react';
 import PersonalityTraitSelector from './PersonalityTraitSelector';
 import StatsSelector from './StatsSelector';
+import AvatarPreview from './AvatarPreview';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent, GameCardFooter } from '@/components/ui/game-card';
+
 interface PlayerFormProps {
   formData: PlayerFormData;
   personalityTraits: PersonalityTrait[];
@@ -18,6 +21,7 @@ interface PlayerFormProps {
   onToggleTrait: (trait: PersonalityTrait) => void;
   onSubmit: () => void;
 }
+
 const PlayerForm: React.FC<PlayerFormProps> = ({
   formData,
   personalityTraits,
@@ -37,102 +41,226 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
     stats,
     remainingPoints
   } = formData;
-  return <Card className="border-2 border-bb-blue shadow-lg">
-      <CardHeader className="bg-bb-blue text-white">
-        <div className="flex items-center">
-          <Camera className="w-8 h-8 mr-2" />
-          <div>
-            <CardTitle className="text-2xl">Big Brother: The Digital House</CardTitle>
-            <CardDescription className="text-white/80">Create Your Player</CardDescription>
+
+  return (
+    <GameCard variant="primary" className="border-2" hoverable={false}>
+      <GameCardHeader variant="primary" icon={Camera}>
+        <GameCardTitle className="text-xl sm:text-2xl">Big Brother: The Digital House</GameCardTitle>
+        <GameCardDescription className="text-white/80">Create Your Houseguest</GameCardDescription>
+      </GameCardHeader>
+      
+      <GameCardContent className="space-y-6">
+        {/* Two column layout on larger screens */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Left column: Form fields */}
+          <div className="space-y-5">
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Label htmlFor="name" className="text-sm font-semibold">Your Name</Label>
+              <Input 
+                id="name" 
+                value={playerName} 
+                onChange={e => onFormDataChange('playerName', e.target.value)} 
+                placeholder="Enter your houseguest name" 
+                className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+              />
+            </motion.div>
+            
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <Label htmlFor="age" className="flex justify-between">
+                <span>Age</span>
+                <span className="text-muted-foreground">{playerAge}</span>
+              </Label>
+              <Slider 
+                id="age" 
+                min={21} 
+                max={60} 
+                step={1} 
+                value={[playerAge]} 
+                onValueChange={values => onFormDataChange('playerAge', values[0])} 
+                className="py-2"
+              />
+            </motion.div>
+            
+            <motion.div 
+              className="grid grid-cols-2 gap-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="hometown">Hometown</Label>
+                <Input 
+                  id="hometown" 
+                  value={playerHometown} 
+                  onChange={e => onFormDataChange('playerHometown', e.target.value)} 
+                  placeholder="Your hometown" 
+                  className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="occupation">Occupation</Label>
+                <Input 
+                  id="occupation" 
+                  value={playerOccupation} 
+                  onChange={e => onFormDataChange('playerOccupation', e.target.value)} 
+                  placeholder="Your job" 
+                  className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+                />
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <Label htmlFor="bio">Short Bio</Label>
+              <Input 
+                id="bio" 
+                value={playerBio} 
+                onChange={e => onFormDataChange('playerBio', e.target.value)} 
+                placeholder="Describe yourself in a sentence..." 
+                className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+              />
+            </motion.div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6 space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="name">Your Name</Label>
-          <Input id="name" value={playerName} onChange={e => onFormDataChange('playerName', e.target.value)} placeholder="Enter your name" className="border-bb-blue" />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="age">Age: {playerAge}</Label>
-          <Slider id="age" min={21} max={60} step={1} value={[playerAge]} onValueChange={values => onFormDataChange('playerAge', values[0])} className="py-4" />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="hometown">Hometown</Label>
-            <Input id="hometown" value={playerHometown} onChange={e => onFormDataChange('playerHometown', e.target.value)} placeholder="Your hometown" className="border-bb-blue" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="occupation">Occupation</Label>
-            <Input id="occupation" value={playerOccupation} onChange={e => onFormDataChange('playerOccupation', e.target.value)} placeholder="Your job" className="border-bb-blue" />
-          </div>
+          
+          {/* Right column: Avatar Preview */}
+          <motion.div 
+            className="flex items-center justify-center lg:border-l lg:pl-6 border-border/30"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <AvatarPreview formData={formData} />
+          </motion.div>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="bio">Short Bio</Label>
-          <Input id="bio" value={playerBio} onChange={e => onFormDataChange('playerBio', e.target.value)} placeholder="Describe yourself in a sentence..." className="border-bb-blue" />
-        </div>
-        
-        <div className="space-y-3">
+        {/* Personality Traits */}
+        <motion.div 
+          className="space-y-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
           <div className="flex justify-between items-center">
-            <Label>Personality Traits (Choose 2)</Label>
+            <Label className="text-sm font-semibold">Personality Traits (Choose 2)</Label>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center text-sm text-muted-foreground cursor-help">
+                  <div className="flex items-center text-sm text-muted-foreground cursor-help hover:text-foreground transition-colors">
                     <HelpCircle className="h-4 w-4 mr-1" />
                     <span>About traits</span>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-md">
-                  <p>Each trait boosts specific stats:</p>
-                  <ul className="text-xs mt-1 space-y-1">
-                    {personalityTraits.map(trait => <li key={trait} className="flex justify-between">
+                <TooltipContent className="max-w-md glass-card">
+                  <p className="font-semibold mb-2">Each trait boosts specific stats:</p>
+                  <ul className="text-xs space-y-1">
+                    {personalityTraits.slice(0, 6).map(trait => (
+                      <li key={trait} className="flex justify-between gap-4">
                         <span className="font-medium">{trait}:</span>
-                        <span>
-                          +2 {TRAIT_STAT_BOOSTS[trait].primary}, 
-                          +1 {TRAIT_STAT_BOOSTS[trait].secondary}
+                        <span className="text-muted-foreground">
+                          +2 {TRAIT_STAT_BOOSTS[trait].primary}, +1 {TRAIT_STAT_BOOSTS[trait].secondary}
                         </span>
-                      </li>)}
+                      </li>
+                    ))}
                   </ul>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
-          <PersonalityTraitSelector selectedTraits={selectedTraits} onToggleTrait={onToggleTrait} personalityTraits={personalityTraits} />
-        </div>
+          <PersonalityTraitSelector 
+            selectedTraits={selectedTraits} 
+            onToggleTrait={onToggleTrait} 
+            personalityTraits={personalityTraits} 
+          />
+        </motion.div>
         
-        <div className="space-y-2 p-4 rounded-lg border border-gray-100 bg-slate-950">
+        {/* Stats */}
+        <motion.div 
+          className="space-y-3 p-4 rounded-xl border border-border/30 bg-muted/30 backdrop-blur-sm"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
           <div className="flex justify-between items-center mb-3">
-            <Label className="text-sm text-muted-foreground">Your Stats</Label>
-            <div className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md flex items-center">
-              <Info className="h-3.5 w-3.5 mr-1" />
-              <span>Points remaining: {remainingPoints}</span>
-            </div>
+            <Label className="text-sm font-semibold">Your Stats</Label>
+            <motion.div 
+              className="text-sm px-3 py-1.5 bg-primary/10 text-primary rounded-full flex items-center gap-1.5 font-medium"
+              animate={{ scale: remainingPoints > 0 ? [1, 1.05, 1] : 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Info className="h-3.5 w-3.5" />
+              <span>Points: {remainingPoints}</span>
+            </motion.div>
           </div>
           <StatsSelector stats={stats} onStatsChange={onStatsChange} remainingPoints={remainingPoints} />
-        </div>
+        </motion.div>
         
-        <div className="space-y-2">
-          <Label htmlFor="houseguestCount">Number of Houseguests: {houseguestCount}</Label>
-          <Slider id="houseguestCount" min={4} max={12} step={1} value={[houseguestCount]} onValueChange={values => onFormDataChange('houseguestCount', values[0])} className="py-4" />
+        {/* Houseguest Count */}
+        <motion.div 
+          className="space-y-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+        >
+          <Label htmlFor="houseguestCount" className="flex justify-between">
+            <span>Number of Houseguests</span>
+            <span className="text-muted-foreground">{houseguestCount}</span>
+          </Label>
+          <Slider 
+            id="houseguestCount" 
+            min={4} 
+            max={12} 
+            step={1} 
+            value={[houseguestCount]} 
+            onValueChange={values => onFormDataChange('houseguestCount', values[0])} 
+            className="py-2"
+          />
           <p className="text-sm text-muted-foreground">
-            You and {houseguestCount - 1} AI houseguests
+            You and {houseguestCount - 1} AI houseguests will compete for the grand prize
           </p>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between border-t p-4">
+        </motion.div>
+      </GameCardContent>
+      
+      <GameCardFooter>
         <div className="text-sm text-muted-foreground">
-          {selectedTraits.length < 2 && <div className="flex items-center text-bb-red">
+          {selectedTraits.length < 2 && (
+            <motion.div 
+              className="flex items-center text-bb-red"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
               <AlertCircle className="w-4 h-4 mr-1" />
               <span>Please select 2 personality traits</span>
-            </div>}
+            </motion.div>
+          )}
         </div>
-        <Button onClick={onSubmit} disabled={!playerName || selectedTraits.length !== 2} className="bg-bb-blue hover:bg-bb-blue/90">
-          Continue
+        <Button 
+          onClick={onSubmit} 
+          disabled={!playerName || selectedTraits.length !== 2} 
+          variant="dramatic"
+          size="lg"
+          className="gap-2"
+        >
+          <Sparkles className="w-4 h-4" />
+          Enter the House
+          <ArrowRight className="w-4 h-4" />
         </Button>
-      </CardFooter>
-    </Card>;
+      </GameCardFooter>
+    </GameCard>
+  );
 };
+
 export default PlayerForm;
