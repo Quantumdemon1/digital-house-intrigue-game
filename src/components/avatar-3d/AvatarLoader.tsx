@@ -1,16 +1,19 @@
 /**
  * @file avatar-3d/AvatarLoader.tsx
- * @description Smart avatar loader that chooses between RPM and procedural avatars
+ * @description Smart avatar loader with RPM optimization and fallback
  */
 
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useProgress } from '@react-three/drei';
 import { SimsAvatar } from './SimsAvatar';
 import { Avatar3DConfig } from '@/models/avatar-config';
 import { MoodType } from '@/models/houseguest';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
+import type { AvatarContext } from './RPMAvatar';
 
 // Lazy load RPM avatar to prevent build issues with the SDK
 const LazyRPMAvatar = lazy(() => 
@@ -20,33 +23,58 @@ const LazyRPMAvatar = lazy(() =>
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
 interface AvatarLoaderProps {
-  // GLB URL from Ready Player Me or custom source
   avatarUrl?: string;
-  // Fallback procedural config
   avatarConfig?: Avatar3DConfig;
-  // Display size
   size?: AvatarSize;
-  // Current mood for expressions
   mood?: MoodType;
-  // Game status
   status?: 'none' | 'hoh' | 'pov' | 'nominee' | 'evicted';
-  // Is this the player's avatar?
   isPlayer?: boolean;
-  // Enable idle animations
   animated?: boolean;
-  // Additional CSS classes
   className?: string;
-  // Force use of procedural avatar even if URL exists
   forceChibibAvatar?: boolean;
+  /** Timeout in ms before falling back to chibi (default: 8000) */
+  loadTimeout?: number;
 }
 
-// Size configurations
-const SIZE_CONFIG: Record<AvatarSize, { width: string; height: string; scale: number }> = {
-  sm: { width: 'w-12', height: 'h-12', scale: 0.8 },
-  md: { width: 'w-20', height: 'h-20', scale: 1 },
-  lg: { width: 'w-32', height: 'h-32', scale: 1.2 },
-  xl: { width: 'w-48', height: 'h-48', scale: 1.5 },
-  full: { width: 'w-full', height: 'h-full', scale: 1 },
+// Size configurations with context mapping
+const SIZE_CONFIG: Record<AvatarSize, { width: string; height: string; scale: number; context: AvatarContext }> = {
+  sm: { width: 'w-12', height: 'h-12', scale: 0.8, context: 'thumbnail' },
+  md: { width: 'w-20', height: 'h-20', scale: 1, context: 'game' },
+  lg: { width: 'w-32', height: 'h-32', scale: 1.2, context: 'game' },
+  xl: { width: 'w-48', height: 'h-48', scale: 1.5, context: 'profile' },
+  full: { width: 'w-full', height: 'h-full', scale: 1, context: 'customizer' },
+};
+
+/**
+ * Loading state component with progress bar
+ */
+const RPMLoadingState: React.FC<{ progress: number; timedOut?: boolean }> = ({ 
+  progress, 
+  timedOut 
+}) => (
+  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 z-10">
+    <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
+    <div className="w-20 h-1 bg-muted rounded-full overflow-hidden">
+      <motion.div 
+        className="h-full bg-primary"
+        initial={{ width: 0 }}
+        animate={{ width: `${progress}%` }}
+        transition={{ duration: 0.2 }}
+      />
+    </div>
+    <p className="text-xs text-muted-foreground mt-1">
+      {timedOut ? 'Switching to chibi...' : 
+       progress < 100 ? `${Math.round(progress)}%` : 'Rendering...'}
+    </p>
+  </div>
+);
+
+/**
+ * Progress tracker hook
+ */
+const useLoadingProgress = () => {
+  const { progress, active, loaded, total } = useProgress();
+  return { progress, active, loaded, total };
 };
 
 /**
@@ -56,10 +84,29 @@ const RPMAvatarCanvas: React.FC<{
   avatarUrl: string;
   mood: MoodType;
   scale: number;
+  context: AvatarContext;
   sizeConfig: { width: string; height: string };
   className?: string;
-}> = ({ avatarUrl, mood, scale, sizeConfig, className }) => {
+  onLoaded?: () => void;
+  onError?: () => void;
+}> = ({ avatarUrl, mood, scale, context, sizeConfig, className, onLoaded, onError }) => {
   const [rpmLoadError, setRpmLoadError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
+
+  // Get optimized URL based on context
+  const optimizedUrl = getOptimizedUrl(avatarUrl, context === 'customizer' ? 'profile' : context);
+
+  const handleLoaded = useCallback(() => {
+    setIsLoading(false);
+    setLoadProgress(100);
+    onLoaded?.();
+  }, [onLoaded]);
+
+  const handleError = useCallback(() => {
+    setRpmLoadError(true);
+    onError?.();
+  }, [onError]);
 
   if (rpmLoadError) {
     return null; // Will trigger fallback to SimsAvatar
@@ -75,17 +122,21 @@ const RPMAvatarCanvas: React.FC<{
       <Canvas
         camera={{ position: [0, 0, 2.5], fov: 35 }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
-        onError={() => setRpmLoadError(true)}
+        onError={handleError}
       >
         <ambientLight intensity={0.6} />
         <directionalLight position={[2, 3, 4]} intensity={0.8} />
         <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
         
         <Suspense fallback={null}>
+          <ProgressTracker onProgress={setLoadProgress} />
           <LazyRPMAvatar
-            modelSrc={avatarUrl}
+            modelSrc={optimizedUrl}
             mood={mood}
             scale={scale}
+            context={context}
+            onLoaded={handleLoaded}
+            onError={handleError}
           />
         </Suspense>
         
@@ -97,14 +148,28 @@ const RPMAvatarCanvas: React.FC<{
         />
       </Canvas>
       
-      {/* Loading overlay */}
-      <LoadingOverlay />
+      {/* Loading overlay with progress */}
+      {isLoading && <RPMLoadingState progress={loadProgress} />}
     </div>
   );
 };
 
 /**
+ * Progress tracker component (inside Canvas)
+ */
+const ProgressTracker: React.FC<{ onProgress: (p: number) => void }> = ({ onProgress }) => {
+  const { progress } = useLoadingProgress();
+  
+  useEffect(() => {
+    onProgress(progress);
+  }, [progress, onProgress]);
+  
+  return null;
+};
+
+/**
  * AvatarLoader - Renders either RPM GLB avatar or procedural chibi avatar
+ * With timeout fallback and loading progress
  */
 export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   avatarUrl,
@@ -115,17 +180,47 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   isPlayer = false,
   animated = true,
   className,
-  forceChibibAvatar = false
+  forceChibibAvatar = false,
+  loadTimeout = 8000
 }) => {
   const sizeConfig = SIZE_CONFIG[size];
   const shouldUseRPM = avatarUrl && !forceChibibAvatar;
+  const [timedOut, setTimedOut] = useState(false);
+  const [rpmReady, setRpmReady] = useState(false);
 
-  // For small sizes, use procedural avatar (faster rendering)
+  // Timeout fallback - if RPM takes too long, switch to chibi
+  useEffect(() => {
+    if (!shouldUseRPM || rpmReady) return;
+    
+    const timeout = setTimeout(() => {
+      if (!rpmReady) {
+        console.warn('RPM avatar load timeout, falling back to chibi');
+        setTimedOut(true);
+      }
+    }, loadTimeout);
+    
+    return () => clearTimeout(timeout);
+  }, [shouldUseRPM, rpmReady, loadTimeout]);
+
+  // For small sizes, always use procedural avatar (faster rendering)
   const useProceduralForPerformance = size === 'sm' && avatarConfig;
 
-  // Always prefer procedural avatar for now due to SDK stability issues
-  // RPM integration can be re-enabled once the SDK is more stable
-  if (shouldUseRPM && !useProceduralForPerformance) {
+  // If timed out, force chibi
+  if (timedOut || useProceduralForPerformance) {
+    return (
+      <SimsAvatar
+        config={avatarConfig}
+        size={size}
+        mood={mood}
+        status={status}
+        isPlayer={isPlayer}
+        animated={animated}
+      />
+    );
+  }
+
+  // Try RPM avatar with chibi fallback
+  if (shouldUseRPM) {
     return (
       <Suspense fallback={
         <SimsAvatar
@@ -141,8 +236,11 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
           avatarUrl={avatarUrl}
           mood={mood}
           scale={sizeConfig.scale}
+          context={sizeConfig.context}
           sizeConfig={sizeConfig}
           className={className}
+          onLoaded={() => setRpmReady(true)}
+          onError={() => setTimedOut(true)}
         />
       </Suspense>
     );
@@ -158,17 +256,6 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
       isPlayer={isPlayer}
       animated={animated}
     />
-  );
-};
-
-/**
- * Loading overlay with spinner
- */
-const LoadingOverlay: React.FC = () => {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center bg-background/50 pointer-events-none opacity-0 transition-opacity duration-300">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
-    </div>
   );
 };
 
@@ -194,15 +281,15 @@ export const AvatarSkeleton: React.FC<{ size?: AvatarSize; className?: string }>
 };
 
 /**
- * Preload utility for GLB models
+ * Preload utility for GLB models with optimization
  */
-export const preloadAvatar = async (url: string): Promise<void> => {
+export const preloadAvatar = async (url: string, context: AvatarContext = 'game'): Promise<void> => {
   if (!url) return;
   
   try {
-    const response = await fetch(url);
+    const optimizedUrl = getOptimizedUrl(url, context);
+    const response = await fetch(optimizedUrl, { method: 'HEAD' });
     if (!response.ok) throw new Error(`Failed to preload: ${response.status}`);
-    // Just validate the URL is accessible, actual caching is handled by useGLTF
   } catch (error) {
     console.warn('Failed to preload avatar:', error);
   }
