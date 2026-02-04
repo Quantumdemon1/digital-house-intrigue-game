@@ -1,770 +1,260 @@
 
-# Plan: Three.js Animated "The Sims" Style Avatar System
+
+# Plan: 3D Avatar Customization Screen & System-Wide 3D Avatars
 
 ## Overview
 
-Revamp the entire avatar system to use 3D animated characters rendered with React Three Fiber (Three.js). Characters will have a stylized "The Sims" aesthetic with:
-- Procedurally generated low-poly humanoid bodies
-- Customizable features (skin tone, hair, clothing colors)
-- Idle animations (breathing, blinking, subtle movements)
-- Status-based animations (celebrating for HoH, nervous for nominees)
-- Mood-reactive expressions and poses
+This plan updates the player creation flow to feature a full "Sims-style" 3D avatar customizer and enables 3D avatars throughout the game UI.
 
 ---
 
-## Technical Stack
+## Part 1: Create Sims-Style Avatar Customizer Component
 
-| Library | Version | Purpose |
-|---------|---------|---------|
-| `three` | `>=0.133` | Core 3D rendering engine |
-| `@react-three/fiber` | `^8.18` | React renderer for Three.js (React 18 compatible) |
-| `@react-three/drei` | `^9.122.0` | Helper utilities (OrbitControls, useAnimations, etc.) |
+### New Component: `AvatarCustomizer.tsx`
 
----
+A dedicated full-screen customization interface inspired by The Sims' character creation:
 
-## Part 1: Install Dependencies and Create Base Infrastructure
+**Layout Structure:**
+- **Left Side**: Large 3D avatar preview (rotating, interactive)
+- **Right Side**: Categorized customization panels
 
-### New Dependencies
-```json
-{
-  "three": ">=0.133",
-  "@react-three/fiber": "^8.18",
-  "@react-three/drei": "^9.122.0"
-}
-```
+**Customization Categories (Tabbed):**
 
-### New Directory Structure
-```
-src/
-├── components/
-│   └── avatar-3d/
-│       ├── SimsAvatar.tsx           # Main 3D avatar component
-│       ├── AvatarCanvas.tsx         # Canvas wrapper for 3D scene
-│       ├── AvatarBody.tsx           # Procedural body mesh generation
-│       ├── AvatarHead.tsx           # Face with expressions
-│       ├── AvatarHair.tsx           # Hair mesh variations
-│       ├── AvatarClothing.tsx       # Outfit rendering
-│       ├── AvatarAnimations.tsx     # Animation controller
-│       ├── hooks/
-│       │   ├── useIdleAnimation.ts  # Breathing, blinking loops
-│       │   ├── useMoodAnimation.ts  # Mood-reactive animations
-│       │   └── useStatusAnimation.ts # Game status animations
-│       ├── utils/
-│       │   ├── avatar-generator.ts  # Procedural mesh generation
-│       │   ├── color-palettes.ts    # Skin, hair, clothing colors
-│       │   └── animation-clips.ts   # Predefined animation data
-│       └── index.ts
-└── models/
-    └── avatar-config.ts              # Avatar customization types
-```
+| Tab | Options |
+|-----|---------|
+| **Body** | Body Type (4 options), Height (3 options) |
+| **Skin** | Skin Tone picker (12 diverse colors) |
+| **Face** | Head Shape (4), Eye Shape (4), Eye Color (6+), Nose Type (4), Mouth Type (4) |
+| **Hair** | Hair Style (8 styles), Hair Color (natural + fantasy colors) |
+| **Clothing** | Top Style (5), Top Color, Bottom Style (4), Bottom Color |
+
+**UI Components:**
+- Visual icon-based selectors (not just dropdowns)
+- Color swatches for skin/hair/clothing
+- Live 3D preview updates as user selects options
+- "Randomize" button per category
+- "Randomize All" button
 
 ---
 
-## Part 2: Avatar Configuration Model
+## Part 2: Add Larger Canvas Size for Customizer
 
-**Create: `src/models/avatar-config.ts`**
+### Modify: `AvatarCanvas.tsx`
 
-Define the customizable properties for 3D avatars:
+Add new sizes for the customization screen:
 
 ```typescript
-export interface Avatar3DConfig {
-  // Body shape
-  bodyType: 'slim' | 'average' | 'athletic' | 'stocky';
-  height: 'short' | 'average' | 'tall';
-  
-  // Skin
-  skinTone: string; // Hex color from palette
-  
-  // Face
-  headShape: 'round' | 'oval' | 'square' | 'heart';
-  eyeShape: 'round' | 'almond' | 'wide' | 'narrow';
-  eyeColor: string;
-  noseType: 'small' | 'medium' | 'large' | 'button';
-  mouthType: 'thin' | 'full' | 'wide' | 'small';
-  
-  // Hair
-  hairStyle: 'short' | 'medium' | 'long' | 'buzz' | 'ponytail' | 'bun' | 'curly' | 'bald';
-  hairColor: string;
-  
-  // Clothing
-  topStyle: 'tshirt' | 'tanktop' | 'blazer' | 'hoodie' | 'dress';
-  topColor: string;
-  bottomStyle: 'pants' | 'shorts' | 'skirt' | 'jeans';
-  bottomColor: string;
-}
-
-// Generate random config from archetype
-export function generateAvatarConfig(archetype: string, seed?: string): Avatar3DConfig;
-
-// Convert houseguest traits to avatar appearance hints
-export function traitsToAvatarHints(traits: string[]): Partial<Avatar3DConfig>;
-```
-
----
-
-## Part 3: Core 3D Avatar Component
-
-**Create: `src/components/avatar-3d/SimsAvatar.tsx`**
-
-The main component that renders a complete 3D character:
-
-```typescript
-interface SimsAvatarProps {
-  config: Avatar3DConfig;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  mood?: MoodType;
-  status?: AvatarStatus;
-  isPlayer?: boolean;
-  animated?: boolean;
-  showShadow?: boolean;
-  className?: string;
-}
-
-export const SimsAvatar: React.FC<SimsAvatarProps> = ({
-  config,
-  size = 'md',
-  mood = 'Neutral',
-  status = 'none',
-  isPlayer = false,
-  animated = true,
-  showShadow = true,
-  className
-}) => {
-  return (
-    <AvatarCanvas size={size} className={className}>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[5, 5, 5]} intensity={0.8} />
-      
-      <group>
-        <AvatarBody config={config} />
-        <AvatarHead config={config} mood={mood} />
-        <AvatarHair config={config} />
-        <AvatarClothing config={config} />
-        
-        {animated && (
-          <AvatarAnimations 
-            mood={mood} 
-            status={status} 
-            isPlayer={isPlayer}
-          />
-        )}
-      </group>
-      
-      {showShadow && <ContactShadows />}
-    </AvatarCanvas>
-  );
+const SIZE_CONFIG = {
+  // ... existing sizes
+  xxl: { width: 200, height: 200, cameraZ: 1.4, cameraY: 0.35 },
+  full: { width: 280, height: 280, cameraZ: 1.2, cameraY: 0.3 }
 };
 ```
 
----
-
-## Part 4: Procedural Body Generation
-
-**Create: `src/components/avatar-3d/AvatarBody.tsx`**
-
-Generate a low-poly humanoid body procedurally:
-
-```typescript
-// Sims-style proportions:
-// - Slightly oversized head (cartoonish)
-// - Simplified body shapes
-// - No fingers (mitten hands like original Sims)
-// - Smooth, rounded edges
-
-export const AvatarBody: React.FC<{ config: Avatar3DConfig }> = ({ config }) => {
-  const bodyMesh = useMemo(() => {
-    // Create torso - rounded cylinder/capsule shape
-    const torsoGeometry = createTorsoGeometry(config.bodyType);
-    
-    // Create limbs - simple cylinders with rounded caps
-    const armGeometry = createArmGeometry(config.bodyType);
-    const legGeometry = createLegGeometry(config.bodyType);
-    
-    // Create hands - sphere "mittens"
-    const handGeometry = new THREE.SphereGeometry(0.08, 16, 16);
-    
-    return { torso: torsoGeometry, arms: armGeometry, legs: legGeometry, hands: handGeometry };
-  }, [config.bodyType]);
-
-  return (
-    <group>
-      {/* Torso */}
-      <mesh geometry={bodyMesh.torso}>
-        <meshStandardMaterial color={config.skinTone} />
-      </mesh>
-      
-      {/* Arms */}
-      <mesh position={[-0.3, 0, 0]} geometry={bodyMesh.arms}>
-        <meshStandardMaterial color={config.skinTone} />
-      </mesh>
-      <mesh position={[0.3, 0, 0]} geometry={bodyMesh.arms}>
-        <meshStandardMaterial color={config.skinTone} />
-      </mesh>
-      
-      {/* Legs */}
-      <mesh position={[-0.1, -0.5, 0]} geometry={bodyMesh.legs}>
-        <meshStandardMaterial color={config.skinTone} />
-      </mesh>
-      <mesh position={[0.1, -0.5, 0]} geometry={bodyMesh.legs}>
-        <meshStandardMaterial color={config.skinTone} />
-      </mesh>
-    </group>
-  );
-};
-```
+This allows a large, detailed view of the avatar during customization.
 
 ---
 
-## Part 5: Animated Head with Expressions
+## Part 3: Integrate Customizer into Player Creation Flow
 
-**Create: `src/components/avatar-3d/AvatarHead.tsx`**
+### Modify: `PlayerForm.tsx`
 
-Sims-style head with mood-reactive expressions:
+Replace the current `AvatarPreview` section with:
+- A button to "Customize Avatar" that opens the full customizer
+- Or embed a compact version of the customizer directly
 
-```typescript
-const moodExpressions = {
-  Happy: { eyeScale: 1.1, mouthCurve: 0.3, browRaise: 0.1 },
-  Content: { eyeScale: 1.0, mouthCurve: 0.1, browRaise: 0 },
-  Neutral: { eyeScale: 1.0, mouthCurve: 0, browRaise: 0 },
-  Upset: { eyeScale: 0.9, mouthCurve: -0.2, browRaise: -0.1 },
-  Angry: { eyeScale: 0.8, mouthCurve: -0.3, browRaise: -0.2 }
-};
+### Modify: `AvatarPreview.tsx`
 
-export const AvatarHead: React.FC<{ config: Avatar3DConfig; mood: MoodType }> = ({ 
-  config, 
-  mood 
-}) => {
-  const expression = moodExpressions[mood];
-  const blinkRef = useRef<THREE.Mesh>(null);
-  
-  // Blinking animation
-  useFrame((state) => {
-    // Blink every 3-5 seconds
-    const blink = Math.sin(state.clock.elapsedTime * 0.5) > 0.99;
-    if (blinkRef.current) {
-      blinkRef.current.scale.y = blink ? 0.1 : expression.eyeScale;
-    }
-  });
+Update to display the 3D avatar instead of initials/gradient:
+- Use `SimsAvatar` component with the player's avatar config
+- Show the 3D animated avatar as the main preview
 
-  return (
-    <group position={[0, 0.8, 0]}>
-      {/* Head base */}
-      <mesh>
-        <sphereGeometry args={[0.25, 32, 32]} />
-        <meshStandardMaterial color={config.skinTone} />
-      </mesh>
-      
-      {/* Eyes */}
-      <group position={[0, 0.05, 0.2]}>
-        <mesh ref={blinkRef} position={[-0.08, 0, 0]}>
-          <sphereGeometry args={[0.04, 16, 16]} />
-          <meshStandardMaterial color="white" />
-        </mesh>
-        {/* Pupils */}
-        <mesh position={[-0.08, 0, 0.03]}>
-          <sphereGeometry args={[0.02, 16, 16]} />
-          <meshStandardMaterial color={config.eyeColor} />
-        </mesh>
-      </group>
-      
-      {/* Mouth - curved line based on mood */}
-      <MouthShape curve={expression.mouthCurve} />
-    </group>
-  );
-};
-```
+### Modify: `types.ts`
 
----
-
-## Part 6: Animation System
-
-**Create: `src/components/avatar-3d/hooks/useIdleAnimation.ts`**
-
-Subtle idle movements for lifelike feel:
+Add `avatarConfig` to `PlayerFormData`:
 
 ```typescript
-export function useIdleAnimation(groupRef: React.RefObject<THREE.Group>) {
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    
-    const time = state.clock.elapsedTime;
-    
-    // Breathing - subtle chest expansion
-    groupRef.current.scale.x = 1 + Math.sin(time * 1.5) * 0.01;
-    groupRef.current.scale.y = 1 + Math.sin(time * 1.5) * 0.005;
-    
-    // Slight sway
-    groupRef.current.rotation.z = Math.sin(time * 0.5) * 0.02;
-    
-    // Head micro-movements
-    groupRef.current.children[0].rotation.y = Math.sin(time * 0.3) * 0.05;
-  });
-}
-```
-
-**Create: `src/components/avatar-3d/hooks/useStatusAnimation.ts`**
-
-Game-status reactive animations:
-
-```typescript
-export function useStatusAnimation(
-  groupRef: React.RefObject<THREE.Group>,
-  status: AvatarStatus
-) {
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const time = state.clock.elapsedTime;
-    
-    switch (status) {
-      case 'hoh':
-        // Confident pose - slight lean back, chest out
-        groupRef.current.rotation.x = -0.05;
-        // Subtle glow effect via scale pulse
-        const hohPulse = 1 + Math.sin(time * 2) * 0.02;
-        groupRef.current.scale.setScalar(hohPulse);
-        break;
-        
-      case 'nominee':
-        // Nervous - fidgeting, looking around
-        groupRef.current.position.y = Math.sin(time * 4) * 0.02;
-        groupRef.current.rotation.y = Math.sin(time * 2) * 0.1;
-        break;
-        
-      case 'pov':
-        // Confident but alert
-        groupRef.current.rotation.x = -0.03;
-        break;
-        
-      case 'evicted':
-        // Sad pose - slumped shoulders
-        groupRef.current.rotation.x = 0.1;
-        groupRef.current.position.y = -0.05;
-        break;
-    }
-  });
+export interface PlayerFormData {
+  // ... existing fields
+  avatarConfig?: Avatar3DConfig;  // 3D avatar configuration
 }
 ```
 
 ---
 
-## Part 7: Canvas Wrapper with Size Presets
+## Part 4: Update Character Frame to Show 3D Avatars
 
-**Create: `src/components/avatar-3d/AvatarCanvas.tsx`**
+### Modify: `CharacterFrame.tsx`
 
-Responsive canvas wrapper:
+Replace the 2D template image with 3D avatar when `avatar3DConfig` is available:
 
 ```typescript
-const sizeConfig = {
-  sm: { width: 40, height: 40, cameraZ: 3 },
-  md: { width: 64, height: 64, cameraZ: 2.5 },
-  lg: { width: 96, height: 96, cameraZ: 2 },
-  xl: { width: 128, height: 128, cameraZ: 1.8 }
-};
-
-export const AvatarCanvas: React.FC<{
-  size: keyof typeof sizeConfig;
-  children: React.ReactNode;
-  className?: string;
-}> = ({ size, children, className }) => {
-  const config = sizeConfig[size];
-  
-  return (
-    <div 
-      className={cn('relative rounded-full overflow-hidden', className)}
-      style={{ width: config.width, height: config.height }}
-    >
-      <Canvas
-        camera={{ position: [0, 0.3, config.cameraZ], fov: 35 }}
-        gl={{ antialias: true, alpha: true }}
-        dpr={[1, 2]}
-      >
-        <Suspense fallback={null}>
-          {children}
-        </Suspense>
-      </Canvas>
-    </div>
-  );
-};
+// If template has 3D config, render SimsAvatar
+{template.avatar3DConfig ? (
+  <SimsAvatar 
+    config={template.avatar3DConfig} 
+    size="lg" 
+    animated={false}
+  />
+) : (
+  <img src={template.imageUrl} ... />
+)}
 ```
 
 ---
 
-## Part 8: Integration with Existing System
+## Part 5: Enable 3D Avatars in Game UI
 
-### Replace StatusAvatar
+### Modify: `HouseguestAvatar.tsx`
 
-**Modify: `src/components/ui/status-avatar.tsx`**
-
-Add 3D mode while preserving 2D fallback:
+Update to support 3D mode:
 
 ```typescript
-interface StatusAvatarProps {
-  name: string;
-  status?: AvatarStatus;
-  size?: AvatarSize;
-  // ... existing props
-  use3D?: boolean;
-  avatarConfig?: Avatar3DConfig;
+interface HouseguestAvatarProps {
+  houseguest: Houseguest;
+  size?: 'sm' | 'md' | 'lg';
+  use3D?: boolean;  // New prop
 }
 
-export const StatusAvatar: React.FC<StatusAvatarProps> = ({
-  use3D = false,
-  avatarConfig,
-  ...props
-}) => {
-  // If 3D mode enabled and config available, render 3D avatar
-  if (use3D && avatarConfig) {
-    return (
-      <div className={cn('status-avatar relative inline-flex', props.className)}>
-        <SimsAvatar
-          config={avatarConfig}
-          size={props.size}
-          status={props.status}
-          mood={/* derive from houseguest */}
-          isPlayer={props.isPlayer}
-          animated={props.animated}
-        />
-        {/* Keep existing badge/indicator overlays */}
-        {props.showBadge && props.status !== 'none' && (
-          <StatusBadge status={props.status} size={props.size} />
-        )}
-        {props.isPlayer && <PlayerIndicator size={props.size} />}
-      </div>
-    );
-  }
-  
-  // Fall back to existing 2D implementation
-  return <StatusAvatar2D {...props} />;
-};
+// If houseguest has avatarConfig and use3D is true, render SimsAvatar
 ```
 
-### Add avatarConfig to Houseguest Model
+### Modify: `HouseguestDialog.tsx`
 
-**Modify: `src/models/houseguest/types.ts`**
-
-```typescript
-export interface Houseguest {
-  // ... existing properties
-  avatarConfig?: Avatar3DConfig; // 3D avatar configuration
-}
-```
-
-### Update Character Templates
-
-**Modify: `src/data/character-templates.ts`**
-
-Add 3D configs for existing templates:
-
-```typescript
-export interface CharacterTemplate {
-  // ... existing properties
-  avatar3DConfig: Avatar3DConfig;
-}
-
-export const characterTemplates: CharacterTemplate[] = [
-  {
-    id: 'alex-chen',
-    name: 'Alex Chen',
-    // ... existing
-    avatar3DConfig: {
-      bodyType: 'slim',
-      height: 'average',
-      skinTone: '#E8C4A0',
-      headShape: 'oval',
-      eyeShape: 'almond',
-      eyeColor: '#3B2314',
-      hairStyle: 'short',
-      hairColor: '#1A1A1A',
-      topStyle: 'blazer',
-      topColor: '#2C3E50',
-      bottomStyle: 'pants',
-      bottomColor: '#1A1A1A'
-    }
-  },
-  // ... other templates
-];
-```
+Pass `use3D={true}` to `HouseguestAvatar` when the houseguest has an avatar config.
 
 ---
 
-## Part 9: Avatar Customization UI
+## Part 6: Create Color Palette Picker Component
 
-**Create: `src/components/avatar-3d/AvatarCustomizer.tsx`**
+### New Component: `ColorPalettePicker.tsx`
 
-Interactive 3D avatar editor for player creation:
+A reusable swatch-based color picker:
 
 ```typescript
-export const AvatarCustomizer: React.FC<{
-  initialConfig?: Avatar3DConfig;
-  onChange: (config: Avatar3DConfig) => void;
-}> = ({ initialConfig, onChange }) => {
-  const [config, setConfig] = useState(initialConfig || generateDefaultConfig());
-  
-  const updateConfig = (updates: Partial<Avatar3DConfig>) => {
-    const newConfig = { ...config, ...updates };
-    setConfig(newConfig);
-    onChange(newConfig);
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Live 3D Preview */}
-      <div className="flex justify-center">
-        <div className="w-64 h-64 rounded-xl overflow-hidden bg-gradient-to-b from-slate-800 to-slate-900">
-          <SimsAvatar config={config} size="xl" animated />
-        </div>
-      </div>
-      
-      {/* Customization Controls */}
-      <div className="space-y-6">
-        {/* Body Type */}
-        <div>
-          <Label>Body Type</Label>
-          <RadioGroup 
-            value={config.bodyType}
-            onValueChange={(v) => updateConfig({ bodyType: v as any })}
-          >
-            {['slim', 'average', 'athletic', 'stocky'].map(type => (
-              <RadioGroupItem key={type} value={type}>{type}</RadioGroupItem>
-            ))}
-          </RadioGroup>
-        </div>
-        
-        {/* Skin Tone Picker */}
-        <div>
-          <Label>Skin Tone</Label>
-          <ColorPalette 
-            colors={SKIN_TONE_PALETTE}
-            value={config.skinTone}
-            onChange={(color) => updateConfig({ skinTone: color })}
-          />
-        </div>
-        
-        {/* Hair Style & Color */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>Hair Style</Label>
-            <Select value={config.hairStyle} onValueChange={(v) => updateConfig({ hairStyle: v as any })}>
-              {HAIR_STYLES.map(style => (
-                <SelectItem key={style} value={style}>{style}</SelectItem>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Hair Color</Label>
-            <ColorPalette 
-              colors={HAIR_COLOR_PALETTE}
-              value={config.hairColor}
-              onChange={(color) => updateConfig({ hairColor: color })}
-            />
-          </div>
-        </div>
-        
-        {/* Clothing */}
-        {/* ... similar structure for clothing options */}
-      </div>
-    </div>
-  );
-};
+interface ColorPalettePickerProps {
+  colors: string[];
+  value: string;
+  onChange: (color: string) => void;
+  size?: 'sm' | 'md' | 'lg';
+  label?: string;
+}
 ```
+
+- Grid of clickable color swatches
+- Selected state with ring/checkmark
+- Optional category labels
 
 ---
 
-## Part 10: Performance Optimizations
+## Part 7: Create Option Selector Components
 
-### Geometry Instancing
-For houseguest list views with many avatars:
+### New Component: `AvatarOptionSelector.tsx`
 
-```typescript
-// Use instanced meshes for shared geometries
-const SharedBodyInstances = ({ houseguests, configs }) => {
-  const bodyGeometry = useMemo(() => createBodyGeometry(), []);
-  const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
-  
-  useEffect(() => {
-    houseguests.forEach((hg, i) => {
-      const matrix = new THREE.Matrix4();
-      matrix.setPosition(i * 0.5, 0, 0);
-      instancedMeshRef.current?.setMatrixAt(i, matrix);
-    });
-    instancedMeshRef.current?.instanceMatrix.needsUpdate = true;
-  }, [houseguests]);
-
-  return (
-    <instancedMesh ref={instancedMeshRef} args={[bodyGeometry, null, houseguests.length]}>
-      <meshStandardMaterial />
-    </instancedMesh>
-  );
-};
-```
-
-### Level of Detail (LOD)
-Reduce polygon count for small avatars:
+A visual selector for non-color options (body type, hair style, etc.):
 
 ```typescript
-// sm size: 16 segments, md: 24, lg: 32, xl: 48
-const getSegments = (size: AvatarSize) => ({
-  sm: 12,
-  md: 20,
-  lg: 28,
-  xl: 36
-}[size]);
+interface AvatarOptionSelectorProps<T extends string> {
+  options: T[];
+  value: T;
+  onChange: (value: T) => void;
+  renderOption: (option: T, isSelected: boolean) => React.ReactNode;
+  columns?: number;
+}
 ```
 
-### Lazy Loading
-Only load 3D canvas when avatar is in viewport:
-
-```typescript
-const LazyAvatar = ({ ...props }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref}>
-      {isVisible ? <SimsAvatar {...props} /> : <AvatarPlaceholder {...props} />}
-    </div>
-  );
-};
-```
+- Grid layout with visual icons/previews
+- Selected state with border highlight
 
 ---
 
 ## Files Summary
 
-### New Files (15)
+### New Files (4)
+
 | File | Purpose |
 |------|---------|
-| `src/models/avatar-config.ts` | 3D avatar configuration types |
-| `src/components/avatar-3d/index.ts` | Module exports |
-| `src/components/avatar-3d/SimsAvatar.tsx` | Main 3D avatar component |
-| `src/components/avatar-3d/AvatarCanvas.tsx` | Canvas wrapper |
-| `src/components/avatar-3d/AvatarBody.tsx` | Procedural body mesh |
-| `src/components/avatar-3d/AvatarHead.tsx` | Head with expressions |
-| `src/components/avatar-3d/AvatarHair.tsx` | Hair mesh variations |
-| `src/components/avatar-3d/AvatarClothing.tsx` | Clothing rendering |
-| `src/components/avatar-3d/AvatarAnimations.tsx` | Animation controller |
-| `src/components/avatar-3d/AvatarCustomizer.tsx` | Customization UI |
-| `src/components/avatar-3d/hooks/useIdleAnimation.ts` | Idle animation hook |
-| `src/components/avatar-3d/hooks/useMoodAnimation.ts` | Mood animations |
-| `src/components/avatar-3d/hooks/useStatusAnimation.ts` | Status animations |
-| `src/components/avatar-3d/utils/avatar-generator.ts` | Procedural mesh utils |
-| `src/components/avatar-3d/utils/color-palettes.ts` | Color presets |
+| `src/components/avatar-3d/AvatarCustomizer.tsx` | Full Sims-style customization UI |
+| `src/components/avatar-3d/ColorPalettePicker.tsx` | Color swatch picker component |
+| `src/components/avatar-3d/AvatarOptionSelector.tsx` | Visual option selector |
+| `src/components/avatar-3d/AvatarCustomizerPreview.tsx` | Large 3D preview with controls |
 
-### Modified Files (6)
+### Modified Files (8)
+
 | File | Changes |
 |------|---------|
-| `package.json` | Add three, @react-three/fiber, @react-three/drei |
-| `src/components/ui/status-avatar.tsx` | Add 3D mode support |
-| `src/models/houseguest/types.ts` | Add avatarConfig property |
-| `src/data/character-templates.ts` | Add avatar3DConfig to templates |
-| `src/components/game-setup/PlayerForm.tsx` | Integrate AvatarCustomizer |
+| `src/components/avatar-3d/AvatarCanvas.tsx` | Add `xxl` and `full` size presets |
+| `src/components/game-setup/types.ts` | Add `avatarConfig` to `PlayerFormData` |
+| `src/components/game-setup/PlayerForm.tsx` | Integrate avatar customizer |
 | `src/components/game-setup/AvatarPreview.tsx` | Use 3D avatar in preview |
+| `src/components/game-setup/CharacterFrame.tsx` | Render 3D avatars for templates |
+| `src/components/houseguest/HouseguestAvatar.tsx` | Add 3D mode support |
+| `src/components/houseguest/HouseguestDialog.tsx` | Enable 3D avatars |
+| `src/models/avatar-config.ts` | Export all type arrays for selectors |
 
 ---
 
-## Visual Preview
+## UI Design: Avatar Customizer Screen
 
 ```text
-+--------------------------------------------------+
-|                  3D SIMS AVATAR                   |
-|                                                  |
-|              .-""""""""-.                        |
-|             /   O    O   \     <- Blinking eyes  |
-|            |      <>      |    <- Animated nose  |
-|            |    \____/    |    <- Mood mouth     |
-|             \            /                       |
-|              '-........-'                        |
-|                  |||                             |
-|              .---|||---.     <- Breathing torso  |
-|             /    |||    \                        |
-|            |     |||     |                       |
-|            |   /     \   |   <- Idle arm sway   |
-|            |  /       \  |                       |
-|             \/         \/                        |
-|             ||         ||    <- Standing pose    |
-|             ||         ||                        |
-+--------------------------------------------------+
-|  Animation: Idle breathing + blinking + sway     |
-|  Status effects: HoH glow, Nominee nervous       |
-+--------------------------------------------------+
++------------------------------------------------------------------+
+|  < Back                     CREATE YOUR AVATAR                    |
++------------------------------------------------------------------+
+|                                                                   |
+|  +---------------------------+  +------------------------------+  |
+|  |                           |  |  [Body] [Skin] [Face] [Hair] [Clothes] |
+|  |     +--------------+      |  +------------------------------+  |
+|  |     |              |      |  |                              |  |
+|  |     |   3D AVATAR  |      |  |  Body Type:                  |  |
+|  |     |   (Rotating) |      |  |  [Slim] [Average] [Athletic] [Stocky] |
+|  |     |   (Large)    |      |  |                              |  |
+|  |     |              |      |  |  Height:                     |  |
+|  |     +--------------+      |  |  [Short] [Average] [Tall]    |  |
+|  |                           |  |                              |  |
+|  |     [Rotate Left/Right]   |  |  [Randomize Body]            |  |
+|  |     [Randomize All]       |  |                              |  |
+|  +---------------------------+  +------------------------------+  |
+|                                                                   |
+|                         [Continue with this Avatar]               |
++------------------------------------------------------------------+
 ```
 
 ---
 
-## Implementation Order
+## Implementation Steps
 
-1. **Phase 1: Dependencies & Base** (Foundation)
-   - Install Three.js packages
-   - Create avatar-config model
-   - Set up AvatarCanvas wrapper
-
-2. **Phase 2: Body Generation** (Core Rendering)
-   - AvatarBody procedural mesh
-   - AvatarHead with basic shapes
-   - Simple static rendering
-
-3. **Phase 3: Expressions & Animation** (Bring to Life)
-   - Idle animation hook
-   - Mood-based expressions
-   - Status animations
-
-4. **Phase 4: Customization** (Hair, Clothing)
-   - AvatarHair variations
-   - AvatarClothing rendering
-   - Color palette system
-
-5. **Phase 5: Integration** (Replace 2D)
-   - Update StatusAvatar with 3D mode
-   - Add avatarConfig to houseguest model
-   - Update character templates
-
-6. **Phase 6: Customizer UI** (Player Creation)
-   - Interactive customization interface
-   - Integrate with PlayerForm
-
-7. **Phase 7: Performance** (Optimization)
-   - Lazy loading
-   - LOD system
-   - Geometry instancing for lists
+1. **Create `ColorPalettePicker` component** - Reusable color swatch picker
+2. **Create `AvatarOptionSelector` component** - Visual option grid selector
+3. **Extend `AvatarCanvas` sizes** - Add larger preview sizes
+4. **Create `AvatarCustomizer` component** - Main customization UI with tabs
+5. **Update `PlayerFormData` type** - Add avatarConfig field
+6. **Modify `PlayerForm`** - Add customizer integration
+7. **Update `AvatarPreview`** - Show 3D avatar preview
+8. **Update `CharacterFrame`** - Render 3D for templates
+9. **Update `HouseguestAvatar`** - Add 3D rendering mode
+10. **Update `HouseguestDialog`** - Enable 3D avatars in dialogs
 
 ---
 
 ## Expected Behavior
 
-1. **Idle State**: Avatars breathe subtly, blink every 3-5 seconds, sway slightly
-2. **HoH Status**: Avatar has confident pose with subtle golden glow pulse
-3. **Nominee Status**: Avatar looks nervous, fidgets, shifts weight
-4. **PoV Status**: Avatar stands tall, alert posture
-5. **Evicted Status**: Sad, slumped posture, desaturated colors
-6. **Mood Happy**: Wide eyes, upturned mouth, bouncy
-7. **Mood Angry**: Furrowed brows, downturned mouth, tense pose
+1. **Create Custom Character flow**: Opens full-screen Sims-style customizer
+2. **Live preview**: 3D avatar updates instantly as options are changed
+3. **Tabbed navigation**: Easy switching between Body, Skin, Face, Hair, Clothes
+4. **Visual selectors**: Icon-based selectors instead of plain dropdowns
+5. **Color palettes**: Swatch grids for skin/hair/clothing colors
+6. **Randomize options**: Per-category and global randomize buttons
+7. **Game UI**: All houseguest avatars render as 3D when config available
+8. **Status animations**: 3D avatars show HoH glow, nominee nervousness, etc.
 
 ---
 
-## Technical Notes
+## Visual Style Guide
 
-### Why Procedural Instead of Pre-made Models?
-- Infinite customization possibilities
-- Smaller bundle size (no GLTF files)
-- Consistent art style across all characters
-- Easier to animate programmatically
-- React-native Three.js patterns
+- **Background**: Dark slate gradient to make 3D avatar pop
+- **Category tabs**: Pill-shaped buttons with icons
+- **Option cards**: Rounded cards with hover effects
+- **Color swatches**: Circular swatches in grid layout
+- **Selected state**: Ring highlight + subtle glow
+- **Animations**: Smooth transitions between selections
 
-### Performance Targets
-- 60 FPS with 16 avatars visible
-- < 5ms render time per avatar
-- < 1MB additional bundle size
-
-### Fallback Strategy
-- 2D avatars remain as fallback
-- `use3D` prop controls mode
-- Can be disabled per-user for low-end devices
