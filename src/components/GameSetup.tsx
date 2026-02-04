@@ -207,7 +207,8 @@ const GameSetup: React.FC = () => {
       selectedTraits, 
       stats, 
       houseguestCount,
-      avatarUrl
+      avatarUrl,
+      avatarConfig
     } = playerFormData;
     
     const playerGuest = createHouseguest(
@@ -220,7 +221,8 @@ const GameSetup: React.FC = () => {
       avatarUrl || '/placeholder.svg',
       selectedTraits,
       stats,
-      true
+      true,
+      avatarConfig // Pass the avatar config with profilePhotoUrl
     );
     
     // Use character templates for NPCs
@@ -243,7 +245,8 @@ const GameSetup: React.FC = () => {
         guest.imageUrl,
         guest.traits,
         {},
-        false
+        false,
+        guest.avatar3DConfig // Pass NPC avatar config too
       )
     );
     
