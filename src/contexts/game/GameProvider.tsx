@@ -67,8 +67,13 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
   }, [game]);
   
   const getRelationship = useCallback((guest1Id: string, guest2Id: string) => {
-    return relationshipSystem?.getRelationship(guest1Id, guest2Id) || 0;
-  }, [relationshipSystem]);
+    // Read from reducer state instead of legacy system
+    const guestRelationships = gameState.relationships.get(guest1Id);
+    if (!guestRelationships) return 0;
+    
+    const relationship = guestRelationships.get(guest2Id);
+    return relationship?.score || 0;
+  }, [gameState.relationships]);
   
   const getActiveHouseguests = useCallback(() => {
     return game?.getActiveHouseguests() || [];

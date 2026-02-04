@@ -23,7 +23,7 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({
   houseguest,
   onComplete
 }) => {
-  const { gameState } = useGame();
+  const { gameState, dispatch } = useGame();
   const { addImpact } = useRelationshipImpact();
   
   // Get player's social stat for the roll
@@ -59,12 +59,26 @@ const InteractionResults: React.FC<InteractionResultsProps> = ({
     };
   }, [playerSocialStat, requiredStat, selectedOption, houseguest.name]);
   
-  // Show relationship impact when component mounts
+  // Show relationship impact and persist to reducer state when component mounts
   useEffect(() => {
-    if (actualChange !== 0) {
+    if (actualChange !== 0 && player) {
+      // Visual feedback
       addImpact(houseguest.id, houseguest.name, actualChange);
+      
+      // Persist to reducer state
+      dispatch({
+        type: 'UPDATE_RELATIONSHIPS',
+        payload: {
+          guestId1: player.id,
+          guestId2: houseguest.id,
+          change: actualChange,
+          note: succeeded 
+            ? `${selectedOption.text} interaction succeeded`
+            : `${selectedOption.text} interaction backfired`
+        }
+      });
     }
-  }, [houseguest.id, houseguest.name, actualChange, addImpact]);
+  }, []);
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
