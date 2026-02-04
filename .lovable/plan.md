@@ -1,224 +1,314 @@
 
-# Plan: Fix Skip-to-Next-Phase Eviction Bug
+# Implementation Plan: Enhanced Social, Deals & Alliances System
 
-## Problem Summary
+## Executive Summary
 
-When clicking "Skip to next phase" repeatedly after being evicted (in spectator mode), the game breaks:
-- Houseguests stop being evicted
-- Active count gets stuck (e.g., at 6 despite weeks passing)
-- Eviction screen shows no nominees
-
-## Root Causes
-
-### 1. No Eviction Guard
-When `useFastForward` is called during Eviction phase with empty nominees, it still advances the week without evicting anyone.
-
-### 2. Race Condition with Multiple Clicks
-Rapid clicks cause multiple fast-forward dispatches before state updates propagate, leading to:
-- Multiple `eviction_complete` or `advance_week` actions
-- Week number incrementing without evictions occurring
-- Nominees being cleared before eviction happens
-
-### 3. Stale Closure Data
-The `useCallback` in `useFastForward` captures `gameState.nominees` from render time. With rapid clicks, subsequent calls use stale data.
-
-### 4. No Validation Before Week Advance
-The `eviction_complete` and `advance_week` player actions don't verify that an eviction actually happened before advancing.
+This plan enhances the game's social systems with 5 major improvements:
+1. **Conversation Topics System** - Replace generic "Talk" with meaningful choices
+2. **Alliance Management UI** - Give players control over their alliances
+3. **Relationship Milestones** - Visual celebration of friendship tiers
+4. **Deal Obligation Reminders** - Highlight relevant deals during ceremonies
+5. **Counter-Offer System** - NPCs can propose alternative deals
 
 ---
 
-## Solution
+## Phase 1: Conversation Topics System
 
-### Part 1: Add Eviction Validation Guard
+### Current State
+- "Talk to [Name]" action gives a flat +3-7 relationship boost
+- No player choice about conversation type
+- All conversations feel identical
 
-**Modify: `src/hooks/useFastForward.ts`**
+### Enhancement
+Add 5 conversation topic choices when clicking "Talk":
 
-Add validation to ensure eviction phase has nominees before processing, and add a longer cooldown:
+| Topic | Risk | Reward | Effect |
+|-------|------|--------|--------|
+| Small Talk | None | +3-5 | Safe relationship building |
+| Personal Chat | Low | +5-8 | Share personal info, builds trust |
+| Discuss the Game | Medium | +4-10 | Strategic talk, trait-dependent |
+| Vent About Houseguest | High | +8-15 OR -10 | Gossip - risky if they're allied |
+| Share a Secret | High | +10-18 OR -15 | High trust builder OR betrayal risk |
 
-```typescript
-// If Eviction phase has no nominees, this is an invalid state - don't advance
-if (gameState.phase === 'Eviction') {
-  if (!gameState.nominees || gameState.nominees.length < 2) {
-    logger?.warn("Fast-forward blocked: Eviction phase has no/insufficient nominees");
-    setInternalProcessing(false);
-    return; // Block the fast-forward entirely
-  }
-  
-  // Proceed with eviction...
-}
-```
+### Files to Create/Modify
 
-Also increase the processing lock timeout from 1500ms to 3000ms to prevent rapid clicks.
+**Create: `src/components/dialogs/ConversationTopicDialog.tsx`**
+- Modal that appears after clicking "Talk to [Name]"
+- Shows 5 topic cards with risk/reward indicators
+- Displays target's likely reaction based on traits
 
----
-
-### Part 2: Add Eviction State Tracking
-
-**Modify: `src/models/game-state.ts`**
-
-Add a flag to track if eviction happened this week:
-
-```typescript
-export interface GameState {
-  // ... existing properties
-  evictionCompletedThisWeek?: boolean;
-}
-```
-
-**Modify: `src/contexts/reducers/reducers/eviction-reducer.ts`**
-
-Set the flag when eviction occurs:
-
-```typescript
-case 'EVICT_HOUSEGUEST': {
-  // ... existing eviction logic
-  
-  return {
-    ...state,
-    // ... other updates
-    evictionCompletedThisWeek: true, // Mark eviction as complete
-  };
-}
-```
-
----
-
-### Part 3: Validate Before Week Advance
+**Modify: `src/game-states/social/handlers/talkHandler.ts`**
+- Accept `conversationType` parameter
+- Calculate relationship change based on topic + traits
+- Add betrayal logic for risky topics
 
 **Modify: `src/contexts/reducers/reducers/player-action-reducer.ts`**
+- Handle new `talk_to` with topic parameter
+- Calculate outcomes based on:
+  - Target's traits (e.g., "Sneaky" NPCs love gossip)
+  - Existing relationship level
+  - Whether gossip target is allied with conversation partner
 
-In the `eviction_complete` and `advance_week` cases, add validation:
+---
 
-```typescript
-case 'eviction_complete':
-case 'advance_week': {
-  // Don't advance if we're in eviction phase but no eviction happened
-  if (state.phase === 'Eviction' && !state.evictionCompletedThisWeek) {
-    console.warn('Blocking week advance: No eviction completed');
-    return state; // Don't advance
-  }
-  
-  // Reset flag for next week
-  return {
-    ...state,
-    week: state.week + 1,
-    // ... other resets
-    evictionCompletedThisWeek: false, // Reset for next week
-  };
-}
+## Phase 2: Alliance Management UI
+
+### Current State
+- Alliances exist in system but player has no management interface
+- No way to name alliances, invite members, or track stability
+- Alliance tab in DealsPanel shows minimal info
+
+### Enhancement
+Create dedicated Alliance Management interface:
+
+**Features:**
+- **Create Alliance**: Name it, select founding members (min 2)
+- **Invite Members**: Propose new member to existing alliance
+- **View Stability**: See stability score (0-100) with breakdown
+- **Hold Meeting**: Action to boost all member relationships +3 and stability +5
+- **Leave/Kick**: Remove yourself or vote to kick a member
+
+### Files to Create/Modify
+
+**Create: `src/components/alliances/AllianceManagementDialog.tsx`**
+- Full alliance management interface
+- Tabs: Overview | Members | Stability | Actions
+
+**Create: `src/components/alliances/CreateAllianceWizard.tsx`**
+- Step 1: Name your alliance
+- Step 2: Select founding members (shows relationship scores)
+- Step 3: Confirm creation
+
+**Create: `src/components/alliances/AllianceMemberCard.tsx`**
+- Shows member avatar, relationship to you, role in alliance
+- "Kick" button if you're founder
+
+**Modify: `src/game-states/SocialInteractionState.ts`**
+- Add alliance management actions:
+  - `create_alliance`
+  - `invite_to_alliance`
+  - `hold_alliance_meeting`
+  - `leave_alliance`
+
+**Modify: `src/systems/alliance-system.ts`**
+- Add `proposeKickMember()` method
+- Add `inviteMember()` with NPC acceptance logic
+- Improve `holdAllianceMeeting()` to give visual feedback
+
+---
+
+## Phase 3: Relationship Milestones
+
+### Current State
+- `checkRelationshipMilestones()` exists in npc-deal-proposals.ts
+- Triggers NPC proposals at 25, 50, 75 thresholds
+- No visual celebration or player notification
+
+### Enhancement
+Add visual feedback when crossing friendship tiers:
+
+| Threshold | Tier Name | Visual | Unlock |
+|-----------|-----------|--------|--------|
+| 25+ | Acquaintance → Friend | Toast + badge | Info sharing deals |
+| 50+ | Friend → Close Friend | Celebration + badge | Safety pact deals |
+| 75+ | Close Friend → Ally | Confetti + badge | Partnership/F2 deals |
+
+### Files to Create/Modify
+
+**Create: `src/components/feedback/RelationshipMilestoneToast.tsx`**
+- Animated toast with tier icon and NPC avatar
+- "You and [Name] are now Close Friends!"
+- Confetti effect for 75+ threshold
+
+**Create: `src/components/houseguest/RelationshipTierBadge.tsx`**
+- Small badge shown next to relationship score
+- Tiers: Stranger | Acquaintance | Friend | Close Friend | Ally | Rival | Enemy
+
+**Modify: `src/contexts/reducers/reducers/relationship-reducer.ts`**
+- After relationship update, check for milestone crossing
+- Emit `relationship_milestone` event via GameEventBus
+- Store milestone achievements in state
+
+**Modify: `src/components/houseguest/HouseguestDialog.tsx`**
+- Display RelationshipTierBadge next to score
+- Show "milestone unlocked" if crossed during session
+
+---
+
+## Phase 4: Deal Obligation Reminders
+
+### Current State
+- Active deals exist but player can accidentally break them
+- No visual reminder during ceremonies
+- Trust score suffers with no warning
+
+### Enhancement
+Show relevant deal obligations during key game moments:
+
+**Reminder Contexts:**
+- **Nomination Ceremony**: "You have a Safety Pact with Morgan - nominating them will break this deal!"
+- **Veto Decision**: "You promised to use the Veto on Alex if they're on the block"
+- **Voting**: "You have a Voting Block deal with Sam - vote with them to keep the deal"
+- **Final Selection**: "Your Final Two deal with Jordan - take them to honor it"
+
+### Files to Create/Modify
+
+**Create: `src/components/deals/DealObligationBanner.tsx`**
+- Warning banner shown during relevant ceremonies
+- Yellow/amber styling with deal icon
+- Shows deal type, partner name, consequence of breaking
+
+**Create: `src/hooks/useDealObligations.ts`**
+- Returns relevant active deals for current game phase
+- Filters by deal type matching phase context
+- Example: During Eviction phase, return `vote_together` deals
+
+**Modify: `src/components/game-phases/NominationPhase.tsx`**
+- Import and render DealObligationBanner
+- Pass nominees-to-be for conflict checking
+
+**Modify: `src/components/game-phases/VetoMeetingPhase.tsx`**
+- Show veto_use obligation if applicable
+
+**Modify: `src/components/game-phases/eviction/PlayerEvictionVoting.tsx`**
+- Show vote_together obligation during vote casting
+
+---
+
+## Phase 5: Counter-Offer System
+
+### Current State
+- NPC either accepts or declines player deals
+- Binary response with reasoning text
+- No negotiation possible
+
+### Enhancement
+NPCs can propose alternative deals when declining:
+
+**Counter-Offer Logic:**
+1. Player proposes Final Two deal
+2. NPC declines (relationship too low)
+3. NPC counter-offers: "I'm not ready for that, but how about a Safety Pact instead?"
+4. Player can accept counter-offer or walk away
+
+**Counter-Offer Mapping:**
+| Proposed | Counter-Offer Options |
+|----------|----------------------|
+| Final Two | Partnership, Safety Pact |
+| Partnership | Safety Pact, Information Sharing |
+| Target Agreement | Vote Together (this week) |
+| Veto Use | Safety Pact |
+| Alliance Invite | Partnership |
+
+### Files to Create/Modify
+
+**Modify: `src/systems/deal-system.ts`**
+- Add `generateCounterOffer()` method
+- Returns alternative deal type if NPC would decline original
+- Considers relationship gap needed
+
+**Modify: `src/components/deals/ProposeDealDialog.tsx`**
+- Add `counter_offer` status state
+- Show counter-offer UI with NPC's alternative
+- Buttons: "Accept Counter" | "Decline & Leave"
+
+**Modify: `src/models/deal.ts`**
+- Add counter-offer type definitions
+- Add `counterOfferFor` field to track original proposal
+
+---
+
+## Technical Architecture
+
+### Event Flow for Milestones
+
+```text
+Player Action (Talk) 
+    → player-action-reducer 
+    → UPDATE_RELATIONSHIPS 
+    → relationship-reducer 
+    → Check milestone crossing 
+    → Emit 'relationship_milestone' event 
+    → GameEventBus 
+    → UI subscribes → Show toast/confetti
+```
+
+### Deal Obligation Detection
+
+```text
+Phase Changes to Nomination 
+    → useDealObligations hook 
+    → Filter deals where:
+        - type = 'safety_agreement'
+        - partner in potential nominees
+    → Return obligation warnings 
+    → DealObligationBanner renders
 ```
 
 ---
 
-### Part 4: Reset Flag on Week Advance
+## File Summary
 
-**Modify: `src/contexts/reducers/reducers/game-progress-reducer.ts`**
+### New Files (10)
+| File | Purpose |
+|------|---------|
+| `src/components/dialogs/ConversationTopicDialog.tsx` | Topic selection for talk actions |
+| `src/components/alliances/AllianceManagementDialog.tsx` | Full alliance management UI |
+| `src/components/alliances/CreateAllianceWizard.tsx` | Alliance creation flow |
+| `src/components/alliances/AllianceMemberCard.tsx` | Individual member display |
+| `src/components/feedback/RelationshipMilestoneToast.tsx` | Milestone celebration toast |
+| `src/components/houseguest/RelationshipTierBadge.tsx` | Tier indicator badge |
+| `src/components/deals/DealObligationBanner.tsx` | Ceremony obligation warnings |
+| `src/hooks/useDealObligations.ts` | Obligation detection logic |
+| `src/models/conversation-topic.ts` | Topic type definitions |
+| `src/models/relationship-tier.ts` | Tier definitions and thresholds |
 
-In the `ADVANCE_WEEK` case, reset the eviction flag:
-
-```typescript
-case 'ADVANCE_WEEK':
-  return {
-    ...state,
-    week: state.week + 1,
-    // ... existing resets
-    evictionCompletedThisWeek: false, // Ready for next week's eviction
-  };
-```
-
----
-
-### Part 5: Add Processing Lock to SpectatorBanner Button
-
-**Modify: `src/components/game-screen/SpectatorBanner.tsx`**
-
-Disable the button while processing and add visual feedback:
-
-```typescript
-<Button 
-  variant="secondary" 
-  size="sm" 
-  onClick={handleFastForward}
-  disabled={isProcessing}
-  className={cn(
-    "bg-white/10 hover:bg-white/20 text-white border-white/20 shrink-0",
-    isProcessing && "opacity-50 cursor-not-allowed"
-  )}
->
-  {isProcessing ? (
-    <>
-      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-      Processing...
-    </>
-  ) : (
-    <>
-      <SkipForward className="h-4 w-4 mr-1" />
-      Skip to Next Phase
-    </>
-  )}
-</Button>
-```
-
----
-
-### Part 6: Fix Fast Forward to Use Fresh State Reference
-
-**Modify: `src/hooks/useFastForward.ts`**
-
-Use a ref to always get fresh state, avoiding stale closures:
-
-```typescript
-export function useFastForward() {
-  const { dispatch, gameState, logger } = useGame();
-  const gameStateRef = useRef(gameState);
-  
-  // Keep ref updated
-  useEffect(() => {
-    gameStateRef.current = gameState;
-  }, [gameState]);
-  
-  const handleFastForward = useCallback(() => {
-    const currentState = gameStateRef.current; // Always fresh
-    
-    // Use currentState instead of gameState in all logic
-    if (currentState.phase === 'Eviction') {
-      if (currentState.nominees && currentState.nominees.length > 0) {
-        // ...
-      }
-    }
-  }, [dispatch, fastForward, logger, internalProcessing]);
-}
-```
-
----
-
-## Files to Modify
-
+### Modified Files (12)
 | File | Changes |
 |------|---------|
-| `src/hooks/useFastForward.ts` | Add validation, increase cooldown, use ref for fresh state |
-| `src/models/game-state.ts` | Add `evictionCompletedThisWeek` tracking flag |
-| `src/contexts/reducers/reducers/eviction-reducer.ts` | Set flag on eviction |
-| `src/contexts/reducers/reducers/player-action-reducer.ts` | Block week advance without eviction |
-| `src/contexts/reducers/reducers/game-progress-reducer.ts` | Reset flag on week advance |
-| `src/components/game-screen/SpectatorBanner.tsx` | Add visual loading state, ensure button is disabled while processing |
+| `src/game-states/social/handlers/talkHandler.ts` | Add topic parameter support |
+| `src/game-states/SocialInteractionState.ts` | Add alliance management actions |
+| `src/systems/alliance-system.ts` | Add invite, kick, improved meeting logic |
+| `src/systems/deal-system.ts` | Add counter-offer generation |
+| `src/contexts/reducers/reducers/player-action-reducer.ts` | Handle topic-based talk, alliance actions |
+| `src/contexts/reducers/reducers/relationship-reducer.ts` | Milestone detection and event emission |
+| `src/components/deals/ProposeDealDialog.tsx` | Counter-offer UI flow |
+| `src/components/houseguest/HouseguestDialog.tsx` | Add tier badge display |
+| `src/components/game-phases/NominationPhase.tsx` | Add obligation banner |
+| `src/components/game-phases/VetoMeetingPhase.tsx` | Add obligation banner |
+| `src/components/game-phases/eviction/PlayerEvictionVoting.tsx` | Add obligation banner |
+| `src/components/game-phases/social-interaction/sections/ConversationsSection.tsx` | Open topic dialog |
 
 ---
 
-## Expected Behavior After Fix
+## Implementation Order
 
-1. **Single eviction per week guaranteed**: Week cannot advance until eviction flag is set
-2. **No rapid-click exploitation**: Button disabled during processing, 3s cooldown
-3. **No stale state issues**: Ref provides fresh state for fast-forward logic
-4. **Clear user feedback**: Button shows "Processing..." when disabled
-5. **Invalid state protection**: If somehow eviction phase has no nominees, fast-forward is blocked entirely
+1. **Phase 3: Relationship Milestones** (2-3 changes)
+   - Quickest win, adds visual polish
+   - Foundation for other features
+
+2. **Phase 4: Deal Obligation Reminders** (4 changes)
+   - High value for gameplay clarity
+   - Prevents accidental betrayals
+
+3. **Phase 1: Conversation Topics** (4 changes)
+   - Core social improvement
+   - Adds meaningful choice
+
+4. **Phase 5: Counter-Offers** (3 changes)
+   - Enhances deal negotiation
+   - Builds on existing deal UI
+
+5. **Phase 2: Alliance Management** (5 changes)
+   - Largest feature
+   - Complete social system overhaul
 
 ---
 
-## Testing Checklist
+## Success Metrics
 
-- [ ] Play game until eviction in spectator mode
-- [ ] Click "Skip to next phase" rapidly - verify only one week advances
-- [ ] Verify houseguest count decreases by exactly 1 per week
-- [ ] Verify nominees exist before each eviction ceremony
-- [ ] Test through Final 4 → Final 3 → Final 2 transitions
+- Players have 3+ conversation topic choices per houseguest
+- Relationship milestone toasts appear at 25/50/75 thresholds
+- Deal obligations shown during 100% of relevant ceremonies
+- NPCs offer counter-deals in ~40% of declined proposals
+- Alliance management available with create/invite/meeting actions
