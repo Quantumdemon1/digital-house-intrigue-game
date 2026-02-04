@@ -19,19 +19,20 @@ export const AvatarBody: React.FC<AvatarBodyProps> = ({
   config, 
   segments = 24 
 }) => {
+  // Defensive: handle undefined or partial config
   const proportions = useMemo(() => 
-    getBodyProportions(config.bodyType, config.height), 
-    [config.bodyType, config.height]
+    getBodyProportions(config?.bodyType ?? 'average', config?.height ?? 'average'), 
+    [config?.bodyType, config?.height]
   );
   
   // Apply chibi scaling - shorter, stubbier body
   const heightMult = proportions.heightMultiplier * CHIBI_PROPORTIONS.bodyHeight;
   const limbScale = CHIBI_PROPORTIONS.armLength;
   
-  // Toon materials
-  const skinMaterial = useSkinMaterial(config.skinTone);
-  const topMaterial = useClothMaterial(config.topColor);
-  const bottomMaterial = useClothMaterial(config.bottomColor);
+  // Toon materials with defensive defaults
+  const skinMaterial = useSkinMaterial(config?.skinTone ?? '#E8BEAC');
+  const topMaterial = useClothMaterial(config?.topColor ?? '#3B82F6');
+  const bottomMaterial = useClothMaterial(config?.bottomColor ?? '#1E3A5F');
   
   // Shoe material - darker toon
   const shoeMaterial = useMemo(() => 

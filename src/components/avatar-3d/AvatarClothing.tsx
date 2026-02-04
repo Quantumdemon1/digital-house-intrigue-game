@@ -33,14 +33,16 @@ export const AvatarClothing: React.FC<AvatarClothingProps> = ({
   segments = 24 
 }) => {
   const proportions = useMemo(() => 
-    getBodyProportions(config.bodyType, config.height), 
-    [config.bodyType, config.height]
+    getBodyProportions(config?.bodyType ?? 'average', config?.height ?? 'average'), 
+    [config?.bodyType, config?.height]
   );
   
-  const topStyle = TOP_STYLES[config.topStyle];
+  // Defensive: default to tshirt if topStyle is missing or invalid
+  const topStyleKey = config?.topStyle && TOP_STYLES[config.topStyle] ? config.topStyle : 'tshirt';
+  const topStyle = TOP_STYLES[topStyleKey];
   const heightMult = proportions.heightMultiplier * CHIBI_PROPORTIONS.bodyHeight;
   
-  const topMaterial = useClothMaterial(config.topColor);
+  const topMaterial = useClothMaterial(config?.topColor ?? '#3B82F6');
   
   // Button material for blazer
   const buttonMaterial = useMemo(() => 
@@ -48,7 +50,7 @@ export const AvatarClothing: React.FC<AvatarClothingProps> = ({
     []
   );
   
-  const isDress = config.topStyle === 'dress';
+  const isDress = topStyleKey === 'dress';
 
   return (
     <group position={[0, -0.2, 0]}>
