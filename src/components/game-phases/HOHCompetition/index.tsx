@@ -30,10 +30,11 @@ const HOHCompetition: React.FC = () => {
   
   const { advanceToNomination } = usePhaseTransition();
 
-  // Redirect to Final HoH if 3 or fewer houseguests remain
+  // Redirect to Final HoH if exactly 3 houseguests remain (after Final 4 week)
+  // Final 4 (4 houseguests) should run a normal week
   useEffect(() => {
-    if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
-      logger?.info(`Only ${activeHouseguests.length} houseguests - redirecting to Final HoH`);
+    if (activeHouseguests.length === 3 && !gameState.isFinalStage) {
+      logger?.info(`Exactly 3 houseguests - redirecting to Final HoH`);
       dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
     }
   }, [activeHouseguests.length, gameState.isFinalStage, dispatch, logger]);

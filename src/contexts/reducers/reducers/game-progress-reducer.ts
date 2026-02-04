@@ -26,7 +26,7 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       
       // Override: If only 2 houseguests remain and we're not already at finale phases, go to Jury Questioning
       const finalePhases = ['juryquestioning', 'finale', 'gameover'];
-      if (activeHouseguestsCount <= 2 && !finalePhases.includes(normalizedPhase)) {
+      if (activeHouseguestsCount === 2 && !finalePhases.includes(normalizedPhase)) {
         console.log(`SET_PHASE override: Only ${activeHouseguestsCount} houseguests, redirecting to JuryQuestioning`);
         return {
           ...state,
@@ -35,7 +35,8 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
         };
       }
       
-      // Override: If 3 houseguests and trying to enter normal weekly phases, go to FinalHoH
+      // Override: If exactly 3 houseguests and trying to enter normal weekly phases, go to FinalHoH
+      // Note: 4 houseguests (Final 4) should run a normal week
       const weeklyPhases = ['hoh', 'nomination', 'pov', 'povmeeting', 'povplayerselection', 'eviction'];
       if (activeHouseguestsCount === 3 && !state.isFinalStage && weeklyPhases.includes(normalizedPhase)) {
         console.log(`SET_PHASE override: 3 houseguests in weekly phase, redirecting to FinalHoH`);
@@ -101,11 +102,12 @@ export function gameProgressReducer(state: GameState, action: GameAction): GameS
       }));
       
       // Check if we're at final 3 - if so, transition to final stage
+      // Note: 4 houseguests (Final 4) should run a normal week with special voting rules
       const activeHouseguests = resetHouseguests.filter(h => h.status === 'Active').length;
       let nextPhase: GamePhase = 'HoH';
       let isFinalStage = state.isFinalStage;
       
-      if (activeHouseguests <= 3 && !state.isFinalStage) {
+      if (activeHouseguests === 3 && !state.isFinalStage) {
         nextPhase = 'FinalHoH';
         isFinalStage = true;
       }

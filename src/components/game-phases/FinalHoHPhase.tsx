@@ -40,6 +40,19 @@ const FinalHoHPhase: React.FC = () => {
   // Get the final 3 houseguests - IMPORTANT: Use gameState directly to ensure eliminated players are excluded
   const finalThree = gameState.houseguests.filter(h => h.status === 'Active');
   
+  // Guard: Redirect if not exactly 3 houseguests
+  useEffect(() => {
+    if (finalThree.length !== 3) {
+      if (finalThree.length > 3) {
+        console.log(`FinalHoHPhase: ${finalThree.length} active houseguests, redirecting to normal HoH`);
+        dispatch({ type: 'SET_PHASE', payload: 'HoH' });
+      } else if (finalThree.length === 2) {
+        console.log(`FinalHoHPhase: Only 2 active houseguests, redirecting to JuryQuestioning`);
+        dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
+      }
+    }
+  }, [finalThree.length, dispatch]);
+  
   // Get winners from game state on mount
   useEffect(() => {
     const winners = gameState.finalHoHWinners;
