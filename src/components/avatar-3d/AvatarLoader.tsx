@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/AvatarLoader.tsx
- * @description Smart avatar loader with RPM optimization and fallback
+ * @description Smart avatar loader with multi-source routing, optimization and fallbacks
  */
 
 import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
@@ -13,11 +13,19 @@ import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
+import { AvatarThumbnail } from './AvatarThumbnail';
+import { getAvatarCacheKey } from '@/utils/avatar-cache';
 import type { AvatarContext } from './RPMAvatar';
 
-// Lazy load RPM avatar to prevent build issues with the SDK
+// Lazy load components to prevent build issues
 const LazyRPMAvatar = lazy(() => 
   import('./RPMAvatar').then(mod => ({ default: mod.RPMAvatar }))
+);
+const LazyVRMAvatar = lazy(() => 
+  import('./VRMAvatar').then(mod => ({ default: mod.VRMAvatar }))
+);
+const LazyPresetAvatar = lazy(() => 
+  import('./PresetAvatar').then(mod => ({ default: mod.PresetAvatar }))
 );
 
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -168,8 +176,84 @@ const ProgressTracker: React.FC<{ onProgress: (p: number) => void }> = ({ onProg
 };
 
 /**
- * AvatarLoader - Renders either RPM GLB avatar or procedural chibi avatar
- * With timeout fallback and loading progress
+ * VRM Avatar Canvas
+ */
+const VRMAvatarCanvas: React.FC<{
+  modelSrc: string;
+  mood: MoodType;
+  scale: number;
+  sizeConfig: { width: string; height: string };
+  className?: string;
+  onLoaded?: () => void;
+  onError?: () => void;
+}> = ({ modelSrc, mood, scale, sizeConfig, className, onLoaded, onError }) => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  return (
+    <div className={cn(sizeConfig.width, sizeConfig.height, 'relative overflow-hidden rounded-lg', className)}>
+      <Canvas camera={{ position: [0, 0, 2.5], fov: 35 }} gl={{ preserveDrawingBuffer: true, antialias: true }}>
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[2, 3, 4]} intensity={0.8} />
+        <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
+        
+        <Suspense fallback={null}>
+          <LazyVRMAvatar
+            modelSrc={modelSrc}
+            mood={mood}
+            scale={scale}
+            onLoaded={() => { setIsLoading(false); onLoaded?.(); }}
+            onError={(err) => { console.error(err); onError?.(); }}
+          />
+        </Suspense>
+        
+        <OrbitControls enableZoom={false} enablePan={false} />
+      </Canvas>
+      {isLoading && <RPMLoadingState progress={50} />}
+    </div>
+  );
+};
+
+/**
+ * Preset GLB Avatar Canvas
+ */
+const PresetAvatarCanvas: React.FC<{
+  presetId: string;
+  mood: MoodType;
+  scale: number;
+  sizeConfig: { width: string; height: string };
+  className?: string;
+  onLoaded?: () => void;
+  onError?: () => void;
+}> = ({ presetId, mood, scale, sizeConfig, className, onLoaded, onError }) => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  return (
+    <div className={cn(sizeConfig.width, sizeConfig.height, 'relative overflow-hidden rounded-lg', className)}>
+      <Canvas camera={{ position: [0, 0, 2.5], fov: 35 }} gl={{ preserveDrawingBuffer: true, antialias: true }}>
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[2, 3, 4]} intensity={0.8} />
+        <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
+        
+        <Suspense fallback={null}>
+          <LazyPresetAvatar
+            presetId={presetId}
+            mood={mood}
+            scale={scale}
+            onLoaded={() => { setIsLoading(false); onLoaded?.(); }}
+            onError={(err) => { console.error(err); onError?.(); }}
+          />
+        </Suspense>
+        
+        <OrbitControls enableZoom={false} enablePan={false} />
+      </Canvas>
+      {isLoading && <RPMLoadingState progress={50} />}
+    </div>
+  );
+};
+
+/**
+ * AvatarLoader - Smart router for multiple avatar sources
+ * Supports: procedural (chibi), preset-glb, vrm, ready-player-me
  */
 export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   avatarUrl,
@@ -184,28 +268,29 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   loadTimeout = 8000
 }) => {
   const sizeConfig = SIZE_CONFIG[size];
-  const shouldUseRPM = avatarUrl && !forceChibibAvatar;
+  const modelSource = avatarConfig?.modelSource || 'procedural';
   const [timedOut, setTimedOut] = useState(false);
-  const [rpmReady, setRpmReady] = useState(false);
+  const [modelReady, setModelReady] = useState(false);
 
-  // Timeout fallback - if RPM takes too long, switch to chibi
+  // Determine what to render based on modelSource
+  const shouldUseExternalModel = !forceChibibAvatar && modelSource !== 'procedural';
+
+  // Timeout fallback
   useEffect(() => {
-    if (!shouldUseRPM || rpmReady) return;
+    if (!shouldUseExternalModel || modelReady) return;
     
     const timeout = setTimeout(() => {
-      if (!rpmReady) {
-        console.warn('RPM avatar load timeout, falling back to chibi');
+      if (!modelReady) {
+        console.warn('Avatar load timeout, falling back to chibi');
         setTimedOut(true);
       }
     }, loadTimeout);
     
     return () => clearTimeout(timeout);
-  }, [shouldUseRPM, rpmReady, loadTimeout]);
+  }, [shouldUseExternalModel, modelReady, loadTimeout]);
 
-  // For small sizes, always use procedural avatar (faster rendering)
+  // For small sizes or timeout, always use procedural
   const useProceduralForPerformance = size === 'sm' && avatarConfig;
-
-  // If timed out, force chibi
   if (timedOut || useProceduralForPerformance) {
     return (
       <SimsAvatar
@@ -219,34 +304,79 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
     );
   }
 
-  // Try RPM avatar with chibi fallback
-  if (shouldUseRPM) {
-    return (
-      <Suspense fallback={
-        <SimsAvatar
-          config={avatarConfig}
-          size={size}
-          mood={mood}
-          status={status}
-          isPlayer={isPlayer}
-          animated={animated}
-        />
-      }>
-        <RPMAvatarCanvas
-          avatarUrl={avatarUrl}
-          mood={mood}
-          scale={sizeConfig.scale}
-          context={sizeConfig.context}
-          sizeConfig={sizeConfig}
-          className={className}
-          onLoaded={() => setRpmReady(true)}
-          onError={() => setTimedOut(true)}
-        />
-      </Suspense>
-    );
+  // Get avatar ID for thumbnail caching
+  const avatarId = getAvatarCacheKey(avatarUrl || avatarConfig?.modelUrl, avatarConfig?.presetId);
+
+  // Fallback component with thumbnail
+  const FallbackWithThumbnail = () => (
+    avatarConfig?.thumbnailUrl ? (
+      <AvatarThumbnail url={avatarConfig.thumbnailUrl} size={size === 'full' ? 'xl' : size} />
+    ) : (
+      <SimsAvatar config={avatarConfig} size={size} mood={mood} status={status} isPlayer={isPlayer} animated={animated} />
+    )
+  );
+
+  // Route to appropriate renderer
+  switch (modelSource) {
+    case 'vrm':
+      if (avatarConfig?.modelUrl) {
+        return (
+          <Suspense fallback={<FallbackWithThumbnail />}>
+            <VRMAvatarCanvas
+              modelSrc={avatarConfig.modelUrl}
+              mood={mood}
+              scale={sizeConfig.scale}
+              sizeConfig={sizeConfig}
+              className={className}
+              onLoaded={() => setModelReady(true)}
+              onError={() => setTimedOut(true)}
+            />
+          </Suspense>
+        );
+      }
+      break;
+
+    case 'preset-glb':
+      if (avatarConfig?.presetId) {
+        return (
+          <Suspense fallback={<FallbackWithThumbnail />}>
+            <PresetAvatarCanvas
+              presetId={avatarConfig.presetId}
+              mood={mood}
+              scale={sizeConfig.scale}
+              sizeConfig={sizeConfig}
+              className={className}
+              onLoaded={() => setModelReady(true)}
+              onError={() => setTimedOut(true)}
+            />
+          </Suspense>
+        );
+      }
+      break;
+
+    case 'ready-player-me':
+    case 'custom-glb':
+      const modelUrl = avatarUrl || avatarConfig?.modelUrl;
+      if (modelUrl) {
+        return (
+          <Suspense fallback={<FallbackWithThumbnail />}>
+            <RPMAvatarCanvas
+              avatarUrl={modelUrl}
+              mood={mood}
+              scale={sizeConfig.scale}
+              context={sizeConfig.context}
+              sizeConfig={sizeConfig}
+              className={className}
+              onLoaded={() => setModelReady(true)}
+              onError={() => setTimedOut(true)}
+            />
+          </Suspense>
+        );
+      }
+      break;
   }
 
-  // Fallback to procedural SimsAvatar
+  // Default: procedural SimsAvatar
   return (
     <SimsAvatar
       config={avatarConfig}

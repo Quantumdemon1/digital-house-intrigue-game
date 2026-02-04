@@ -23,7 +23,7 @@ export type TopStyle = 'tshirt' | 'tanktop' | 'blazer' | 'hoodie' | 'dress';
 export type BottomStyle = 'pants' | 'shorts' | 'skirt' | 'jeans';
 
 // Avatar model source types
-export type AvatarModelSource = 'procedural' | 'ready-player-me' | 'custom-glb';
+export type AvatarModelSource = 'procedural' | 'preset-glb' | 'vrm' | 'ready-player-me' | 'custom-glb';
 
 /**
  * Complete 3D avatar configuration
@@ -32,6 +32,8 @@ export interface Avatar3DConfig {
   // Model source and URL (for GLB-based avatars)
   modelSource?: AvatarModelSource;
   modelUrl?: string;
+  presetId?: string;          // For preset-glb/vrm selection
+  thumbnailUrl?: string;      // Cached 2D fallback
   
   // Body shape
   bodyType: BodyType;

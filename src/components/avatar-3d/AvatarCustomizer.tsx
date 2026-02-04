@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   User, Palette, Eye, Scissors, Shirt, 
   RotateCcw, ChevronLeft, ChevronRight,
-  Sparkles, Globe, Wand2
+  Sparkles, Globe, Wand2, Users, Star
 } from 'lucide-react';
 import { 
   Avatar3DConfig, 
@@ -34,6 +34,9 @@ import {
 } from './SimsIcons';
 import { RPMAvatarCreator } from './RPMAvatarCreator';
 import { AvatarLoader } from './AvatarLoader';
+import { PresetAvatarSelector, PresetSource } from './PresetAvatarSelector';
+import { PRESET_GLB_AVATARS } from '@/data/preset-glb-avatars';
+import { PRESET_VRM_AVATARS } from '@/data/preset-vrm-avatars';
 
 // Option arrays
 const BODY_TYPES: readonly BodyType[] = ['slim', 'average', 'athletic', 'stocky'] as const;
@@ -59,7 +62,7 @@ interface AvatarCustomizerProps {
 }
 
 type TabId = 'body' | 'skin' | 'face' | 'hair' | 'clothing';
-type AvatarMode = 'procedural' | 'rpm';
+type AvatarMode = 'procedural' | 'preset' | 'vrm' | 'rpm';
 
 const tabConfig: { id: TabId; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: 'body', label: 'Body', icon: User },
@@ -82,9 +85,13 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   const [rotation, setRotation] = useState(0);
   const [activeTab, setActiveTab] = useState<TabId>('body');
   const [isDragging, setIsDragging] = useState(false);
-  const [avatarMode, setAvatarMode] = useState<AvatarMode>(
-    initialConfig?.modelSource === 'ready-player-me' ? 'rpm' : 'procedural'
-  );
+  const [avatarMode, setAvatarMode] = useState<AvatarMode>(() => {
+    const source = initialConfig?.modelSource;
+    if (source === 'ready-player-me') return 'rpm';
+    if (source === 'vrm') return 'vrm';
+    if (source === 'preset-glb') return 'preset';
+    return 'procedural';
+  });
   const [showRPMCreator, setShowRPMCreator] = useState(false);
 
   const updateConfig = useCallback((updates: Partial<Avatar3DConfig>) => {
@@ -96,15 +103,37 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   const handleRPMAvatarCreated = useCallback((avatarUrl: string) => {
     updateConfig({
       modelSource: 'ready-player-me',
-      modelUrl: avatarUrl
+      modelUrl: avatarUrl,
+      presetId: undefined
     });
     setAvatarMode('rpm');
+  }, [updateConfig]);
+
+  const handlePresetSelected = useCallback((preset: { id: string; url: string; thumbnail?: string }) => {
+    updateConfig({
+      modelSource: 'preset-glb',
+      modelUrl: preset.url,
+      presetId: preset.id,
+      thumbnailUrl: preset.thumbnail
+    });
+    setAvatarMode('preset');
+  }, [updateConfig]);
+
+  const handleVRMSelected = useCallback((preset: { id: string; url: string; thumbnail?: string }) => {
+    updateConfig({
+      modelSource: 'vrm',
+      modelUrl: preset.url,
+      presetId: preset.id,
+      thumbnailUrl: preset.thumbnail
+    });
+    setAvatarMode('vrm');
   }, [updateConfig]);
 
   const switchToProceduralMode = useCallback(() => {
     updateConfig({
       modelSource: 'procedural',
-      modelUrl: undefined
+      modelUrl: undefined,
+      presetId: undefined
     });
     setAvatarMode('procedural');
   }, [updateConfig]);
@@ -420,52 +449,36 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             <PlumbobIcon className="w-full h-full" />
           </div>
 
-          {/* Mode Toggle - Refined design */}
+          {/* Mode Toggle - 4 mode selector */}
           {enableRPM && (
-            <div className="relative flex bg-card/50 backdrop-blur-sm rounded-xl p-1 mb-4 border border-border/50">
-              {/* Animated background indicator */}
-              <motion.div
-                className="absolute inset-1 rounded-lg bg-gradient-to-r from-primary to-primary/80 shadow-lg"
-                animate={{
-                  x: avatarMode === 'procedural' ? 0 : '100%',
-                  width: '50%'
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              />
-              
-              <motion.button
-                onClick={() => setAvatarMode('procedural')}
-                className={cn(
-                  "relative z-10 flex-1 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors",
-                  avatarMode === 'procedural' 
-                    ? "text-primary-foreground" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Wand2 className="w-4 h-4" />
-                <span>Chibi Style</span>
-              </motion.button>
-              
-              <motion.button
-                onClick={() => {
-                  if (config.modelUrl) {
-                    setAvatarMode('rpm');
-                  } else {
-                    setShowRPMCreator(true);
-                  }
-                }}
-                className={cn(
-                  "relative z-10 flex-1 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors",
-                  avatarMode === 'rpm' 
-                    ? "text-primary-foreground" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Globe className="w-4 h-4" />
-                <span>Pro Avatar</span>
-              </motion.button>
+            <div className="flex gap-1 bg-card/50 backdrop-blur-sm rounded-xl p-1 mb-4 border border-border/50">
+              {[
+                { mode: 'procedural' as const, icon: Wand2, label: 'Chibi' },
+                { mode: 'preset' as const, icon: Users, label: 'Presets' },
+                { mode: 'vrm' as const, icon: Star, label: 'Anime' },
+                { mode: 'rpm' as const, icon: Globe, label: 'Pro' },
+              ].map(({ mode, icon: Icon, label }) => (
+                <motion.button
+                  key={mode}
+                  onClick={() => {
+                    if (mode === 'rpm' && !config.modelUrl) {
+                      setShowRPMCreator(true);
+                    } else {
+                      setAvatarMode(mode);
+                    }
+                  }}
+                  className={cn(
+                    "flex-1 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all",
+                    avatarMode === mode 
+                      ? "bg-primary text-primary-foreground shadow-md" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                </motion.button>
+              ))}
             </div>
           )}
           
@@ -495,7 +508,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                 transition={{ type: 'spring', stiffness: 100, damping: 15 }}
                 className="w-full h-full"
               >
-                {avatarMode === 'rpm' && config.modelUrl ? (
+                {avatarMode !== 'procedural' && (config.modelUrl || config.presetId) ? (
                   <AvatarLoader
                     avatarUrl={config.modelUrl}
                     avatarConfig={config}
@@ -549,8 +562,8 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             </motion.button>
           </div>
 
-          {/* Randomize All / Create New RPM */}
-          {avatarMode === 'procedural' ? (
+          {/* Randomize All / Edit buttons based on mode */}
+          {avatarMode === 'procedural' && (
             <motion.button
               onClick={randomizeAll}
               className="sims-randomize mt-2"
@@ -560,7 +573,8 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
               <DiceIcon className="w-5 h-5 sims-dice" />
               Randomize All
             </motion.button>
-          ) : (
+          )}
+          {avatarMode === 'rpm' && (
             <motion.button
               onClick={() => setShowRPMCreator(true)}
               className="sims-randomize mt-2"
@@ -568,7 +582,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
               whileTap={{ scale: 0.95 }}
             >
               <Globe className="w-5 h-5" />
-              Edit Avatar
+              Edit Pro Avatar
             </motion.button>
           )}
         </motion.div>
@@ -580,12 +594,12 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {avatarMode === 'rpm' ? (
+          {avatarMode === 'rpm' && (
             /* RPM Mode - Show info and option to switch */
             <div className="sims-panel flex flex-col items-center justify-center h-[400px] text-center">
               <Globe className="w-16 h-16 text-primary mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Pro Avatar Active</h3>
-              <p className="text-white/60 mb-6 max-w-sm">
+              <h3 className="text-xl font-bold text-foreground mb-2">Pro Avatar Active</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm">
                 You're using a Ready Player Me avatar with realistic proportions and expressions.
               </p>
               <div className="flex flex-col gap-3">
@@ -600,7 +614,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                 </motion.button>
                 <motion.button
                   onClick={switchToProceduralMode}
-                  className="px-6 py-2 text-sm text-white/60 hover:text-white transition-colors"
+                  className="px-6 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -608,7 +622,55 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                 </motion.button>
               </div>
             </div>
-          ) : (
+          )}
+
+          {avatarMode === 'preset' && (
+            /* Preset GLB Mode */
+            <div className="sims-panel">
+              <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Choose a Preset Character
+              </h3>
+              <PresetAvatarSelector
+                source="glb"
+                onSelect={(preset) => handlePresetSelected(preset as { id: string; url: string; thumbnail?: string })}
+                selectedId={config.presetId}
+                columns={4}
+              />
+              <motion.button
+                onClick={switchToProceduralMode}
+                className="mt-4 px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                whileTap={{ scale: 0.98 }}
+              >
+                Or customize your own chibi
+              </motion.button>
+            </div>
+          )}
+
+          {avatarMode === 'vrm' && (
+            /* VRM Anime Mode */
+            <div className="sims-panel">
+              <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5" />
+                Choose an Anime Avatar
+              </h3>
+              <PresetAvatarSelector
+                source="vrm"
+                onSelect={(preset) => handleVRMSelected(preset as { id: string; url: string; thumbnail?: string })}
+                selectedId={config.presetId}
+                columns={4}
+              />
+              <motion.button
+                onClick={switchToProceduralMode}
+                className="mt-4 px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                whileTap={{ scale: 0.98 }}
+              >
+                Or customize your own chibi
+              </motion.button>
+            </div>
+          )}
+
+          {avatarMode === 'procedural' && (
             /* Procedural Mode - Show customization tabs */
             <>
               {/* Sims-style Tabs */}
