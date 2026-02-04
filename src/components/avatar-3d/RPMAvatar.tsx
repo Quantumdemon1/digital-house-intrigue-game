@@ -10,42 +10,64 @@ import * as THREE from 'three';
 import { SkeletonUtils } from 'three-stdlib';
 import { MoodType } from '@/models/houseguest';
 
-// ARKit blendshape names for expressions
-const EXPRESSION_MORPHS = {
+// ARKit blendshape names for expressions (52 blendshapes available)
+const EXPRESSION_MORPHS: Record<string, Record<string, number>> = {
   happy: {
-    'mouthSmileLeft': 0.7,
-    'mouthSmileRight': 0.7,
-    'eyeSquintLeft': 0.3,
-    'eyeSquintRight': 0.3,
+    'mouthSmileLeft': 0.8,
+    'mouthSmileRight': 0.8,
+    'eyeSquintLeft': 0.4,
+    'eyeSquintRight': 0.4,
+    'cheekSquintLeft': 0.3,
+    'cheekSquintRight': 0.3,
+  },
+  content: {
+    'mouthSmileLeft': 0.4,
+    'mouthSmileRight': 0.4,
+    'eyeSquintLeft': 0.15,
+    'eyeSquintRight': 0.15,
   },
   sad: {
     'mouthFrownLeft': 0.6,
     'mouthFrownRight': 0.6,
-    'browDownLeft': 0.4,
-    'browDownRight': 0.4,
+    'browDownLeft': 0.5,
+    'browDownRight': 0.5,
+    'browInnerUp': 0.4,
+    'mouthPucker': 0.2,
   },
   angry: {
-    'browDownLeft': 0.7,
-    'browDownRight': 0.7,
+    'browDownLeft': 0.8,
+    'browDownRight': 0.8,
     'mouthFrownLeft': 0.5,
     'mouthFrownRight': 0.5,
-    'jawForward': 0.2,
+    'jawForward': 0.3,
+    'noseSneerLeft': 0.3,
+    'noseSneerRight': 0.3,
   },
   surprised: {
-    'eyeWideLeft': 0.8,
-    'eyeWideRight': 0.8,
-    'browOuterUpLeft': 0.6,
-    'browOuterUpRight': 0.6,
-    'jawOpen': 0.3,
+    'eyeWideLeft': 0.9,
+    'eyeWideRight': 0.9,
+    'browOuterUpLeft': 0.7,
+    'browOuterUpRight': 0.7,
+    'browInnerUp': 0.6,
+    'jawOpen': 0.4,
+  },
+  worried: {
+    'browInnerUp': 0.6,
+    'browDownLeft': 0.2,
+    'browDownRight': 0.2,
+    'mouthFrownLeft': 0.3,
+    'mouthFrownRight': 0.3,
+    'eyeSquintLeft': 0.1,
+    'eyeSquintRight': 0.1,
   },
   neutral: {},
 };
 
 // Map game mood to RPM expression
-const moodToExpression = (mood: MoodType): keyof typeof EXPRESSION_MORPHS => {
+const moodToExpression = (mood: MoodType): string => {
   switch (mood) {
     case 'Happy': return 'happy';
-    case 'Content': return 'happy';
+    case 'Content': return 'content';
     case 'Upset': return 'sad';
     case 'Angry': return 'angry';
     case 'Neutral':

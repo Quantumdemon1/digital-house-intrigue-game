@@ -420,23 +420,33 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             <PlumbobIcon className="w-full h-full" />
           </div>
 
-          {/* Mode Toggle */}
+          {/* Mode Toggle - Refined design */}
           {enableRPM && (
-            <div className="flex gap-2 mb-2">
+            <div className="relative flex bg-card/50 backdrop-blur-sm rounded-xl p-1 mb-4 border border-border/50">
+              {/* Animated background indicator */}
+              <motion.div
+                className="absolute inset-1 rounded-lg bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+                animate={{
+                  x: avatarMode === 'procedural' ? 0 : '100%',
+                  width: '50%'
+                }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              />
+              
               <motion.button
                 onClick={() => setAvatarMode('procedural')}
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all",
+                  "relative z-10 flex-1 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors",
                   avatarMode === 'procedural' 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-white/10 text-white/70 hover:bg-white/20"
+                    ? "text-primary-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
                 )}
-                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Wand2 className="w-3 h-3" />
-                Chibi Style
+                <Wand2 className="w-4 h-4" />
+                <span>Chibi Style</span>
               </motion.button>
+              
               <motion.button
                 onClick={() => {
                   if (config.modelUrl) {
@@ -446,16 +456,15 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                   }
                 }}
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all",
+                  "relative z-10 flex-1 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors",
                   avatarMode === 'rpm' 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-white/10 text-white/70 hover:bg-white/20"
+                    ? "text-primary-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
                 )}
-                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Globe className="w-3 h-3" />
-                Pro Avatar
+                <Globe className="w-4 h-4" />
+                <span>Pro Avatar</span>
               </motion.button>
             </div>
           )}
