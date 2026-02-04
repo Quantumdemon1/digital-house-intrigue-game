@@ -26,6 +26,7 @@ export interface AllianceCircle {
 
 /**
  * Calculate positions for circular layout with player prominently on the left
+ * Ensures all nodes stay within visible bounds with proper padding
  */
 export function calculateCircularLayout(
   houseguests: Houseguest[],
@@ -34,33 +35,50 @@ export function calculateCircularLayout(
 ): Map<string, Position> {
   const positions = new Map<string, Position>();
   const { width, height } = containerSize;
+  
+  // Generous padding to keep nodes and labels visible
+  const padding = 90; // Account for node size (56px) + name label + badges
+  const usableWidth = width - padding * 2;
+  const usableHeight = height - padding * 2;
   const centerX = width / 2;
   const centerY = height / 2;
-  
-  // Calculate radius based on container size
-  const radius = Math.min(width, height) * 0.35;
   
   // Find player and separate from others
   const player = houseguests.find(h => h.id === playerId);
   const others = houseguests.filter(h => h.id !== playerId);
   
-  // Player position - prominent on the left
+  // Player position - left side but within bounds
   if (player) {
     positions.set(player.id, {
-      x: width * 0.15,
+      x: padding + 60, // Ensure visible with margin for "YOU" label
       y: centerY
     });
   }
   
-  // Distribute others in a semi-circle on the right
-  const angleStart = -Math.PI / 2; // Start from top
-  const angleEnd = Math.PI / 2; // End at bottom
-  const angleStep = others.length > 1 ? (angleEnd - angleStart) / (others.length - 1) : 0;
+  // Adaptive radius based on container and player count
+  const maxRadius = Math.min(usableWidth * 0.38, usableHeight * 0.38);
+  const minRadius = Math.max(80, others.length * 18);
+  const radius = Math.min(maxRadius, Math.max(minRadius, 120));
+  
+  // Center point for the arc (shifted right from center for better distribution)
+  const arcCenterX = centerX + radius * 0.2;
+  
+  // Adaptive arc angle based on number of houseguests
+  // More houseguests = wider arc to prevent overlap
+  const baseAngle = Math.PI * 0.8;
+  const totalAngle = Math.min(Math.PI * 1.4, baseAngle + (others.length * 0.08));
+  const angleStart = -totalAngle / 2;
+  const angleStep = others.length > 1 ? totalAngle / (others.length - 1) : 0;
   
   others.forEach((houseguest, index) => {
     const angle = angleStart + angleStep * index;
-    const x = centerX + radius * 0.6 + radius * Math.cos(angle);
-    const y = centerY + radius * Math.sin(angle);
+    let x = arcCenterX + radius * Math.cos(angle);
+    let y = centerY + radius * Math.sin(angle);
+    
+    // Clamp to visible bounds with padding
+    x = Math.max(padding, Math.min(width - padding, x));
+    y = Math.max(padding, Math.min(height - padding, y));
+    
     positions.set(houseguest.id, { x, y });
   });
   

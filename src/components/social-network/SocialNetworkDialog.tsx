@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGame } from '@/contexts/GameContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Houseguest } from '@/models/houseguest';
 import { 
   PlayerPerception, 
@@ -27,6 +28,7 @@ import { RelationshipMap } from '@/systems/relationship/types';
 import SocialNetworkGraph from './SocialNetworkGraph';
 import PerceptionEditorDialog from './PerceptionEditorDialog';
 import CustomAllianceDialog from './CustomAllianceDialog';
+import NetworkLegend from './NetworkLegend';
 import { Plus, Users, Eye, Network, HelpCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,7 +44,7 @@ const SocialNetworkDialog: React.FC<SocialNetworkDialogProps> = ({
   onOpenChange
 }) => {
   const { gameState, dispatch, getRelationship } = useGame();
-  
+  const isMobile = useIsMobile();
   // State for view mode
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   
@@ -123,11 +125,22 @@ const SocialNetworkDialog: React.FC<SocialNetworkDialogProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-[1200px] h-[90vh] max-h-[800px] p-0 gap-0 overflow-hidden">
-          <DialogHeader className="p-4 pb-2 border-b bg-gradient-to-r from-bb-blue/10 via-transparent to-bb-gold/10">
+        <DialogContent className={cn(
+          "p-0 gap-0 overflow-hidden",
+          isMobile 
+            ? "w-[98vw] h-[95vh] max-w-none max-h-none" 
+            : "max-w-[95vw] w-[1200px] h-[90vh] max-h-[800px]"
+        )}>
+          <DialogHeader className={cn(
+            "p-4 pb-2 border-b bg-gradient-to-r from-bb-blue/10 via-transparent to-bb-gold/10",
+            isMobile && "p-3 pb-2"
+          )}>
             <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2 text-xl">
-                <Network className="h-5 w-5 text-bb-blue" />
+              <DialogTitle className={cn(
+                "flex items-center gap-2",
+                isMobile ? "text-lg" : "text-xl"
+              )}>
+                <Network className={cn("text-bb-blue", isMobile ? "h-4 w-4" : "h-5 w-5")} />
                 Social Network
               </DialogTitle>
               <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
@@ -135,54 +148,50 @@ const SocialNetworkDialog: React.FC<SocialNetworkDialogProps> = ({
               </Button>
             </div>
             
-            {/* Legend */}
-            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mt-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-8 h-1 bg-green-500 rounded" />
-                <span>Friendship</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-8 h-1 bg-amber-400 rounded" />
-                <span>Neutral</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-8 h-1 bg-red-500 rounded" />
-                <span>Enmity</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-1 bg-muted-foreground rounded" style={{ strokeDasharray: '4,2' }} />
-                <span>Weak</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-2 bg-muted-foreground rounded" />
-                <span>Strong</span>
-              </div>
+            {/* Legend - Responsive */}
+            <div className="mt-2">
+              <NetworkLegend isMobile={isMobile} />
             </div>
           </DialogHeader>
           
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* View Mode Tabs */}
-            <div className="px-4 py-2 border-b bg-muted/30">
+            <div className={cn(
+              "px-4 py-2 border-b bg-muted/30",
+              isMobile && "px-3 py-1.5"
+            )}>
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                <TabsList>
-                  <TabsTrigger value="all" className="flex items-center gap-1.5">
-                    <Eye className="h-3.5 w-3.5" />
+                <TabsList className={cn(isMobile && "h-8")}>
+                  <TabsTrigger value="all" className={cn(
+                    "flex items-center gap-1.5",
+                    isMobile && "text-xs px-2 py-1"
+                  )}>
+                    <Eye className={cn(isMobile ? "h-3 w-3" : "h-3.5 w-3.5")} />
                     All
                   </TabsTrigger>
-                  <TabsTrigger value="alliances" className="flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5" />
-                    Alliances
+                  <TabsTrigger value="alliances" className={cn(
+                    "flex items-center gap-1.5",
+                    isMobile && "text-xs px-2 py-1"
+                  )}>
+                    <Users className={cn(isMobile ? "h-3 w-3" : "h-3.5 w-3.5")} />
+                    {isMobile ? "Allies" : "Alliances"}
                   </TabsTrigger>
-                  <TabsTrigger value="connections" className="flex items-center gap-1.5">
-                    <Network className="h-3.5 w-3.5" />
-                    My Connections
+                  <TabsTrigger value="connections" className={cn(
+                    "flex items-center gap-1.5",
+                    isMobile && "text-xs px-2 py-1"
+                  )}>
+                    <Network className={cn(isMobile ? "h-3 w-3" : "h-3.5 w-3.5")} />
+                    {isMobile ? "Mine" : "My Connections"}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
             
             {/* Main Graph Area */}
-            <div className="flex-1 relative bg-gradient-to-br from-background via-muted/20 to-background overflow-hidden">
+            <div className={cn(
+              "flex-1 relative bg-gradient-to-br from-background via-muted/20 to-background",
+              isMobile ? "overflow-auto touch-pan-x touch-pan-y" : "overflow-hidden"
+            )}>
               <SocialNetworkGraph
                 houseguests={gameState.houseguests}
                 playerId={player.id}
@@ -192,39 +201,56 @@ const SocialNetworkDialog: React.FC<SocialNetworkDialogProps> = ({
                 onEditPerception={handleEditPerception}
                 showOnlyPlayerConnections={viewMode === 'connections'}
                 showOnlyAlliances={viewMode === 'alliances'}
+                isMobile={isMobile}
               />
               
-              {/* Help tooltip */}
-              <motion.div 
-                className="absolute bottom-4 left-4 flex items-center gap-2 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <HelpCircle className="h-4 w-4" />
-                Click on any houseguest to edit your perception
-              </motion.div>
+              {/* Help tooltip - hidden on mobile */}
+              {!isMobile && (
+                <motion.div 
+                  className="absolute bottom-4 left-4 flex items-center gap-2 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  Click on any houseguest to edit your perception
+                </motion.div>
+              )}
             </div>
             
             {/* Alliance Management Footer */}
-            <div className="px-4 py-3 border-t bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Your Alliances:</span>
-                  <div className="flex flex-wrap gap-2">
+            <div className={cn(
+              "px-4 py-3 border-t bg-muted/30",
+              isMobile && "px-3 py-2"
+            )}>
+              <div className={cn(
+                "flex items-center",
+                isMobile ? "flex-col gap-2" : "justify-between"
+              )}>
+                <div className={cn(
+                  "flex items-center gap-2",
+                  isMobile && "w-full flex-wrap"
+                )}>
+                  <span className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>
+                    Your Alliances:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
                     {playerPerceptions.customAlliances.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">No alliances created yet</span>
+                      <span className="text-xs text-muted-foreground">None yet</span>
                     ) : (
                       playerPerceptions.customAlliances.map((alliance) => (
                         <Badge
                           key={alliance.id}
                           variant="outline"
-                          className="cursor-pointer hover:bg-accent transition-colors"
+                          className={cn(
+                            "cursor-pointer hover:bg-accent transition-colors",
+                            isMobile && "text-[10px] px-1.5 py-0.5"
+                          )}
                           style={{ borderColor: alliance.color, color: alliance.color }}
                           onClick={() => handleAllianceClick(alliance)}
                         >
                           <div 
-                            className="w-2 h-2 rounded-full mr-1.5" 
+                            className="w-2 h-2 rounded-full mr-1" 
                             style={{ backgroundColor: alliance.color }}
                           />
                           {alliance.name}
@@ -238,7 +264,8 @@ const SocialNetworkDialog: React.FC<SocialNetworkDialogProps> = ({
                 </div>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size={isMobile ? "sm" : "sm"}
+                  className={cn(isMobile && "w-full mt-1")}
                   onClick={() => {
                     setEditingAlliance(undefined);
                     setAllianceDialogOpen(true);

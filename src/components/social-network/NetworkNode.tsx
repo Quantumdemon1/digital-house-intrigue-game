@@ -5,10 +5,10 @@
 
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Shield, Target, Star } from 'lucide-react';
 import { Houseguest } from '@/models/houseguest';
-import { PlayerPerception, RelationshipLevel } from '@/models/player-perception';
+import { PlayerPerception } from '@/models/player-perception';
 import { Position, getRelationshipLevelInfo } from './utils/graph-layout';
+import { HoHIcon, PoVIcon, NomineeIcon } from './StatusIcons';
 
 interface NetworkNodeProps {
   houseguest: Houseguest;
@@ -157,26 +157,38 @@ const NetworkNode: React.FC<NetworkNodeProps> = memo(({
         </text>
       )}
       
-      {/* Status badges */}
+      {/* Status badges - Custom BB-themed icons */}
       {isHoH && (
-        <g transform={`translate(${position.x + sizeConfig.node / 2 - 8}, ${position.y - sizeConfig.node / 2 - 4})`}>
-          <circle cx={0} cy={0} r={10} fill="hsl(var(--bb-gold))" />
-          <Crown className="text-background" x={-6} y={-6} width={12} height={12} />
-        </g>
+        <foreignObject 
+          x={position.x + sizeConfig.node / 2 - 12} 
+          y={position.y - sizeConfig.node / 2 - 14}
+          width={22}
+          height={22}
+        >
+          <HoHIcon className="w-[22px] h-[22px]" />
+        </foreignObject>
       )}
       
       {isPovHolder && !isHoH && (
-        <g transform={`translate(${position.x + sizeConfig.node / 2 - 8}, ${position.y - sizeConfig.node / 2 - 4})`}>
-          <circle cx={0} cy={0} r={10} fill="hsl(var(--bb-gold))" />
-          <Shield className="text-background" x={-6} y={-6} width={12} height={12} />
-        </g>
+        <foreignObject 
+          x={position.x + sizeConfig.node / 2 - 12} 
+          y={position.y - sizeConfig.node / 2 - 14}
+          width={22}
+          height={22}
+        >
+          <PoVIcon className="w-[22px] h-[22px]" />
+        </foreignObject>
       )}
       
       {isNominated && (
-        <g transform={`translate(${position.x - sizeConfig.node / 2 + 8}, ${position.y - sizeConfig.node / 2 - 4})`}>
-          <circle cx={0} cy={0} r={10} fill="hsl(var(--bb-red))" />
-          <Target className="text-background" x={-6} y={-6} width={12} height={12} />
-        </g>
+        <foreignObject 
+          x={position.x - sizeConfig.node / 2 - 8} 
+          y={position.y - sizeConfig.node / 2 - 14}
+          width={22}
+          height={22}
+        >
+          <NomineeIcon className="w-[22px] h-[22px]" />
+        </foreignObject>
       )}
       
       {/* Perception badge */}
