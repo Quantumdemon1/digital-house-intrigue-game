@@ -3,13 +3,21 @@
  * @description Big Brother House 3D environment with characters arranged in a circle
  */
 
-import React, { Suspense, useRef, useState, useCallback } from 'react';
+import React, { Suspense, useRef, useState, useCallback, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { CharacterTemplate } from '@/data/character-templates';
 import { RPMAvatar } from './RPMAvatar';
-import { HouseFloor, Couch, CoffeeTable, Plant, LightFixture } from './HouseFurniture';
+import { 
+  HouseFloor, Couch, CoffeeTable, Plant, LightFixture,
+  TVStand, KitchenArea, DiaryRoomDoor, WallPanel 
+} from './HouseFurniture';
+
+// Easing function for smooth camera transitions
+const easeInOutCubic = (t: number): number => {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+};
 
 interface HouseSceneProps {
   characters: CharacterTemplate[];
@@ -54,20 +62,22 @@ const SelectionRing: React.FC<{ active: boolean }> = ({ active }) => {
   );
 };
 
-// Character spot with avatar
+// Character spot with avatar and idle animations
 const CharacterSpot: React.FC<{
   template: CharacterTemplate;
   position: [number, number, number];
   rotation: [number, number, number];
   isSelected: boolean;
   isHovered: boolean;
+  index: number;
   onSelect: () => void;
   onHover: (hovered: boolean) => void;
-}> = ({ template, position, rotation, isSelected, isHovered, onSelect, onHover }) => {
+}> = ({ template, position, rotation, isSelected, isHovered, index, onSelect, onHover }) => {
   const groupRef = useRef<THREE.Group>(null);
+  const idleGroupRef = useRef<THREE.Group>(null);
   const modelUrl = template.avatar3DConfig?.modelUrl;
   
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (groupRef.current) {
       // Subtle elevation for selected/hovered
       const targetY = isSelected ? 0.1 : isHovered ? 0.05 : 0;
@@ -76,6 +86,24 @@ const CharacterSpot: React.FC<{
         targetY,
         0.1
       );
+    }
+    
+    // Idle animation - staggered per character
+    if (idleGroupRef.current) {
+      const time = clock.getElapsedTime();
+      const phase = index * 0.5; // Offset per character for variety
+      
+      // Breathing animation (subtle scale)
+      const breath = Math.sin(time * 1.5 + phase) * 0.008;
+      idleGroupRef.current.scale.set(1 + breath, 1, 1 + breath * 0.5);
+      
+      // Weight shift sway (subtle rotation)
+      const sway = Math.sin(time * 0.5 + phase) * 0.012;
+      idleGroupRef.current.rotation.z = sway;
+      
+      // Very subtle forward/back lean
+      const lean = Math.sin(time * 0.3 + phase * 1.5) * 0.005;
+      idleGroupRef.current.rotation.x = lean;
     }
   });
   
@@ -111,19 +139,21 @@ const CharacterSpot: React.FC<{
         {/* Selection ring */}
         <SelectionRing active={isSelected} />
         
-        {/* Avatar */}
-        {modelUrl ? (
-          <Suspense fallback={<AvatarPlaceholder />}>
-            <RPMAvatar
-              modelSrc={modelUrl}
-              context="game"
-              scale={1}
-              position={[0, 0, 0]}
-            />
-          </Suspense>
-        ) : (
-          <AvatarPlaceholder />
-        )}
+        {/* Avatar with idle animation wrapper */}
+        <group ref={idleGroupRef}>
+          {modelUrl ? (
+            <Suspense fallback={<AvatarPlaceholder />}>
+              <RPMAvatar
+                modelSrc={modelUrl}
+                context="game"
+                scale={1}
+                position={[0, 0, 0]}
+              />
+            </Suspense>
+          ) : (
+            <AvatarPlaceholder />
+          )}
+        </group>
         
         {/* Name label (visible on hover or selection) */}
         {(isHovered || isSelected) && (
@@ -185,24 +215,90 @@ const SceneLoader: React.FC = () => {
   );
 };
 
-// Camera animation controller
+// Camera fly-to animation controller
 const CameraController: React.FC<{ 
   focusPosition: [number, number, number] | null;
   defaultPosition: [number, number, number];
-}> = ({ focusPosition, defaultPosition }) => {
+  controlsRef: React.RefObject<any>;
+}> = ({ focusPosition, defaultPosition, controlsRef }) => {
   const { camera } = useThree();
-  const targetRef = useRef(new THREE.Vector3());
   
-  useFrame(() => {
-    if (focusPosition) {
-      targetRef.current.set(focusPosition[0] * 0.5, 1, focusPosition[2] * 0.5);
-    } else {
-      targetRef.current.set(0, 0, 0);
+  // Animation state
+  const animating = useRef(false);
+  const progress = useRef(0);
+  const startCameraPos = useRef(new THREE.Vector3());
+  const targetCameraPos = useRef(new THREE.Vector3());
+  const startLookAt = useRef(new THREE.Vector3());
+  const targetLookAt = useRef(new THREE.Vector3());
+  const lastFocusPosition = useRef<[number, number, number] | null>(null);
+  
+  // Detect focus changes and start animation
+  useEffect(() => {
+    const focusChanged = 
+      (focusPosition === null && lastFocusPosition.current !== null) ||
+      (focusPosition !== null && lastFocusPosition.current === null) ||
+      (focusPosition && lastFocusPosition.current && 
+        (focusPosition[0] !== lastFocusPosition.current[0] ||
+         focusPosition[2] !== lastFocusPosition.current[2]));
+    
+    if (focusChanged) {
+      // Store current camera position
+      startCameraPos.current.copy(camera.position);
+      
+      // Store current look-at (from controls target)
+      if (controlsRef.current) {
+        startLookAt.current.copy(controlsRef.current.target);
+      }
+      
+      if (focusPosition) {
+        // Calculate target position: behind and above character, looking at them
+        const charX = focusPosition[0];
+        const charZ = focusPosition[2];
+        
+        // Position camera behind character relative to center
+        const angle = Math.atan2(charZ, charX);
+        const distance = 4;
+        targetCameraPos.current.set(
+          charX + Math.cos(angle) * distance,
+          3,
+          charZ + Math.sin(angle) * distance
+        );
+        
+        // Look at character position
+        targetLookAt.current.set(charX, 1.2, charZ);
+      } else {
+        // Return to default overview
+        targetCameraPos.current.set(defaultPosition[0], defaultPosition[1], defaultPosition[2]);
+        targetLookAt.current.set(0, 0.5, 0);
+      }
+      
+      // Start animation
+      progress.current = 0;
+      animating.current = true;
+      lastFocusPosition.current = focusPosition;
+    }
+  }, [focusPosition, camera, defaultPosition, controlsRef]);
+  
+  useFrame((_, delta) => {
+    if (!animating.current) return;
+    
+    // Advance animation
+    progress.current = Math.min(progress.current + delta * 1.2, 1);
+    const t = easeInOutCubic(progress.current);
+    
+    // Interpolate camera position
+    camera.position.lerpVectors(startCameraPos.current, targetCameraPos.current, t);
+    
+    // Interpolate look-at target
+    if (controlsRef.current) {
+      controlsRef.current.target.lerpVectors(startLookAt.current, targetLookAt.current, t);
+      controlsRef.current.update();
     }
     
-    // Smooth camera look-at interpolation
-    const currentTarget = new THREE.Vector3();
-    camera.getWorldDirection(currentTarget);
+    // End animation
+    if (progress.current >= 1) {
+      animating.current = false;
+    }
   });
   
   return null;
@@ -220,6 +316,9 @@ const SceneContent: React.FC<HouseSceneProps & { hoveredId: string | null; onHov
   const selectedPosition = selectedId 
     ? positions[characters.findIndex(c => c.id === selectedId)]?.position 
     : null;
+  
+  // Ref for OrbitControls to allow programmatic updates
+  const controlsRef = useRef<any>(null);
   
   return (
     <>
@@ -251,16 +350,31 @@ const SceneContent: React.FC<HouseSceneProps & { hoveredId: string | null; onHov
         far={10}
       />
       
-      {/* Furniture arrangement */}
-      <Couch position={[-7, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
-      <Couch position={[7, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
-      <Couch position={[0, 0, -7]} rotation={[0, 0, 0]} />
+      {/* New furniture: TV area at back */}
+      <TVStand position={[0, 0, -9]} />
+      
+      {/* New furniture: Kitchen area on right side */}
+      <KitchenArea position={[9, 0, 0]} />
+      
+      {/* New furniture: Diary Room door on left side */}
+      <DiaryRoomDoor position={[-9.5, 0, 0]} />
+      
+      {/* Wall panels for backdrop */}
+      <WallPanel position={[-9, 2, -6]} rotation={[0, Math.PI / 4, 0]} width={3} />
+      <WallPanel position={[9, 2, -6]} rotation={[0, -Math.PI / 4, 0]} width={3} />
+      <WallPanel position={[-6, 2, 8]} rotation={[0, Math.PI, 0]} width={4} />
+      <WallPanel position={[6, 2, 8]} rotation={[0, Math.PI, 0]} width={4} />
+      
+      {/* Existing furniture arrangement */}
+      <Couch position={[-7, 0, 3]} rotation={[0, Math.PI / 2, 0]} />
+      <Couch position={[0, 0, 7]} rotation={[0, Math.PI, 0]} />
       <CoffeeTable position={[0, 0, 0]} />
-      <Plant position={[-8, 0, 4]} scale={1.2} />
-      <Plant position={[8, 0, 4]} scale={1} />
-      <Plant position={[-8, 0, -4]} scale={0.8} />
-      <Plant position={[8, 0, -4]} scale={1.1} />
+      <Plant position={[-8.5, 0, 6]} scale={1.2} />
+      <Plant position={[8.5, 0, 6]} scale={1} />
+      <Plant position={[-8.5, 0, -3]} scale={0.8} />
       <LightFixture position={[0, 5, 0]} />
+      <LightFixture position={[-5, 4.5, -5]} />
+      <LightFixture position={[5, 4.5, -5]} />
       
       {/* Characters in circle */}
       <Suspense fallback={<SceneLoader />}>
@@ -272,22 +386,25 @@ const SceneContent: React.FC<HouseSceneProps & { hoveredId: string | null; onHov
             rotation={positions[i].rotation}
             isSelected={selectedId === char.id}
             isHovered={hoveredId === char.id}
+            index={i}
             onSelect={() => onSelect(char.id)}
             onHover={(hovered) => onHover(hovered ? char.id : null)}
           />
         ))}
       </Suspense>
       
-      {/* Camera animation */}
+      {/* Camera fly-to animation */}
       <CameraController 
         focusPosition={selectedPosition || null} 
         defaultPosition={[0, 10, 15]}
+        controlsRef={controlsRef}
       />
       
-      {/* Orbit controls */}
+      {/* Orbit controls with ref for programmatic access */}
       <OrbitControls
+        ref={controlsRef}
         enablePan={false}
-        minDistance={8}
+        minDistance={4}
         maxDistance={25}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}

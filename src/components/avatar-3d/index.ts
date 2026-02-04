@@ -29,7 +29,10 @@ export { AvatarProfilePicture } from './AvatarProfilePicture';
 
 // House Scene components (3D environment)
 export { HouseScene } from './HouseScene';
-export { HouseFloor, Couch, CoffeeTable, Plant, LightFixture } from './HouseFurniture';
+export { 
+  HouseFloor, Couch, CoffeeTable, Plant, LightFixture,
+  TVStand, BarStool, KitchenArea, DiaryRoomDoor, WallPanel 
+} from './HouseFurniture';
 export { CharacterCarousel } from './CharacterCarousel';
 
 // Hooks
