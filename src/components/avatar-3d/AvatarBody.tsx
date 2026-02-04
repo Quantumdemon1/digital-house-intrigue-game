@@ -1,12 +1,14 @@
 /**
  * @file avatar-3d/AvatarBody.tsx
- * @description Procedurally generated Sims-style body mesh
+ * @description Modern chibi-style body with toon shading
  */
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
+import { Outlines } from '@react-three/drei';
 import { Avatar3DConfig } from '@/models/avatar-config';
 import { getBodyProportions } from './utils/avatar-generator';
+import { useSkinMaterial, useClothMaterial, CHIBI_PROPORTIONS, OUTLINE_COLOR, OUTLINE_THICKNESS } from './materials/ToonMaterials';
 
 interface AvatarBodyProps {
   config: Avatar3DConfig;
@@ -15,173 +17,165 @@ interface AvatarBodyProps {
 
 export const AvatarBody: React.FC<AvatarBodyProps> = ({ 
   config, 
-  segments = 20 
+  segments = 24 
 }) => {
   const proportions = useMemo(() => 
     getBodyProportions(config.bodyType, config.height), 
     [config.bodyType, config.height]
   );
   
-  const heightMult = proportions.heightMultiplier;
+  // Apply chibi scaling - shorter, stubbier body
+  const heightMult = proportions.heightMultiplier * CHIBI_PROPORTIONS.bodyHeight;
+  const limbScale = CHIBI_PROPORTIONS.armLength;
   
-  // Clothing covers torso, so we use clothing color there
-  const skinMaterial = useMemo(() => 
-    new THREE.MeshStandardMaterial({ 
-      color: config.skinTone,
-      roughness: 0.7,
-      metalness: 0.1
-    }), 
-    [config.skinTone]
-  );
+  // Toon materials
+  const skinMaterial = useSkinMaterial(config.skinTone);
+  const topMaterial = useClothMaterial(config.topColor);
+  const bottomMaterial = useClothMaterial(config.bottomColor);
   
-  const topMaterial = useMemo(() => 
-    new THREE.MeshStandardMaterial({ 
-      color: config.topColor,
-      roughness: 0.8,
-      metalness: 0.0
-    }), 
-    [config.topColor]
-  );
-  
-  const bottomMaterial = useMemo(() => 
-    new THREE.MeshStandardMaterial({ 
-      color: config.bottomColor,
-      roughness: 0.8,
-      metalness: 0.0
-    }), 
-    [config.bottomColor]
+  // Shoe material - darker toon
+  const shoeMaterial = useMemo(() => 
+    new THREE.MeshToonMaterial({ color: '#2D2D2D' }), 
+    []
   );
 
   return (
-    <group position={[0, -0.15 * heightMult, 0]}>
-      {/* Torso - covered by clothing */}
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[
-          proportions.torsoWidth * 0.85,  // top (shoulders)
-          proportions.torsoWidth,          // bottom (waist)
-          0.35 * heightMult,              // height
+    <group position={[0, -0.2, 0]}>
+      {/* Torso - rounder, cuter shape */}
+      <mesh position={[0, 0.08, 0]}>
+        <capsuleGeometry args={[
+          proportions.torsoWidth * 0.85,
+          0.2 * heightMult,
+          8,
           segments
         ]} />
         <primitive object={topMaterial} attach="material" />
+        <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
       </mesh>
       
-      {/* Neck */}
-      <mesh position={[0, 0.32, 0]}>
-        <cylinderGeometry args={[0.06, 0.07, 0.08, segments]} />
+      {/* Neck - shorter, cuter */}
+      <mesh position={[0, 0.28, 0]}>
+        <cylinderGeometry args={[0.055, 0.06, 0.05, segments]} />
         <primitive object={skinMaterial} attach="material" />
       </mesh>
       
-      {/* Shoulders/Upper Arms */}
+      {/* Arms - stubby and round */}
       <group>
         {/* Left Arm */}
-        <group position={[-proportions.shoulderWidth * 0.9, 0.18, 0]}>
-          {/* Upper arm - short sleeve visible */}
-          <mesh rotation={[0, 0, 0.15]}>
+        <group position={[-proportions.shoulderWidth * 0.75, 0.12, 0]}>
+          {/* Upper arm */}
+          <mesh rotation={[0, 0, 0.25]}>
             <capsuleGeometry args={[
-              proportions.armThickness,
-              0.12 * heightMult,
+              proportions.armThickness * 1.1,
+              0.08 * limbScale,
               8,
               segments
             ]} />
             <primitive object={topMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
           {/* Lower arm - skin */}
-          <mesh position={[-0.05, -0.15, 0]} rotation={[0, 0, 0.1]}>
+          <mesh position={[-0.04, -0.1, 0]} rotation={[0, 0, 0.15]}>
             <capsuleGeometry args={[
-              proportions.armThickness * 0.9,
-              0.1 * heightMult,
+              proportions.armThickness * 1.0,
+              0.06 * limbScale,
               8,
               segments
             ]} />
             <primitive object={skinMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
-          {/* Hand - mitten style */}
-          <mesh position={[-0.08, -0.28, 0]}>
-            <sphereGeometry args={[proportions.armThickness * 1.2, segments, segments]} />
+          {/* Hand - bigger, cuter mitten */}
+          <mesh position={[-0.06, -0.18, 0]}>
+            <sphereGeometry args={[proportions.armThickness * CHIBI_PROPORTIONS.handScale, segments, segments]} />
             <primitive object={skinMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
         </group>
         
         {/* Right Arm */}
-        <group position={[proportions.shoulderWidth * 0.9, 0.18, 0]}>
-          <mesh rotation={[0, 0, -0.15]}>
+        <group position={[proportions.shoulderWidth * 0.75, 0.12, 0]}>
+          <mesh rotation={[0, 0, -0.25]}>
             <capsuleGeometry args={[
-              proportions.armThickness,
-              0.12 * heightMult,
+              proportions.armThickness * 1.1,
+              0.08 * limbScale,
               8,
               segments
             ]} />
             <primitive object={topMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
-          <mesh position={[0.05, -0.15, 0]} rotation={[0, 0, -0.1]}>
+          <mesh position={[0.04, -0.1, 0]} rotation={[0, 0, -0.15]}>
             <capsuleGeometry args={[
-              proportions.armThickness * 0.9,
-              0.1 * heightMult,
+              proportions.armThickness * 1.0,
+              0.06 * limbScale,
               8,
               segments
             ]} />
             <primitive object={skinMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
-          <mesh position={[0.08, -0.28, 0]}>
-            <sphereGeometry args={[proportions.armThickness * 1.2, segments, segments]} />
+          <mesh position={[0.06, -0.18, 0]}>
+            <sphereGeometry args={[proportions.armThickness * CHIBI_PROPORTIONS.handScale, segments, segments]} />
             <primitive object={skinMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
         </group>
       </group>
       
-      {/* Hips/Lower body */}
-      <mesh position={[0, -0.12, 0]}>
-        <cylinderGeometry args={[
-          proportions.torsoWidth,         // top (waist)
-          proportions.torsoWidth * 0.95,  // bottom (hips)
-          0.12 * heightMult,
-          segments
+      {/* Hips/Lower body - rounder */}
+      <mesh position={[0, -0.08, 0]}>
+        <sphereGeometry args={[
+          proportions.torsoWidth * 0.75,
+          segments,
+          segments,
+          0,
+          Math.PI * 2,
+          0,
+          Math.PI * 0.6
         ]} />
         <primitive object={bottomMaterial} attach="material" />
+        <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
       </mesh>
       
-      {/* Legs */}
+      {/* Legs - short and stubby */}
       <group>
         {/* Left Leg */}
-        <group position={[-proportions.torsoWidth * 0.4, -0.35, 0]}>
+        <group position={[-proportions.torsoWidth * 0.35, -0.22, 0]}>
           <mesh>
             <capsuleGeometry args={[
-              proportions.legThickness,
-              0.25 * heightMult,
+              proportions.legThickness * 1.1,
+              0.12 * CHIBI_PROPORTIONS.legLength,
               8,
               segments
             ]} />
             <primitive object={bottomMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
-          {/* Foot */}
-          <mesh position={[0, -0.2, 0.03]}>
-            <boxGeometry args={[
-              proportions.legThickness * 1.8,
-              0.05,
-              proportions.legThickness * 2.5
-            ]} />
-            <meshStandardMaterial color="#2D2D2D" roughness={0.9} />
+          {/* Foot - rounder shoe */}
+          <mesh position={[0, -0.12, 0.02]}>
+            <sphereGeometry args={[proportions.legThickness * 1.4, segments, segments]} />
+            <primitive object={shoeMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
         </group>
         
         {/* Right Leg */}
-        <group position={[proportions.torsoWidth * 0.4, -0.35, 0]}>
+        <group position={[proportions.torsoWidth * 0.35, -0.22, 0]}>
           <mesh>
             <capsuleGeometry args={[
-              proportions.legThickness,
-              0.25 * heightMult,
+              proportions.legThickness * 1.1,
+              0.12 * CHIBI_PROPORTIONS.legLength,
               8,
               segments
             ]} />
             <primitive object={bottomMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
-          <mesh position={[0, -0.2, 0.03]}>
-            <boxGeometry args={[
-              proportions.legThickness * 1.8,
-              0.05,
-              proportions.legThickness * 2.5
-            ]} />
-            <meshStandardMaterial color="#2D2D2D" roughness={0.9} />
+          <mesh position={[0, -0.12, 0.02]}>
+            <sphereGeometry args={[proportions.legThickness * 1.4, segments, segments]} />
+            <primitive object={shoeMaterial} attach="material" />
+            <Outlines thickness={OUTLINE_THICKNESS} color={OUTLINE_COLOR} />
           </mesh>
         </group>
       </group>
