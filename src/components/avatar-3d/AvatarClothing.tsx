@@ -4,6 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
+import * as THREE from 'three';
 import { Outlines } from '@react-three/drei';
 import { Avatar3DConfig, TopStyle } from '@/models/avatar-config';
 import { getBodyProportions } from './utils/avatar-generator';
@@ -42,10 +43,10 @@ export const AvatarClothing: React.FC<AvatarClothingProps> = ({
   const topMaterial = useClothMaterial(config.topColor);
   
   // Button material for blazer
-  const buttonMaterial = useMemo(() => {
-    const { MeshBasicMaterial } = require('three');
-    return new MeshBasicMaterial({ color: '#1a1a1a' });
-  }, []);
+  const buttonMaterial = useMemo(() => 
+    new THREE.MeshBasicMaterial({ color: '#1a1a1a' }), 
+    []
+  );
   
   const isDress = config.topStyle === 'dress';
 
