@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { useToast } from '@/hooks/use-toast';
+import { config } from '@/config';
 
 interface VotingLogicProps {
   nominees: Houseguest[];
@@ -54,12 +55,12 @@ export const useVotingLogic = ({
     onVoteSubmit(currentVoter.id, voteForId);
     setShowVote(true);
     
-    // Show the vote briefly, then move to next voter
+    // Show the vote for longer so players can read
     setTimeout(() => {
       setShowVote(false);
       setIsVoting(false);
       nextVoter();
-    }, 1200); // Give a bit more time to see AI votes
+    }, config.NPC_VOTE_DISPLAY_TIME);
     
   }, [currentVoter, isPlayerVoting, isVoting, nominees, votes, getRelationship, onVoteSubmit]);
   
@@ -77,7 +78,7 @@ export const useVotingLogic = ({
       setShowVote(false);
       setIsVoting(false);
       nextVoter();
-    }, 1500); // Give more time for player votes
+    }, config.NPC_PLAYER_VOTE_DISPLAY_TIME);
   };
   
   const nextVoter = () => {

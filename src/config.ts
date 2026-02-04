@@ -68,6 +68,14 @@ export const config = {
   NPC_AUTONOMOUS_ACTIONS_ENABLED: true, // Enable NPC autonomous social actions
   NPC_ACTIONS_PER_SOCIAL_PHASE: 2,  // How many actions each NPC takes
   
+  // NPC Decision Display Timing (in milliseconds)
+  NPC_VOTE_DISPLAY_TIME: 2500,           // Time to show each NPC's vote decision
+  NPC_THOUGHT_DISPLAY_TIME: 3000,        // Time to show AI thought bubbles
+  NPC_DECISION_PROCESSING_MIN: 2000,     // Minimum AI decision "thinking" time
+  NPC_DECISION_PROCESSING_MAX: 4000,     // Maximum AI decision "thinking" time
+  NPC_NOMINATION_REVEAL_DELAY: 2500,     // Delay when revealing nomination decisions
+  NPC_PLAYER_VOTE_DISPLAY_TIME: 2000,    // Time to show player's vote
+  
   // Development flags
   DEBUG_MODE: true,
   SKIP_ANIMATIONS: false,

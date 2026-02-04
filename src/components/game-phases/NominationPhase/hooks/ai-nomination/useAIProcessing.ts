@@ -5,6 +5,7 @@ import { Logger } from '@/utils/logger';
 import { AIIntegrationSystem } from '@/systems/ai/ai-integration-system';
 import { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import { AIDecision } from './types';
+import { config } from '@/config';
 
 interface UseAIProcessingProps {
   hoh: Houseguest | null;
@@ -51,8 +52,9 @@ export const useAIProcessing = ({
     aiLogger.info(`Starting AI nomination process for ${hoh.name}`);
 
     try {
-      // Simulated processing time (1-2 seconds)
-      const processingTime = 1000 + Math.random() * 1000;
+      // Simulated processing time (2-4 seconds for readable decision display)
+      const processingTime = config.NPC_DECISION_PROCESSING_MIN + 
+        Math.random() * (config.NPC_DECISION_PROCESSING_MAX - config.NPC_DECISION_PROCESSING_MIN);
       
       aiTimeoutRef.current = setTimeout(async () => {
         // Get AI decision
