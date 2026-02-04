@@ -67,9 +67,11 @@ const povPlayers = effectivePovPlayerIds
   
   // Redirect to final stages if not enough houseguests
   useEffect(() => {
-    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    const activeCount = gameState.houseguests.filter(h => h.status === 'Active').length;
     
-    if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+    // Only redirect when exactly 3 houseguests remain
+    // Note: 4 houseguests (Final 4) should run a normal PoV week
+    if (activeCount === 3 && !gameState.isFinalStage) {
       dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
     }
   }, [gameState.houseguests, gameState.isFinalStage, dispatch]);
