@@ -1,123 +1,171 @@
 
 
-# Plan: Fix Competition Results UI Overlapping
+# Plan: Redesign Weekly Status Tracker and Reorganize Header Buttons
 
 ## Problem Summary
 
-When a houseguest wins a competition (HoH or PoV), the results screen has severe overlapping UI elements:
+1. **Phase Indicator is boring and unclear**: In compact mode, only icons are shown without labels - users can't tell what each phase is
+2. **Promises button is cut off**: Too many buttons in the header row without proper overflow handling
+3. **Save feature is hidden**: The Save/Load button is buried in the header among other buttons
+4. **Layout is cluttered**: Action buttons compete for space with the phase indicator
 
-1. The winner avatar is positioned outside its container using absolute positioning with `-bottom-8`, causing it to overlap with the "Wins!" text inside the CompetitionVisual
-2. An extra Crown/Trophy icon is placed above the avatar at `-top-3`, overlapping with the avatar's own status badge
-3. The winner's name appears in 3 places: CompetitionVisual, the overlaid avatar, and the text section below - creating visual redundancy
+---
 
-## Root Cause
+## Solution Overview
 
-The layout uses `position: absolute` with negative offsets to position the avatar partially outside its parent container. This creates a stacking conflict where:
-- CompetitionVisual shows "{name} Wins!" text
-- StatusAvatar with initials overlays on top of that text
-- Additional Crown icon overlays on the avatar badge
-- Status badge from StatusAvatar (HoH crown/PoV shield) adds yet another icon layer
+Reorganize the header and status area into a cleaner 2-row layout:
 
-## Solution
+```text
++--------------------------------------------------+
+| DIGITAL HOUSE  |  WEEK 1  |  [Phase Progress]    |
+| INTRIGUE       |          |  HoH > Noms > PoV... |
++--------------------------------------------------+
 
-Restructure the layout to avoid negative positioning and remove redundant elements:
-
-1. **Remove the overlapping avatar from CompetitionVisual area** - place it below in a proper flow layout
-2. **Remove the extra Crown/Trophy icon** - the StatusAvatar already has a status badge
-3. **Simplify the winner display** - show avatar and name in a single, clean section
++--------------------------------------------------+
+| [Save] [History] [Promises]  |  HoH: Alex        |
+|                              |  8 Active | 2 Noms|
++--------------------------------------------------+
+```
 
 ---
 
 ## Technical Changes
 
-### File: `src/components/game-phases/HOHCompetition/CompetitionResults.tsx`
+### 1. Enhance Phase Indicator with Labels and Tooltips
 
-**Before (problematic layout):**
+**File**: `src/components/ui/phase-indicator.tsx`
+
+Make the compact mode more informative:
+- Add abbreviated labels below icons even in compact mode
+- Add visual polish with better hover states and tooltips
+- Show current phase name prominently
+- Add subtle animation to active phase
+
 ```tsx
-<div className="relative">
-  <CompetitionVisual type={...} status="complete" winner={winner.name} />
-  
-  {/* Avatar OVERLAPPING the visual with negative positioning */}
-  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
-    <StatusAvatar ... />
-    <div className="absolute -top-3">  {/* Extra crown OVERLAPPING avatar */}
-      <Crown ... />
+// Phase step with always-visible label
+<div className="phase-step flex flex-col items-center">
+  <div className={cn('phase-step-circle', isActive && 'active', isCompleted && 'completed')}>
+    {isCompleted ? <Check /> : <Icon />}
+  </div>
+  <span className="text-[10px] font-medium mt-1 text-center whitespace-nowrap">
+    {config.shortLabel}
+  </span>
+</div>
+```
+
+Add tooltip support for full phase name on hover.
+
+### 2. Reorganize GameHeader - Clean Up Button Row
+
+**File**: `src/components/game-screen/GameHeader.tsx`
+
+Remove action buttons from header - only keep essential branding and phase indicator:
+
+```tsx
+<header className="...">
+  <div className="flex items-center justify-between">
+    {/* Left: Title + Week */}
+    <div className="flex items-center gap-4">
+      <h1 className="game-title">Digital House Intrigue</h1>
+      <WeekIndicator week={gameState.week} />
     </div>
+    
+    {/* Right: Profile only */}
+    <ProfileButton />
   </div>
-</div>
-```
-
-**After (clean layout):**
-```tsx
-{/* Competition Visual - no avatar overlay */}
-<CompetitionVisual type={...} status="complete" winner={winner.name} />
-
-{/* Winner Section - properly positioned below */}
-<div className="flex flex-col items-center pt-4 space-y-4">
-  <StatusAvatar 
-    name={winner.name}
-    status="hoh"
-    size="xl"
-    isPlayer={winner.isPlayer}
-    showBadge={true}
-    className="animate-celebrate-winner"
-  />
   
-  <div className="text-center space-y-1">
-    <h3 className="text-sm font-medium text-muted-foreground uppercase">
-      New Head of Household
-    </h3>
-    <p className="text-3xl font-bold font-display text-bb-gold">
-      {winner.name}
-    </p>
-    <p className="text-sm text-muted-foreground">
-      {winner.isPlayer 
-        ? "Congratulations! You are the new HoH!" 
-        : `${winner.name} has won!`}
-    </p>
+  {/* Full-width Phase Indicator below */}
+  <div className="mt-4">
+    <PhaseIndicator currentPhase={gameState.phase} week={gameState.week} />
+  </div>
+</header>
+```
+
+### 3. Redesign GameStatusIndicator with Action Buttons
+
+**File**: `src/components/game-screen/GameStatusIndicator.tsx`
+
+Move Save, History, and Promises buttons here with game status:
+
+```tsx
+<div className="game-status-bar">
+  {/* Left: Action Buttons */}
+  <div className="flex items-center gap-2">
+    <SaveLoadButton />
+    <GameRecapButton />
+    <PromiseButton />
+    <FastForwardButton />
+  </div>
+  
+  {/* Right: Status Badges */}
+  <div className="flex flex-wrap items-center gap-2">
+    <Badge>Week {week}</Badge>
+    <PhaseBadge phase={phase} />
+    <Badge>{activeCount} Active</Badge>
+    {hohName && <Badge>HoH: {hohName}</Badge>}
+    {povName && <Badge>PoV: {povName}</Badge>}
   </div>
 </div>
 ```
 
-### File: `src/components/game-phases/POVCompetition/CompetitionResults.tsx`
+### 4. Update Phase Indicator Styling
 
-Apply the same fix - remove absolute positioning and extra trophy icon.
+**File**: `src/index.css`
+
+Add enhanced styles for the phase indicator:
+
+```css
+.phase-indicator-enhanced {
+  @apply flex items-center justify-between gap-1 py-3 px-4 bg-muted/30 rounded-lg;
+}
+
+.phase-step-enhanced {
+  @apply flex flex-col items-center gap-1 min-w-[50px];
+}
+
+.phase-step-circle-enhanced {
+  @apply w-10 h-10 rounded-full flex items-center justify-center;
+  @apply transition-all duration-300 ease-out;
+}
+
+.phase-step-circle-enhanced.active {
+  background: var(--gradient-primary);
+  @apply text-white scale-110;
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.phase-step-label-enhanced {
+  @apply text-[10px] font-semibold uppercase tracking-wide;
+  @apply text-muted-foreground;
+}
+
+.phase-step-label-enhanced.active {
+  @apply text-primary font-bold;
+}
+```
 
 ---
 
 ## Layout Comparison
 
-### Current Layout (Broken)
+### Before (Broken)
 ```text
-+----------------------------------+
-|      CompetitionVisual           |
-|   +-----------------------+      |
-|   |    [Trophy Icon]      |      |
-|   |   "Taylor Kim Wins!"  |      |
-|   |      [TK Avatar]      |  <- OVERLAPPING here!
-|   |   [Crown] [Crown]     |  <- Two icons!
-|   +-----------------------+      |
-|                                  |
-|   NEW HEAD OF HOUSEHOLD          |
-|      Taylor Kim                  |  <- Name shown 3 times
-+----------------------------------+
++----------------------------------------------------------------+
+| DIGITAL HOUSE  WEEK 1 [o][o][o][o][o][o] [History][Promises... |
+| INTRIGUE                                           <- CUT OFF! |
++----------------------------------------------------------------+
+| Week 1 | HoH | 8 Active | HoH: Alex                            |
++----------------------------------------------------------------+
 ```
 
-### Fixed Layout (Clean)
+### After (Clean)
 ```text
-+----------------------------------+
-|      CompetitionVisual           |
-|   +-----------------------+      |
-|   |    [Trophy Icon]      |      |
-|   |   "Taylor Kim Wins!"  |      |
-|   +-----------------------+      |
-|                                  |
-|         [TK Avatar]              |  <- Properly below
-|         [HoH Badge]              |  <- Single status badge
-|                                  |
-|   NEW HEAD OF HOUSEHOLD          |
-|      Taylor Kim                  |
-+----------------------------------+
++----------------------------------------------------------------+
+| DIGITAL HOUSE INTRIGUE           WEEK 1             [Profile]  |
+| [HoH] ─ [Noms] ─ [PoV Pick] ─ [PoV] ─ [Veto] ─ [Evict]        |
++----------------------------------------------------------------+
+| [Save/Load] [History] [Promises] [Skip] | HoH: Alex | 8 Active |
++----------------------------------------------------------------+
 ```
 
 ---
@@ -126,26 +174,27 @@ Apply the same fix - remove absolute positioning and extra trophy icon.
 
 | File | Changes |
 |------|---------|
-| `src/components/game-phases/HOHCompetition/CompetitionResults.tsx` | Remove absolute positioning on avatar, remove extra Crown icon, clean up layout |
-| `src/components/game-phases/POVCompetition/CompetitionResults.tsx` | Apply same fixes - remove absolute positioning and extra Trophy icon |
+| `src/components/ui/phase-indicator.tsx` | Add labels to compact mode, improve styling, add tooltips |
+| `src/components/game-screen/GameHeader.tsx` | Remove action buttons, keep only title/week/profile, expand phase indicator |
+| `src/components/game-screen/GameStatusIndicator.tsx` | Add Save, History, Promises, FastForward buttons |
+| `src/index.css` | Add enhanced phase indicator styles |
 
 ---
 
-## Additional Improvements
+## Mobile Responsiveness
 
-1. **Reduce avatar size** from `xl` to `lg` if needed for better proportions
-2. **Add proper spacing** using Tailwind gap utilities instead of negative margins
-3. **Consider reducing CompetitionVisual height** on completion state since the avatar no longer overlaps
+On mobile:
+- Phase indicator shows abbreviated labels (HoH, Noms, etc.)
+- Action buttons use icon-only mode with tooltips
+- Status badges stack vertically if needed
 
 ---
 
-## Testing Checklist
+## Visual Enhancements
 
-After implementation:
-- [ ] Play through an HoH competition and verify results screen has no overlapping elements
-- [ ] Verify the winner avatar displays below the competition visual, not on top
-- [ ] Verify only ONE status badge (crown for HoH) appears, not duplicate icons
-- [ ] Play through a PoV competition and verify same clean layout
-- [ ] Test on mobile viewport to ensure layout is responsive
-- [ ] Verify animations still work smoothly (celebrate-winner animation)
+1. **Current Phase Highlighting**: Active phase circle has pulsing glow animation
+2. **Completed Phases**: Green checkmarks with connecting line turning green
+3. **Labels Always Visible**: Short labels (HoH, Noms, PoV, etc.) shown below icons
+4. **Hover Tooltips**: Full phase name appears on hover (e.g., "Head of Household Competition")
+5. **Progress Line**: Animated line connecting phases, fills as game progresses
 
