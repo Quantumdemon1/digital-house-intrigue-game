@@ -306,6 +306,35 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'scale(0.8)' },
           '50%': { opacity: '1', transform: 'scale(1.1)' },
           '100%': { opacity: '1', transform: 'scale(1)' }
+        },
+        'dramatic-enter': {
+          '0%': { opacity: '0', transform: 'scale(0.8) translateY(20px)', filter: 'blur(10px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)', filter: 'blur(0)' }
+        },
+        'glow-pulse-ring': {
+          '0%, 100%': { boxShadow: '0 0 20px var(--glow-color, hsl(var(--bb-blue) / 0.4))' },
+          '50%': { boxShadow: '0 0 40px var(--glow-color, hsl(var(--bb-blue) / 0.6)), 0 0 60px var(--glow-color, hsl(var(--bb-blue) / 0.4))' }
+        },
+        'spotlight-reveal': {
+          '0%': { clipPath: 'circle(0% at 50% 50%)' },
+          '100%': { clipPath: 'circle(100% at 50% 50%)' }
+        },
+        'card-flip-reveal': {
+          '0%': { transform: 'rotateY(180deg)', opacity: '0' },
+          '100%': { transform: 'rotateY(0deg)', opacity: '1' }
+        },
+        'bounce-in': {
+          '0%': { transform: 'scale(0)', opacity: '0' },
+          '50%': { transform: 'scale(1.1)' },
+          '100%': { transform: 'scale(1)', opacity: '1' }
+        },
+        'gradient-shift': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' }
+        },
+        'text-shimmer': {
+          '0%': { backgroundPosition: '-200% center' },
+          '100%': { backgroundPosition: '200% center' }
         }
       },
       animation: {
@@ -340,6 +369,13 @@ const config: Config = {
         'confetti': 'confetti 3s ease-in-out forwards',
         'vote-count': 'vote-count 0.5s ease-out',
         'spotlight': 'spotlight 0.6s ease-out',
+        'dramatic-enter': 'dramatic-enter 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+        'glow-pulse-ring': 'glow-pulse-ring 2s ease-in-out infinite',
+        'spotlight-reveal': 'spotlight-reveal 0.8s ease-out',
+        'card-flip-reveal': 'card-flip-reveal 0.6s ease-out',
+        'bounce-in': 'bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+        'gradient-shift': 'gradient-shift 3s ease infinite',
+        'text-shimmer': 'text-shimmer 3s ease-in-out infinite',
         // Combined animations
         'enter': 'fade-in 0.3s ease-out, scale-in 0.2s ease-out',
         'exit': 'fade-out 0.3s ease-out, scale-out 0.2s ease-out'
