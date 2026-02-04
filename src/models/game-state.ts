@@ -74,6 +74,19 @@ export function getOrCreateRelationship(
 import { Promise } from './promise';
 import { Deal, NPCProposal } from './deal';
 import { PlayerPerceptions } from './player-perception';
+import { MilestoneThreshold } from './relationship-tier';
+
+// Relationship milestone event for UI celebrations
+export interface RelationshipMilestoneEvent {
+  playerId: string;
+  targetId: string;
+  targetName: string;
+  targetAvatarUrl?: string;
+  threshold: MilestoneThreshold;
+  oldScore: number;
+  newScore: number;
+  timestamp: number;
+}
 
 // Define GameState interface - explicitly export this
 export interface GameState {
@@ -116,6 +129,8 @@ export interface GameState {
     value: number;
     timestamp: number;
   };
+  // Pending relationship milestone to celebrate
+  pendingMilestone?: RelationshipMilestoneEvent;
 }
 
 // Create initial game state
@@ -144,7 +159,8 @@ export function createInitialGameState(): GameState {
     isSpectatorMode: false,
     outOfPhaseSocialActionsUsed: 0,
     evictionCompletedThisWeek: false,
-    lastRelationshipImpact: undefined
+    lastRelationshipImpact: undefined,
+    pendingMilestone: undefined
   };
 }
 

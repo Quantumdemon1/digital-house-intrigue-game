@@ -344,6 +344,66 @@ export class DealSystem {
   }
 
   /**
+   * Counter-offer mapping - what alternatives to propose when declining
+   */
+  private static readonly COUNTER_OFFER_MAP: Partial<Record<DealType, DealType[]>> = {
+    final_two: ['partnership', 'safety_agreement'],
+    partnership: ['safety_agreement', 'information_sharing'],
+    target_agreement: ['vote_together'],
+    veto_use: ['safety_agreement'],
+    alliance_invite: ['partnership', 'safety_agreement'],
+    safety_agreement: ['information_sharing'],
+  };
+
+  /**
+   * Generate a counter-offer when NPC would decline the original deal
+   * Returns null if no counter-offer is appropriate
+   */
+  generateCounterOffer(
+    npc: Houseguest,
+    player: Houseguest,
+    originalType: DealType,
+    context?: Deal['context']
+  ): { 
+    counterType: DealType; 
+    reasoning: string;
+    acceptanceChance: number;
+  } | null {
+    if (!this.game) return null;
+
+    // Get potential counter-offers for this deal type
+    const alternatives = DealSystem.COUNTER_OFFER_MAP[originalType];
+    if (!alternatives || alternatives.length === 0) return null;
+
+    // Only offer counter 40% of the time when declining
+    if (Math.random() > 0.4) return null;
+
+    const relationship = this.game.relationshipSystem?.getRelationship(npc.id, player.id) ?? 0;
+
+    // Try each alternative in order until we find one they'd accept
+    for (const counterType of alternatives) {
+      const evaluation = this.evaluatePlayerDeal(npc, player, counterType, context);
+      
+      // If they'd accept this alternative (or close to accepting)
+      if (evaluation.acceptanceChance >= 40) {
+        const counterReasonings = [
+          `I'm not ready for ${DEAL_TYPE_INFO[originalType].title}, but how about ${DEAL_TYPE_INFO[counterType].title} instead?`,
+          `That's too big of a commitment. Let's start with ${DEAL_TYPE_INFO[counterType].title} first.`,
+          `I'd rather do ${DEAL_TYPE_INFO[counterType].title} for now. We can talk about more later.`,
+        ];
+        
+        return {
+          counterType,
+          reasoning: counterReasonings[Math.floor(Math.random() * counterReasonings.length)],
+          acceptanceChance: evaluation.acceptanceChance,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Get trait-based modifiers for deal acceptance
    */
   private getTraitDealModifiers(traits: string[], dealType: DealType): number {

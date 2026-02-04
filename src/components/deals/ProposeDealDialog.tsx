@@ -45,8 +45,12 @@ const ProposeDealDialog: React.FC<ProposeDealDialogProps> = ({
   const { game, dispatch } = useGame();
   const [selectedDealType, setSelectedDealType] = useState<DealType>('safety_agreement');
   const [targetHouseguestId, setTargetHouseguestId] = useState<string>('');
-  const [status, setStatus] = useState<'selecting' | 'proposing' | 'response'>('selecting');
+  const [status, setStatus] = useState<'selecting' | 'proposing' | 'response' | 'counter_offer'>('selecting');
   const [npcResponse, setNpcResponse] = useState<{ accepted: boolean; reasoning: string } | null>(null);
+  const [counterOffer, setCounterOffer] = useState<{
+    counterType: DealType;
+    reasoning: string;
+  } | null>(null);
 
   const targetNPC = game?.getHouseguestById(params.targetId);
   const player = game?.getHouseguestById(game?.houseguests.find(h => h.isPlayer)?.id || '');
@@ -106,30 +110,85 @@ const ProposeDealDialog: React.FC<ProposeDealDialogProps> = ({
         
         setNpcResponse({ accepted: true, reasoning: evaluation.reasoning });
         toast.success(`${params.targetName} accepted your deal!`);
+        setStatus('response');
       } else {
-        setNpcResponse({ 
-          accepted: false, 
-          reasoning: evaluation?.reasoning || "I don't think that's a good idea." 
-        });
-        toast.error(`${params.targetName} declined your deal`);
-      }
-      
-      setStatus('response');
+        // Check for counter-offer
+        const counter = game?.dealSystem?.generateCounterOffer(
+          targetNPC!,
+          player!,
+          selectedDealType,
+          needsTarget ? { targetHouseguestId } : undefined
+        );
 
-      // Close after showing response
-      setTimeout(() => {
-        onOpenChange(false);
-        // Reset state
-        setStatus('selecting');
-        setNpcResponse(null);
-        setTargetHouseguestId('');
-      }, 2500);
+        if (counter) {
+          setCounterOffer({
+            counterType: counter.counterType,
+            reasoning: counter.reasoning,
+          });
+          setStatus('counter_offer');
+        } else {
+          setNpcResponse({ 
+            accepted: false, 
+            reasoning: evaluation?.reasoning || "I don't think that's a good idea." 
+          });
+          toast.error(`${params.targetName} declined your deal`);
+          setStatus('response');
+        }
+      }
     }, 1500);
   };
 
+  const handleAcceptCounter = () => {
+    if (!counterOffer) return;
+
+    // Create the counter-offer deal
+    game?.dealSystem?.createDeal(
+      player!.id,
+      params.targetId,
+      counterOffer.counterType,
+      needsTarget ? { targetHouseguestId } : undefined
+    );
+
+    toast.success(`You and ${params.targetName} agreed on ${DEAL_TYPE_INFO[counterOffer.counterType].title}!`);
+    
+    // Close after showing success
+    setTimeout(() => {
+      onOpenChange(false);
+      resetState();
+    }, 1500);
+  };
+
+  const handleDeclineCounter = () => {
+    setNpcResponse({
+      accepted: false,
+      reasoning: "We couldn't come to an agreement."
+    });
+    setStatus('response');
+    
+    setTimeout(() => {
+      onOpenChange(false);
+      resetState();
+    }, 2000);
+  };
+
+  const resetState = () => {
+    setStatus('selecting');
+    setNpcResponse(null);
+    setCounterOffer(null);
+    setTargetHouseguestId('');
+  };
+
+  // Close dialog cleanup
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      resetState();
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 max-w-lg">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="p-0 max-w-lg max-h-[90vh] overflow-y-auto">
         <Card className="shadow-lg border-amber-200">
           <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50">
             <div className="flex items-center gap-3">
@@ -263,6 +322,50 @@ const ProposeDealDialog: React.FC<ProposeDealDialogProps> = ({
                 <p className="text-muted-foreground italic">
                   "{npcResponse.reasoning}"
                 </p>
+              </div>
+            )}
+
+            {status === 'counter_offer' && counterOffer && (
+              <div className="py-4 space-y-4">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+                    <Handshake className="h-8 w-8 text-amber-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-amber-700">Counter-Offer!</h3>
+                </div>
+                
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-amber-800 italic mb-3">
+                    "{counterOffer.reasoning}"
+                  </p>
+                  
+                  <div className="flex items-center gap-2 p-2 bg-white rounded border border-amber-200">
+                    <span className="text-xl">{DEAL_TYPE_INFO[counterOffer.counterType].icon}</span>
+                    <div>
+                      <span className="font-medium">{DEAL_TYPE_INFO[counterOffer.counterType].title}</span>
+                      <p className="text-xs text-muted-foreground">
+                        {DEAL_TYPE_INFO[counterOffer.counterType].description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleAcceptCounter}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <Handshake className="h-4 w-4 mr-2" />
+                    Accept Counter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDeclineCounter}
+                    className="flex-1"
+                  >
+                    Walk Away
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

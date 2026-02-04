@@ -3,6 +3,18 @@ import { GameState, getOrCreateRelationship } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { RelationshipEventType } from '../../../models/relationship-event';
 import { config } from '../../../config';
+import { checkMilestoneCrossing, MilestoneThreshold } from '../../../models/relationship-tier';
+
+export interface RelationshipMilestoneEvent {
+  playerId: string;
+  targetId: string;
+  targetName: string;
+  targetAvatarUrl?: string;
+  threshold: MilestoneThreshold;
+  oldScore: number;
+  newScore: number;
+  timestamp: number;
+}
 
 export function relationshipReducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'UPDATE_RELATIONSHIPS') {
@@ -41,6 +53,9 @@ export function relationshipReducer(state: GameState, action: GameAction): GameS
     // Get or create relationships
     const rel1 = getOrCreateRelationship(newRelationships, guestId1, guestId2);
     const rel2 = getOrCreateRelationship(newRelationships, guestId2, guestId1);
+    
+    // Store old score for milestone detection
+    const oldScore = rel1.score;
 
     // If we have a specific event type, add it as a relationship event
     if (eventType) {
@@ -91,9 +106,38 @@ export function relationshipReducer(state: GameState, action: GameAction): GameS
     }
     rel2.lastInteractionWeek = state.week;
     
+    // Check for milestone crossing (only for player relationships with positive changes)
+    let pendingMilestone: RelationshipMilestoneEvent | undefined = state.pendingMilestone;
+    
+    if (guest1.isPlayer && actualChange > 0) {
+      const milestone = checkMilestoneCrossing(oldScore, rel1.score);
+      if (milestone) {
+        pendingMilestone = {
+          playerId: guest1.id,
+          targetId: guest2.id,
+          targetName: guest2.name,
+          targetAvatarUrl: guest2.avatarUrl,
+          threshold: milestone,
+          oldScore,
+          newScore: rel1.score,
+          timestamp: Date.now(),
+        };
+        console.log(`🎉 Milestone reached with ${guest2.name}: crossed ${milestone} threshold!`);
+      }
+    }
+    
     return {
       ...state,
       relationships: newRelationships,
+      pendingMilestone,
+    };
+  }
+  
+  // Handle clearing the pending milestone after it's been shown
+  if (action.type === 'CLEAR_MILESTONE') {
+    return {
+      ...state,
+      pendingMilestone: undefined,
     };
   }
   

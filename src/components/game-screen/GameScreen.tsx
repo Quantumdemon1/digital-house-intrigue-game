@@ -8,10 +8,14 @@ import GameHeader from './GameHeader';
 import GameStatusIndicator from './GameStatusIndicator';
 import SpectatorBanner from './SpectatorBanner';
 import { SocialNetworkDialog } from '@/components/social-network';
+import { useMilestoneToast } from '@/hooks/useMilestoneToast';
 
 const GameScreen: React.FC = () => {
   const { gameState } = useGame();
   const [showSocialNetwork, setShowSocialNetwork] = useState(false);
+  
+  // Watch for relationship milestones and show celebration toasts
+  useMilestoneToast();
   
   // Only show social network when there's an active player in the game
   const player = gameState.houseguests.find(h => h.isPlayer);
