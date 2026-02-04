@@ -35,7 +35,7 @@ export const GameProvider = ({ children }: { children: React.ReactNode }) => {
     loadGame,
     deleteSavedGame,
     getSavedGames
-  } = useSaveLoadFunctions(user, gameState);
+  } = useSaveLoadFunctions(user, gameState, dispatch);
   
   useEffect(() => {
     initializeGameSystems();

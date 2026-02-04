@@ -316,15 +316,16 @@
 
   /* Phase Indicator Styles */
   .phase-indicator {
-    @apply flex items-center gap-2 md:gap-4 overflow-x-auto py-2 px-1;
+    @apply flex items-center gap-3 md:gap-5 overflow-x-auto py-2 px-2;
   }
 
   .phase-step {
-    @apply flex items-center gap-2 transition-all duration-300;
+    @apply flex flex-col items-center gap-1 transition-all duration-300 shrink-0;
+    min-width: 3rem;
   }
 
   .phase-step-circle {
-    @apply w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300;
+    @apply w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300;
     background: hsl(var(--muted));
     color: hsl(var(--muted-foreground));
   }
@@ -332,8 +333,7 @@
   .phase-step-circle.active {
     background: var(--gradient-primary);
     color: white;
-    box-shadow: var(--shadow-glow-primary);
-    animation: pulse-glow 2s ease-in-out infinite;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
   }
 
   .phase-step-circle.completed {
@@ -342,7 +342,7 @@
   }
 
   .phase-step-label {
-    @apply text-xs md:text-sm font-medium hidden sm:block;
+    @apply text-xs font-medium text-center;
     color: hsl(var(--muted-foreground));
   }
 
@@ -352,7 +352,7 @@
   }
 
   .phase-step-connector {
-    @apply w-8 md:w-12 h-0.5 transition-all duration-300;
+    @apply w-6 md:w-10 h-0.5 transition-all duration-300 shrink-0;
     background: hsl(var(--border));
   }
 
