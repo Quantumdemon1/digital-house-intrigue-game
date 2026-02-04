@@ -59,20 +59,21 @@ export const archetypeInfo: Record<Archetype, { label: string; color: string; de
   }
 };
 
-// RPM avatar URLs curated to match character appearances
-const NPC_RPM_AVATARS: Record<string, string> = {
-  'alex-chen': 'https://models.readyplayer.me/6360c6eb5ef7d946f5c35b4a.glb', // Asian male, professional
-  'morgan-lee': 'https://models.readyplayer.me/64bfa15f0d72c63d7c3934f3.glb', // Female, athletic, darker skin
-  'jordan-taylor': 'https://models.readyplayer.me/6409ed6a9d68df96e2316c41.glb', // Male, charming smile
-  'casey-wilson': 'https://models.readyplayer.me/64c28e1a9eb4e9d7f8a7fb42.glb', // Female, fun/party style
-  'riley-johnson': 'https://models.readyplayer.me/6422f49d23f7c4b8d5e91a23.glb', // Male, glasses, nerdy
-  'jamie-roberts': 'https://models.readyplayer.me/642e5c8b1a2d4f6e9c8b7a54.glb', // Female, nurturing
-  'quinn-martinez': 'https://models.readyplayer.me/6435d7c2e8f9a0b1c2d3e4f5.glb', // Female, influencer style
-  'avery-thompson': 'https://models.readyplayer.me/6448f9a1b2c3d4e5f6a7b8c9.glb', // Male, strong, dark skin
-  'taylor-kim': 'https://models.readyplayer.me/645bc2d3e4f5a6b7c8d9e0f1.glb', // Male, athletic, Asian
-  'sam-williams': 'https://models.readyplayer.me/646ed4e5f6a7b8c9d0e1f2a3.glb', // Female, leadership, curly hair
-  'blake-peterson': 'https://models.readyplayer.me/6481e6f7a8b9c0d1e2f3a4b5.glb', // Male, quiet/mysterious
-  'maya-hassan': 'https://models.readyplayer.me/6494f8a9b0c1d2e3f4a5b6c7.glb', // Female, sophisticated
+// RPM avatar URLs - set to undefined to use 2D fallback images
+// To add 3D avatars: create RPM avatars at readyplayer.me, copy the .glb URLs here
+const NPC_RPM_AVATARS: Record<string, string | undefined> = {
+  'alex-chen': undefined,
+  'morgan-lee': undefined,
+  'jordan-taylor': undefined,
+  'casey-wilson': undefined,
+  'riley-johnson': undefined,
+  'jamie-roberts': undefined,
+  'quinn-martinez': undefined,
+  'avery-thompson': undefined,
+  'taylor-kim': undefined,
+  'sam-williams': undefined,
+  'blake-peterson': undefined,
+  'maya-hassan': undefined,
 };
 
 // Helper to create avatar config for NPCs with RPM 3D avatars
