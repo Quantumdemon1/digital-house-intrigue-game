@@ -134,25 +134,27 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
                 )}
               />
             )}
-            <div className="phase-step">
+            <div 
+              className="phase-step"
+              title={config.label}
+            >
               <div 
                 className={cn(
                   'phase-step-circle',
                   isCompleted && 'completed',
                   isActive && 'active'
                 )}
-                title={config.label}
               >
                 {isCompleted ? (
-                  <Check className="w-4 h-4" />
+                  <Check className="w-3.5 h-3.5" />
                 ) : (
-                  <Icon className={cn('w-4 h-4', compact && 'w-3 h-3')} />
+                  <Icon className="w-3.5 h-3.5" />
                 )}
               </div>
               {!compact && (
                 <span 
                   className={cn(
-                    'phase-step-label',
+                    'phase-step-label text-center',
                     isActive && 'active'
                   )}
                 >
