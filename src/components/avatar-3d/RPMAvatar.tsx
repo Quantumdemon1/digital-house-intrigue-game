@@ -98,7 +98,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   animationSrc,
   mood = 'Neutral',
   scale = 1,
-  position = [0, -1.5, 0],
+  position = [0, -0.65, 0],
   context = 'game',
   onLoaded,
   onError
