@@ -1,236 +1,538 @@
 
-# Plan: Consistent Avatar Components Across the Application
+# Plan: Deals & Alliances System Redesign
 
 ## Overview
 
-This plan addresses avatar icon inconsistencies throughout the Big Brother game application. The goal is to ensure all houseguest avatars display consistently with proper support for custom images, status badges, and player indicators.
+Redesign the current "Promises" feature into an interactive "Deals & Alliances" system that allows players and NPCs to propose strategic agreements, form partnerships, and build alliances. This system will feature:
+
+1. **Interactive Proposals** - NPCs can propose deals to the player during social phases
+2. **Deal Types** - Multiple deal types with specific conditions (targeting, veto use, voting blocks)
+3. **Relationship-Based Acceptance** - NPCs accept/reject deals based on their relationship with the player
+4. **Trust Building & Breaking** - Following through builds trust; breaking deals damages standing
+5. **Partnership → Alliance Progression** - Simple deals can upgrade to partnerships and formal alliances
 
 ---
 
-## Problem Analysis
+## Part 1: New Data Models
 
-### Current Issues Found
+### New File: `src/models/deal.ts`
 
-1. **Multiple Avatar Components with Overlapping Functionality:**
-   - `HouseguestAvatar.tsx` - Basic component, no image support
-   - `StatusAvatar.tsx` - Has image support via `imageUrl` prop
-   - `EnhancedAvatar.tsx` - Feature-rich but no image support
-   - `NetworkNode.tsx` - SVG-based, uses `avatarUrl`
-
-2. **Inconsistent Property Naming:**
-   - Houseguest model uses `avatarUrl`
-   - StatusAvatar component expects `imageUrl`
-   - Some components pass nothing for images
-
-3. **Plain DIV Avatars in Some Components:**
-   - `JuryVoting.tsx` uses gray divs with initials instead of avatar components
-   - `SelectReplacementStage.tsx` uses gray divs with initials
-
-4. **Missing Image Propagation:**
-   - Many components use `StatusAvatar` but don't pass `imageUrl` or `avatarUrl`
-   - Components like `CompetitionInitial.tsx` show avatars without images
-
----
-
-## Part 1: Standardize Property Names
-
-### Modify: `src/components/ui/status-avatar.tsx`
-
-Update to accept both `imageUrl` and `avatarUrl` for backward compatibility:
+Create a comprehensive deal model that replaces the simpler promise system:
 
 ```typescript
-interface StatusAvatarProps {
-  name: string;
-  status?: AvatarStatus;
-  size?: AvatarSize;
-  showBadge?: boolean;
-  className?: string;
-  imageUrl?: string;    // Keep for backward compatibility
-  avatarUrl?: string;   // Add support for model's property name
-  isPlayer?: boolean;
-  animated?: boolean;
+export type DealStatus = 'proposed' | 'accepted' | 'active' | 'fulfilled' | 'broken' | 'declined' | 'expired';
+
+export type DealType = 
+  | 'target_agreement'      // Agree to target specific houseguest if win HoH
+  | 'safety_agreement'      // Agree not to nominate each other
+  | 'vote_together'         // Vote as a block this week
+  | 'veto_use'              // Use veto on partner if they're on block
+  | 'information_sharing'   // Share game intel with each other
+  | 'final_two'             // Take each other to final 2
+  | 'partnership'           // General working together
+  | 'alliance_invite';      // Formal alliance formation
+
+export interface Deal {
+  id: string;
+  type: DealType;
+  title: string;
+  description: string;
+  proposerId: string;        // Who proposed
+  recipientId: string;       // Who received proposal
+  week: number;
+  status: DealStatus;
+  createdAt: number;
+  updatedAt: number;
+  expiresWeek?: number;      // Optional expiration
+  trustImpact: 'low' | 'medium' | 'high' | 'critical';
+  context?: {
+    targetHouseguestId?: string;  // For target agreements
+    allianceId?: string;          // For alliance invites
+    votingPreference?: string;    // For vote together deals
+    upgradeFrom?: string;         // If upgraded from another deal
+  };
 }
 
-// In component:
-const actualImageUrl = imageUrl || avatarUrl;
+export interface NPCProposal {
+  id: string;
+  fromNPC: string;           // NPC proposing
+  toPlayer: boolean;         // Always true for proposals to player
+  deal: Omit<Deal, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
+  reasoning: string;         // Why NPC wants this deal
+  timestamp: number;
+  response?: 'accepted' | 'declined' | 'pending';
+}
 ```
 
 ---
 
-## Part 2: Update Components to Pass Image URLs
+## Part 2: Deal Proposal Dialog (NPC → Player)
 
-### Files to Update (High Priority):
+### New File: `src/components/deals/NPCProposalDialog.tsx`
 
-| File | Issue | Fix |
-|------|-------|-----|
-| `CompetitionInitial.tsx` | StatusAvatar without image | Pass `imageUrl={houseguest.avatarUrl}` |
-| `CompetitionResults.tsx` | Winner avatar without image | Pass `imageUrl={winner.avatarUrl}` |
-| `POVCompetition/InitialStage.tsx` | Missing image | Pass `imageUrl={player.avatarUrl}` |
-| `NomineeSelector.tsx` | Missing image | Already passes `imageUrl` |
-| `KeyCeremony.tsx` | Some avatars missing image | Add `imageUrl={houseguest.avatarUrl}` where missing |
-| `EvictionResults.tsx` | Some avatars missing image | Verify all have `imageUrl` |
-| `GameSidebar.tsx` | HoH/PoV/Nominee avatars | Pass `imageUrl={houseguest.avatarUrl}` |
-| `HouseguestCardCompact.tsx` | Missing image | Pass `imageUrl={houseguest.avatarUrl}` |
-| `HouseguestCard.tsx` | Missing image | Pass `imageUrl={houseguest.avatarUrl}` |
+A dialog that appears when an NPC proposes a deal to the player:
+
+```
++--------------------------------------------------+
+|  [NPC Avatar] Morgan wants to make a deal!       |
++--------------------------------------------------+
+|                                                  |
+|  "I think we should target Riley next week if    |
+|   either of us wins HoH. They're getting too     |
+|   powerful and we need to act now."              |
+|                                                  |
+|  +--------------------------------------------+  |
+|  |  🎯 TARGET AGREEMENT                       |  |
+|  |  Target: Riley Johnson                      |  |
+|  |  Condition: When either wins HoH            |  |
+|  |  Trust Impact: ⚠️ HIGH                      |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  Your relationship: 💚 +45 (Friendly)           |
+|                                                  |
+|  [Decline]  [Counter-Propose]  [Accept Deal]    |
++--------------------------------------------------+
+```
+
+**Features:**
+- Shows NPC's reasoning (AI-generated or fallback)
+- Displays deal terms clearly
+- Shows current relationship status
+- Allows accept, decline, or counter-propose
 
 ---
 
-## Part 3: Replace Plain DIV Avatars
+## Part 3: Player Proposal Dialog (Player → NPC)
 
-### Modify: `src/components/game-phases/FinalePhase/JuryVoting.tsx`
+### Modify: `src/components/game-phases/social/MakePromiseDialog.tsx`
 
-Replace gray div avatars with StatusAvatar:
+Rename and expand to `ProposeDealDialog.tsx`:
 
-**Lines 164-165 (finalists display):**
-```tsx
-// Before:
-<div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center text-2xl mb-3">
-  {finalist.name.charAt(0)}
-</div>
+**New Deal Options:**
+1. **Target Agreement** - "Let's target [dropdown] next week"
+2. **Safety Pact** - "Promise not to nominate each other"
+3. **Voting Block** - "Let's vote together this week"
+4. **Veto Commitment** - "Use veto on me if I'm on the block"
+5. **Information Sharing** - "Share all game intel with me"
+6. **Final Two Deal** - "Take me to the final 2"
+7. **Form Partnership** - "Work together moving forward"
+8. **Propose Alliance** - "Form an official alliance" (opens alliance creator)
 
-// After:
-<StatusAvatar
-  name={finalist.name}
-  imageUrl={finalist.avatarUrl}
-  size="lg"
-  isPlayer={finalist.isPlayer}
-/>
-```
-
-**Lines 192-194 (juror list):**
-```tsx
-// Before:
-<div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-  {juror.name.charAt(0)}
-</div>
-
-// After:
-<StatusAvatar
-  name={juror.name}
-  imageUrl={juror.avatarUrl}
-  size="sm"
-/>
-```
-
-### Modify: `src/components/game-phases/POVMeeting/stages/SelectReplacementStage.tsx`
-
-**Lines 103-105:**
-```tsx
-// Before:
-<div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mb-2">
-  {houseguest.name.charAt(0)}
-</div>
-
-// After:
-<StatusAvatar
-  name={houseguest.name}
-  imageUrl={houseguest.avatarUrl}
-  size="sm"
-/>
-```
+**NPC Response Logic:**
+- Based on relationship score and NPC personality traits
+- High relationship (50+) = likely accept
+- Medium relationship (20-50) = may negotiate or decline
+- Low relationship (<20) = likely decline with reason
+- NPC traits affect acceptance (Loyal NPCs more likely to accept alliance deals)
 
 ---
 
-## Part 4: Consistent "YOU" Badge Styling
+## Part 4: Deal System Core Logic
 
-### Standardize Across All Avatar Components
+### New File: `src/systems/deal-system.ts`
 
-The "YOU" badge should be:
-- **Color:** `bg-bb-green` (green, indicating player)
-- **Position:** Bottom center of avatar
-- **Style:** Small rounded pill with white text
-
-Ensure consistency in:
-- `StatusAvatar.tsx` - Line 180-188
-- `EnhancedAvatar.tsx` - Lines 221-228
-- `NetworkNode.tsx` - Lines 233-258
-- `AvatarPreview.tsx` - Lines 149-157
-
-Current `StatusAvatar` uses `bg-bb-green` - this is correct.
-`NetworkNode` uses `bg-bb-blue` - should change to green for consistency.
-
-### Modify: `src/components/social-network/NetworkNode.tsx`
-
-```tsx
-// Line 244: Change from bb-blue to bb-green
-<rect
-  x={position.x - 16}
-  y={position.y - sizeConfig.node / 2 - 18}
-  width={32}
-  height={14}
-  rx={7}
-  fill="hsl(var(--bb-green))"  // Changed from bb-blue
-/>
-```
-
----
-
-## Part 5: Update EnhancedAvatar to Support Images
-
-### Modify: `src/components/houseguest/EnhancedAvatar.tsx`
-
-Add image support to match StatusAvatar:
+Replace/extend promise-system with deal-system:
 
 ```typescript
-interface EnhancedAvatarProps {
-  houseguest: Houseguest;
-  size?: AvatarSize;
-  status?: AvatarStatus;
-  showMood?: boolean;
-  showStatus?: boolean;
-  showBadge?: boolean;
-  animated?: boolean;
-  onClick?: () => void;
-  className?: string;
+export class DealSystem {
+  // Create new deal between houseguests
+  createDeal(proposerId: string, recipientId: string, type: DealType, context?: object): Deal;
+  
+  // NPC proposes deal to player
+  npcProposeDealToPlayer(npc: Houseguest, dealType: DealType, reasoning: string): NPCProposal;
+  
+  // Player responds to NPC proposal
+  respondToProposal(proposalId: string, response: 'accept' | 'decline'): void;
+  
+  // Check if NPC would accept a deal from player
+  evaluatePlayerDeal(npc: Houseguest, dealType: DealType, context?: object): {
+    wouldAccept: boolean;
+    acceptanceChance: number;
+    reasoning: string;
+  };
+  
+  // Evaluate deals based on game actions
+  evaluateDealsForAction(actionType: string, params: any): void;
+  
+  // Get active deals for a houseguest
+  getActiveDeals(houseguestId: string): Deal[];
+  
+  // Check if two houseguests have a specific deal type
+  haveDeal(guest1Id: string, guest2Id: string, type?: DealType): boolean;
+  
+  // Upgrade a deal (e.g., partnership → alliance)
+  upgradeDeal(dealId: string, newType: DealType): Deal;
 }
+```
 
-// In the render, use houseguest.avatarUrl:
-{houseguest.avatarUrl ? (
-  <img 
-    src={houseguest.avatarUrl} 
-    alt={houseguest.name}
-    className="absolute inset-0 w-full h-full object-cover"
+**Deal Evaluation Logic:**
+- Target Agreement: Fulfilled when HoH winner nominates target; Broken if they nominate partner
+- Safety Pact: Broken if either nominates the other
+- Vote Together: Evaluated at eviction
+- Veto Commitment: Evaluated at PoV meeting
+- Final Two: Evaluated at final selection
+
+---
+
+## Part 5: NPC Deal Generation
+
+### Modify: `src/systems/ai/npc-social-behavior.ts`
+
+Update to generate proposals directed at the player:
+
+```typescript
+/**
+ * Generate NPC proposals for the player
+ */
+export function generateNPCPlayerProposals(
+  npc: Houseguest,
+  game: BigBrotherGame
+): NPCProposal[] {
+  const proposals: NPCProposal[] = [];
+  const player = game.getActiveHouseguests().find(h => h.isPlayer);
+  if (!player) return proposals;
+  
+  const relationship = game.relationshipSystem?.getRelationship(npc.id, player.id) ?? 0;
+  
+  // Only propose if relationship is decent
+  if (relationship < 15) return proposals;
+  
+  // Check various conditions for proposals
+  
+  // If NPC is on the block - desperate for votes
+  if (npc.isNominated) {
+    proposals.push(createProposal(npc, 'vote_together', 
+      `I need your vote to stay. In return, I'll have your back next week.`));
+  }
+  
+  // If there's a common threat
+  const commonThreat = findCommonThreat(npc, player, game);
+  if (commonThreat && relationship > 30) {
+    proposals.push(createProposal(npc, 'target_agreement',
+      `${commonThreat.name} is getting too powerful. We should work together to get them out.`,
+      { targetHouseguestId: commonThreat.id }));
+  }
+  
+  // Alliance formation opportunity
+  if (relationship > 45 && !game.allianceSystem?.areInSameAlliance(npc.id, player.id)) {
+    proposals.push(createProposal(npc, 'partnership',
+      `I think we work well together. Want to officially partner up?`));
+  }
+  
+  // Late game final 2 deals
+  const activeCount = game.getActiveHouseguests().length;
+  if (relationship > 60 && activeCount <= 6) {
+    proposals.push(createProposal(npc, 'final_two',
+      `We're getting close to the end. I want you with me in the final 2.`));
+  }
+  
+  return proposals;
+}
+```
+
+---
+
+## Part 6: Active Deals UI Panel
+
+### New File: `src/components/deals/DealsPanel.tsx`
+
+Replace the Promises button with a Deals & Alliances button:
+
+```
++--------------------------------------------------+
+|  DEALS & ALLIANCES                   [Filter ▾]  |
++--------------------------------------------------+
+|                                                  |
+|  ACTIVE DEALS (3)                               |
+|  +--------------------------------------------+  |
+|  | 🎯 Target Agreement with Morgan            |  |
+|  | Target: Riley | Expires: Week 4            |  |
+|  | Status: ✓ Active                           |  |
+|  +--------------------------------------------+  |
+|  | 🛡️ Safety Pact with Taylor                 |  |
+|  | Neither nominates the other                |  |
+|  | Status: ✓ Active                           |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  PENDING PROPOSALS (1)                          |
+|  +--------------------------------------------+  |
+|  | ⏳ Casey wants to form a Voting Block      |  |
+|  | [View Details]                             |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  YOUR ALLIANCES (1)                             |
+|  +--------------------------------------------+  |
+|  | 👥 "The Core Four" (4 members)             |  |
+|  | Stability: 85% | Founded Week 2            |  |
+|  +--------------------------------------------+  |
+|                                                  |
++--------------------------------------------------+
+```
+
+---
+
+## Part 7: Trust & Reputation System
+
+### Modify: `src/systems/ai/npc-decision-engine.ts`
+
+Add trust score tracking based on deal history:
+
+```typescript
+/**
+ * Calculate trust reputation based on deal history
+ */
+export function calculateDealTrust(
+  houseguestId: string,
+  game: BigBrotherGame
+): { trustScore: number; reputation: 'trustworthy' | 'neutral' | 'untrustworthy' } {
+  const deals = game.deals || [];
+  let trustScore = 50; // Start neutral
+  
+  deals.forEach(deal => {
+    if (deal.proposerId !== houseguestId && deal.recipientId !== houseguestId) return;
+    
+    if (deal.status === 'fulfilled') {
+      trustScore += deal.trustImpact === 'critical' ? 15 : 
+                    deal.trustImpact === 'high' ? 10 : 
+                    deal.trustImpact === 'medium' ? 5 : 3;
+    } else if (deal.status === 'broken') {
+      trustScore -= deal.trustImpact === 'critical' ? 30 : 
+                    deal.trustImpact === 'high' ? 20 : 
+                    deal.trustImpact === 'medium' ? 12 : 6;
+    }
+  });
+  
+  trustScore = Math.max(0, Math.min(100, trustScore));
+  
+  return {
+    trustScore,
+    reputation: trustScore >= 65 ? 'trustworthy' : 
+                trustScore <= 35 ? 'untrustworthy' : 'neutral'
+  };
+}
+```
+
+NPCs will use this trust score when deciding whether to accept deals from the player.
+
+---
+
+## Part 8: NPC Proposal Queue in Social Phase
+
+### Modify: `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`
+
+Add NPC proposal handling:
+
+```typescript
+// New state for NPC proposals
+const [pendingProposals, setPendingProposals] = useState<NPCProposal[]>([]);
+const [currentProposal, setCurrentProposal] = useState<NPCProposal | null>(null);
+
+// Generate NPC proposals at start of social phase
+useEffect(() => {
+  if (game?.currentState?.constructor.name === 'SocialInteractionState') {
+    const proposals = generateAllNPCProposals(game);
+    setPendingProposals(proposals);
+    
+    // Show first proposal after a delay
+    if (proposals.length > 0) {
+      setTimeout(() => {
+        setCurrentProposal(proposals[0]);
+      }, 2000);
+    }
+  }
+}, [game?.currentState]);
+
+// Render proposal dialog when there's a pending proposal
+{currentProposal && (
+  <NPCProposalDialog
+    proposal={currentProposal}
+    onRespond={handleProposalResponse}
+    onClose={() => handleNextProposal()}
   />
-) : (
-  <>
-    {/* Gradient background */}
-    <div className={cn('absolute inset-0 bg-gradient-to-br', gradient)} />
-    {/* ... existing gradient content ... */}
-  </>
 )}
 ```
 
 ---
 
+## Part 9: Deal Evaluation Integration
+
+### Modify: `src/contexts/reducers/game-reducer.ts`
+
+Add deal evaluation hooks to game actions:
+
+```typescript
+case 'NOMINATE':
+  // Evaluate deals when nomination happens
+  if (game.dealSystem) {
+    game.dealSystem.evaluateDealsForAction('NOMINATE', {
+      nominatorId: action.payload.hohId,
+      nomineeIds: action.payload.nomineeIds
+    });
+  }
+  break;
+
+case 'CAST_VOTE':
+  // Evaluate vote-related deals
+  if (game.dealSystem) {
+    game.dealSystem.evaluateDealsForAction('CAST_VOTE', {
+      voterId: action.payload.voterId,
+      voteFor: action.payload.voteFor
+    });
+  }
+  break;
+
+case 'VETO_DECISION':
+  // Evaluate veto-related deals
+  if (game.dealSystem) {
+    game.dealSystem.evaluateDealsForAction('VETO_DECISION', {
+      povHolderId: action.payload.povHolderId,
+      savedId: action.payload.savedId,
+      used: action.payload.used
+    });
+  }
+  break;
+```
+
+---
+
+## Part 10: Game State Updates
+
+### Modify: `src/models/game-state.ts`
+
+Add deals to game state:
+
+```typescript
+export interface GameState {
+  // ... existing fields
+  deals?: Deal[];
+  pendingNPCProposals?: NPCProposal[];
+  promises?: Promise[]; // Keep for backward compatibility during migration
+}
+```
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/models/deal.ts` | Deal and NPCProposal type definitions |
+| `src/systems/deal-system.ts` | Core deal management logic |
+| `src/components/deals/NPCProposalDialog.tsx` | Dialog for NPC proposals to player |
+| `src/components/deals/ProposeDealDialog.tsx` | Dialog for player proposing deals |
+| `src/components/deals/DealsPanel.tsx` | Main deals overview panel |
+| `src/components/deals/DealCard.tsx` | Individual deal display |
+| `src/components/deals/index.ts` | Exports |
+
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/ui/status-avatar.tsx` | Add `avatarUrl` prop alias |
-| `src/components/houseguest/EnhancedAvatar.tsx` | Add image support |
-| `src/components/houseguest/HouseguestCardCompact.tsx` | Pass `imageUrl` |
-| `src/components/houseguest/HouseguestCard.tsx` | Pass `imageUrl` |
-| `src/components/game-screen/GameSidebar.tsx` | Pass `imageUrl` to all StatusAvatars |
-| `src/components/game-phases/HOHCompetition/CompetitionInitial.tsx` | Pass `imageUrl` |
-| `src/components/game-phases/HOHCompetition/CompetitionResults.tsx` | Pass `imageUrl` |
-| `src/components/game-phases/POVCompetition/InitialStage.tsx` | Pass `imageUrl` |
-| `src/components/game-phases/FinalePhase/JuryVoting.tsx` | Replace gray divs with StatusAvatar |
-| `src/components/game-phases/POVMeeting/stages/SelectReplacementStage.tsx` | Replace gray div with StatusAvatar |
-| `src/components/game-phases/NominationPhase/KeyCeremony.tsx` | Add missing `imageUrl` props |
-| `src/components/game-phases/EvictionPhase/VoterDisplay.tsx` | Already passes imageUrl |
-| `src/components/social-network/NetworkNode.tsx` | Change "YOU" badge to green |
+| `src/models/game-state.ts` | Add deals and proposals to state |
+| `src/contexts/reducers/game-reducer.ts` | Add deal evaluation hooks |
+| `src/systems/ai/npc-social-behavior.ts` | Add NPC proposal generation for player |
+| `src/systems/ai/npc-decision-engine.ts` | Add trust score calculations |
+| `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx` | Handle NPC proposals |
+| `src/components/game-screen/GameHeader.tsx` | Replace Promises with Deals button |
+| `src/game-states/SocialInteractionState.ts` | Add propose_deal action |
 
 ---
 
-## Summary of Changes
+## Deal Types Summary
 
-1. **StatusAvatar** gets `avatarUrl` prop alias for consistency with model
-2. **EnhancedAvatar** gets image support using `houseguest.avatarUrl`
-3. **15+ components** updated to pass `imageUrl={houseguest.avatarUrl}`
-4. **2 components** with plain gray divs replaced with proper StatusAvatar
-5. **NetworkNode** "YOU" badge color changed from blue to green for consistency
-6. All player avatars will consistently show:
-   - Custom uploaded/generated images when available
-   - Trait-based gradient fallback when no image
-   - Green "YOU" badge at bottom center
-   - Appropriate status badges (HoH/PoV/Nominee) when applicable
+| Deal Type | Trigger Condition | Fulfilled When | Broken When |
+|-----------|------------------|----------------|-------------|
+| Target Agreement | Either wins HoH | Target is nominated | Partner is nominated instead |
+| Safety Pact | Either wins HoH | Neither nominates other | Either nominates the other |
+| Vote Together | Eviction vote | Both vote the same | Vote differently |
+| Veto Commitment | PoV Meeting | Veto used on partner | Veto not used when promised |
+| Information Sharing | Any info learned | Info is shared | Info is withheld/leaked |
+| Final Two | Final selection | Partner taken to F2 | Partner not selected |
+| Partnership | Ongoing | Alliance formed | Betrayal occurs |
+| Alliance Invite | Alliance creation | Alliance formed | Declined/Alliance breaks |
+
+---
+
+## NPC Personality Influence on Deals
+
+| Trait | Deal Preferences | Acceptance Modifier |
+|-------|-----------------|---------------------|
+| Strategic | Target agreements, partnerships | +10% for tactical deals |
+| Loyal | Safety pacts, alliances | +20% for loyalty deals, -20% for betrayal requests |
+| Sneaky | Information sharing, short-term deals | +15% for info deals, may break deals more often |
+| Competitive | Target agreements on comp threats | +15% for targeting strong players |
+| Emotional | Final two, partnerships | +25% for relationship-based deals |
+| Paranoid | Safety pacts | +10% for safety, -15% for trusting new allies |
+
+---
+
+## User Flow Example
+
+```text
+Social Phase begins
+    |
+    v
+NPC evaluates player relationship
+    |
+    +---> Relationship > 30 + NPC sees strategic opportunity
+    |         |
+    |         v
+    |     [NPC Proposal Dialog appears]
+    |     "Morgan wants to target Riley together"
+    |         |
+    |         +---> Player accepts
+    |         |         |
+    |         |         v
+    |         |     Deal created (status: active)
+    |         |     Relationship boost (+8)
+    |         |     
+    |         +---> Player declines
+    |                   |
+    |                   v
+    |               Small relationship penalty (-3)
+    |
+    +---> Player can also initiate deals
+              |
+              v
+          [Propose Deal button on houseguest]
+              |
+              v
+          [ProposeDealDialog opens]
+          Select deal type + target
+              |
+              v
+          NPC evaluates based on:
+          - Relationship score
+          - Personality traits  
+          - Trust history
+          - Strategic value
+              |
+              +---> NPC accepts (relationship + traits favorable)
+              |         |
+              |         v
+              |     Deal created, relationship boost
+              |
+              +---> NPC declines (low trust/relationship)
+                        |
+                        v
+                    "I don't think I can trust you with that"
+```
+
+---
+
+## Technical Notes
+
+### Backward Compatibility
+- Keep `promises` field in GameState during transition
+- Migrate existing promises to deals on load
+- Eventually deprecate promise system
+
+### Performance
+- NPC proposals generated at phase start, not continuously
+- Maximum 2-3 proposals per social phase to prevent overwhelm
+- Deal evaluations are event-driven, not polling
+
+### Trust Persistence
+- Trust scores persist across weeks
+- Breaking high-impact deals has lasting effects
+- Other houseguests can learn about broken deals (same as current promise betrayal spread)
