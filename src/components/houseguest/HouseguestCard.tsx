@@ -12,6 +12,7 @@ import { StatusAvatar, AvatarStatus } from '@/components/ui/status-avatar';
 import HouseguestBadges from './HouseguestBadges';
 import HouseguestRelationship from './HouseguestRelationship';
 import HouseguestDialog from './HouseguestDialog';
+import StrategicIntel from './StrategicIntel';
 
 interface HouseguestCardProps {
   houseguest: Houseguest;
@@ -96,12 +97,21 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({
               </p>
               
               {showRelationship && !houseguest.isPlayer && player && (
-                <div className="mt-3 w-full">
+                <div className="mt-2 w-full">
                   <HouseguestRelationship 
                     relationshipScore={relationshipScore}
                     relationshipColor={relationshipColor}
                   />
                 </div>
+              )}
+              
+              {/* Strategic Intel - shows based on player's Strategic stat */}
+              {!houseguest.isPlayer && (
+                <StrategicIntel 
+                  houseguestId={houseguest.id}
+                  houseguestName={houseguest.name}
+                  compact
+                />
               )}
             </div>
           </CardContent>

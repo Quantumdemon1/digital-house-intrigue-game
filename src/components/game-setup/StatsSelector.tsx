@@ -20,14 +20,14 @@ type StatInfo = {
 };
 
 const statConfig: StatInfo[] = [
-  { key: 'physical', label: 'Physical', icon: Dumbbell, description: 'Strength and athleticism in physical competitions', category: 'competition' },
-  { key: 'mental', label: 'Mental', icon: Brain, description: 'Intelligence and problem-solving in mental challenges', category: 'competition' },
-  { key: 'endurance', label: 'Endurance', icon: Flame, description: 'Stamina for long-lasting endurance competitions', category: 'competition' },
-  { key: 'social', label: 'Social', icon: Heart, description: 'Ability to build relationships and influence others', category: 'social' },
-  { key: 'loyalty', label: 'Loyalty', icon: Handshake, description: 'Trustworthiness and commitment to alliances', category: 'social' },
-  { key: 'strategic', label: 'Strategic', icon: Target, description: 'Game awareness and ability to make smart moves', category: 'strategic' },
-  { key: 'luck', label: 'Luck', icon: Dice1, description: 'Random chance factor in tie-breakers and crapshoot comps', category: 'strategic' },
-  { key: 'competition', label: 'Competition', icon: Swords, description: 'Overall competitive drive and clutch performance', category: 'competition' },
+  { key: 'physical', label: 'Physical', icon: Dumbbell, description: 'Boosts Physical competition performance. High Physical (6+) enhances intimidation tactics.', category: 'competition' },
+  { key: 'mental', label: 'Mental', icon: Brain, description: 'Boosts Mental competition performance and Final HoH Part 2.', category: 'competition' },
+  { key: 'endurance', label: 'Endurance', icon: Flame, description: 'Boosts Endurance competition performance and Final HoH Part 1.', category: 'competition' },
+  { key: 'social', label: 'Social', icon: Heart, description: 'Affects interaction success rates. Higher Social = better persuasion outcomes during eviction campaigning.', category: 'social' },
+  { key: 'loyalty', label: 'Loyalty', icon: Handshake, description: 'Amplifies promise impact. High Loyalty = trusted ally with stronger promises; low = flexible player with less betrayal damage.', category: 'social' },
+  { key: 'strategic', label: 'Strategic', icon: Target, description: 'Reveals hidden intel: relationships (3+), targets (5+), votes (7+), alliances (9+).', category: 'strategic' },
+  { key: 'luck', label: 'Luck', icon: Dice1, description: 'Boosts Crapshoot (random) competitions and may influence tiebreakers.', category: 'strategic' },
+  { key: 'competition', label: 'Competition', icon: Swords, description: 'Provides a clutch bonus (+0.5 per point) when competing while on the block. Comeback potential!', category: 'competition' },
 ];
 
 const categoryLabels = {
