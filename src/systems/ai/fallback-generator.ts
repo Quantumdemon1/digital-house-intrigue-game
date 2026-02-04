@@ -13,7 +13,7 @@ import {
   getDecisionFactors, 
   calculateDecisionScore, 
   getTraitWeights,
-  calculatePromiseObligations,
+  calculateDealObligations,
   calculateAllianceLoyalty
 } from './npc-decision-engine';
 import { assessThreat, isMajorThreat } from './threat-assessment';
@@ -261,9 +261,9 @@ export class AIFallbackGenerator {
     const allianceLoyalty = calculateAllianceLoyalty(juror.id, finalist.id, game);
     score += allianceLoyalty * 0.15;
 
-    // Promise obligations (15% weight)
-    const promiseScore = calculatePromiseObligations(juror.id, finalist.id, game);
-    score += (promiseScore + 30) * 0.15; // Normalize -30 to 30 -> 0 to 60
+    // Deal/Promise obligations (15% weight)
+    const dealScore = calculateDealObligations(juror.id, finalist.id, game);
+    score += (dealScore + 50) * 0.15; // Normalize -50 to 50 -> 0 to 100
 
     return score;
   }

@@ -23,7 +23,12 @@ export type InteractionType =
   | 'defended'
   | 'attacked'
   | 'helped'
-  | 'ignored';
+  | 'ignored'
+  // Deal-related interaction types
+  | 'deal_proposed'
+  | 'deal_accepted'
+  | 'deal_fulfilled'
+  | 'deal_broken';
 
 export type InteractionSentiment = 'positive' | 'negative' | 'neutral';
 
@@ -86,6 +91,15 @@ export function getInteractionDefaults(type: InteractionType): { sentiment: Inte
       return { sentiment: 'positive', impact: 15, decays: true };
     case 'ignored':
       return { sentiment: 'negative', impact: -5, decays: true };
+    // Deal-related interactions - stronger impact than promises
+    case 'deal_proposed':
+      return { sentiment: 'positive', impact: 8, decays: true };
+    case 'deal_accepted':
+      return { sentiment: 'positive', impact: 18, decays: false };
+    case 'deal_fulfilled':
+      return { sentiment: 'positive', impact: 35, decays: false };
+    case 'deal_broken':
+      return { sentiment: 'negative', impact: -50, decays: false };
     default:
       return { sentiment: 'neutral', impact: 0, decays: true };
   }

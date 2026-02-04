@@ -1,6 +1,6 @@
 /**
  * @file src/components/deals/DealCard.tsx
- * @description Individual deal display card
+ * @description Individual deal display card with relationship and trust indicators
  */
 
 import React from 'react';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useGame } from '@/contexts/GameContext';
 import { StatusAvatar } from '@/components/ui/status-avatar';
-import { CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, AlertCircle, Heart, Shield } from 'lucide-react';
 
 interface DealCardProps {
   deal: Deal;
@@ -28,6 +28,10 @@ const DealCard: React.FC<DealCardProps> = ({ deal, showPartner = true, compact =
   const target = deal.context?.targetHouseguestId 
     ? game?.getHouseguestById(deal.context.targetHouseguestId) 
     : null;
+  
+  // Get relationship and trust scores
+  const relationship = game?.relationshipSystem?.getRelationship(player?.id || '', partnerId) ?? 0;
+  const trustScore = game?.dealSystem?.calculateTrustScore(partnerId) ?? 50;
 
   const getStatusIcon = () => {
     switch (deal.status) {
@@ -140,18 +144,38 @@ const DealCard: React.FC<DealCardProps> = ({ deal, showPartner = true, compact =
         </div>
       )}
 
-      {/* Partner display */}
+      {/* Partner display with trust indicators */}
       {showPartner && partner && (
-        <div className="flex items-center gap-2 pt-2 border-t">
-          <StatusAvatar 
-            name={partner.name} 
-            avatarUrl={partner.avatarUrl}
-            size="sm"
-            isPlayer={partner.isPlayer}
-          />
-          <div className="text-sm">
-            <span className="text-muted-foreground">Partner: </span>
-            <span className="font-medium">{partner.name}</span>
+        <div className="flex items-center justify-between pt-2 border-t">
+          <div className="flex items-center gap-2">
+            <StatusAvatar 
+              name={partner.name} 
+              avatarUrl={partner.avatarUrl}
+              size="sm"
+              isPlayer={partner.isPlayer}
+            />
+            <div className="text-sm">
+              <span className="text-muted-foreground">Partner: </span>
+              <span className="font-medium">{partner.name}</span>
+            </div>
+          </div>
+          
+          {/* Relationship and trust indicators */}
+          <div className="flex items-center gap-3 text-xs">
+            <span className={cn(
+              "flex items-center gap-1",
+              relationship > 30 ? "text-green-600" : relationship < 0 ? "text-red-500" : "text-muted-foreground"
+            )}>
+              <Heart className="h-3 w-3" />
+              {relationship > 0 ? '+' : ''}{relationship}
+            </span>
+            <span className={cn(
+              "flex items-center gap-1",
+              trustScore >= 65 ? "text-green-600" : trustScore <= 35 ? "text-red-500" : "text-muted-foreground"
+            )}>
+              <Shield className="h-3 w-3" />
+              {trustScore}%
+            </span>
           </div>
         </div>
       )}

@@ -20,7 +20,7 @@ export interface DecisionFactors {
   recentEvents: number;        // -50 to 50 (recent positive/negative events)
   personalityBias: number;     // -20 to 20 (trait-based modifier)
   strategicValue: number;      // 0 to 100 (how useful is this person)
-  promiseObligations: number;  // -30 to 30 (active promise effects)
+  dealObligations: number;     // -50 to 50 (active deal effects - replaces promiseObligations)
 }
 
 /**
@@ -30,7 +30,7 @@ export interface TraitWeights {
   threatWeight: number;
   loyaltyWeight: number;
   relationshipWeight: number;
-  promiseWeight: number;
+  dealWeight: number;       // Renamed from promiseWeight
   strategicWeight: number;
 }
 
@@ -43,7 +43,7 @@ export function getTraitWeights(traits: string[]): TraitWeights {
     threatWeight: config.NPC_THREAT_WEIGHT,
     loyaltyWeight: config.NPC_LOYALTY_WEIGHT,
     relationshipWeight: config.NPC_RELATIONSHIP_WEIGHT,
-    promiseWeight: config.NPC_PROMISE_WEIGHT,
+    dealWeight: config.NPC_PROMISE_WEIGHT, // Uses promise weight config
     strategicWeight: config.NPC_PERSONALITY_WEIGHT,
   };
 
@@ -57,7 +57,7 @@ export function getTraitWeights(traits: string[]): TraitWeights {
         break;
       case 'Loyal':
         weights.loyaltyWeight += 0.2;
-        weights.promiseWeight += 0.15;
+        weights.dealWeight += 0.15;
         weights.threatWeight -= 0.1;
         break;
       case 'Competitive':
@@ -71,7 +71,7 @@ export function getTraitWeights(traits: string[]): TraitWeights {
       case 'Sneaky':
         weights.loyaltyWeight -= 0.15;
         weights.strategicWeight += 0.15;
-        weights.promiseWeight -= 0.1;
+        weights.dealWeight -= 0.1;
         break;
       case 'Confrontational':
         weights.relationshipWeight += 0.1;
@@ -100,7 +100,7 @@ export function getTraitWeights(traits: string[]): TraitWeights {
     weights.threatWeight /= total;
     weights.loyaltyWeight /= total;
     weights.relationshipWeight /= total;
-    weights.promiseWeight /= total;
+    weights.dealWeight /= total;
     weights.strategicWeight /= total;
   }
 
@@ -140,16 +140,18 @@ export function calculateAllianceLoyalty(
 }
 
 /**
- * Calculate promise obligations between two houseguests
+ * Calculate deal and promise obligations between two houseguests
+ * This replaces the older calculatePromiseObligations function
  */
-export function calculatePromiseObligations(
+export function calculateDealObligations(
   evaluatorId: string,
   targetId: string,
   game: BigBrotherGame
 ): number {
-  const promises = game.promises || [];
   let obligationScore = 0;
 
+  // Check legacy promises
+  const promises = game.promises || [];
   promises.forEach(promise => {
     const isPromiser = promise.fromId === evaluatorId;
     const isPromisee = promise.toId === evaluatorId;
@@ -159,7 +161,6 @@ export function calculatePromiseObligations(
 
     if (promise.status === 'pending' || promise.status === 'active') {
       if (isPromiser) {
-        // I made a promise to this person - strong obligation
         switch (promise.type) {
           case 'safety':
             obligationScore += 30;
@@ -174,18 +175,68 @@ export function calculatePromiseObligations(
             obligationScore += 10;
         }
       } else if (isPromisee) {
-        // They made a promise to me - mild positive
         obligationScore += 10;
       }
     } else if (promise.status === 'broken') {
       if (promise.fromId === targetId) {
-        // They broke a promise to me - negative
         obligationScore -= 25;
       }
     }
   });
 
-  return Math.max(-30, Math.min(30, obligationScore));
+  // Check deals (new system - stronger impact)
+  const deals = game.deals || [];
+  deals.forEach(deal => {
+    const evaluatorInDeal = deal.proposerId === evaluatorId || deal.recipientId === evaluatorId;
+    const targetInDeal = deal.proposerId === targetId || deal.recipientId === targetId;
+
+    if (!evaluatorInDeal || !targetInDeal) return;
+
+    if (deal.status === 'active') {
+      // Active deals create obligations based on type
+      switch (deal.type) {
+        case 'safety_agreement':
+          obligationScore += 35; // Strong obligation not to nominate
+          break;
+        case 'vote_together':
+          obligationScore += 25; // Should vote the same
+          break;
+        case 'target_agreement':
+          if (deal.context?.targetHouseguestId) {
+            obligationScore += 15; // Obligation toward deal partner
+          }
+          break;
+        case 'final_two':
+          obligationScore += 50; // Very strong late-game obligation
+          break;
+        case 'partnership':
+          obligationScore += 20;
+          break;
+        case 'veto_use':
+          obligationScore += 40; // Strong veto commitment
+          break;
+        case 'information_sharing':
+          obligationScore += 10;
+          break;
+        case 'alliance_invite':
+          obligationScore += 25;
+          break;
+        default:
+          obligationScore += 10;
+      }
+    } else if (deal.status === 'broken') {
+      // Broken deals reduce obligation (betrayal)
+      if (deal.proposerId === targetId || deal.recipientId === targetId) {
+        // They broke a deal with us
+        obligationScore -= 35;
+      }
+    } else if (deal.status === 'fulfilled') {
+      // Fulfilled deals create slight positive residual
+      obligationScore += 5;
+    }
+  });
+
+  return Math.max(-50, Math.min(50, obligationScore));
 }
 
 /**
@@ -288,7 +339,7 @@ export function getDecisionFactors(
     recentEvents,
     personalityBias: calculatePersonalityBias(evaluator, target),
     strategicValue: calculateStrategicValue(evaluator, target, game),
-    promiseObligations: calculatePromiseObligations(evaluator.id, target.id, game),
+    dealObligations: calculateDealObligations(evaluator.id, target.id, game),
   };
 }
 
@@ -312,8 +363,8 @@ export function calculateDecisionScore(
   // Alliance loyalty (higher = want to keep)
   score += factors.allianceLoyalty * weights.loyaltyWeight;
 
-  // Promise obligations (positive = should protect)
-  score += factors.promiseObligations * weights.promiseWeight;
+  // Deal obligations (positive = should protect)
+  score += factors.dealObligations * weights.dealWeight;
 
   // Strategic value (higher = want to keep)
   score += factors.strategicValue * weights.strategicWeight * 0.5;

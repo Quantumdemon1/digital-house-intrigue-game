@@ -1,6 +1,7 @@
 /**
  * @file src/systems/ai/npc-deal-proposals.ts
  * @description Generate NPC deal proposals for the player
+ * Enhanced with trust-aware proposals, reputation checks, and relationship milestones
  */
 
 import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
@@ -15,7 +16,6 @@ function findCommonThreat(npc: Houseguest, player: Houseguest, game: BigBrotherG
     g.id !== npc.id && g.id !== player.id
   );
   
-  // Find someone both have negative relationships with
   for (const guest of activeGuests) {
     const npcRel = game.relationshipSystem?.getRelationship(npc.id, guest.id) ?? 0;
     const playerRel = game.relationshipSystem?.getRelationship(player.id, guest.id) ?? 0;
@@ -33,6 +33,29 @@ function findCommonThreat(npc: Houseguest, player: Houseguest, game: BigBrotherG
   }
   
   return null;
+}
+
+/**
+ * Get player's reputation penalty based on broken deals
+ */
+function getPlayerReputationPenalty(playerId: string, game: BigBrotherGame): number {
+  const brokenDeals = game.deals?.filter(d => 
+    d.status === 'broken' && 
+    (d.proposerId === playerId || d.recipientId === playerId)
+  ) || [];
+  
+  return brokenDeals.length * 15;
+}
+
+/**
+ * Get existing active deals between two houseguests
+ */
+function getExistingDeals(guest1Id: string, guest2Id: string, game: BigBrotherGame) {
+  return game.deals?.filter(d =>
+    d.status === 'active' &&
+    ((d.proposerId === guest1Id && d.recipientId === guest2Id) ||
+     (d.proposerId === guest2Id && d.recipientId === guest1Id))
+  ) || [];
 }
 
 /**
@@ -79,6 +102,7 @@ function createProposal(
 
 /**
  * Generate proposals from a single NPC to the player
+ * Now considers trust history, existing deals, and reputation
  */
 function generateNPCProposals(
   npc: Houseguest,
@@ -88,13 +112,34 @@ function generateNPCProposals(
   const proposals: NPCProposal[] = [];
   const relationship = game.relationshipSystem?.getRelationship(npc.id, player.id) ?? 0;
   
-  // Only propose if relationship is decent (at least neutral-ish)
-  if (relationship < 10) return proposals;
+  // Get trust score and reputation penalty
+  const trustScore = game.dealSystem?.calculateTrustScore(player.id) ?? 50;
+  const reputationPenalty = getPlayerReputationPenalty(player.id, game);
+  const adjustedRelationship = relationship - reputationPenalty;
   
-  // Check various conditions for proposals
+  // Won't deal with untrustworthy players
+  if (adjustedRelationship < 10) return proposals;
+  
+  // Get existing deals between them
+  const existingDeals = getExistingDeals(npc.id, player.id, game);
+  const hasPartnership = existingDeals.some(d => d.type === 'partnership');
+  const hasSafetyPact = existingDeals.some(d => d.type === 'safety_agreement');
+  const hasF2 = existingDeals.some(d => d.type === 'final_two');
+  
+  // Upgrade path: partnership + safety -> alliance invite
+  if (hasPartnership && hasSafetyPact && adjustedRelationship > 40) {
+    const alreadyAllied = game.allianceSystem?.areInSameAlliance(npc.id, player.id);
+    if (!alreadyAllied) {
+      proposals.push(createProposal(
+        npc, player, 'alliance_invite',
+        `We've been working well together. I think it's time to make it official.`,
+        game
+      ));
+    }
+  }
   
   // If NPC is on the block - desperate for votes
-  if (npc.isNominated && relationship > 15) {
+  if (npc.isNominated && adjustedRelationship > 15) {
     proposals.push(createProposal(
       npc, player, 'vote_together',
       `I need your vote to stay. In return, I'll have your back next week.`,
@@ -104,7 +149,7 @@ function generateNPCProposals(
   
   // If there's a common threat and relationship is good
   const commonThreat = findCommonThreat(npc, player, game);
-  if (commonThreat && relationship > 25) {
+  if (commonThreat && adjustedRelationship > 25) {
     proposals.push(createProposal(
       npc, player, 'target_agreement',
       `${commonThreat.name} is getting too powerful. We should work together to get them out.`,
@@ -114,53 +159,50 @@ function generateNPCProposals(
   }
   
   // Safety pact opportunity - if player is HoH or NPC is worried
-  if (relationship > 35 && !game.allianceSystem?.areInSameAlliance(npc.id, player.id)) {
-    if (player.isHoH) {
-      proposals.push(createProposal(
-        npc, player, 'safety_agreement',
-        `Congratulations on HoH! How about we agree not to put each other up in the future?`,
-        game
-      ));
+  if (adjustedRelationship > 35 && !hasSafetyPact) {
+    if (!game.allianceSystem?.areInSameAlliance(npc.id, player.id)) {
+      if (player.isHoH) {
+        proposals.push(createProposal(
+          npc, player, 'safety_agreement',
+          `Congratulations on HoH! How about we agree not to put each other up in the future?`,
+          game
+        ));
+      }
     }
   }
   
   // Partnership opportunity - good relationship, not allied
-  if (relationship > 40 && !game.allianceSystem?.areInSameAlliance(npc.id, player.id)) {
-    proposals.push(createProposal(
-      npc, player, 'partnership',
-      `I think we work well together. Want to officially partner up?`,
-      game
-    ));
-  }
-  
-  // Late game final 2 deals
-  const activeCount = game.getActiveHouseguests().length;
-  if (relationship > 55 && activeCount <= 6) {
-    // Check if NPC already has a final 2 deal with player
-    const existingF2 = game.deals?.some(d => 
-      d.type === 'final_two' && 
-      d.status === 'active' &&
-      ((d.proposerId === npc.id && d.recipientId === player.id) ||
-       (d.proposerId === player.id && d.recipientId === npc.id))
-    );
-    
-    if (!existingF2) {
+  if (adjustedRelationship > 40 && !hasPartnership) {
+    if (!game.allianceSystem?.areInSameAlliance(npc.id, player.id)) {
       proposals.push(createProposal(
-        npc, player, 'final_two',
-        `We're getting close to the end. I want you with me in the final 2.`,
+        npc, player, 'partnership',
+        `I think we work well together. Want to officially partner up?`,
         game
       ));
     }
   }
   
+  // Late game final 2 deals
+  const activeCount = game.getActiveHouseguests().length;
+  if (adjustedRelationship > 55 && activeCount <= 6 && !hasF2) {
+    proposals.push(createProposal(
+      npc, player, 'final_two',
+      `We're getting close to the end. I want you with me in the final 2.`,
+      game
+    ));
+  }
+  
   // Information sharing - sneaky or strategic NPCs
   if (npc.traits.includes('Sneaky') || npc.traits.includes('Strategic')) {
-    if (relationship > 30) {
-      proposals.push(createProposal(
-        npc, player, 'information_sharing',
-        `Let's share what we hear around the house. Information is power in this game.`,
-        game
-      ));
+    if (adjustedRelationship > 30 && trustScore > 40) {
+      const hasInfoSharing = existingDeals.some(d => d.type === 'information_sharing');
+      if (!hasInfoSharing) {
+        proposals.push(createProposal(
+          npc, player, 'information_sharing',
+          `Let's share what we hear around the house. Information is power in this game.`,
+          game
+        ));
+      }
     }
   }
   
@@ -218,4 +260,81 @@ export function generateNPCProposalsForPlayer(game: BigBrotherGame): NPCProposal
   }
   
   return selectedProposals;
+}
+
+/**
+ * Check relationship milestones and generate triggered proposals
+ * Called when relationship scores change significantly
+ */
+export function checkRelationshipMilestones(
+  houseguestId: string,
+  otherId: string,
+  oldScore: number,
+  newScore: number,
+  game: BigBrotherGame
+): NPCProposal | null {
+  // Only generate proposals from NPC to Player
+  const npc = game.getHouseguestById(houseguestId);
+  const other = game.getHouseguestById(otherId);
+  
+  if (!npc || !other) return null;
+  if (npc.isPlayer) return null; // NPC must be the proposer
+  if (!other.isPlayer) return null; // Player must be the recipient
+  
+  // Get existing deals to avoid duplicates
+  const existingDeals = getExistingDeals(npc.id, other.id, game);
+  const hasInfoSharing = existingDeals.some(d => d.type === 'information_sharing');
+  const hasSafetyPact = existingDeals.some(d => d.type === 'safety_agreement');
+  const hasPartnership = existingDeals.some(d => d.type === 'partnership');
+  
+  // Crossed friendship threshold (25+)
+  if (oldScore < 25 && newScore >= 25 && !hasInfoSharing) {
+    return createProposal(
+      npc, other, 'information_sharing',
+      `I feel like I can trust you now. Let's share what we hear around the house.`,
+      game
+    );
+  }
+  
+  // Crossed close friend threshold (50+)
+  if (oldScore < 50 && newScore >= 50 && !hasSafetyPact) {
+    return createProposal(
+      npc, other, 'safety_agreement',
+      `You've become one of my closest people here. Let's protect each other.`,
+      game
+    );
+  }
+  
+  // Crossed ally threshold (75+)
+  if (oldScore < 75 && newScore >= 75 && !hasPartnership) {
+    return createProposal(
+      npc, other, 'partnership',
+      `I trust you completely. We should ride this out together.`,
+      game
+    );
+  }
+  
+  return null;
+}
+
+/**
+ * Process end of week deals
+ * Evaluates voting deals, checks expirations, updates alliance stability
+ */
+export function processWeekEndDeals(game: BigBrotherGame): void {
+  if (!game.dealSystem) return;
+  
+  // Let the deal system handle the week end processing
+  // This function can be called from the game reducer
+  const deals = game.deals || [];
+  
+  // Check for expired deals
+  deals.forEach(deal => {
+    if (deal.status === 'active' && deal.expiresWeek !== undefined) {
+      if (game.week > deal.expiresWeek) {
+        deal.status = 'expired';
+        deal.updatedAt = Date.now();
+      }
+    }
+  });
 }

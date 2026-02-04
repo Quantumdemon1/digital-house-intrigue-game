@@ -11,6 +11,8 @@ import { Promise } from '../promise';
 import { Deal, NPCProposal } from '../deal';
 import { PromiseSystem } from '../../systems/promise-system';
 import { DealSystem } from '../../systems/deal-system';
+import { TrustSystem } from '../../systems/trust-system';
+import { GameEventBus, gameEventBus } from '../../systems/game-event-bus';
 import {
   logGameEvent, 
   advancePhase, 
@@ -60,6 +62,8 @@ export class BigBrotherGame implements GameStateInterface {
   public allianceSystem: any = null;
   public promiseSystem: PromiseSystem | null = null;
   public dealSystem: DealSystem | null = null;
+  public trustSystem: TrustSystem | null = null;
+  public eventBus: GameEventBus = gameEventBus;
   
   // Game state management
   public currentState: any = null;
