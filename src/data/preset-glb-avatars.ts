@@ -4,6 +4,8 @@
  * These are pre-optimized for instant loading without external API calls
  */
 
+export type GLBCategory = 'humanoid' | 'robot' | 'creature' | 'demo';
+
 export interface GLBPresetAvatar {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface GLBPresetAvatar {
   thumbnail?: string;
   style: 'casual' | 'formal' | 'athletic' | 'fantasy' | 'professional';
   bodyType?: 'slim' | 'average' | 'athletic' | 'stocky';
+  category?: GLBCategory;
   traits?: string[];
   description?: string;
   /** If true, this is a placeholder entry without actual assets */
@@ -31,9 +34,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-marcus',
     name: 'Marcus',
     url: '/avatars/glb/marcus.glb',
-    thumbnail: '/avatars/thumbnails/marcus.webp',
     style: 'casual',
     bodyType: 'slim',
+    category: 'demo',
     traits: ['confident', 'agile'],
     description: 'Rigged figure with humanoid proportions',
     isPlaceholder: false
@@ -42,9 +45,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-elena',
     name: 'Elena',
     url: '/avatars/glb/elena.glb',
-    thumbnail: '/avatars/thumbnails/elena.webp',
     style: 'casual',
     bodyType: 'slim',
+    category: 'humanoid',
     traits: ['graceful', 'charming'],
     description: 'Expressive character with smooth animations',
     isPlaceholder: false
@@ -53,9 +56,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-tyler',
     name: 'Tyler',
     url: '/avatars/glb/tyler.glb',
-    thumbnail: '/avatars/thumbnails/tyler.webp',
     style: 'athletic',
     bodyType: 'athletic',
+    category: 'robot',
     traits: ['competitive', 'tech-savvy'],
     description: 'Robot-style character ready for action',
     isPlaceholder: false
@@ -64,9 +67,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-sophia',
     name: 'Sophia',
     url: '/avatars/glb/sophia.glb',
-    thumbnail: '/avatars/thumbnails/sophia.webp',
     style: 'formal',
     bodyType: 'athletic',
+    category: 'humanoid',
     traits: ['strategic', 'disciplined'],
     description: 'Military-inspired tactical character',
     isPlaceholder: false
@@ -75,9 +78,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-jamal',
     name: 'Jamal',
     url: '/avatars/glb/jamal.glb',
-    thumbnail: '/avatars/thumbnails/jamal.webp',
     style: 'casual',
     bodyType: 'slim',
+    category: 'demo',
     traits: ['analytical', 'calm'],
     description: 'Simple rigged humanoid with clean lines',
     isPlaceholder: false
@@ -86,9 +89,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-maya',
     name: 'Maya',
     url: '/avatars/glb/maya.glb',
-    thumbnail: '/avatars/thumbnails/maya.webp',
     style: 'fantasy',
     bodyType: 'average',
+    category: 'robot',
     traits: ['creative', 'expressive'],
     description: 'Expressive robot with emotional animations',
     isPlaceholder: false
@@ -97,9 +100,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-derek',
     name: 'Derek',
     url: '/avatars/glb/derek.glb',
-    thumbnail: '/avatars/thumbnails/derek.webp',
     style: 'casual',
     bodyType: 'average',
+    category: 'demo',
     traits: ['honest', 'reliable'],
     description: 'Classic humanoid with space-suit style',
     isPlaceholder: false
@@ -108,9 +111,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-luna',
     name: 'Luna',
     url: '/avatars/glb/luna.glb',
-    thumbnail: '/avatars/thumbnails/luna.webp',
     style: 'fantasy',
     bodyType: 'slim',
+    category: 'creature',
     traits: ['quick', 'clever'],
     description: 'Playful fox character with smooth motion',
     isPlaceholder: false
@@ -119,9 +122,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-carlos',
     name: 'Carlos',
     url: '/avatars/glb/carlos.glb',
-    thumbnail: '/avatars/thumbnails/carlos.webp',
     style: 'professional',
     bodyType: 'average',
+    category: 'humanoid',
     traits: ['diplomatic', 'patient'],
     description: 'The mediator',
     isPlaceholder: true
@@ -130,9 +133,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     id: 'glb-zara',
     name: 'Zara',
     url: '/avatars/glb/zara.glb',
-    thumbnail: '/avatars/thumbnails/zara.webp',
     style: 'athletic',
     bodyType: 'athletic',
+    category: 'creature',
     traits: ['fast', 'determined'],
     description: 'Galloping horse with dynamic animations',
     isPlaceholder: false

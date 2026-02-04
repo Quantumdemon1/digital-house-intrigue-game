@@ -24,6 +24,8 @@ export { PresetAvatar, preloadPresetAvatars, preloadAllPresets, getPresetById, g
 export { PresetAvatarSelector } from './PresetAvatarSelector';
 export type { PresetSource } from './PresetAvatarSelector';
 export { AvatarThumbnail, captureAvatarThumbnail, ThumbnailCapture, useAvatarThumbnail } from './AvatarThumbnail';
+export { AvatarScreenshotCapture, captureAvatarScreenshot } from './AvatarScreenshotCapture';
+export { AvatarProfilePicture } from './AvatarProfilePicture';
 
 // Body parts
 export { AvatarBody } from './AvatarBody';

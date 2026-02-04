@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/PresetAvatarSelector.tsx
- * @description Grid UI for selecting preset avatars (GLB, VRM, or RPM)
+ * @description Grid UI for selecting preset avatars (GLB, VRM, or RPM) with category filtering
  */
 
 import React, { useState, useMemo } from 'react';
@@ -9,8 +9,8 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Search, User, Sparkles, Filter } from 'lucide-react';
-import { PRESET_GLB_AVATARS, GLBPresetAvatar } from '@/data/preset-glb-avatars';
+import { Search, User, Sparkles, Filter, Bot, Cat, Beaker } from 'lucide-react';
+import { PRESET_GLB_AVATARS, GLBPresetAvatar, GLBCategory } from '@/data/preset-glb-avatars';
 import { PRESET_VRM_AVATARS, VRMPresetAvatar } from '@/data/preset-vrm-avatars';
 import { PRESET_RPM_AVATARS, RPMPresetAvatar } from '@/data/preset-rpm-avatars';
 
@@ -23,6 +23,7 @@ interface PresetAvatarSelectorProps {
   onSelect: (preset: PresetAvatar) => void;
   selectedId?: string;
   showFilters?: boolean;
+  showCategoryFilter?: boolean;
   columns?: number;
   className?: string;
 }
@@ -38,6 +39,14 @@ const SOURCE_LABELS: Record<PresetSource, string> = {
   vrm: 'Anime',
   rpm: 'Pro Custom'
 };
+
+const CATEGORY_OPTIONS: { value: GLBCategory | 'all'; label: string; icon: React.ElementType }[] = [
+  { value: 'all', label: 'All', icon: User },
+  { value: 'humanoid', label: 'Human', icon: User },
+  { value: 'robot', label: 'Robot', icon: Bot },
+  { value: 'creature', label: 'Creature', icon: Cat },
+  { value: 'demo', label: 'Demo', icon: Beaker }
+];
 
 /**
  * Extract all unique styles from presets
@@ -60,14 +69,17 @@ export const PresetAvatarSelector: React.FC<PresetAvatarSelectorProps> = ({
   onSelect,
   selectedId,
   showFilters = true,
+  showCategoryFilter = true,
   columns = 4,
   className
 }) => {
   const [search, setSearch] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<GLBCategory | 'all'>('all');
 
   const presets = PRESET_MAP[source];
   const styles = useMemo(() => getAvailableStyles(presets), [presets]);
+  const showCategories = showCategoryFilter && source === 'glb';
 
   // Filter presets
   const filteredPresets = useMemo(() => {
@@ -87,9 +99,15 @@ export const PresetAvatarSelector: React.FC<PresetAvatarSelectorProps> = ({
         if (preset.style !== selectedStyle) return false;
       }
 
+      // Category filter (GLB only)
+      if (selectedCategory !== 'all' && source === 'glb' && 'category' in preset) {
+        const glbPreset = preset as GLBPresetAvatar;
+        if (glbPreset.category !== selectedCategory) return false;
+      }
+
       return true;
     });
-  }, [presets, search, selectedStyle]);
+  }, [presets, search, selectedStyle, selectedCategory, source]);
 
   const gridCols = {
     3: 'grid-cols-3',
@@ -122,6 +140,27 @@ export const PresetAvatarSelector: React.FC<PresetAvatarSelectorProps> = ({
             />
           </div>
 
+          {/* Category filters (GLB only) */}
+          {showCategories && (
+            <div className="flex flex-wrap gap-2">
+              {CATEGORY_OPTIONS.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setSelectedCategory(value)}
+                  className={cn(
+                    "px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5",
+                    selectedCategory === value
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-border hover:bg-accent"
+                  )}
+                >
+                  <Icon className="w-3 h-3" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Style filters */}
           {styles.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -134,7 +173,7 @@ export const PresetAvatarSelector: React.FC<PresetAvatarSelectorProps> = ({
                     : "bg-background border-border hover:bg-accent"
                 )}
               >
-                All
+                All Styles
               </button>
               {styles.map(style => (
                 <button
@@ -245,6 +284,7 @@ export const PresetAvatarSelector: React.FC<PresetAvatarSelectorProps> = ({
               onClick={() => {
                 setSearch('');
                 setSelectedStyle(null);
+                setSelectedCategory('all');
               }}
               className="text-xs text-primary mt-2 hover:underline"
             >

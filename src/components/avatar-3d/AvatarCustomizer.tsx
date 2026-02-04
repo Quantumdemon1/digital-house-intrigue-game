@@ -9,12 +9,13 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  User, Sparkles, Globe, Users, Star, RotateCcw, ChevronLeft, ChevronRight
+  User, Sparkles, Globe, Users, Star, RotateCcw, ChevronLeft, ChevronRight, Camera, Check
 } from 'lucide-react';
 import { Avatar3DConfig, generateDefaultConfig } from '@/models/avatar-config';
 import { RPMAvatarCreator } from './RPMAvatarCreator';
 import { AvatarLoader } from './AvatarLoader';
 import { PresetAvatarSelector, PresetSource } from './PresetAvatarSelector';
+import { AvatarScreenshotCapture } from './AvatarScreenshotCapture';
 import { PRESET_GLB_AVATARS } from '@/data/preset-glb-avatars';
 import { PRESET_VRM_AVATARS } from '@/data/preset-vrm-avatars';
 
@@ -85,12 +86,17 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
     setAvatarMode('vrm');
   }, [updateConfig]);
 
+  const handleProfilePhotoCaptured = useCallback((dataUrl: string) => {
+    updateConfig({ profilePhotoUrl: dataUrl });
+  }, [updateConfig]);
+
   const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: { delta: { x: number } }) => {
     setRotation(r => r + info.delta.x * 0.5);
   };
 
   // Check if a valid avatar is selected
   const hasValidAvatar = config.modelUrl || config.presetId;
+  const hasProfilePhoto = !!config.profilePhotoUrl;
 
   return (
     <div className={cn(
@@ -238,6 +244,27 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
               <Globe className="w-5 h-5" />
               Edit Pro Avatar
             </motion.button>
+          )}
+
+          {/* Profile Photo Capture Button */}
+          {hasValidAvatar && (
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <AvatarScreenshotCapture
+                canvasSelector="canvas"
+                onCapture={handleProfilePhotoCaptured}
+              />
+              
+              {hasProfilePhoto && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 text-xs text-primary"
+                >
+                  <Check className="w-3 h-3" />
+                  Profile photo saved
+                </motion.div>
+              )}
+            </div>
           )}
         </motion.div>
 
