@@ -25,7 +25,9 @@ export function getPromiseImpact(promise: Promise, loyaltyStat: number = 5): num
     'final_2': 2.0,      // Final 2 deals are the most impactful
     'vote': 1.0,         // Vote promises have standard impact
     'alliance_loyalty': 1.8, // Alliance loyalty is quite important
-    'information': 0.7   // Information sharing is less impactful
+    'information': 0.7,  // Information sharing is less impactful
+    'hoh_protection': 1.6, // HoH protection promises are significant
+    'veto_use': 1.4      // Veto use promises are moderately important
   };
   
   // Calculate impact based on status and type

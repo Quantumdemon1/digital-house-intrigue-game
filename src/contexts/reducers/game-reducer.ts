@@ -9,6 +9,7 @@ import { logReducer } from './reducers/log-reducer';
 import { playerActionReducer } from './reducers/player-action-reducer';
 import { GameAction } from '../types/game-context-types';
 import { loadGameReducer } from './reducers/load-game-reducer';
+import { PlayerPerception, CustomAlliance } from '../../models/player-perception';
 
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
   console.log(`Game reducer: ${action.type}`, action.payload);
@@ -71,6 +72,53 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     case 'RELATIONSHIP_IMPACT':
       // This doesn't actually modify the state, but is used by the RelationshipImpactProvider
       return state;
+    
+    // Player perception actions
+    case 'UPDATE_PLAYER_PERCEPTION': {
+      const { perception } = action.payload as { perception: PlayerPerception };
+      const currentPerceptions = state.playerPerceptions || { perceptions: {}, customAlliances: [] };
+      return {
+        ...state,
+        playerPerceptions: {
+          ...currentPerceptions,
+          perceptions: {
+            ...currentPerceptions.perceptions,
+            [perception.houseguestId]: perception
+          }
+        }
+      };
+    }
+    
+    case 'CREATE_CUSTOM_ALLIANCE':
+    case 'UPDATE_CUSTOM_ALLIANCE': {
+      const { alliance } = action.payload as { alliance: CustomAlliance };
+      const currentPerceptions = state.playerPerceptions || { perceptions: {}, customAlliances: [] };
+      const existingIndex = currentPerceptions.customAlliances.findIndex(a => a.id === alliance.id);
+      
+      const updatedAlliances = existingIndex >= 0
+        ? currentPerceptions.customAlliances.map((a, i) => i === existingIndex ? alliance : a)
+        : [...currentPerceptions.customAlliances, alliance];
+      
+      return {
+        ...state,
+        playerPerceptions: {
+          ...currentPerceptions,
+          customAlliances: updatedAlliances
+        }
+      };
+    }
+    
+    case 'DELETE_CUSTOM_ALLIANCE': {
+      const { allianceId } = action.payload as { allianceId: string };
+      const currentPerceptions = state.playerPerceptions || { perceptions: {}, customAlliances: [] };
+      return {
+        ...state,
+        playerPerceptions: {
+          ...currentPerceptions,
+          customAlliances: currentPerceptions.customAlliances.filter(a => a.id !== allianceId)
+        }
+      };
+    }
       
     default:
       return state;
