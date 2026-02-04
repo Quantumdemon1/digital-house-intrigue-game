@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/AvatarCustomizer.tsx
- * @description Full Sims-style 3D avatar customization interface
+ * @description Full Sims-style 3D avatar customization interface with RPM integration
  */
 
 import React, { useState, useCallback } from 'react';
@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   User, Palette, Eye, Scissors, Shirt, 
   RotateCcw, ChevronLeft, ChevronRight,
-  Sparkles
+  Sparkles, Globe, Wand2
 } from 'lucide-react';
 import { 
   Avatar3DConfig, 
@@ -32,6 +32,8 @@ import {
   BOTTOM_STYLE_ICONS,
   HEAD_SHAPE_ICONS
 } from './SimsIcons';
+import { RPMAvatarCreator } from './RPMAvatarCreator';
+import { AvatarLoader } from './AvatarLoader';
 
 // Option arrays
 const BODY_TYPES: readonly BodyType[] = ['slim', 'average', 'athletic', 'stocky'] as const;
@@ -51,10 +53,13 @@ interface AvatarCustomizerProps {
   onChange: (config: Avatar3DConfig) => void;
   onComplete?: () => void;
   showCompleteButton?: boolean;
+  enableRPM?: boolean;
+  rpmSubdomain?: string;
   className?: string;
 }
 
 type TabId = 'body' | 'skin' | 'face' | 'hair' | 'clothing';
+type AvatarMode = 'procedural' | 'rpm';
 
 const tabConfig: { id: TabId; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: 'body', label: 'Body', icon: User },
@@ -69,12 +74,18 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   onChange,
   onComplete,
   showCompleteButton = true,
+  enableRPM = true,
+  rpmSubdomain = 'demo',
   className
 }) => {
   const [config, setConfig] = useState<Avatar3DConfig>(initialConfig || generateDefaultConfig());
   const [rotation, setRotation] = useState(0);
   const [activeTab, setActiveTab] = useState<TabId>('body');
   const [isDragging, setIsDragging] = useState(false);
+  const [avatarMode, setAvatarMode] = useState<AvatarMode>(
+    initialConfig?.modelSource === 'ready-player-me' ? 'rpm' : 'procedural'
+  );
+  const [showRPMCreator, setShowRPMCreator] = useState(false);
 
   const updateConfig = useCallback((updates: Partial<Avatar3DConfig>) => {
     const newConfig = { ...config, ...updates };
@@ -82,10 +93,27 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
     onChange(newConfig);
   }, [config, onChange]);
 
+  const handleRPMAvatarCreated = useCallback((avatarUrl: string) => {
+    updateConfig({
+      modelSource: 'ready-player-me',
+      modelUrl: avatarUrl
+    });
+    setAvatarMode('rpm');
+  }, [updateConfig]);
+
+  const switchToProceduralMode = useCallback(() => {
+    updateConfig({
+      modelSource: 'procedural',
+      modelUrl: undefined
+    });
+    setAvatarMode('procedural');
+  }, [updateConfig]);
+
   const randomizeAll = () => {
-    const newConfig = generateDefaultConfig();
+    const newConfig = { ...generateDefaultConfig(), modelSource: 'procedural' as const, modelUrl: undefined };
     setConfig(newConfig);
     onChange(newConfig);
+    setAvatarMode('procedural');
   };
 
   const randomizeCategory = (category: string) => {
@@ -370,6 +398,16 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
       'sims-cas-background sims-cas-pattern min-h-[500px] rounded-2xl overflow-hidden',
       className
     )}>
+      {/* RPM Creator Dialog */}
+      {enableRPM && (
+        <RPMAvatarCreator
+          open={showRPMCreator}
+          onClose={() => setShowRPMCreator(false)}
+          onAvatarCreated={handleRPMAvatarCreated}
+          subdomain={rpmSubdomain}
+        />
+      )}
+
       <div className="flex flex-col lg:flex-row gap-6 p-6">
         {/* Left: 3D Preview */}
         <motion.div 
@@ -381,6 +419,46 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
           <div className="sims-plumbob w-6 h-8 text-emerald-400">
             <PlumbobIcon className="w-full h-full" />
           </div>
+
+          {/* Mode Toggle */}
+          {enableRPM && (
+            <div className="flex gap-2 mb-2">
+              <motion.button
+                onClick={() => setAvatarMode('procedural')}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all",
+                  avatarMode === 'procedural' 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-white/10 text-white/70 hover:bg-white/20"
+                )}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Wand2 className="w-3 h-3" />
+                Chibi Style
+              </motion.button>
+              <motion.button
+                onClick={() => {
+                  if (config.modelUrl) {
+                    setAvatarMode('rpm');
+                  } else {
+                    setShowRPMCreator(true);
+                  }
+                }}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all",
+                  avatarMode === 'rpm' 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-white/10 text-white/70 hover:bg-white/20"
+                )}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Globe className="w-3 h-3" />
+                Pro Avatar
+              </motion.button>
+            </div>
+          )}
           
           {/* Avatar Preview with Turntable */}
           <div className="sims-turntable relative">
@@ -394,7 +472,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                 isDragging ? "cursor-grabbing" : "cursor-grab"
               )}
               style={{ 
-                background: 'radial-gradient(ellipse at center 30%, hsl(200 30% 20%) 0%, hsl(200 40% 10%) 100%)'
+                background: 'radial-gradient(ellipse at center 30%, hsl(var(--primary) / 0.2) 0%, hsl(var(--background)) 100%)'
               }}
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
@@ -404,15 +482,24 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
               onDrag={(e, info) => handleDrag(e, info)}
             >
               <motion.div
-                animate={{ rotateY: rotation }}
+                animate={{ rotateY: avatarMode === 'procedural' ? rotation : 0 }}
                 transition={{ type: 'spring', stiffness: 100, damping: 15 }}
                 className="w-full h-full"
               >
-                <SimsAvatar 
-                  config={config} 
-                  size="full"
-                  animated={true}
-                />
+                {avatarMode === 'rpm' && config.modelUrl ? (
+                  <AvatarLoader
+                    avatarUrl={config.modelUrl}
+                    avatarConfig={config}
+                    size="full"
+                    animated={true}
+                  />
+                ) : (
+                  <SimsAvatar 
+                    config={config} 
+                    size="full"
+                    animated={true}
+                  />
+                )}
               </motion.div>
               
               {/* Drag hint */}
@@ -453,16 +540,28 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             </motion.button>
           </div>
 
-          {/* Randomize All */}
-          <motion.button
-            onClick={randomizeAll}
-            className="sims-randomize mt-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <DiceIcon className="w-5 h-5 sims-dice" />
-            Randomize All
-          </motion.button>
+          {/* Randomize All / Create New RPM */}
+          {avatarMode === 'procedural' ? (
+            <motion.button
+              onClick={randomizeAll}
+              className="sims-randomize mt-2"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <DiceIcon className="w-5 h-5 sims-dice" />
+              Randomize All
+            </motion.button>
+          ) : (
+            <motion.button
+              onClick={() => setShowRPMCreator(true)}
+              className="sims-randomize mt-2"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Globe className="w-5 h-5" />
+              Edit Avatar
+            </motion.button>
+          )}
         </motion.div>
 
         {/* Right: Customization Panels */}
@@ -472,41 +571,74 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {/* Sims-style Tabs */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
-            {tabConfig.map((tab) => (
-              <motion.button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "sims-tab text-sm",
-                  activeTab === tab.id && "active"
-                )}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <tab.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </motion.button>
-            ))}
-          </div>
-
-          {/* Panel Content */}
-          <div className="sims-panel">
-            <ScrollArea className="h-[320px] lg:h-[380px] pr-4">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+          {avatarMode === 'rpm' ? (
+            /* RPM Mode - Show info and option to switch */
+            <div className="sims-panel flex flex-col items-center justify-center h-[400px] text-center">
+              <Globe className="w-16 h-16 text-primary mb-4" />
+              <h3 className="text-xl font-bold text-white mb-2">Pro Avatar Active</h3>
+              <p className="text-white/60 mb-6 max-w-sm">
+                You're using a Ready Player Me avatar with realistic proportions and expressions.
+              </p>
+              <div className="flex flex-col gap-3">
+                <motion.button
+                  onClick={() => setShowRPMCreator(true)}
+                  className="sims-button px-6 py-3 flex items-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  {renderTabContent()}
-                </motion.div>
-              </AnimatePresence>
-            </ScrollArea>
-          </div>
+                  <Globe className="w-5 h-5" />
+                  Customize Pro Avatar
+                </motion.button>
+                <motion.button
+                  onClick={switchToProceduralMode}
+                  className="px-6 py-2 text-sm text-white/60 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Switch to Chibi Style
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            /* Procedural Mode - Show customization tabs */
+            <>
+              {/* Sims-style Tabs */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+                {tabConfig.map((tab) => (
+                  <motion.button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "sims-tab text-sm",
+                      activeTab === tab.id && "active"
+                    )}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Panel Content */}
+              <div className="sims-panel">
+                <ScrollArea className="h-[320px] lg:h-[380px] pr-4">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {renderTabContent()}
+                    </motion.div>
+                  </AnimatePresence>
+                </ScrollArea>
+              </div>
+            </>
+          )}
 
           {/* Complete Button */}
           {showCompleteButton && onComplete && (
