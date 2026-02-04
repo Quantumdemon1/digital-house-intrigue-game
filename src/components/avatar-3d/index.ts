@@ -18,6 +18,13 @@ export * from './SimsIcons';
 export { AvatarLoader, AvatarSkeleton, preloadAvatar } from './AvatarLoader';
 export type { AvatarSize } from './AvatarLoader';
 
+// VRM and Preset avatar components
+export { VRMAvatar, preloadVRM } from './VRMAvatar';
+export { PresetAvatar, preloadPresetAvatars, preloadAllPresets, getPresetById, getPresetUrl } from './PresetAvatar';
+export { PresetAvatarSelector } from './PresetAvatarSelector';
+export type { PresetSource } from './PresetAvatarSelector';
+export { AvatarThumbnail, captureAvatarThumbnail, ThumbnailCapture, useAvatarThumbnail } from './AvatarThumbnail';
+
 // Body parts
 export { AvatarBody } from './AvatarBody';
 export { AvatarHead } from './AvatarHead';
