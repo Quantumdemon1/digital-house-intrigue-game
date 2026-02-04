@@ -76,35 +76,8 @@ const EvictionInteractionDialog: React.FC<EvictionInteractionDialogProps> = ({
   const handleOptionSelected = (option: InteractionOption) => {
     setSelectedOption(option);
     
-    // Calculate relationship change based on interaction and houseguest personality
-    // Apply relationship change
-    dispatch({
-      type: 'PLAYER_ACTION',
-      payload: {
-        actionId: 'update_relationship',
-        params: {
-          guestId1: player.id,
-          guestId2: houseguest.id,
-          change: option.relationshipChange,
-          note: `${player.name} interacted with ${houseguest.name}`
-        }
-      }
-    });
-    
-    // Log the interaction in game log
-    dispatch({
-      type: 'PLAYER_ACTION',
-      payload: {
-        actionId: 'log_event',
-        params: {
-          week: gameState.week,
-          phase: gameState.phase,
-          type: 'SOCIAL_INTERACTION',
-          description: `${player.name} interacted with ${houseguest.name}.`,
-          involvedHouseguests: [player.id, houseguest.id],
-        }
-      }
-    });
+    // Don't dispatch relationship change here - InteractionResults will handle it
+    // after calculating success/failure based on stats
     
     // Show results after a short delay
     setTimeout(() => {

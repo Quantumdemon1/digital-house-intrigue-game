@@ -9,25 +9,30 @@ import { cn } from '@/lib/utils';
 import { Promise } from '@/models/promise';
 
 const PromiseManager: React.FC = () => {
-  const { game } = useGame();
+  const { gameState } = useGame();
   const [activePromises, setActivePromises] = useState<Promise[]>([]);
   const [expiredPromises, setExpiredPromises] = useState<Promise[]>([]);
   const [showExpiredPromises, setShowExpiredPromises] = useState(false);
   
+  // Helper to get houseguest by ID from reducer state
+  const getHouseguestById = (id: string) => {
+    return gameState.houseguests.find(h => h.id === id);
+  };
+  
   useEffect(() => {
-    if (!game?.promises) return;
+    if (!gameState?.promises) return;
     
     // Filter promises based on status
     setActivePromises(
-      game.promises.filter(p => p.status === 'pending' || p.status === 'active')
+      gameState.promises.filter(p => p.status === 'pending' || p.status === 'active')
     );
     
     setExpiredPromises(
-      game.promises.filter(p => p.status === 'expired' || p.status === 'broken' || p.status === 'fulfilled')
+      gameState.promises.filter(p => p.status === 'expired' || p.status === 'broken' || p.status === 'fulfilled')
     );
-  }, [game?.promises]);
+  }, [gameState?.promises]);
   
-  if (!game?.promises || !activePromises) {
+  if (!gameState?.promises || activePromises.length === 0) {
     return (
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
@@ -62,8 +67,8 @@ const PromiseManager: React.FC = () => {
         ) : (
           <div className="max-h-[240px] overflow-y-auto pr-1 space-y-2">
             {activePromises.map(promise => {
-              const promiser = game.getHouseguestById(promise.fromId);
-              const promisee = game.getHouseguestById(promise.toId);
+              const promiser = getHouseguestById(promise.fromId);
+              const promisee = getHouseguestById(promise.toId);
               
               return (
                 <div 
@@ -114,8 +119,8 @@ const PromiseManager: React.FC = () => {
             {showExpiredPromises && (
               <div className="max-h-[120px] overflow-y-auto mt-2 space-y-2">
                 {expiredPromises.map(promise => {
-                  const promiser = game.getHouseguestById(promise.fromId);
-                  const promisee = game.getHouseguestById(promise.toId);
+                  const promiser = getHouseguestById(promise.fromId);
+                  const promisee = getHouseguestById(promise.toId);
                   
                   return (
                     <div 
