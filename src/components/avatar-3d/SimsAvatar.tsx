@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/SimsAvatar.tsx
- * @description Main 3D Sims-style avatar component
+ * @description Modern chibi-style 3D avatar with toon shading
  */
 
 import React, { useRef } from 'react';
@@ -32,7 +32,7 @@ interface SimsAvatarProps {
 }
 
 /**
- * Inner avatar scene component that renders inside the Canvas
+ * Inner avatar scene component with modern toon lighting
  */
 const AvatarScene: React.FC<{
   config: Avatar3DConfig;
@@ -54,26 +54,36 @@ const AvatarScene: React.FC<{
   
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.6} color="#ffffff" />
+      {/* Modern soft 3-point lighting for toon shading */}
+      <ambientLight intensity={0.75} color="#fff8f5" />
+      
+      {/* Main key light - warm, from above-front */}
       <directionalLight 
-        position={[3, 5, 5]} 
-        intensity={0.8} 
+        position={[2, 4, 4]} 
+        intensity={0.6} 
+        color="#fffaf5"
         castShadow={false}
       />
+      
+      {/* Rim/back light - cool blue for depth */}
       <directionalLight 
-        position={[-2, 3, 2]} 
-        intensity={0.3}
-        color="#b0c4de"
+        position={[-2, 2, -3]} 
+        intensity={0.35}
+        color="#c5d8ff"
+      />
+      
+      {/* Fill light from below - warm bounce */}
+      <hemisphereLight 
+        args={['#ffffff', '#ffd4b8', 0.4]}
       />
       
       {/* Status glow light */}
       {hasGlow && (
         <pointLight
-          position={[0, 0.3, 0.5]}
-          intensity={0.5}
+          position={[0, 0.2, 0.6]}
+          intensity={0.4}
           color={glowColor}
-          distance={2}
+          distance={2.5}
         />
       )}
       
@@ -89,22 +99,29 @@ const AvatarScene: React.FC<{
         <AvatarHair config={config} segments={segments} />
         <AvatarClothing config={config} segments={segments} />
         
-        {/* Player indicator ring */}
+        {/* Player indicator ring - cute glow */}
         {isPlayer && (
-          <mesh position={[0, -0.6, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.25, 0.28, 32]} />
-            <meshBasicMaterial color="#22C55E" transparent opacity={0.8} />
-          </mesh>
+          <group position={[0, -0.5, 0]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.22, 0.26, 32]} />
+              <meshBasicMaterial color="#22C55E" transparent opacity={0.7} />
+            </mesh>
+            {/* Inner glow */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
+              <circleGeometry args={[0.22, 32]} />
+              <meshBasicMaterial color="#22C55E" transparent opacity={0.15} />
+            </mesh>
+          </group>
         )}
       </group>
       
-      {/* Ground shadow */}
+      {/* Soft ground shadow */}
       {showShadow && (
         <ContactShadows
-          position={[0, -0.65, 0]}
-          opacity={0.4}
-          scale={1}
-          blur={2}
+          position={[0, -0.52, 0]}
+          opacity={0.5}
+          scale={1.2}
+          blur={2.5}
           far={1}
         />
       )}
@@ -113,7 +130,7 @@ const AvatarScene: React.FC<{
 };
 
 /**
- * Main Sims-style 3D avatar component
+ * Main modern chibi-style 3D avatar component
  */
 export const SimsAvatar: React.FC<SimsAvatarProps> = ({
   config = DEFAULT_AVATAR_CONFIG,
