@@ -91,7 +91,19 @@ export class SocialInteractionState extends GameStateBase {
       }
     });
     
-    // Make promise options
+    // Propose deal options (replaces make_promise)
+    activeGuests.forEach(houseguest => {
+      if (!houseguest.isPlayer) {
+        actions.push({
+          actionId: 'propose_deal',
+          text: `Propose a deal to ${houseguest.name}`,
+          parameters: { targetId: houseguest.id, targetName: houseguest.name },
+          category: 'deal'
+        });
+      }
+    });
+    
+    // Legacy: Make promise options (keeping for backward compatibility)
     activeGuests.forEach(houseguest => {
       if (!houseguest.isPlayer) {
         actions.push({
@@ -132,7 +144,7 @@ export class SocialInteractionState extends GameStateBase {
   
   async handleAction(actionId: string, parameters: any): Promise<boolean> {
     // Decrement interactions for actions that consume them
-    const consumesInteraction = ['talk_to', 'strategic_discussion', 'relationship_building', 'make_promise'].includes(actionId);
+    const consumesInteraction = ['talk_to', 'strategic_discussion', 'relationship_building', 'make_promise', 'propose_deal'].includes(actionId);
     
     if (consumesInteraction && this.interactionsRemaining <= 0) return false;
     
@@ -169,6 +181,11 @@ export class SocialInteractionState extends GameStateBase {
           promiseType: parameters.promiseType,
           promiseDescription: parameters.promiseDescription 
         });
+        if (consumesInteraction) this.interactionsRemaining--;
+        break;
+        
+      case 'propose_deal':
+        // Handle deal proposal (UI handles the actual creation)
         if (consumesInteraction) this.interactionsRemaining--;
         break;
         

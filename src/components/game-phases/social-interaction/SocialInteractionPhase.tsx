@@ -9,10 +9,13 @@ import InteractionsCounter from './InteractionsCounter';
 import ActionSections from './ActionSections';
 import StrategicDiscussionDialog from '../social/StrategicDiscussionDialog';
 import MakePromiseDialog from '../social/MakePromiseDialog';
+import { ProposeDealDialog, NPCProposalDialog } from '@/components/deals';
 import NPCActivityFeed from './NPCActivityFeed';
 import { EnhancedGameLogger } from '@/utils/game-log';
 import { executeAllNPCActions, type NPCActivityItem } from '@/systems/ai/npc-social-behavior';
 import { InteractionTracker } from '@/systems/ai/interaction-tracker';
+import { generateNPCProposalsForPlayer } from '@/systems/ai/npc-deal-proposals';
+import { NPCProposal } from '@/models/deal';
 import { config } from '@/config';
 
 const SocialInteractionPhase: React.FC = () => {
@@ -22,6 +25,11 @@ const SocialInteractionPhase: React.FC = () => {
   const [isNPCPhaseActive, setIsNPCPhaseActive] = useState(false);
   const interactionTrackerRef = useRef<InteractionTracker | null>(null);
   const hasRunNPCActions = useRef(false);
+  const hasGeneratedProposals = useRef(false);
+  
+  // NPC Proposals state
+  const [currentProposal, setCurrentProposal] = useState<NPCProposal | null>(null);
+  const [proposalQueue, setProposalQueue] = useState<NPCProposal[]>([]);
   
   const [dialogAction, setDialogAction] = useState<{
     type: string;
@@ -47,6 +55,28 @@ const SocialInteractionPhase: React.FC = () => {
       setEnhancedLogger(new EnhancedGameLogger(game, logger));
     }
   }, [game, logger]);
+
+  // Generate NPC proposals for player at start of social phase
+  useEffect(() => {
+    if (!game || hasGeneratedProposals.current) return;
+    if (game?.currentState?.constructor.name !== 'SocialInteractionState') return;
+    
+    hasGeneratedProposals.current = true;
+    
+    // Generate proposals after a short delay
+    const timer = setTimeout(() => {
+      const proposals = generateNPCProposalsForPlayer(game);
+      if (proposals.length > 0) {
+        setProposalQueue(proposals);
+        // Show first proposal after NPC actions
+        setTimeout(() => {
+          setCurrentProposal(proposals[0]);
+        }, 3000);
+      }
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [game?.currentState]);
 
   // Run NPC autonomous actions when social phase starts
   const runNPCActions = useCallback(async () => {
@@ -82,6 +112,37 @@ const SocialInteractionPhase: React.FC = () => {
     }
   }, [game?.currentState, runNPCActions]);
 
+  // Handle NPC proposal response
+  const handleProposalResponse = useCallback((proposalId: string, response: 'accepted' | 'declined') => {
+    if (!game?.dealSystem) return;
+    
+    game.dealSystem.respondToProposal(proposalId, response);
+    
+    // Move to next proposal
+    const nextQueue = proposalQueue.filter(p => p.id !== proposalId);
+    setProposalQueue(nextQueue);
+    setCurrentProposal(null);
+    
+    // Show next proposal if available
+    if (nextQueue.length > 0) {
+      setTimeout(() => {
+        setCurrentProposal(nextQueue[0]);
+      }, 1500);
+    }
+  }, [game?.dealSystem, proposalQueue]);
+
+  const handleCloseProposal = useCallback(() => {
+    setCurrentProposal(null);
+    // Show next proposal if available
+    const nextQueue = proposalQueue.slice(1);
+    setProposalQueue(nextQueue);
+    if (nextQueue.length > 0) {
+      setTimeout(() => {
+        setCurrentProposal(nextQueue[0]);
+      }, 1500);
+    }
+  }, [proposalQueue]);
+
   if (!game || !game.currentState || !(game.currentState.constructor.name === 'SocialInteractionState')) {
     return (
       <GameCard className="animate-pulse">
@@ -110,6 +171,15 @@ const SocialInteractionPhase: React.FC = () => {
     if (actionId === 'make_promise') {
       setDialogAction({
         type: 'make_promise',
+        params,
+        isOpen: true
+      });
+      return;
+    }
+    
+    if (actionId === 'propose_deal') {
+      setDialogAction({
+        type: 'propose_deal',
         params,
         isOpen: true
       });
@@ -193,6 +263,21 @@ const SocialInteractionPhase: React.FC = () => {
           params={dialogAction.params}
         />
       )}
+      
+      {dialogAction.type === 'propose_deal' && (
+        <ProposeDealDialog
+          open={dialogAction.isOpen}
+          onOpenChange={handleCloseDialog}
+          params={dialogAction.params}
+        />
+      )}
+      
+      {/* NPC Proposal Dialog */}
+      <NPCProposalDialog
+        proposal={currentProposal}
+        onRespond={handleProposalResponse}
+        onClose={handleCloseProposal}
+      />
     </GameCard>
   );
 };

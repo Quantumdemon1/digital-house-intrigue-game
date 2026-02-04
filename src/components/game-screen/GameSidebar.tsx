@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Crown, Shield, Target, Users, FileText } from "lucide-react";
 import HouseguestListComponent from '../HouseguestList';
 import GameLog from "../GameEventLog";
-import PromiseManager from '../promise/PromiseManager';
+import { DealsManager } from '@/components/deals';
 import { StatusAvatar } from '@/components/ui/status-avatar';
 import { staggerContainer, cardVariants } from '@/lib/motion-variants';
 
@@ -143,9 +143,9 @@ const GameSidebar: React.FC = () => {
         </Card>
       </motion.div>
       
-      {/* Promise Manager */}
+      {/* Deals & Alliances Manager */}
       <motion.div variants={cardVariants}>
-        <PromiseManager />
+        <DealsManager />
       </motion.div>
       
       {/* Tabs for Houseguests and Game Log */}
