@@ -59,6 +59,15 @@ export const config = {
   // UI settings
   TRANSITION_DELAY: 1000, // ms
   
+  // NPC Behavior settings
+  NPC_THREAT_WEIGHT: 0.25,          // How much threat level affects decisions
+  NPC_LOYALTY_WEIGHT: 0.25,         // How much alliance loyalty matters
+  NPC_RELATIONSHIP_WEIGHT: 0.3,     // Base relationship importance
+  NPC_PROMISE_WEIGHT: 0.1,          // Promise obligation weight
+  NPC_PERSONALITY_WEIGHT: 0.1,      // Personality bias weight
+  NPC_AUTONOMOUS_ACTIONS_ENABLED: true, // Enable NPC autonomous social actions
+  NPC_ACTIONS_PER_SOCIAL_PHASE: 2,  // How many actions each NPC takes
+  
   // Development flags
   DEBUG_MODE: true,
   SKIP_ANIMATIONS: false,
