@@ -118,12 +118,28 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
             'w-32 h-32 rounded-full relative overflow-hidden',
             'shadow-xl'
           )}
-          key={has3DConfig ? 'avatar-3d' : (hasAvatar ? avatarUrl : gradient)}
+          key={avatarConfig?.profilePhotoUrl || (hasAvatar ? avatarUrl : gradient)}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
-          {has3DConfig ? (
+          {/* Priority: 1. Captured profile photo, 2. 3D avatar, 3. Image URL, 4. Initials */}
+          {avatarConfig?.profilePhotoUrl ? (
+            <>
+              {/* Show captured 2D profile photo */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-0.5">
+                <div className="w-full h-full rounded-full overflow-hidden">
+                  <img
+                    src={avatarConfig.profilePhotoUrl}
+                    alt={playerName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              {/* Subtle lens overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/10 pointer-events-none rounded-full" />
+            </>
+          ) : has3DConfig ? (
             <AvatarLoader 
               avatarConfig={avatarConfig || localConfig}
               size="xl"
