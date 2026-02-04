@@ -22,10 +22,17 @@ export type HairStyle = 'short' | 'medium' | 'long' | 'buzz' | 'ponytail' | 'bun
 export type TopStyle = 'tshirt' | 'tanktop' | 'blazer' | 'hoodie' | 'dress';
 export type BottomStyle = 'pants' | 'shorts' | 'skirt' | 'jeans';
 
+// Avatar model source types
+export type AvatarModelSource = 'procedural' | 'ready-player-me' | 'custom-glb';
+
 /**
  * Complete 3D avatar configuration
  */
 export interface Avatar3DConfig {
+  // Model source and URL (for GLB-based avatars)
+  modelSource?: AvatarModelSource;
+  modelUrl?: string;
+  
   // Body shape
   bodyType: BodyType;
   height: HeightType;

@@ -11,6 +11,12 @@ export { ColorPalettePicker } from './ColorPalettePicker';
 export { AvatarOptionSelector } from './AvatarOptionSelector';
 export * from './SimsIcons';
 
+// Ready Player Me components
+export { RPMAvatar, RPMAvatarWithSuspense, preloadRPMAvatar } from './RPMAvatar';
+export { RPMAvatarCreator, RPMAvatarCreatorInline } from './RPMAvatarCreator';
+export { AvatarLoader, AvatarSkeleton, preloadAvatar } from './AvatarLoader';
+export type { AvatarSize } from './AvatarLoader';
+
 // Body parts
 export { AvatarBody } from './AvatarBody';
 export { AvatarHead } from './AvatarHead';
