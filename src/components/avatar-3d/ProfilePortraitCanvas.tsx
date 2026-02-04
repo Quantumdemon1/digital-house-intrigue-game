@@ -3,15 +3,12 @@
  * @description Dedicated head-focused canvas for capturing profile photos
  */
 
-import React, { Suspense, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { Suspense, useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import { Avatar } from '@readyplayerme/visage';
 import { cn } from '@/lib/utils';
-
-// Lazy load the RPM avatar component
-const RPMAvatar = React.lazy(() => 
-  import('@readyplayerme/visage').then(mod => ({ default: mod.Avatar }))
-);
+import { User, Loader2 } from 'lucide-react';
 
 // Camera settings optimized for head portrait
 const PORTRAIT_CAMERA = {
@@ -35,6 +32,21 @@ export const ProfilePortraitCanvas = forwardRef<ProfilePortraitCanvasRef, Profil
   className
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  // Reset states when URL changes
+  useEffect(() => {
+    setIsLoading(true);
+    setHasError(false);
+    
+    // Set loaded after a delay to allow model to render
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [avatarUrl]);
 
   // Expose capture function to parent
   useImperativeHandle(ref, () => ({
@@ -55,11 +67,28 @@ export const ProfilePortraitCanvas = forwardRef<ProfilePortraitCanvasRef, Profil
     }
   }), []);
 
+  if (hasError) {
+    return (
+      <div 
+        style={{ width: size, height: size }} 
+        className={cn('rounded-full overflow-hidden bg-muted flex items-center justify-center', className)}
+      >
+        <User className="w-1/3 h-1/3 text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div 
       style={{ width: size, height: size }} 
-      className={cn('rounded-full overflow-hidden bg-gradient-to-b from-muted/50 to-muted', className)}
+      className={cn('rounded-full overflow-hidden bg-gradient-to-b from-muted/50 to-muted relative', className)}
     >
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/80 z-10">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      
       <Canvas
         ref={canvasRef}
         camera={{
@@ -74,6 +103,9 @@ export const ProfilePortraitCanvas = forwardRef<ProfilePortraitCanvasRef, Profil
           alpha: true
         }}
         style={{ background: 'transparent' }}
+        onCreated={() => {
+          // Canvas created successfully
+        }}
       >
         {/* Lighting optimized for portraits */}
         <ambientLight intensity={0.8} />
@@ -82,9 +114,10 @@ export const ProfilePortraitCanvas = forwardRef<ProfilePortraitCanvasRef, Profil
         
         <Suspense fallback={null}>
           <group position={[0, -0.55, 0]}>
-            <RPMAvatar 
+            <Avatar 
               modelSrc={avatarUrl}
               halfBody={false}
+              onLoaded={() => setIsLoading(false)}
             />
           </group>
         </Suspense>
