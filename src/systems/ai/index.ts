@@ -14,3 +14,28 @@ export { PromptGenerator } from './prompts/prompt-generator';
 export { AIErrorHandler } from './error-handler';
 export { AIDecisionHelper } from './decision-helper';
 export { FallbackCoordinator } from './fallback-coordinator';
+
+// NPC Intelligence System
+export {
+  getDecisionFactors,
+  calculateDecisionScore,
+  getTraitWeights,
+  rankHouseguestsByScore,
+  calculateAllianceLoyalty,
+  calculatePromiseObligations,
+  calculateStrategicValue,
+  calculatePersonalityBias,
+} from './npc-decision-engine';
+
+export type { DecisionFactors, TraitWeights } from './npc-decision-engine';
+
+export {
+  calculateThreatLevel,
+  getThreatBreakdown,
+  rankByThreat,
+  isMajorThreat,
+  getThreatDescription,
+  assessThreat,
+} from './threat-assessment';
+
+export type { ThreatBreakdown } from './threat-assessment';

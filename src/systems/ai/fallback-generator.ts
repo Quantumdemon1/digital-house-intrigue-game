@@ -1,10 +1,22 @@
 /**
  * @file src/systems/ai/fallback-generator.ts
  * @description Provides fallback decisions when AI API calls fail
+ * Enhanced with multi-factor NPC intelligence system
  */
 
 import type { Logger } from '@/utils/logger';
 import type { RelationshipSystem } from '../relationship-system';
+import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
+import type { Houseguest } from '@/models/houseguest';
+import { 
+  rankHouseguestsByScore, 
+  getDecisionFactors, 
+  calculateDecisionScore, 
+  getTraitWeights,
+  calculatePromiseObligations,
+  calculateAllianceLoyalty
+} from './npc-decision-engine';
+import { assessThreat, isMajorThreat } from './threat-assessment';
 
 export class AIFallbackGenerator {
   private logger: Logger;
@@ -62,10 +74,256 @@ export class AIFallbackGenerator {
         return this.getRelationshipAwareReplacement(context, houseguestId, relationshipSystem);
       case 'eviction_vote':
         return this.getRelationshipAwareEvictionVote(context, houseguestId, relationshipSystem);
+      case 'jury_vote':
+        return this.getEnhancedJuryVote(context, houseguestId, relationshipSystem);
       default:
         // If no special relationship-aware handler, use the base fallback
         return this.getFallbackDecision(decisionType, context);
     }
+  }
+
+  /**
+   * Enhanced fallback using full NPC intelligence system
+   */
+  getIntelligentFallbackDecision(
+    decisionType: string,
+    context: any,
+    houseguest: Houseguest,
+    game: BigBrotherGame
+  ): any {
+    this.logger.info(`Using intelligent fallback for ${decisionType}`);
+    
+    const relationshipSystem = game.relationshipSystem as RelationshipSystem | null;
+    
+    switch (decisionType) {
+      case 'nomination':
+        return this.getIntelligentNominations(context, houseguest, game);
+      case 'eviction_vote':
+        return this.getIntelligentEvictionVote(context, houseguest, game);
+      case 'jury_vote':
+        return this.getIntelligentJuryVote(context, houseguest, game);
+      default:
+        // Fall back to relationship-aware if we have a relationship system
+        if (relationshipSystem) {
+          return this.getRelationshipAwareFallbackDecision(
+            decisionType, 
+            context, 
+            houseguest.id, 
+            relationshipSystem
+          );
+        }
+        return this.getFallbackDecision(decisionType, context);
+    }
+  }
+
+  /**
+   * Intelligent nominations using full decision engine
+   */
+  private getIntelligentNominations(
+    context: any, 
+    hoh: Houseguest, 
+    game: BigBrotherGame
+  ): any {
+    const eligible = context.eligible || [];
+    if (eligible.length < 2) {
+      return this.getNominationFallback(context);
+    }
+
+    // Get houseguest objects for eligible nominees
+    const eligibleHouseguests = game.houseguests.filter(
+      h => eligible.includes(h.name) && h.status === 'Active'
+    );
+
+    if (eligibleHouseguests.length < 2) {
+      return this.getNominationFallback(context);
+    }
+
+    // Rank using full decision engine
+    const relationshipSystem = game.relationshipSystem as RelationshipSystem | null;
+    const ranked = rankHouseguestsByScore(
+      hoh,
+      eligibleHouseguests,
+      game,
+      relationshipSystem,
+      assessThreat
+    );
+
+    // Pick the two with lowest scores (most likely to target)
+    const nominee1 = ranked[0]?.houseguest.name;
+    const nominee2 = ranked[1]?.houseguest.name;
+
+    this.logger.info(`Intelligent nomination fallback: ${nominee1} and ${nominee2}`);
+    
+    return { nominee1, nominee2 };
+  }
+
+  /**
+   * Intelligent eviction vote using full decision engine
+   */
+  private getIntelligentEvictionVote(
+    context: any,
+    voter: Houseguest,
+    game: BigBrotherGame
+  ): any {
+    const nomineeNames = context.nominees || [];
+    if (nomineeNames.length !== 2) {
+      return this.getEvictionVoteFallback(context);
+    }
+
+    // Get houseguest objects for nominees
+    const nominees = game.houseguests.filter(
+      h => nomineeNames.includes(h.name)
+    );
+
+    if (nominees.length !== 2) {
+      return this.getEvictionVoteFallback(context);
+    }
+
+    const relationshipSystem = game.relationshipSystem as RelationshipSystem | null;
+    const weights = getTraitWeights(voter.traits);
+
+    // Calculate scores for both nominees
+    const scores = nominees.map(nominee => {
+      const factors = getDecisionFactors(voter, nominee, game, relationshipSystem, assessThreat);
+      return {
+        nominee,
+        score: calculateDecisionScore(factors, weights)
+      };
+    });
+
+    // Vote to evict the one with LOWER score
+    scores.sort((a, b) => a.score - b.score);
+    const voteToEvict = scores[0].nominee.name;
+
+    this.logger.info(`Intelligent eviction vote: evict ${voteToEvict}`);
+    
+    return { voteToEvict };
+  }
+
+  /**
+   * Intelligent jury vote considering gameplay respect
+   */
+  private getIntelligentJuryVote(
+    context: any,
+    juror: Houseguest,
+    game: BigBrotherGame
+  ): any {
+    const finalistNames = context.finalists || [];
+    if (finalistNames.length < 2) {
+      return this.getJuryVoteFallback(context);
+    }
+
+    const finalists = game.houseguests.filter(
+      h => finalistNames.includes(h.name)
+    );
+
+    if (finalists.length < 2) {
+      return this.getJuryVoteFallback(context);
+    }
+
+    const relationshipSystem = game.relationshipSystem as RelationshipSystem | null;
+
+    // Calculate jury vote scores
+    const scores = finalists.map(finalist => {
+      const score = this.calculateJuryScore(juror, finalist, game, relationshipSystem);
+      return { finalist, score };
+    });
+
+    // Vote for the finalist with HIGHER score
+    scores.sort((a, b) => b.score - a.score);
+    const voteForWinner = scores[0].finalist.name;
+
+    this.logger.info(`Intelligent jury vote: vote for ${voteForWinner}`);
+    
+    return { voteForWinner };
+  }
+
+  /**
+   * Calculate comprehensive jury vote score
+   */
+  private calculateJuryScore(
+    juror: Houseguest,
+    finalist: Houseguest,
+    game: BigBrotherGame,
+    relationshipSystem: RelationshipSystem | null
+  ): number {
+    let score = 0;
+
+    // Personal relationship (30% weight)
+    const relationship = relationshipSystem?.getRelationship(juror.id, finalist.id) ?? 0;
+    score += relationship * 0.3;
+
+    // Gameplay respect (40% weight)
+    const gameplayRespect = this.calculateGameplayRespect(finalist, game);
+    score += gameplayRespect * 0.4;
+
+    // Alliance loyalty (15% weight)
+    const allianceLoyalty = calculateAllianceLoyalty(juror.id, finalist.id, game);
+    score += allianceLoyalty * 0.15;
+
+    // Promise obligations (15% weight)
+    const promiseScore = calculatePromiseObligations(juror.id, finalist.id, game);
+    score += (promiseScore + 30) * 0.15; // Normalize -30 to 30 -> 0 to 60
+
+    return score;
+  }
+
+  /**
+   * Calculate gameplay respect for jury voting
+   */
+  private calculateGameplayRespect(finalist: Houseguest, game: BigBrotherGame): number {
+    let respect = 0;
+
+    // Competition performance
+    const hohWins = finalist.competitionsWon?.hoh || 0;
+    const povWins = finalist.competitionsWon?.pov || 0;
+    respect += hohWins * 8;
+    respect += povWins * 6;
+
+    // Survived nominations (resilience)
+    const nominationTimes = finalist.nominations?.times || 0;
+    respect += nominationTimes * 5;
+
+    // Made it to final (baseline)
+    respect += 20;
+
+    // Strategic stat bonus
+    respect += finalist.stats.strategic;
+
+    return Math.min(100, respect);
+  }
+
+  /**
+   * Enhanced jury vote with relationship awareness
+   */
+  private getEnhancedJuryVote(
+    context: any,
+    voterId: string,
+    relationshipSystem: RelationshipSystem
+  ): any {
+    const finalists = context.finalists || [];
+    if (finalists.length < 2) {
+      return this.getJuryVoteFallback(context);
+    }
+
+    // Get relationships with finalists
+    const scores = finalists.map((finalistName: string) => {
+      const finalistId = finalistName.toLowerCase().replace(/\\s/g, '-');
+      const relationship = relationshipSystem.getEffectiveRelationship(voterId, finalistId);
+      
+      // Add some randomness to simulate considering gameplay
+      const gameplayBonus = Math.random() * 20;
+      
+      return {
+        name: finalistName,
+        score: relationship + gameplayBonus
+      };
+    });
+
+    // Vote for highest score
+    scores.sort((a: any, b: any) => b.score - a.score);
+    
+    return { voteForWinner: scores[0].name };
   }
   
   /**
@@ -79,34 +337,25 @@ export class AIFallbackGenerator {
     
     // Calculate scores for each eligible houseguest
     const scoredHouseguests = eligible.map((name: string) => {
-      // Find the ID for this houseguest
-      // In a real implementation, we would have a proper lookup method
-      const targetId = name.toLowerCase().replace(/\s/g, '-');
+      const targetId = name.toLowerCase().replace(/\\s/g, '-');
       
-      // Get relationship info
       const baseScore = relationshipSystem.getRelationship(hohId, targetId);
       const effectiveScore = relationshipSystem.getEffectiveRelationship(hohId, targetId);
       const reciprocity = relationshipSystem.calculateReciprocityModifier(targetId, hohId);
       
-      // Combine factors - lower scores are more likely to be nominated
       const nominationScore = effectiveScore + (reciprocity * 20);
       
       return { name, score: nominationScore };
     });
     
-    // Sort by score (lowest first = most likely to be nominated)
-    scoredHouseguests.sort((a, b) => a.score - b.score);
+    scoredHouseguests.sort((a: any, b: any) => a.score - b.score);
     
-    // Pick the two with lowest scores
     const nominee1 = scoredHouseguests[0]?.name;
     const nominee2 = scoredHouseguests[1]?.name;
     
     this.logger.info(`Relationship-based nomination fallback: ${nominee1} and ${nominee2}`);
     
-    return {
-      nominee1,
-      nominee2
-    };
+    return { nominee1, nominee2 };
   }
   
   /**
