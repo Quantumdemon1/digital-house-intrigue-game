@@ -1,393 +1,220 @@
 
-# Plan: Fix Social, Promises, and Deals Integration
+# Plan: Add Social Action Buttons to Houseguest Profile Dialog
 
-## Problem Analysis
+## Overview
 
-After thorough investigation, I found multiple critical issues preventing the systems from working together:
-
-### Issue 1: Missing Deals Section UI
-The `ActionSections.tsx` filters for `category === 'deal'` but there's **no `DealsSection.tsx` component** to render deal actions. The `SocialInteractionState` generates `propose_deal` actions with `category: 'deal'`, but they're never displayed.
-
-### Issue 2: Disconnected Action Flow
-When player clicks actions like "Talk to [name]" or "Build relationship":
-- The UI dispatches `PLAYER_ACTION` to the reducer
-- The reducer logs it but doesn't call the game state handlers
-- The actual handlers in `talkHandler.ts`, `relationshipHandler.ts` etc. are never executed
-- No relationship changes occur
-
-### Issue 3: No Feedback After Interactions
-- Actions complete silently with no visual confirmation
-- The `RELATIONSHIP_IMPACT` events are dispatched but there's no UI showing them inline
-- Players can't see if their actions had any effect
-
-### Issue 4: NPC Proposals Not Triggering
-- Proposals generate at phase start but require `game.dealSystem` which may not be set
-- The `generateNPCProposalsForPlayer` runs but proposals don't appear if `dealSystem` returns no results
-
-### Issue 5: Legacy Promises Overlap with Deals
-- Both "Make a Promise" and "Propose Deal" exist with overlapping functionality
-- The promise system (`MakePromiseDialog`) doesn't integrate with the new deal system
-- Creates confusion and duplicated features
+Add "Talk to", "Build Relationship", and "Propose Deal" action buttons directly to the individual houseguest profile dialogs (HouseguestDialog). This gives players a convenient way to interact with houseguests from anywhere in the game without needing to navigate through the social phase sections.
 
 ---
 
-## Part 1: Create Deals Section Component
+## Current State
 
-**New File: `src/components/game-phases/social-interaction/sections/DealsSection.tsx`**
+The `HouseguestDialog` component shows:
+- Houseguest name, age, occupation, status
+- Personality traits
+- Relationship score bar (for non-player houseguests)
 
-Create a section to display deal proposal buttons for each houseguest:
-
-```typescript
-// Display cards for each houseguest with:
-// - Their avatar and current relationship
-// - Active deals with them (if any)
-// - "Propose Deal" button that opens ProposeDealDialog
-// - Badge showing trust score
-```
+**Missing:** Any interactive action buttons to talk, build relationship, or propose deals.
 
 ---
 
-## Part 2: Fix Action Handler Connection
+## Solution
 
-**Modify: `src/contexts/reducers/reducers/player-action-reducer.ts`**
+Add an "Actions" section at the bottom of the dialog containing:
 
-The reducer needs to actually execute the social action handlers:
+1. **Talk to [Name]** - Quick conversation (+3-7 relationship)
+2. **Build Relationship** - Quality time (+5-12 relationship)  
+3. **Propose Deal** - Opens the ProposeDealDialog
+4. **Discuss Strategy** - Opens strategic discussion options
 
-```typescript
-case 'talk_to':
-case 'relationship_building':
-case 'strategic_discussion':
-  // These are currently just logged
-  // Need to actually update relationships here OR
-  // Ensure the game state machine calls the handlers
-  break;
-```
-
-Better approach: Import and call handlers directly:
-
-```typescript
-import { handleTalkTo, handleRelationshipBuilding } from '@/game-states/social/handlers';
-
-case 'talk_to': {
-  // Get controller facade and call handler
-  const controller = getControllerFromState(state);
-  handleTalkTo({ controller, targetId: payload.params.targetId });
-  break;
-}
-```
-
-**Alternative (simpler):** Update relationships directly in reducer:
-
-```typescript
-case 'talk_to': {
-  const playerId = state.houseguests.find(h => h.isPlayer)?.id;
-  const targetId = payload.params.targetId;
-  const improvement = Math.floor(Math.random() * 5) + 3; // 3-7 points
-  
-  // Update relationships directly
-  const key = [playerId, targetId].sort().join('-');
-  const currentRel = state.relationships?.[key] ?? 0;
-  
-  return {
-    ...state,
-    relationships: {
-      ...state.relationships,
-      [key]: currentRel + improvement
-    }
-  };
-}
-```
+These actions will be **enabled only during the Social Interaction phase** to maintain game balance.
 
 ---
 
-## Part 3: Add Inline Interaction Feedback
+## Implementation Details
 
-**Modify: `src/components/game-phases/social-interaction/sections/ConversationsSection.tsx`**
+### Modify: `src/components/houseguest/HouseguestDialog.tsx`
 
-Add visual feedback when player interacts:
+Add action buttons section:
 
 ```typescript
-const [recentInteraction, setRecentInteraction] = useState<{
-  targetId: string;
-  message: string;
-  change: number;
-} | null>(null);
+// New imports
+import { Button } from '@/components/ui/button';
+import { MessageCircle, Heart, Handshake, Users, Lock } from 'lucide-react';
+import ProposeDealDialog from '@/components/deals/ProposeDealDialog';
+import { toast } from 'sonner';
 
-const handleActionClick = async (actionId: string, params: any) => {
-  onActionClick(actionId, params);
-  
-  // Show feedback toast or inline message
-  const improvement = Math.floor(Math.random() * 5) + 3;
-  setRecentInteraction({
-    targetId: params.targetId,
-    message: `Relationship improved by +${improvement}`,
-    change: improvement
+// Inside component - add state for deal dialog
+const [dealDialogOpen, setDealDialogOpen] = useState(false);
+const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+// Check if social phase is active
+const isSocialPhase = gameState.phase === 'SocialInteraction';
+
+// Handle action clicks
+const handleTalkTo = () => {
+  dispatch({ 
+    type: 'PLAYER_ACTION', 
+    payload: { actionId: 'talk_to', params: { targetId: houseguest.id } }
   });
-  
-  // Clear after animation
-  setTimeout(() => setRecentInteraction(null), 2000);
+  // Show feedback
+  toast.success(`You had a conversation with ${houseguest.name}`);
+};
+
+const handleBuildRelationship = () => {
+  dispatch({ 
+    type: 'PLAYER_ACTION', 
+    payload: { actionId: 'relationship_building', params: { targetId: houseguest.id } }
+  });
+  toast.success(`You spent quality time with ${houseguest.name}`);
 };
 ```
 
-Display feedback on the houseguest card:
+Add action buttons UI (only for non-player, active houseguests):
 
 ```tsx
-{recentInteraction?.targetId === targetId && (
-  <motion.div
-    initial={{ opacity: 0, y: -10 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0 }}
-    className="text-green-500 text-sm font-medium"
-  >
-    +{recentInteraction.change} relationship
-  </motion.div>
-)}
-```
-
----
-
-## Part 4: Consolidate Promises into Deals
-
-**Remove or Hide: Legacy Promise Actions**
-
-**Modify: `src/game-states/SocialInteractionState.ts`**
-
-Remove the legacy `make_promise` actions since deals cover the same functionality:
-
-```typescript
-// REMOVE this block:
-// activeGuests.forEach(houseguest => {
-//   if (!houseguest.isPlayer) {
-//     actions.push({
-//       actionId: 'make_promise',
-//       text: `Make a promise to ${houseguest.name}`,
-//       parameters: { targetId: houseguest.id, targetName: houseguest.name },
-//       category: 'promise'
-//     });
-//   }
-// });
-
-// CHANGE check_promises to check_deals:
-actions.push({
-  actionId: 'check_deals',
-  text: 'Check active deals',
-  parameters: {},
-  category: 'status'
-});
-```
-
-**Modify: `src/components/game-phases/social-interaction/ActionSections.tsx`**
-
-Add DealsSection and remove PromiseSection:
-
-```typescript
-import DealsSection from './sections/DealsSection';
-
-// Add deals filter
-const dealActions = availableActions.filter(action => 
-  action.category === 'deal'
-);
-
-// In render:
-{dealActions.length > 0 && (
-  <DealsSection
-    actions={dealActions}
-    onActionClick={onActionClick}
-  />
-)}
-
-// Remove or keep PromiseSection for legacy, but deprioritize
-```
-
----
-
-## Part 5: Improve NPC Proposal Generation
-
-**Modify: `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`**
-
-Ensure proposals generate correctly:
-
-```typescript
-// Generate NPC proposals at start of social phase
-useEffect(() => {
-  if (!game || hasGeneratedProposals.current) return;
-  if (game?.currentState?.constructor.name !== 'SocialInteractionState') return;
-  
-  hasGeneratedProposals.current = true;
-  
-  const timer = setTimeout(() => {
-    try {
-      // Check if dealSystem exists
-      if (!game.dealSystem) {
-        console.warn('DealSystem not initialized');
-        return;
-      }
-      
-      const proposals = generateNPCProposalsForPlayer(game);
-      console.log(`Generated ${proposals.length} NPC proposals`);
-      
-      if (proposals.length > 0) {
-        setProposalQueue(proposals);
-        setTimeout(() => {
-          setCurrentProposal(proposals[0]);
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Error generating NPC proposals:', error);
-    }
-  }, 1500);
-  
-  return () => clearTimeout(timer);
-}, [game?.currentState]);
-```
-
----
-
-## Part 6: Show Active Deals & Relationship Status
-
-**Modify: `src/components/game-phases/social-interaction/sections/DealsSection.tsx`**
-
-Show existing deals on each houseguest card:
-
-```tsx
-const DealsSection = ({ actions, onActionClick }) => {
-  const { game } = useGame();
-  const player = game?.houseguests.find(h => h.isPlayer);
-  
-  // Get active deals for player
-  const playerDeals = game?.dealSystem?.getActiveDeals(player?.id || '') || [];
-  
-  return (
-    <div className="space-y-4">
-      <h3 className="flex items-center gap-2">
-        <Handshake className="h-4 w-4" />
-        DEALS & AGREEMENTS
-      </h3>
-      
-      {/* Show active deals summary */}
-      {playerDeals.length > 0 && (
-        <div className="bg-amber-50 p-3 rounded-lg">
-          <div className="text-sm font-medium">Active Deals: {playerDeals.length}</div>
-          {playerDeals.slice(0, 3).map(deal => (
-            <div key={deal.id} className="text-xs text-muted-foreground">
-              {deal.title} with {/* partner name */}
-            </div>
-          ))}
-        </div>
+{/* Social Actions */}
+{player && !houseguest.isPlayer && houseguest.status === 'Active' && (
+  <div className="border-t pt-4 space-y-3">
+    <h4 className="font-medium text-sm flex items-center gap-2">
+      <Users className="h-4 w-4" />
+      Actions
+      {!isSocialPhase && (
+        <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
+          <Lock className="h-3 w-3" />
+          Social Phase Only
+        </span>
       )}
+    </h4>
+    
+    <div className="grid grid-cols-2 gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleTalkTo}
+        disabled={!isSocialPhase}
+        className="flex items-center gap-2"
+      >
+        <MessageCircle className="h-4 w-4" />
+        Talk
+      </Button>
       
-      {/* Deal proposal buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {actions.map(action => (
-          <DealActionCard 
-            key={action.actionId + action.parameters?.targetId}
-            action={action}
-            onActionClick={onActionClick}
-            existingDeals={playerDeals.filter(d => 
-              d.recipientId === action.parameters?.targetId ||
-              d.proposerId === action.parameters?.targetId
-            )}
-          />
-        ))}
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleBuildRelationship}
+        disabled={!isSocialPhase}
+        className="flex items-center gap-2"
+      >
+        <Heart className="h-4 w-4" />
+        Bond
+      </Button>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setDealDialogOpen(true)}
+        disabled={!isSocialPhase}
+        className="flex items-center gap-2 col-span-2 border-amber-300 hover:bg-amber-50"
+      >
+        <Handshake className="h-4 w-4 text-amber-600" />
+        Propose Deal
+      </Button>
     </div>
-  );
-};
+    
+    {/* Relationship change feedback */}
+    {feedbackMessage && (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-green-500 text-sm text-center"
+      >
+        {feedbackMessage}
+      </motion.div>
+    )}
+  </div>
+)}
+
+{/* Propose Deal Dialog */}
+<ProposeDealDialog
+  open={dealDialogOpen}
+  onOpenChange={setDealDialogOpen}
+  params={{
+    targetId: houseguest.id,
+    targetName: houseguest.name
+  }}
+/>
 ```
 
 ---
 
-## Part 7: Add Relationship Display on Houseguest Cards
+## Visual Layout
 
-**Modify: `src/components/game-phases/social-interaction/sections/ConversationsSection.tsx`**
-
-Add relationship score display:
-
-```tsx
-// In the houseguest card:
-const relationship = game?.relationshipSystem?.getRelationship(
-  player?.id || '', 
-  targetId
-) ?? 0;
-
-<div className="flex items-center gap-2 text-xs">
-  <Heart className={cn(
-    "h-3 w-3",
-    relationship > 30 ? "text-green-500" : 
-    relationship > 0 ? "text-blue-400" :
-    relationship > -20 ? "text-gray-400" : "text-red-500"
-  )} />
-  <span>{relationship >= 0 ? '+' : ''}{relationship}</span>
-</div>
+```text
++--------------------------------------------------+
+|  Morgan Lee                              [X]     |
++--------------------------------------------------+
+|                                                  |
+|  [ML]    Age: 26                                |
+|          Occupation: Personal Trainer            |
+|          Status: Active                          |
+|          [Competitive] [Loyal]                   |
+|                                                  |
+|  +--------------------------------------------+  |
+|  | Relationship with you:                     |  |
+|  | 💔 ████████░░░░░░░░░░░░░░░░░░░░░░░  -4    |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  +--------------------------------------------+  |
+|  | 👥 Actions                  🔒 Social Only |  |
+|  | +----------------+ +--------------------+  |  |
+|  | | 💬 Talk        | | ❤️ Bond            |  |  |
+|  | +----------------+ +--------------------+  |  |
+|  | +----------------------------------------+ |  |
+|  | | 🤝 Propose Deal                        | |  |
+|  | +----------------------------------------+ |  |
+|  +--------------------------------------------+  |
+|                                                  |
++--------------------------------------------------+
 ```
 
 ---
 
-## Part 8: Ensure DealSystem Initialization
+## Key Features
 
-**Modify: `src/contexts/game/hooks/useSystems.ts`**
+1. **Phase-Aware Actions**
+   - Buttons are visible but disabled outside Social Interaction phase
+   - Lock icon and "Social Phase Only" label explains why buttons are disabled
+   - Prevents gameplay exploitation while maintaining UI discoverability
 
-Verify deal system is properly initialized:
+2. **Immediate Feedback**
+   - Toast notifications confirm action success
+   - Relationship bar updates immediately after action
+   - Uses existing `lastRelationshipImpact` from reducer for feedback
 
-```typescript
-useEffect(() => {
-  if (game && !game.dealSystem) {
-    const dealSystem = new DealSystem(logger);
-    dealSystem.setGame(game);
-    game.dealSystem = dealSystem;
-  }
-}, [game]);
-```
+3. **Deal Integration**
+   - "Propose Deal" button opens the existing ProposeDealDialog
+   - Full deal workflow remains unchanged
+
+4. **Clean UI**
+   - Buttons organized in 2-column grid
+   - "Propose Deal" spans full width to emphasize its importance
+   - Consistent with existing game card styling
 
 ---
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/game-phases/social-interaction/sections/DealsSection.tsx` | Display deal actions with relationship context |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/contexts/reducers/reducers/player-action-reducer.ts` | Handle social actions with relationship updates |
-| `src/game-states/SocialInteractionState.ts` | Remove legacy promise actions, keep deals |
-| `src/components/game-phases/social-interaction/ActionSections.tsx` | Add DealsSection import and rendering |
-| `src/components/game-phases/social-interaction/sections/ConversationsSection.tsx` | Add relationship display and interaction feedback |
-| `src/components/game-phases/social-interaction/sections/RelationshipSection.tsx` | Add relationship score display |
-| `src/components/game-phases/social-interaction/sections/StrategicSection.tsx` | Add feedback for strategic discussions |
-| `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx` | Improve error handling for proposal generation |
-| `src/contexts/game/hooks/useSystems.ts` | Ensure DealSystem is always initialized |
+| `src/components/houseguest/HouseguestDialog.tsx` | Add action buttons section, import ProposeDealDialog, add state and handlers |
 
 ---
 
-## Expected Outcome
+## Optional Enhancements
 
-After implementation:
-
-1. **Deals Section visible** - Players see "Propose a Deal" options for each houseguest
-2. **Working interactions** - Clicking "Talk to" or "Build Relationship" actually changes relationships
-3. **Visual feedback** - Green "+5 relationship" animations appear after interactions
-4. **NPC Proposals appear** - NPCs approach player with deal offers during social phase
-5. **Consolidated system** - Deals replace legacy promises, single unified system
-6. **Relationship visibility** - Each houseguest card shows current relationship score
-7. **Active deals shown** - Players can see their existing deals at a glance
-
----
-
-## Technical Notes
-
-### State Synchronization
-The key issue was that `PLAYER_ACTION` dispatch goes to the reducer, but the actual game logic handlers (in `social/handlers/`) weren't being called. The fix ensures relationship updates happen directly in the reducer using `gameState.relationships` as the source of truth.
-
-### Backward Compatibility
-- Keep `promises` array in state but stop creating new ones
-- Migrate any existing promises to deals on load (optional)
-- Legacy `PromiseSection` can remain hidden or show as "Legacy" items
-
-### Testing
-- Test each interaction type (talk, relationship build, strategic discussion)
-- Verify relationship scores update in real-time
-- Confirm NPC proposals appear after 3+ seconds in social phase
-- Test accepting/declining proposals updates deals array
+If needed in future iterations:
+- Add cooldown indicators for actions
+- Show remaining interaction count from SocialInteractionState
+- Add "Discuss Strategy" as a third quick action
+- Add tooltip showing exact relationship change range
