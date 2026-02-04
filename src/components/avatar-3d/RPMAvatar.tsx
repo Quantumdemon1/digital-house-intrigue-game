@@ -3,12 +3,13 @@
  * @description Ready Player Me avatar component wrapper for React Three Fiber
  */
 
-import React, { Suspense, useRef, useEffect, useMemo } from 'react';
+import React, { Suspense, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useFrame, useGraph } from '@react-three/fiber';
-import { useGLTF, useAnimations } from '@react-three/drei';
+import { useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { SkeletonUtils } from 'three-stdlib';
 import { MoodType } from '@/models/houseguest';
+import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
 
 // ARKit blendshape names for expressions (52 blendshapes available)
 const EXPRESSION_MORPHS: Record<string, Record<string, number>> = {
@@ -75,13 +76,18 @@ const moodToExpression = (mood: MoodType): string => {
   }
 };
 
+export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
+
 interface RPMAvatarProps {
   modelSrc: string;
   animationSrc?: string;
   mood?: MoodType;
   scale?: number;
   position?: [number, number, number];
+  /** UI context for quality optimization */
+  context?: AvatarContext;
   onLoaded?: () => void;
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -93,10 +99,27 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   mood = 'Neutral',
   scale = 1,
   position = [0, -1.5, 0],
-  onLoaded
+  context = 'game',
+  onLoaded,
+  onError
 }) => {
   const group = useRef<THREE.Group>(null);
-  const { scene } = useGLTF(modelSrc);
+  
+  // Map context to quality preset - 'customizer' -> 'profile', keep others
+  const getQualityContext = (ctx: AvatarContext): 'thumbnail' | 'game' | 'profile' => {
+    if (ctx === 'customizer') return 'profile';
+    return ctx;
+  };
+  
+  const qualityContext = getQualityContext(context);
+  const isAnimated = qualityContext !== 'thumbnail';
+  
+  const optimizedUrl = useMemo(() => 
+    getOptimizedUrl(modelSrc, qualityContext),
+    [modelSrc, qualityContext]
+  );
+  
+  const { scene } = useGLTF(optimizedUrl);
   
   // Clone the scene to prevent issues with multiple instances
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -134,8 +157,10 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
     });
   }, [mood, skinnedMeshes]);
 
-  // Idle blink animation
+  // Idle blink animation - only run for non-thumbnail contexts
   useFrame(({ clock }) => {
+    if (!isAnimated) return; // Skip animations for thumbnails
+    
     const time = clock.getElapsedTime();
     
     // Blink every ~4 seconds
@@ -165,8 +190,8 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
       }
     });
     
-    // Subtle head movement
-    if (group.current) {
+    // Subtle head movement (skip for thumbnails)
+    if (group.current && isAnimated) {
       group.current.rotation.y = Math.sin(time * 0.5) * 0.05;
       group.current.rotation.x = Math.sin(time * 0.3) * 0.02;
     }
@@ -181,6 +206,29 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
     <group ref={group} position={position} scale={scale}>
       <primitive object={clone} />
     </group>
+  );
+};
+
+/**
+ * Loading progress indicator component
+ */
+export const RPMLoadingProgress: React.FC<{ className?: string }> = ({ className }) => {
+  const { progress, active } = useProgress();
+  
+  if (!active) return null;
+  
+  return (
+    <div className={`flex flex-col items-center justify-center ${className || ''}`}>
+      <div className="w-16 h-1 bg-muted rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-primary transition-all duration-200"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        {progress < 100 ? `${Math.round(progress)}%` : 'Ready'}
+      </p>
+    </div>
   );
 };
 
@@ -215,9 +263,12 @@ const RPMAvatarFallback: React.FC = () => {
   );
 };
 
-// Preload helper for performance
-export const preloadRPMAvatar = (url: string) => {
-  useGLTF.preload(url);
+// Preload helper for performance - with optimization
+export const preloadRPMAvatar = (url: string, context: AvatarContext = 'game') => {
+  // Map customizer to profile for preloading
+  const preloadContext = context === 'customizer' ? 'profile' : context;
+  const optimizedUrl = getOptimizedUrl(url, preloadContext as 'thumbnail' | 'game' | 'profile');
+  useGLTF.preload(optimizedUrl);
 };
 
 export default RPMAvatar;

@@ -7,6 +7,8 @@ import React, { useState, useCallback, lazy, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
+import { optimizeRPMUrl, QUALITY_PRESETS } from '@/utils/rpm-avatar-optimizer';
+import { useGLTF } from '@react-three/drei';
 
 // Lazy load the RPM SDK to prevent build issues
 const LazyAvatarCreator = lazy(async () => {
@@ -60,15 +62,29 @@ export const RPMAvatarCreator: React.FC<RPMAvatarCreatorProps> = ({
     language: 'en' as const,
   };
 
+  // Optimized avatar config for export - use low quality for faster exports
+  // We'll optimize the URL further when storing
   const avatarConfig = {
-    quality: 'medium' as const,
+    quality: 'low' as const,
     morphTargets: ['ARKit'],
     useDracoCompression: true,
   };
 
   const handleOnAvatarExported = useCallback((url: string) => {
-    console.log('Avatar exported:', url);
-    onAvatarCreated(url);
+    console.log('Avatar exported (raw):', url);
+    
+    // Optimize the URL for game use
+    const optimizedUrl = optimizeRPMUrl(url, QUALITY_PRESETS.game);
+    console.log('Avatar optimized:', optimizedUrl);
+    
+    // Start preloading immediately for instant display
+    try {
+      useGLTF.preload(optimizedUrl);
+    } catch (e) {
+      // Preload may fail silently, that's OK
+    }
+    
+    onAvatarCreated(optimizedUrl);
     onClose();
   }, [onAvatarCreated, onClose]);
 
@@ -146,10 +162,23 @@ export const RPMAvatarCreatorInline: React.FC<{
   };
 
   const avatarConfig = {
-    quality: 'medium' as const,
+    quality: 'low' as const,
     morphTargets: ['ARKit'],
     useDracoCompression: true,
   };
+
+  const handleExport = useCallback((url: string) => {
+    const optimizedUrl = optimizeRPMUrl(url, QUALITY_PRESETS.game);
+    
+    // Start preloading immediately
+    try {
+      useGLTF.preload(optimizedUrl);
+    } catch (e) {
+      // Preload may fail silently
+    }
+    
+    onAvatarCreated(optimizedUrl);
+  }, [onAvatarCreated]);
 
   return (
     <div className={className} style={{ minHeight: '500px' }}>
@@ -162,7 +191,7 @@ export const RPMAvatarCreatorInline: React.FC<{
           subdomain={subdomain}
           editorConfig={editorConfig}
           avatarConfig={avatarConfig}
-          onAvatarExported={onAvatarCreated}
+          onAvatarExported={handleExport}
         />
       </Suspense>
     </div>
