@@ -4,7 +4,7 @@
  * These are pre-optimized for instant loading without external API calls
  */
 
-export type GLBCategory = 'humanoid' | 'robot' | 'creature' | 'demo';
+export type GLBCategory = 'humanoid' | 'robot' | 'demo';
 
 export interface GLBPresetAvatar {
   id: string;
@@ -22,25 +22,9 @@ export interface GLBPresetAvatar {
 
 /**
  * Curated preset GLB avatars
- * 
- * NOTE: These are placeholder entries. To populate with real avatars:
- * 1. Download CC0/free-use GLB characters from Mixamo, Sketchfab, etc.
- * 2. Optimize using gltf-pipeline with Draco compression
- * 3. Place in /public/avatars/glb/
- * 4. Generate thumbnail images for each
+ * All models are verified human/humanoid-proportioned characters from Three.js examples
  */
 export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
-  {
-    id: 'glb-marcus',
-    name: 'Marcus',
-    url: '/avatars/glb/marcus.glb',
-    style: 'casual',
-    bodyType: 'slim',
-    category: 'demo',
-    traits: ['confident', 'agile'],
-    description: 'Rigged figure with humanoid proportions',
-    isPlaceholder: false
-  },
   {
     id: 'glb-elena',
     name: 'Elena',
@@ -49,29 +33,40 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     bodyType: 'slim',
     category: 'humanoid',
     traits: ['graceful', 'charming'],
-    description: 'Expressive character with smooth animations',
+    description: 'Stylized female with expressive animations',
     isPlaceholder: false
   },
   {
-    id: 'glb-tyler',
-    name: 'Tyler',
-    url: '/avatars/glb/tyler.glb',
-    style: 'athletic',
+    id: 'glb-marcus',
+    name: 'Marcus',
+    url: '/avatars/glb/marcus.glb',
+    style: 'formal',
     bodyType: 'athletic',
-    category: 'robot',
-    traits: ['competitive', 'tech-savvy'],
-    description: 'Robot-style character ready for action',
+    category: 'humanoid',
+    traits: ['confident', 'tactical'],
+    description: 'Military tactical character',
     isPlaceholder: false
   },
   {
     id: 'glb-sophia',
     name: 'Sophia',
     url: '/avatars/glb/sophia.glb',
-    style: 'formal',
-    bodyType: 'athletic',
+    style: 'athletic',
+    bodyType: 'average',
     category: 'humanoid',
     traits: ['strategic', 'disciplined'],
-    description: 'Military-inspired tactical character',
+    description: 'Space-suited explorer character',
+    isPlaceholder: false
+  },
+  {
+    id: 'glb-tyler',
+    name: 'Tyler',
+    url: '/avatars/glb/tyler.glb',
+    style: 'casual',
+    bodyType: 'average',
+    category: 'humanoid',
+    traits: ['competitive', 'tech-savvy'],
+    description: 'Ready Player Me styled avatar',
     isPlaceholder: false
   },
   {
@@ -80,9 +75,9 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     url: '/avatars/glb/jamal.glb',
     style: 'casual',
     bodyType: 'slim',
-    category: 'demo',
-    traits: ['analytical', 'calm'],
-    description: 'Simple rigged humanoid with clean lines',
+    category: 'humanoid',
+    traits: ['analytical', 'expressive'],
+    description: 'Face-capture model with expressions',
     isPlaceholder: false
   },
   {
@@ -90,10 +85,10 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     name: 'Maya',
     url: '/avatars/glb/maya.glb',
     style: 'fantasy',
-    bodyType: 'average',
-    category: 'robot',
-    traits: ['creative', 'expressive'],
-    description: 'Expressive robot with emotional animations',
+    bodyType: 'slim',
+    category: 'humanoid',
+    traits: ['creative', 'charming'],
+    description: 'Stylized female with smooth animations',
     isPlaceholder: false
   },
   {
@@ -108,36 +103,14 @@ export const PRESET_GLB_AVATARS: GLBPresetAvatar[] = [
     isPlaceholder: false
   },
   {
-    id: 'glb-luna',
-    name: 'Luna',
-    url: '/avatars/glb/luna.glb',
-    style: 'fantasy',
-    bodyType: 'slim',
-    category: 'creature',
-    traits: ['quick', 'clever'],
-    description: 'Playful fox character with smooth motion',
-    isPlaceholder: false
-  },
-  {
-    id: 'glb-carlos',
-    name: 'Carlos',
-    url: '/avatars/glb/carlos.glb',
-    style: 'professional',
-    bodyType: 'average',
-    category: 'humanoid',
-    traits: ['diplomatic', 'patient'],
-    description: 'The mediator',
-    isPlaceholder: true
-  },
-  {
-    id: 'glb-zara',
-    name: 'Zara',
-    url: '/avatars/glb/zara.glb',
+    id: 'glb-nadia',
+    name: 'Nadia',
+    url: '/avatars/glb/nadia.glb',
     style: 'athletic',
     bodyType: 'athletic',
-    category: 'creature',
+    category: 'robot',
     traits: ['fast', 'determined'],
-    description: 'Galloping horse with dynamic animations',
+    description: 'Sleek robotic humanoid figure',
     isPlaceholder: false
   }
 ];
@@ -163,6 +136,13 @@ export const getGLBPresetsByTrait = (trait: string): GLBPresetAvatar[] => {
   return PRESET_GLB_AVATARS.filter(preset => 
     preset.traits?.some(t => t.toLowerCase().includes(trait.toLowerCase()))
   );
+};
+
+/**
+ * Get presets by category
+ */
+export const getGLBPresetsByCategory = (category: GLBCategory): GLBPresetAvatar[] => {
+  return PRESET_GLB_AVATARS.filter(preset => preset.category === category);
 };
 
 /**

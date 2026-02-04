@@ -227,10 +227,13 @@ const PresetAvatarCanvas: React.FC<{
 
   return (
     <div className={cn(sizeConfig.width, sizeConfig.height, 'relative overflow-hidden rounded-lg', className)}>
-      <Canvas camera={{ position: [0, 0, 2.5], fov: 35 }} gl={{ preserveDrawingBuffer: true, antialias: true }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[2, 3, 4]} intensity={0.8} />
-        <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
+      <Canvas 
+        camera={{ position: [0, 0.3, 2.0], fov: 40 }} 
+        gl={{ preserveDrawingBuffer: true, antialias: true }}
+      >
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[2, 3, 4]} intensity={0.9} />
+        <directionalLight position={[-2, 2, -3]} intensity={0.4} color="#e0f0ff" />
         
         <Suspense fallback={null}>
           <LazyPresetAvatar
@@ -242,7 +245,12 @@ const PresetAvatarCanvas: React.FC<{
           />
         </Suspense>
         
-        <OrbitControls enableZoom={false} enablePan={false} />
+        <OrbitControls 
+          enableZoom={false} 
+          enablePan={false}
+          minPolarAngle={Math.PI / 2.5}
+          maxPolarAngle={Math.PI / 1.8}
+        />
       </Canvas>
       {isLoading && <RPMLoadingState progress={50} />}
     </div>

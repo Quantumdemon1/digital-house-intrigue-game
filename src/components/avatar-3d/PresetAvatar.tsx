@@ -1,9 +1,9 @@
 /**
  * @file avatar-3d/PresetAvatar.tsx
- * @description Self-hosted GLB preset avatar renderer
+ * @description Self-hosted GLB preset avatar renderer with auto-scaling normalization
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -30,6 +30,9 @@ const MOOD_TINTS: Record<MoodType, { intensity: number; color: THREE.Color }> = 
   'Angry': { intensity: 0.2, color: new THREE.Color(0.5, 0.2, 0.2) }
 };
 
+// Target height for normalized avatars (in world units)
+const TARGET_HEIGHT = 1.8;
+
 /**
  * Get preset info by ID
  */
@@ -46,7 +49,7 @@ export const getPresetUrl = (presetId: string): string | undefined => {
 
 /**
  * Preset Avatar Component
- * Renders self-hosted GLB models with cloning for instances
+ * Renders self-hosted GLB models with auto-scaling normalization
  */
 export const PresetAvatar: React.FC<PresetAvatarProps> = ({
   presetId,
@@ -58,9 +61,6 @@ export const PresetAvatar: React.FC<PresetAvatarProps> = ({
   enableIdleAnimation = true
 }) => {
   const preset = useMemo(() => getPresetById(presetId), [presetId]);
-  const groupRef = useRef<THREE.Group>(null);
-  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
-  const timeRef = useRef(0);
   
   // If preset is a placeholder (no real assets), trigger error immediately
   useEffect(() => {
@@ -101,6 +101,8 @@ const PresetAvatarInner: React.FC<PresetAvatarProps & { preset: GLBPresetAvatar 
   const groupRef = useRef<THREE.Group>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const timeRef = useRef(0);
+  const [normalizedScale, setNormalizedScale] = useState(1);
+  const [verticalOffset, setVerticalOffset] = useState(0);
   
   // Load the GLTF model - only called for valid presets
   const gltf = useGLTF(preset.url, true, true);
@@ -117,6 +119,28 @@ const PresetAvatarInner: React.FC<PresetAvatarProps & { preset: GLBPresetAvatar 
       return gltf.scene.clone();
     }
   }, [gltf?.scene]);
+
+  // Auto-scale normalization based on bounding box
+  useEffect(() => {
+    if (!clonedScene) return;
+    
+    const box = new THREE.Box3().setFromObject(clonedScene);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    
+    // Get the maximum dimension (usually height for humanoids)
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    // Calculate scale to normalize to target height
+    const autoScale = TARGET_HEIGHT / maxDim;
+    setNormalizedScale(autoScale);
+    
+    // Calculate vertical offset to center the model
+    // Position so the model's bottom is at y=0
+    const bottomY = box.min.y * autoScale;
+    setVerticalOffset(-bottomY - 0.9); // Adjust for portrait framing
+    
+  }, [clonedScene]);
 
   // Setup animations if available
   useEffect(() => {
@@ -177,7 +201,7 @@ const PresetAvatarInner: React.FC<PresetAvatarProps & { preset: GLBPresetAvatar 
     if (enableIdleAnimation && groupRef.current && !gltf.animations?.length) {
       timeRef.current += delta;
       const breathe = Math.sin(timeRef.current * 1.5) * 0.01;
-      groupRef.current.position.y = position[1] + breathe;
+      groupRef.current.position.y = verticalOffset + breathe;
       
       // Subtle sway
       groupRef.current.rotation.y = Math.sin(timeRef.current * 0.3) * 0.02;
@@ -188,8 +212,15 @@ const PresetAvatarInner: React.FC<PresetAvatarProps & { preset: GLBPresetAvatar 
     return null;
   }
 
+  // Final scale combines auto-normalization with user-provided scale
+  const finalScale = normalizedScale * scale;
+
   return (
-    <group ref={groupRef} position={position} scale={scale}>
+    <group 
+      ref={groupRef} 
+      position={[position[0], verticalOffset, position[2]]} 
+      scale={finalScale}
+    >
       <primitive object={clonedScene} />
     </group>
   );
