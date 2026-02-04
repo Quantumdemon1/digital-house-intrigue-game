@@ -103,18 +103,6 @@ export class SocialInteractionState extends GameStateBase {
       }
     });
     
-    // Legacy: Make promise options (keeping for backward compatibility)
-    activeGuests.forEach(houseguest => {
-      if (!houseguest.isPlayer) {
-        actions.push({
-          actionId: 'make_promise',
-          text: `Make a promise to ${houseguest.name}`,
-          parameters: { targetId: houseguest.id, targetName: houseguest.name },
-          category: 'promise'
-        });
-      }
-    });
-    
     // Add check relationships action
     actions.push({
       actionId: 'check_relationships',
@@ -123,10 +111,10 @@ export class SocialInteractionState extends GameStateBase {
       category: 'status'
     });
     
-    // Add check promises action
+    // Add check deals action (replaces check_promises)
     actions.push({
-      actionId: 'check_promises',
-      text: 'Check active promises',
+      actionId: 'check_deals',
+      text: 'Check active deals',
       parameters: { },
       category: 'status'
     });

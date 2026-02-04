@@ -1,11 +1,41 @@
 
-import { GameState, GamePhase } from '../../../models/game-state';
+import { GameState, GamePhase, getOrCreateRelationship } from '../../../models/game-state';
 import { GameAction } from '../../types/game-context-types';
 import { Promise, PromiseType } from '../../../models/promise';
 
 export interface PlayerActionPayload {
   actionId: string;
   params: any;
+}
+
+/**
+ * Helper to update relationship in state
+ */
+function updateRelationshipInState(
+  state: GameState, 
+  playerId: string, 
+  targetId: string, 
+  change: number
+): GameState {
+  const newRelationships = new Map(state.relationships);
+  
+  // Get or create relationships
+  const rel1 = getOrCreateRelationship(newRelationships, playerId, targetId);
+  const rel2 = getOrCreateRelationship(newRelationships, targetId, playerId);
+  
+  // Update scores
+  rel1.score = Math.max(-100, Math.min(100, rel1.score + change));
+  rel1.lastInteractionWeek = state.week;
+  
+  // Reciprocal (slightly varied)
+  const reciprocalChange = change * (0.8 + Math.random() * 0.4);
+  rel2.score = Math.max(-100, Math.min(100, rel2.score + reciprocalChange));
+  rel2.lastInteractionWeek = state.week;
+  
+  return {
+    ...state,
+    relationships: newRelationships
+  };
 }
 
 export function playerActionReducer(state: GameState, action: GameAction): GameState {
@@ -19,6 +49,122 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
     // Note: Most of these will also be handled by the game state machine
     
     switch (payload.actionId) {
+      // SOCIAL INTERACTION ACTIONS - Now directly update relationships
+      case 'talk_to': {
+        const playerId = state.houseguests.find(h => h.isPlayer)?.id;
+        const targetId = payload.params?.targetId;
+        
+        if (playerId && targetId) {
+          const improvement = Math.floor(Math.random() * 5) + 3; // 3-7 points
+          console.log(`Talk to: ${targetId}, improvement: +${improvement}`);
+          
+          // Update state with relationship change
+          const newState = updateRelationshipInState(state, playerId, targetId, improvement);
+          
+          // Log the event
+          const targetName = state.houseguests.find(h => h.id === targetId)?.name || 'Unknown';
+          const playerName = state.houseguests.find(h => h.isPlayer)?.name || 'Player';
+          
+          return {
+            ...newState,
+            gameLog: [
+              ...newState.gameLog,
+              {
+                week: state.week,
+                phase: 'SocialInteraction',
+                type: 'CONVERSATION',
+                description: `${playerName} had a conversation with ${targetName} (+${improvement} relationship)`,
+                involvedHouseguests: [playerId, targetId],
+                timestamp: Date.now()
+              }
+            ],
+            // Store the last relationship impact for UI feedback
+            lastRelationshipImpact: {
+              targetId,
+              targetName,
+              value: improvement,
+              timestamp: Date.now()
+            }
+          };
+        }
+        break;
+      }
+      
+      case 'relationship_building': {
+        const playerId = state.houseguests.find(h => h.isPlayer)?.id;
+        const targetId = payload.params?.targetId;
+        
+        if (playerId && targetId) {
+          const improvement = Math.floor(Math.random() * 8) + 5; // 5-12 points (stronger than talk_to)
+          console.log(`Build relationship with: ${targetId}, improvement: +${improvement}`);
+          
+          const newState = updateRelationshipInState(state, playerId, targetId, improvement);
+          
+          const targetName = state.houseguests.find(h => h.id === targetId)?.name || 'Unknown';
+          const playerName = state.houseguests.find(h => h.isPlayer)?.name || 'Player';
+          
+          return {
+            ...newState,
+            gameLog: [
+              ...newState.gameLog,
+              {
+                week: state.week,
+                phase: 'SocialInteraction',
+                type: 'RELATIONSHIP_BUILDING',
+                description: `${playerName} spent quality time with ${targetName} (+${improvement} relationship)`,
+                involvedHouseguests: [playerId, targetId],
+                timestamp: Date.now()
+              }
+            ],
+            lastRelationshipImpact: {
+              targetId,
+              targetName,
+              value: improvement,
+              timestamp: Date.now()
+            }
+          };
+        }
+        break;
+      }
+      
+      case 'strategic_discussion': {
+        const playerId = state.houseguests.find(h => h.isPlayer)?.id;
+        const targetId = payload.params?.targetId;
+        
+        if (playerId && targetId) {
+          // Strategic discussion has moderate relationship impact
+          const improvement = Math.floor(Math.random() * 4) + 2; // 2-5 points
+          console.log(`Strategic discussion with: ${targetId}, improvement: +${improvement}`);
+          
+          const newState = updateRelationshipInState(state, playerId, targetId, improvement);
+          
+          const targetName = state.houseguests.find(h => h.id === targetId)?.name || 'Unknown';
+          const playerName = state.houseguests.find(h => h.isPlayer)?.name || 'Player';
+          
+          return {
+            ...newState,
+            gameLog: [
+              ...newState.gameLog,
+              {
+                week: state.week,
+                phase: 'SocialInteraction',
+                type: 'STRATEGIC_DISCUSSION',
+                description: `${playerName} discussed strategy with ${targetName} (+${improvement} relationship)`,
+                involvedHouseguests: [playerId, targetId],
+                timestamp: Date.now()
+              }
+            ],
+            lastRelationshipImpact: {
+              targetId,
+              targetName,
+              value: improvement,
+              timestamp: Date.now()
+            }
+          };
+        }
+        break;
+      }
+
       case 'fast_forward':
         // Fast forward is handled by the game state machine
         // Just log it here for debugging
@@ -279,11 +425,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         }
         break;
       
-      case 'strategic_discussion':
-      case 'relationship_building':
       case 'eavesdrop':
-        // These are handled by the game state machine
-        // No immediate state updates needed
+        // Eavesdrop doesn't change relationships
         break;
       
       case 'set_final_two':

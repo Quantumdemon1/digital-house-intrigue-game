@@ -8,7 +8,6 @@ import LocationDisplay from './LocationDisplay';
 import InteractionsCounter from './InteractionsCounter';
 import ActionSections from './ActionSections';
 import StrategicDiscussionDialog from '../social/StrategicDiscussionDialog';
-import MakePromiseDialog from '../social/MakePromiseDialog';
 import { ProposeDealDialog, NPCProposalDialog } from '@/components/deals';
 import NPCActivityFeed from './NPCActivityFeed';
 import { EnhancedGameLogger } from '@/utils/game-log';
@@ -168,15 +167,6 @@ const SocialInteractionPhase: React.FC = () => {
       return;
     }
     
-    if (actionId === 'make_promise') {
-      setDialogAction({
-        type: 'make_promise',
-        params,
-        isOpen: true
-      });
-      return;
-    }
-    
     if (actionId === 'propose_deal') {
       setDialogAction({
         type: 'propose_deal',
@@ -250,14 +240,6 @@ const SocialInteractionPhase: React.FC = () => {
       {/* Dialogs */}
       {dialogAction.type === 'strategic_discussion' && (
         <StrategicDiscussionDialog 
-          open={dialogAction.isOpen}
-          onOpenChange={handleCloseDialog}
-          params={dialogAction.params}
-        />
-      )}
-      
-      {dialogAction.type === 'make_promise' && (
-        <MakePromiseDialog
           open={dialogAction.isOpen}
           onOpenChange={handleCloseDialog}
           params={dialogAction.params}

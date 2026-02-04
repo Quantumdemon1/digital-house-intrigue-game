@@ -9,7 +9,7 @@ import MovementSection from './sections/MovementSection';
 import AdvanceSection from './sections/AdvanceSection';
 import AllianceSection from './sections/AllianceSection';
 import InformationSection from './sections/InformationSection';
-import PromiseSection from './sections/PromiseSection';
+import DealsSection from './sections/DealsSection';
 
 interface ActionSectionsProps {
   availableActions: SocialActionChoice[];
@@ -42,8 +42,8 @@ const ActionSections: React.FC<ActionSectionsProps> = ({ availableActions, onAct
     action.category === 'alliance'
   );
   
-  const promiseActions = availableActions.filter(action => 
-    action.category === 'promise' || action.actionId === 'make_promise' || action.actionId === 'check_promises'
+  const dealActions = availableActions.filter(action => 
+    action.category === 'deal'
   );
   
   const informationActions = availableActions.filter(action => 
@@ -77,9 +77,9 @@ const ActionSections: React.FC<ActionSectionsProps> = ({ availableActions, onAct
         />
       )}
       
-      {promiseActions.length > 0 && (
-        <PromiseSection
-          actions={promiseActions}
+      {dealActions.length > 0 && (
+        <DealsSection
+          actions={dealActions}
           onActionClick={onActionClick}
         />
       )}

@@ -105,6 +105,13 @@ export interface GameState {
   finalHoHWinners?: {part1: string | null, part2: string | null, part3: string | null};
   isFinalStage: boolean;
   isSpectatorMode: boolean;
+  // UI feedback for relationship changes
+  lastRelationshipImpact?: {
+    targetId: string;
+    targetName: string;
+    value: number;
+    timestamp: number;
+  };
 }
 
 // Create initial game state
@@ -130,7 +137,8 @@ export function createInitialGameState(): GameState {
     pendingNPCProposals: [],
     finalHoHWinners: {part1: null, part2: null, part3: null},
     isFinalStage: false,
-    isSpectatorMode: false
+    isSpectatorMode: false,
+    lastRelationshipImpact: undefined
   };
 }
 
