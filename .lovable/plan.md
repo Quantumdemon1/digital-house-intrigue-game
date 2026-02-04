@@ -1,172 +1,203 @@
 
 
-# Plan: Redesign Weekly Status Tracker and Reorganize Header Buttons
+# Plan: UI/UX Redesign for Eviction Result, Stats Selector, and Eviction Interaction Screens
 
-## Problem Summary
+## Overview
 
-1. **Phase Indicator is boring and unclear**: In compact mode, only icons are shown without labels - users can't tell what each phase is
-2. **Promises button is cut off**: Too many buttons in the header row without proper overflow handling
-3. **Save feature is hidden**: The Save/Load button is buried in the header among other buttons
-4. **Layout is cluttered**: Action buttons compete for space with the phase indicator
+This plan addresses the UI/UX improvements for three key screens that currently feel flat and disconnected from the Big Brother aesthetic:
 
----
-
-## Solution Overview
-
-Reorganize the header and status area into a cleaner 2-row layout:
-
-```text
-+--------------------------------------------------+
-| DIGITAL HOUSE  |  WEEK 1  |  [Phase Progress]    |
-| INTRIGUE       |          |  HoH > Noms > PoV... |
-+--------------------------------------------------+
-
-+--------------------------------------------------+
-| [Save] [History] [Promises]  |  HoH: Alex        |
-|                              |  8 Active | 2 Noms|
-+--------------------------------------------------+
-```
+1. **Eviction Result Screen** - Needs more dramatic impact for this pivotal moment
+2. **Stats Selector Screen** - Needs visual hierarchy and engaging stat representation  
+3. **Eviction Interaction Stage** - Needs better organization and visual appeal
 
 ---
 
-## Technical Changes
+## Screen 1: Eviction Result Screen
 
-### 1. Enhance Phase Indicator with Labels and Tooltips
+### Current Issues
+- Plain gray card with minimal visual impact
+- Vote count presentation is bland
+- No dramatic build-up for the eviction announcement
+- The "You have been evicted" message lacks emotional weight
+- Continue button uses generic styling
 
-**File**: `src/components/ui/phase-indicator.tsx`
+### Proposed Changes
 
-Make the compact mode more informative:
-- Add abbreviated labels below icons even in compact mode
-- Add visual polish with better hover states and tooltips
-- Show current phase name prominently
-- Add subtle animation to active phase
+**Visual Enhancements:**
+- Add dramatic gradient background with spotlight effect on evicted player
+- Display evicted player's large avatar with evicted status styling (grayscale effect)
+- Add animated vote count reveal with versus-style layout
+- Use dramatic typography with Orbitron font for the announcement
+- Add subtle particle/dust animation effect for emotional impact
 
-```tsx
-// Phase step with always-visible label
-<div className="phase-step flex flex-col items-center">
-  <div className={cn('phase-step-circle', isActive && 'active', isCompleted && 'completed')}>
-    {isCompleted ? <Check /> : <Icon />}
-  </div>
-  <span className="text-[10px] font-medium mt-1 text-center whitespace-nowrap">
-    {config.shortLabel}
-  </span>
-</div>
+**Layout Restructure:**
+```text
++------------------------------------------+
+|          EVICTION RESULT                 |
+|         [Gavel/Door Icon]                |
++------------------------------------------+
+|                                          |
+|    [Avatar 1]  vs  [Avatar 2]            |
+|      Name 1        Name 2                |
+|        4     TO      1                   |
+|      VOTES         VOTES                 |
+|                                          |
++------------------------------------------+
+|                                          |
+|    "By a vote of 4 to 1..."              |
+|                                          |
+|         [ cvb Avatar - Large ]           |
+|            (grayscale)                   |
+|                                          |
+|    "...you have been evicted from        |
+|     the Big Brother house."              |
+|                                          |
++------------------------------------------+
+|   [Dramatic Red Banner for Player]       |
+|   "YOU HAVE BEEN EVICTED"                |
++------------------------------------------+
+|                                          |
+|     [ Continue to Jury House ]           |
+|                                          |
++------------------------------------------+
 ```
 
-Add tooltip support for full phase name on hover.
-
-### 2. Reorganize GameHeader - Clean Up Button Row
-
-**File**: `src/components/game-screen/GameHeader.tsx`
-
-Remove action buttons from header - only keep essential branding and phase indicator:
-
-```tsx
-<header className="...">
-  <div className="flex items-center justify-between">
-    {/* Left: Title + Week */}
-    <div className="flex items-center gap-4">
-      <h1 className="game-title">Digital House Intrigue</h1>
-      <WeekIndicator week={gameState.week} />
-    </div>
-    
-    {/* Right: Profile only */}
-    <ProfileButton />
-  </div>
-  
-  {/* Full-width Phase Indicator below */}
-  <div className="mt-4">
-    <PhaseIndicator currentPhase={gameState.phase} week={gameState.week} />
-  </div>
-</header>
-```
-
-### 3. Redesign GameStatusIndicator with Action Buttons
-
-**File**: `src/components/game-screen/GameStatusIndicator.tsx`
-
-Move Save, History, and Promises buttons here with game status:
-
-```tsx
-<div className="game-status-bar">
-  {/* Left: Action Buttons */}
-  <div className="flex items-center gap-2">
-    <SaveLoadButton />
-    <GameRecapButton />
-    <PromiseButton />
-    <FastForwardButton />
-  </div>
-  
-  {/* Right: Status Badges */}
-  <div className="flex flex-wrap items-center gap-2">
-    <Badge>Week {week}</Badge>
-    <PhaseBadge phase={phase} />
-    <Badge>{activeCount} Active</Badge>
-    {hohName && <Badge>HoH: {hohName}</Badge>}
-    {povName && <Badge>PoV: {povName}</Badge>}
-  </div>
-</div>
-```
-
-### 4. Update Phase Indicator Styling
-
-**File**: `src/index.css`
-
-Add enhanced styles for the phase indicator:
-
-```css
-.phase-indicator-enhanced {
-  @apply flex items-center justify-between gap-1 py-3 px-4 bg-muted/30 rounded-lg;
-}
-
-.phase-step-enhanced {
-  @apply flex flex-col items-center gap-1 min-w-[50px];
-}
-
-.phase-step-circle-enhanced {
-  @apply w-10 h-10 rounded-full flex items-center justify-center;
-  @apply transition-all duration-300 ease-out;
-}
-
-.phase-step-circle-enhanced.active {
-  background: var(--gradient-primary);
-  @apply text-white scale-110;
-  box-shadow: var(--shadow-glow-primary);
-}
-
-.phase-step-label-enhanced {
-  @apply text-[10px] font-semibold uppercase tracking-wide;
-  @apply text-muted-foreground;
-}
-
-.phase-step-label-enhanced.active {
-  @apply text-primary font-bold;
-}
-```
+**Technical Implementation in `EvictionResults.tsx`:**
+- Use `StatusAvatar` with `status="evicted"` and `size="xl"` for evicted player
+- Create a VS-style comparison layout showing both nominees with vote counts
+- Add CSS animations for vote count reveals
+- Use GameCard with danger variant for dramatic framing
+- Add animated door-closing or fade-to-black effect
 
 ---
 
-## Layout Comparison
+## Screen 2: Stats Selector Screen
 
-### Before (Broken)
+### Current Issues
+- Plain stat labels with no visual hierarchy
+- Progress bars lack visual interest
+- Color coding (red/yellow/green) is basic and uninspiring
+- No tooltips or explanations for what stats mean
+- Layout feels cramped and utilitarian
+
+### Proposed Changes
+
+**Visual Enhancements:**
+- Add icons for each stat type (dumbbell for physical, brain for mental, etc.)
+- Create gradient-filled progress bars with animated fill
+- Add stat category headers to group related stats
+- Include tooltips explaining what each stat affects in gameplay
+- Show stat value as a prominent number with animated updates
+
+**Layout Restructure:**
 ```text
-+----------------------------------------------------------------+
-| DIGITAL HOUSE  WEEK 1 [o][o][o][o][o][o] [History][Promises... |
-| INTRIGUE                                           <- CUT OFF! |
-+----------------------------------------------------------------+
-| Week 1 | HoH | 8 Active | HoH: Alex                            |
-+----------------------------------------------------------------+
++------------------------------------------+
+|  YOUR STATS              Points: 5       |
+|                     [Progress Ring]      |
++------------------------------------------+
+|                                          |
+| COMPETITION STATS                        |
+| +--------------------------------------+ |
+| | [Dumbbell] Physical           5/10  | |
+| | [-] [====|========] [+]             | |
+| +--------------------------------------+ |
+| | [Brain] Mental                7/10  | |
+| | [-] [=======|=====] [+]             | |
+| +--------------------------------------+ |
+| | [Flame] Endurance             5/10  | |
+| | [-] [====|========] [+]             | |
+| +--------------------------------------+ |
+|                                          |
+| SOCIAL STATS                             |
+| +--------------------------------------+ |
+| | [Heart] Social                6/10  | |
+| | [-] [=====|=======] [+]             | |
+| +--------------------------------------+ |
+| | [Handshake] Loyalty           7/10  | |
+| | [-] [=======|=====] [+]             | |
+| +--------------------------------------+ |
+|                                          |
+| STRATEGIC STATS                          |
+| +--------------------------------------+ |
+| | [Target] Strategic            6/10  | |
+| | [-] [=====|=======] [+]             | |
+| +--------------------------------------+ |
+| | [Dice] Luck                   5/10  | |
+| | [-] [====|========] [+]             | |
+| +--------------------------------------+ |
++------------------------------------------+
 ```
 
-### After (Clean)
+**Technical Implementation in `StatsSelector.tsx`:**
+- Add Lucide icons for each stat: `Dumbbell`, `Brain`, `Flame`, `Heart`, `Handshake`, `Target`, `Dice`, `Swords`
+- Group stats into categories: Competition (physical, mental, endurance), Social (social, loyalty), Strategic (strategic, luck, competition)
+- Create enhanced progress bar with gradient fill matching stat level
+- Add tooltips using Tooltip component to explain each stat
+- Animate value changes with scale bounce effect
+- Show remaining points as an animated progress ring
+
+---
+
+## Screen 3: Eviction Interaction Stage
+
+### Current Issues
+- Plain white houseguest cards with no visual distinction
+- AI thought bubbles appear disconnected from cards
+- Remaining interactions counter is buried in a card
+- "Skip Remaining & Proceed" button has poor contrast
+- Toggle for AI thoughts is small and easy to miss
+- No visual indication of which houseguests you've already interacted with
+
+### Proposed Changes
+
+**Visual Enhancements:**
+- Use StatusAvatar component for houseguest avatars with proper status indicators
+- Integrate AI thought bubbles directly into cards (expandable on hover/click)
+- Create a prominent interaction counter with visual countdown
+- Add visual feedback for already-interacted houseguests
+- Make the Skip/Proceed button more prominent with proper danger styling
+- Separate nominees from voters visually
+
+**Layout Restructure:**
 ```text
-+----------------------------------------------------------------+
-| DIGITAL HOUSE INTRIGUE           WEEK 1             [Profile]  |
-| [HoH] ─ [Noms] ─ [PoV Pick] ─ [PoV] ─ [Veto] ─ [Evict]        |
-+----------------------------------------------------------------+
-| [Save/Load] [History] [Promises] [Skip] | HoH: Alex | 8 Active |
-+----------------------------------------------------------------+
++------------------------------------------+
+|     [UserX Icon]                         |
+|    EVICTION NIGHT                        |
+|    Talk with houseguests to influence    |
+|    the upcoming vote                     |
+|                                          |
+|    [Toggle] Show AI Thoughts             |
++------------------------------------------+
+|                                          |
+|  INTERACT WITH VOTERS                    |
+|  +----------------+ +----------------+   |
+|  | [Avatar]       | | [Avatar]       |   |
+|  | Jordan Taylor  | | Riley Johnson  |   |
+|  | Sales Rep      | | Software Eng   |   |
+|  | [AI Bubble]    | | [AI Bubble]    |   |
+|  +----------------+ +----------------+   |
+|  ...                                     |
++------------------------------------------+
+|                                          |
+|  +====================================+  |
+|  |  REMAINING INTERACTIONS: 3         |  |
+|  |  [O] [O] [O]                       |  |
+|  |  Use wisely to influence the vote  |  |
+|  +====================================+  |
+|                                          |
+|  [ Skip Remaining & Proceed >>> ]        |
+|                                          |
++------------------------------------------+
 ```
+
+**Technical Implementation in `EvictionInteractionStage.tsx`:**
+- Replace plain avatar circles with `StatusAvatar` component
+- Create visual interaction dots that deplete as interactions are used
+- Add hover states with glow effect on interactable cards
+- Move AI thought display inside cards with smooth expand animation
+- Track and visually mark already-interacted houseguests (opacity reduction or checkmark)
+- Use distinct sections for nominees vs voters when player is not nominated
+- Add progress bar for interactions remaining
 
 ---
 
@@ -174,27 +205,53 @@ Add enhanced styles for the phase indicator:
 
 | File | Changes |
 |------|---------|
-| `src/components/ui/phase-indicator.tsx` | Add labels to compact mode, improve styling, add tooltips |
-| `src/components/game-screen/GameHeader.tsx` | Remove action buttons, keep only title/week/profile, expand phase indicator |
-| `src/components/game-screen/GameStatusIndicator.tsx` | Add Save, History, Promises, FastForward buttons |
-| `src/index.css` | Add enhanced phase indicator styles |
+| `src/components/game-phases/EvictionPhase/EvictionResults.tsx` | Complete redesign with dramatic VS layout, StatusAvatar integration, animated reveals |
+| `src/components/game-setup/StatsSelector.tsx` | Add icons, category groupings, enhanced progress bars, tooltips |
+| `src/components/game-phases/EvictionPhase/EvictionInteractionStage.tsx` | StatusAvatar integration, improved thought display, interaction counter redesign |
+| `src/index.css` | Add new animations for eviction drama and stat changes |
+
+---
+
+## New Animations to Add
+
+```css
+/* Eviction reveal animation */
+@keyframes eviction-reveal {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Stat value bounce */
+@keyframes stat-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+/* Interaction used fade */
+@keyframes interaction-used {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.5; transform: scale(0.9); }
+}
+```
+
+---
+
+## Design System Alignment
+
+All changes will use:
+- **Colors**: `bb-blue`, `bb-red`, `bb-gold`, `bb-green` semantic colors
+- **Typography**: Orbitron for headers, Montserrat for body
+- **Components**: GameCard, StatusAvatar, Badge from existing UI library
+- **Shadows**: `shadow-glow-*` for emphasis on active elements
+- **Animations**: Consistent with existing `animate-fade-in`, `animate-pulse-glow`
 
 ---
 
 ## Mobile Responsiveness
 
-On mobile:
-- Phase indicator shows abbreviated labels (HoH, Noms, etc.)
-- Action buttons use icon-only mode with tooltips
-- Status badges stack vertically if needed
-
----
-
-## Visual Enhancements
-
-1. **Current Phase Highlighting**: Active phase circle has pulsing glow animation
-2. **Completed Phases**: Green checkmarks with connecting line turning green
-3. **Labels Always Visible**: Short labels (HoH, Noms, PoV, etc.) shown below icons
-4. **Hover Tooltips**: Full phase name appears on hover (e.g., "Head of Household Competition")
-5. **Progress Line**: Animated line connecting phases, fills as game progresses
+- Stats selector will stack categories vertically on mobile
+- Eviction interaction cards will be single column on small screens
+- Vote count VS layout will stack vertically on mobile
+- All touch targets will be minimum 44px
 
