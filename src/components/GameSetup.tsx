@@ -138,7 +138,8 @@ const GameSetup: React.FC = () => {
       playerBio: template.bio,
       selectedTraits: template.traits,
       avatarUrl: template.imageUrl,
-      templateId: template.id
+      templateId: template.id,
+      avatarConfig: template.avatar3DConfig // Pre-populate with template's avatar config
     }));
     setStep(2);
   };
@@ -166,7 +167,8 @@ const GameSetup: React.FC = () => {
       template.imageUrl,
       template.traits,
       {},
-      true
+      true,
+      template.avatar3DConfig // Pass the template's 3D avatar config
     );
 
     // Get other character templates as NPCs (excluding selected one)

@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 import { CharacterTemplate, archetypeInfo } from '@/data/character-templates';
 import { Button } from '@/components/ui/button';
 import { AnimatedBadge } from '@/components/ui/animated-badge';
-import { MapPin, Briefcase, User, Sparkles } from 'lucide-react';
+import { MapPin, Briefcase, User, Sparkles, Loader2 } from 'lucide-react';
+import { AvatarLoader } from '@/components/avatar-3d/AvatarLoader';
 
 interface CharacterDetailPanelProps {
   template: CharacterTemplate | null;
@@ -42,20 +43,35 @@ export const CharacterDetailPanel: React.FC<CharacterDetailPanelProps> = ({
         exit={{ opacity: 0, x: -20 }}
         transition={{ duration: 0.3 }}
       >
-        {/* Large portrait */}
+        {/* Large portrait - 3D or 2D based on avatar config */}
         <div className="relative flex-shrink-0">
           <div className="relative mx-auto w-48 h-48">
             {/* Ornate frame */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 p-1.5 shadow-2xl">
               <div className="w-full h-full rounded-full overflow-hidden ring-2 ring-amber-200/50">
-                <motion.img
-                  src={template.imageUrl}
-                  alt={template.name}
-                  className="w-full h-full object-cover"
-                  initial={{ scale: 1.1 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                />
+                {template.avatar3DConfig?.modelUrl ? (
+                  <React.Suspense fallback={
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                  }>
+                    <AvatarLoader
+                      avatarUrl={template.avatar3DConfig.modelUrl}
+                      avatarConfig={template.avatar3DConfig}
+                      size="full"
+                      animated={true}
+                    />
+                  </React.Suspense>
+                ) : (
+                  <motion.img
+                    src={template.imageUrl}
+                    alt={template.name}
+                    className="w-full h-full object-cover"
+                    initial={{ scale: 1.1 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                  />
+                )}
               </div>
             </div>
 

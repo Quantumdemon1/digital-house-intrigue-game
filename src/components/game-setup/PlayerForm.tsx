@@ -171,7 +171,7 @@ const PlayerForm: React.FC<PlayerFormProps> = ({
               avatarUrl={avatarUrl} 
               onAvatarChange={onAvatarChange}
               onAvatarConfigChange={handleAvatarConfigChange}
-              showImageOptions={!selectedTemplate?.avatar3DConfig}
+              showImageOptions={!selectedTemplate?.avatar3DConfig?.modelUrl}
               use3D={true}
             />
           </motion.div>

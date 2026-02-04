@@ -1,7 +1,7 @@
 
 # Plan: Add RPM Avatar Templates for NPC Characters
 
-## Overview
+## ✅ IMPLEMENTED
 
 This plan adds Ready Player Me (RPM) 3D avatars for all 12 NPC character templates, allowing players to select these avatars as starting points and optionally customize them further using the RPM editor.
 
