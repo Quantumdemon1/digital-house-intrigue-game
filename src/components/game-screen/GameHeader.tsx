@@ -9,17 +9,17 @@ const GameHeader: React.FC = () => {
   const { gameState } = useGame();
   
   return (
-    <header className="relative overflow-hidden rounded-xl border bg-card shadow-game-md">
+    <header className="relative overflow-hidden rounded-xl border bg-card shadow-game-md max-w-full">
       {/* Background pattern */}
       <div className="absolute inset-0 bg-surveillance-pattern opacity-5" />
       
-      <div className="relative p-4">
+      <div className="relative p-2 sm:p-3 md:p-4">
         {/* Top row: Title, Week, Profile */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Left side: Title and Week */}
-          <div className="flex items-center gap-4">
-            <h1 className="game-title text-lg md:text-xl">Digital House Intrigue</h1>
-            <Separator orientation="vertical" className="h-8 hidden md:block" />
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <h1 className="game-title text-sm sm:text-base md:text-lg lg:text-xl truncate">Digital House Intrigue</h1>
+            <Separator orientation="vertical" className="h-6 sm:h-8 hidden md:block" />
             <WeekIndicator week={gameState.week} className="hidden md:flex" />
           </div>
           
@@ -28,7 +28,7 @@ const GameHeader: React.FC = () => {
         </div>
         
         {/* Phase Indicator - Full width below title */}
-        <div className="mt-4">
+        <div className="mt-2 sm:mt-3 md:mt-4">
           <PhaseIndicator 
             currentPhase={gameState.phase} 
             week={gameState.week} 
@@ -36,7 +36,7 @@ const GameHeader: React.FC = () => {
         </div>
         
         {/* Mobile: Week indicator below phase on small screens */}
-        <div className="md:hidden mt-3 flex justify-center">
+        <div className="md:hidden mt-2 sm:mt-3 flex justify-center">
           <WeekIndicator week={gameState.week} />
         </div>
       </div>

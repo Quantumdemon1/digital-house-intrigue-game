@@ -456,23 +456,24 @@ const FinalHoHPhase: React.FC = () => {
           </div>
           
           {/* Finalist Options */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 sm:gap-6">
             {otherFinalists.map(finalist => (
               <div 
                 key={finalist.id} 
-                className="flex flex-col items-center p-6 bg-card rounded-lg border-2 border-border hover:border-bb-gold/50 transition-colors"
+                className="flex flex-col items-center p-4 sm:p-6 bg-card rounded-lg border-2 border-border hover:border-bb-gold/50 transition-colors"
               >
                 <StatusAvatar
                   name={finalist.name}
                   imageUrl={finalist.avatarUrl}
-                  size="lg"
-                  className="mb-3"
+                  size="md"
+                  className="mb-2 sm:mb-3"
                 />
-                <p className="font-semibold text-lg">{finalist.name}</p>
+                <p className="font-semibold text-base sm:text-lg truncate max-w-full">{finalist.name}</p>
                 {finalist.isPlayer && <Badge className="mt-1" variant="outline">You</Badge>}
                 
                 <Button
-                  className="mt-4 w-full bg-gradient-to-r from-bb-gold to-amber-500 text-black hover:from-amber-500 hover:to-bb-gold"
+                  size="sm"
+                  className="mt-3 sm:mt-4 w-full bg-gradient-to-r from-bb-gold to-amber-500 text-black hover:from-amber-500 hover:to-bb-gold"
                   onClick={() => chooseFinalist(finalist)}
                 >
                   Take to Final 2
@@ -507,7 +508,7 @@ const FinalHoHPhase: React.FC = () => {
       
       <GameCardContent className="space-y-6">
         {/* Part Navigation */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1 sm:gap-2">
           {(['part1', 'part2', 'part3'] as const).map((part) => {
             const Icon = getPartIcon(part);
             const isActive = currentPart === part;
@@ -520,7 +521,7 @@ const FinalHoHPhase: React.FC = () => {
                 disabled={isLocked}
                 onClick={() => !isLocked && setCurrentPart(part)}
                 className={cn(
-                  "flex flex-col items-center p-3 rounded-lg border-2 transition-all",
+                  "flex flex-col items-center p-2 sm:p-3 rounded-lg border-2 transition-all",
                   isActive && "border-bb-gold bg-bb-gold/10",
                   isCompleted && !isActive && "border-bb-green/50 bg-bb-green/5",
                   isLocked && "border-border bg-muted/30 opacity-50 cursor-not-allowed",
@@ -528,17 +529,17 @@ const FinalHoHPhase: React.FC = () => {
                 )}
               >
                 <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center mb-2",
+                  "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-1 sm:mb-2",
                   isActive && "bg-bb-gold text-black",
                   isCompleted && !isActive && "bg-bb-green text-white",
                   !isActive && !isCompleted && "bg-muted"
                 )}>
-                  {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                  {isCompleted ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> : <Icon className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </div>
-                <span className="text-xs font-medium">Part {part.slice(-1)}</span>
-                <span className="text-xs text-muted-foreground">{getPartLabel(part)}</span>
+                <span className="text-[10px] sm:text-xs font-medium">Part {part.slice(-1)}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground hidden xs:block">{getPartLabel(part)}</span>
                 {isCompleted && partStatus[part].winnerName && (
-                  <span className="text-xs text-bb-green mt-1">
+                  <span className="text-[10px] sm:text-xs text-bb-green mt-0.5 sm:mt-1 truncate max-w-full">
                     {partStatus[part].winnerName}
                   </span>
                 )}
@@ -562,22 +563,22 @@ const FinalHoHPhase: React.FC = () => {
           <p className="text-sm text-muted-foreground mb-6">{partInfo.description}</p>
           
           {/* Participants */}
-          <div className="mb-6">
-            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-              <Users className="h-4 w-4" />
+          <div className="mb-4 sm:mb-6">
+            <h4 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3 flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Competitors
             </h4>
-            <div className="flex justify-center gap-6">
+            <div className="flex justify-center gap-3 sm:gap-4 md:gap-6 flex-wrap">
               {participants.map(hg => (
                 <div key={hg.id} className="flex flex-col items-center">
                   <StatusAvatar
                     name={hg.name}
                     imageUrl={hg.avatarUrl}
-                    size="md"
-                    className="mb-2"
+                    size="sm"
+                    className="mb-1 sm:mb-2"
                   />
-                  <span className="text-sm font-medium">{hg.name}</span>
-                  {hg.isPlayer && <Badge variant="outline" className="text-xs mt-1">You</Badge>}
+                  <span className="text-xs sm:text-sm font-medium truncate max-w-[70px] sm:max-w-none">{hg.name}</span>
+                  {hg.isPlayer && <Badge variant="outline" className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">You</Badge>}
                 </div>
               ))}
             </div>

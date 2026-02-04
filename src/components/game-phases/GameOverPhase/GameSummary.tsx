@@ -37,62 +37,65 @@ const GameSummary: React.FC<GameSummaryProps> = ({ gameState: propGameState }) =
   const winnerNominations = getNominationsCount(stateToUse.winner?.nominations);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold flex items-center gap-2">
-        <FileText className="h-5 w-5" /> Season Summary
+    <div className="space-y-4 sm:space-y-6 max-w-full overflow-hidden">
+      <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+        <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> 
+        <span className="truncate">Season Summary</span>
       </h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <CardTitle className="mb-4 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-600" /> Season Stats
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+        <Card className="overflow-hidden">
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+            <CardTitle className="mb-3 sm:mb-4 flex items-center gap-2 text-base sm:text-lg">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-bb-blue flex-shrink-0" /> 
+              <span className="truncate">Season Stats</span>
             </CardTitle>
             
-            <ul className="space-y-3">
-              <li className="flex justify-between">
-                <span className="text-muted-foreground">Season Length:</span>
-                <span className="font-medium">{totalWeeks} weeks</span>
+            <ul className="space-y-2 sm:space-y-3 text-sm sm:text-base">
+              <li className="flex justify-between gap-2">
+                <span className="text-muted-foreground truncate">Season Length:</span>
+                <span className="font-medium flex-shrink-0">{totalWeeks} weeks</span>
               </li>
-              <li className="flex justify-between">
-                <span className="text-muted-foreground">Total Houseguests:</span>
-                <span className="font-medium">{totalHouseguests}</span>
+              <li className="flex justify-between gap-2">
+                <span className="text-muted-foreground truncate">Total Houseguests:</span>
+                <span className="font-medium flex-shrink-0">{totalHouseguests}</span>
               </li>
-              <li className="flex justify-between">
-                <span className="text-muted-foreground">Total Evictions:</span>
-                <span className="font-medium">{totalEvictions}</span>
+              <li className="flex justify-between gap-2">
+                <span className="text-muted-foreground truncate">Total Evictions:</span>
+                <span className="font-medium flex-shrink-0">{totalEvictions}</span>
               </li>
-              <li className="flex justify-between">
-                <span className="text-muted-foreground">Jury Size:</span>
-                <span className="font-medium">{jurySize}</span>
+              <li className="flex justify-between gap-2">
+                <span className="text-muted-foreground truncate">Jury Size:</span>
+                <span className="font-medium flex-shrink-0">{jurySize}</span>
               </li>
             </ul>
           </CardContent>
         </Card>
         
         {gameState.winner && (
-          <Card>
-            <CardContent className="pt-6">
-              <CardTitle className="mb-4 flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-600" /> Winner's Journey
+          <Card className="overflow-hidden">
+            <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+              <CardTitle className="mb-3 sm:mb-4 flex items-center gap-2 text-base sm:text-lg">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-bb-gold flex-shrink-0" /> 
+                <span className="truncate">Winner's Journey</span>
               </CardTitle>
               
-              <ul className="space-y-3">
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">Winner:</span>
-                  <span className="font-medium">{gameState.winner.name}</span>
+              <ul className="space-y-2 sm:space-y-3 text-sm sm:text-base">
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">Winner:</span>
+                  <span className="font-medium truncate max-w-[120px] sm:max-w-none">{gameState.winner.name}</span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">HoH Wins:</span>
-                  <span className="font-medium">{winnerHoHWins}</span>
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">HoH Wins:</span>
+                  <span className="font-medium flex-shrink-0">{winnerHoHWins}</span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">PoV Wins:</span>
-                  <span className="font-medium">{winnerPovWins}</span>
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">PoV Wins:</span>
+                  <span className="font-medium flex-shrink-0">{winnerPovWins}</span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">Times Nominated:</span>
-                  <span className="font-medium">{winnerNominations}</span>
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">Times Nominated:</span>
+                  <span className="font-medium flex-shrink-0">{winnerNominations}</span>
                 </li>
               </ul>
             </CardContent>
@@ -101,19 +104,20 @@ const GameSummary: React.FC<GameSummaryProps> = ({ gameState: propGameState }) =
       </div>
       
       {playerHouseguest && (
-        <Card className={playerHouseguest.status === 'Winner' ? 
-          "border-2 border-yellow-400" : 
+        <Card className={`overflow-hidden ${playerHouseguest.status === 'Winner' ? 
+          "border-2 border-bb-gold" : 
           playerHouseguest.status === 'Runner-Up' ? 
-          "border-2 border-gray-400" : ""
-        }>
-          <CardContent className="pt-6">
-            <CardTitle className="mb-4 flex items-center gap-2">
-              <User className="h-5 w-5 text-green-600" /> Your Journey
+          "border-2 border-muted-foreground" : ""
+        }`}>
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+            <CardTitle className="mb-3 sm:mb-4 flex items-center gap-2 text-base sm:text-lg">
+              <User className="h-4 w-4 sm:h-5 sm:w-5 text-bb-green flex-shrink-0" /> 
+              <span className="truncate">Your Journey</span>
             </CardTitle>
             
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl overflow-hidden">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-muted rounded-full flex items-center justify-center text-lg sm:text-xl overflow-hidden flex-shrink-0">
                   {playerHouseguest.avatarUrl ? (
                     <img 
                       src={playerHouseguest.avatarUrl} 
@@ -124,26 +128,26 @@ const GameSummary: React.FC<GameSummaryProps> = ({ gameState: propGameState }) =
                     playerHouseguest.name.charAt(0)
                   )}
                 </div>
-                <div>
-                  <h3 className="font-semibold">{playerHouseguest.name}</h3>
-                  <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-sm sm:text-base truncate">{playerHouseguest.name}</h3>
+                  <div className="flex items-center gap-1 flex-wrap">
                     {playerHouseguest.status === 'Winner' && (
-                      <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-xs sm:text-sm bg-bb-gold/20 text-bb-gold px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Trophy className="h-3 w-3" /> Winner
                       </span>
                     )}
                     {playerHouseguest.status === 'Runner-Up' && (
-                      <span className="text-sm bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-xs sm:text-sm bg-muted text-muted-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Award className="h-3 w-3" /> Runner-Up
                       </span>
                     )}
                     {playerHouseguest.status === 'Jury' && (
-                      <span className="text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-xs sm:text-sm bg-bb-blue/20 text-bb-blue px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Users className="h-3 w-3" /> Jury Member
                       </span>
                     )}
                     {playerHouseguest.status === 'Evicted' && (
-                      <span className="text-sm bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
+                      <span className="text-xs sm:text-sm bg-bb-red/20 text-bb-red px-2 py-0.5 rounded-full">
                         Evicted
                       </span>
                     )}
@@ -151,32 +155,32 @@ const GameSummary: React.FC<GameSummaryProps> = ({ gameState: propGameState }) =
                 </div>
               </div>
               
-              <ul className="space-y-3">
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">HoH Wins:</span>
-                  <span className="font-medium">{playerHouseguest.competitionsWon.hoh}</span>
+              <ul className="space-y-2 sm:space-y-3 text-sm sm:text-base">
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">HoH Wins:</span>
+                  <span className="font-medium flex-shrink-0">{playerHouseguest.competitionsWon.hoh}</span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">PoV Wins:</span>
-                  <span className="font-medium">{playerHouseguest.competitionsWon.pov}</span>
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">PoV Wins:</span>
+                  <span className="font-medium flex-shrink-0">{playerHouseguest.competitionsWon.pov}</span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">Total Competitions:</span>
-                  <span className="font-medium">
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">Total Competitions:</span>
+                  <span className="font-medium flex-shrink-0">
                     {playerHouseguest.competitionsWon.hoh + 
                      playerHouseguest.competitionsWon.pov + 
                      (playerHouseguest.competitionsWon.other || 0)}
                   </span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">Times Nominated:</span>
-                  <span className="font-medium">
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">Times Nominated:</span>
+                  <span className="font-medium flex-shrink-0">
                     {getNominationsCount(playerHouseguest.nominations)}
                   </span>
                 </li>
-                <li className="flex justify-between">
-                  <span className="text-muted-foreground">Final Placement:</span>
-                  <span className="font-medium">
+                <li className="flex justify-between gap-2">
+                  <span className="text-muted-foreground truncate">Final Placement:</span>
+                  <span className="font-medium flex-shrink-0">
                     {playerHouseguest.status === 'Winner' && '1st Place 🏆'}
                     {playerHouseguest.status === 'Runner-Up' && '2nd Place 🥈'}
                     {playerHouseguest.status === 'Jury' && 'Jury Member'}
@@ -185,18 +189,18 @@ const GameSummary: React.FC<GameSummaryProps> = ({ gameState: propGameState }) =
                 </li>
               </ul>
               
-              <div className="mt-4 p-3 bg-gray-50 rounded-md border text-sm">
+              <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-muted/50 rounded-md border text-xs sm:text-sm">
                 {playerHouseguest.status === 'Winner' && (
-                  <p>Congratulations on your victory! You masterfully navigated the social dynamics and competition challenges to claim the title of Big Brother champion!</p>
+                  <p className="line-clamp-3 sm:line-clamp-none">Congratulations on your victory! You masterfully navigated the social dynamics and competition challenges to claim the title of Big Brother champion!</p>
                 )}
                 {playerHouseguest.status === 'Runner-Up' && (
-                  <p>So close! You made it all the way to the final 2, but couldn't quite secure enough jury votes for the win. An impressive game nonetheless!</p>
+                  <p className="line-clamp-3 sm:line-clamp-none">So close! You made it all the way to the final 2, but couldn't quite secure enough jury votes for the win. An impressive game nonetheless!</p>
                 )}
                 {playerHouseguest.status === 'Jury' && (
-                  <p>You played a solid game and made it to the jury phase, where you helped decide the winner of the season.</p>
+                  <p className="line-clamp-3 sm:line-clamp-none">You played a solid game and made it to the jury phase, where you helped decide the winner of the season.</p>
                 )}
                 {playerHouseguest.status === 'Evicted' && (
-                  <p>Your journey was cut short, but there's always next season! Learn from this experience and come back stronger.</p>
+                  <p className="line-clamp-3 sm:line-clamp-none">Your journey was cut short, but there's always next season! Learn from this experience and come back stronger.</p>
                 )}
               </div>
             </div>
