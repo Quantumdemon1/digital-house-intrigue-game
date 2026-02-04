@@ -6,13 +6,14 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { User, Sparkles, Globe, RotateCcw, ChevronLeft, ChevronRight, Check, Camera, AlertCircle } from 'lucide-react';
+import { User, Sparkles, Globe, RotateCcw, ChevronLeft, ChevronRight, Check, Camera, AlertCircle, ZoomIn, ZoomOut } from 'lucide-react';
 import { Avatar3DConfig, generateDefaultConfig } from '@/models/avatar-config';
 import { RPMAvatarCreator } from './RPMAvatarCreator';
 import { RPMAvatarCreatorPanel } from './RPMAvatarCreatorPanel';
 import { AvatarLoader } from './AvatarLoader';
 import { ProfilePortraitPreview, captureHeadPortrait } from './ProfilePortraitCanvas';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { toast } from '@/hooks/use-toast';
 
 interface AvatarCustomizerProps {
@@ -38,6 +39,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   const [showRPMCreator, setShowRPMCreator] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [zoom, setZoom] = useState(1.0);
 
   const updateConfig = useCallback((updates: Partial<Avatar3DConfig>) => {
     const newConfig = { ...config, ...updates };
@@ -163,6 +165,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                     avatarConfig={config}
                     size="full"
                     animated={true}
+                    zoom={zoom}
                   />
                 ) : (
                   /* Placeholder when no avatar is selected */
@@ -181,6 +184,27 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             </motion.div>
           </div>
 
+          {/* Zoom Control */}
+          {hasValidAvatar && (
+            <motion.div 
+              className="flex items-center gap-3 mt-4 px-2 w-full max-w-xs"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <ZoomOut className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <Slider
+                value={[zoom]}
+                onValueChange={(values) => setZoom(values[0])}
+                min={0.8}
+                max={2.5}
+                step={0.1}
+                className="flex-1"
+              />
+              <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            </motion.div>
+          )}
+
           {/* Rotation controls */}
           <div className="flex items-center gap-3 mt-2">
             <motion.button
@@ -193,7 +217,10 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             </motion.button>
             
             <motion.button
-              onClick={() => setRotation(0)}
+              onClick={() => {
+                setRotation(0);
+                setZoom(1.0);
+              }}
               className="px-4 py-2 rounded-full bg-muted/30 border border-border flex items-center gap-2 text-muted-foreground text-sm hover:bg-muted/50 hover:text-foreground transition-all"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
