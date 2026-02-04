@@ -27,6 +27,11 @@ export type { ScreenshotOptions } from './AvatarScreenshotCapture';
 export { AutoCaptureProfilePhoto } from './AutoCaptureProfilePhoto';
 export { AvatarProfilePicture } from './AvatarProfilePicture';
 
+// House Scene components (3D environment)
+export { HouseScene } from './HouseScene';
+export { HouseFloor, Couch, CoffeeTable, Plant, LightFixture } from './HouseFurniture';
+export { CharacterCarousel } from './CharacterCarousel';
+
 // Hooks
 export { useAvatarPreloader, useAvatarUrlPreloader, preloadRPMModel, preloadRPMModels, extractRPMUrls } from './hooks/useAvatarPreloader';
 
