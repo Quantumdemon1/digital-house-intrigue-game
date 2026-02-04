@@ -242,7 +242,7 @@ const NetworkNode: React.FC<NetworkNodeProps> = memo(({
             width={32}
             height={14}
             rx={7}
-            fill="hsl(var(--bb-blue))"
+            fill="hsl(var(--bb-green))"
           />
           <text
             x={position.x}

@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { Trophy } from 'lucide-react';
 import JuryTimer from './JuryTimer';
+import { StatusAvatar } from '@/components/ui/status-avatar';
 
 interface JuryVotingProps {
   finalist1: Houseguest;
@@ -161,9 +161,13 @@ const JuryVoting: React.FC<JuryVotingProps> = ({
           <div className="grid grid-cols-2 gap-8 max-w-lg mx-auto">
             {[finalist1, finalist2].map(finalist => (
               <div key={finalist.id} className="flex flex-col items-center">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center text-2xl mb-3">
-                  {finalist.name.charAt(0)}
-                </div>
+                <StatusAvatar
+                  name={finalist.name}
+                  imageUrl={finalist.avatarUrl}
+                  size="lg"
+                  isPlayer={finalist.isPlayer}
+                  className="mb-3"
+                />
                 <p className="font-semibold mb-3">{finalist.name}</p>
                 {currentJuror.isPlayer && (
                   <button
@@ -186,12 +190,15 @@ const JuryVoting: React.FC<JuryVotingProps> = ({
             <div 
               key={juror.id} 
               className={`p-2 border rounded flex items-center ${
-                votes[juror.id] ? "bg-gray-50" : "opacity-50"
+                votes[juror.id] ? "bg-muted/50" : "opacity-50"
               }`}
             >
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-                {juror.name.charAt(0)}
-              </div>
+              <StatusAvatar
+                name={juror.name}
+                imageUrl={juror.avatarUrl}
+                size="sm"
+                className="mr-2"
+              />
               <span>{juror.name}</span>
               {votes[juror.id] && (
                 <span className="ml-auto text-xs font-medium">

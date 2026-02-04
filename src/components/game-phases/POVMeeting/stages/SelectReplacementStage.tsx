@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Crown, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Houseguest } from '@/models/houseguest';
 import { AIDecisionCard } from '@/components/ai-feedback';
+import { StatusAvatar } from '@/components/ui/status-avatar';
 
 interface SelectReplacementStageProps {
   hoh: Houseguest | null;
@@ -100,9 +100,12 @@ const SelectReplacementStage: React.FC<SelectReplacementStageProps> = ({
                   variant="outline"
                   className="flex flex-col h-auto py-3 border-amber-200 hover:bg-amber-100 hover:text-amber-900"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mb-2">
-                    {houseguest.name.charAt(0)}
-                  </div>
+                  <StatusAvatar
+                    name={houseguest.name}
+                    imageUrl={houseguest.avatarUrl}
+                    size="sm"
+                    className="mb-2"
+                  />
                   <span>{houseguest.name}</span>
                   <span className="text-xs text-muted-foreground">{houseguest.occupation}</span>
                 </Button>

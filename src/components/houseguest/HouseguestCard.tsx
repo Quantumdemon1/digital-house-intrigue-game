@@ -79,6 +79,7 @@ const HouseguestCard: React.FC<HouseguestCardProps> = ({
             <div className="flex flex-col items-center min-w-0">
               <StatusAvatar 
                 name={houseguest.name}
+                imageUrl={houseguest.avatarUrl}
                 status={getHouseguestStatus()}
                 size="md"
                 isPlayer={houseguest.isPlayer}

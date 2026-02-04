@@ -62,6 +62,7 @@ const HouseguestCardCompact: React.FC<HouseguestCardCompactProps> = ({
         >
           <StatusAvatar 
             name={houseguest.name}
+            imageUrl={houseguest.avatarUrl}
             status={getHouseguestStatus()}
             size="sm"
             isPlayer={houseguest.isPlayer}

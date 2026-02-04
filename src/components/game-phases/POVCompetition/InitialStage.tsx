@@ -112,6 +112,7 @@ const InitialStage: React.FC<InitialStageProps> = ({
                 >
                   <StatusAvatar 
                     name={player.name}
+                    imageUrl={player.avatarUrl}
                     status={getPlayerStatus(player)}
                     size="md"
                     isPlayer={player.isPlayer}

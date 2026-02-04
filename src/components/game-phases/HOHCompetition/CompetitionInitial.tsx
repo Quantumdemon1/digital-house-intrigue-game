@@ -120,6 +120,7 @@ const CompetitionInitial: React.FC<CompetitionInitialProps> = ({
               >
                 <StatusAvatar 
                   name={houseguest.name}
+                  imageUrl={houseguest.avatarUrl}
                   size="sm"
                   isPlayer={houseguest.isPlayer}
                   showBadge={false}
