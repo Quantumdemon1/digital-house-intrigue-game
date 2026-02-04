@@ -35,8 +35,14 @@ export function useEvictionPhase() {
   );
   const hoh = gameState.hohWinner;
   
-  // Check if we're at final 3
-  const isFinal3 = activeHouseguests.length <= 3;
+  // Check if we're at final 3 (HoH evicts one of the other two - this is after Final HoH)
+  const isFinal3 = activeHouseguests.length <= 3 && gameState.isFinalStage;
+  
+  // Check if we're at final 4 (only 1 person votes - non-HoH, non-nominee)
+  const isFinal4 = activeHouseguests.length === 4;
+  
+  // The sole voter at Final 4 (non-HoH, non-nominee)
+  const soleVoter = isFinal4 ? nonNominees[0] : null;
   
   // Check if player is one of the nominees
   const playerIsNominee = nominees.some(nominee => nominee.isPlayer);
@@ -157,6 +163,8 @@ export function useEvictionPhase() {
     hoh,
     playerIsNominee,
     isFinal3,
+    isFinal4,
+    soleVoter,
     tiebreakerVote,
     handleProceedToVoting,
     handleSpeechesComplete,

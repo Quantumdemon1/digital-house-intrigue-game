@@ -37,8 +37,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
           console.log("Fast forwarding from Eviction - advancing week");
           const activeCountEviction = state.houseguests.filter(h => h.status === 'Active').length;
           
-          // Check for final stages
-          if (activeCountEviction <= 2) {
+          // Check for final stages - only 2 remaining goes to jury questioning
+          if (activeCountEviction === 2) {
             return {
               ...state,
               week: state.week + 1,
@@ -48,7 +48,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               evictionVotes: {}
             };
           }
-          if (activeCountEviction <= 3) {
+          // Exactly 3 remaining goes to Final HoH
+          if (activeCountEviction === 3) {
             return {
               ...state,
               week: state.week + 1,
@@ -210,7 +211,7 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
         console.log(`Active houseguests: ${activeCount}`);
         
         // If only 2 remain, go to Jury Questioning
-        if (activeCount <= 2) {
+        if (activeCount === 2) {
           console.log('Only 2 houseguests remain - advancing to Jury Questioning');
           return {
             ...state,
@@ -222,8 +223,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
           };
         }
         
-        // If 3 remain, go to Final HoH
-        if (activeCount <= 3) {
+        // If exactly 3 remain, go to Final HoH (after Final 4 eviction)
+        if (activeCount === 3) {
           console.log('3 houseguests remain - advancing to Final HoH');
           return {
             ...state,
@@ -233,6 +234,11 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             nominees: [],
             evictionVotes: {}
           };
+        }
+        
+        // If 4 remain (Final 4), continue normal week with isFinalStage flag for special voting
+        if (activeCount === 4) {
+          console.log('Final 4 - continuing normal week with single voter');
         }
         
         // Normal week advancement

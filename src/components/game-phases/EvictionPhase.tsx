@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { UserX, Clock, Target, Gavel } from 'lucide-react';
+import { UserX, Clock, Target, Gavel, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,8 @@ const EvictionPhase: React.FC = () => {
     hoh,
     playerIsNominee,
     isFinal3,
+    isFinal4,
+    soleVoter,
     tiebreakerVote,
     handleProceedToVoting,
     handleSpeechesComplete,
@@ -38,7 +40,7 @@ const EvictionPhase: React.FC = () => {
 
   // Render different content based on the current stage
   const renderStageContent = () => {
-    // Special case for Final 3
+    // Special case for Final 3 (after Final HoH - HoH evicts one of two)
     if (isFinal3) {
       return (
         <div className="text-center space-y-6 py-4">
@@ -104,15 +106,30 @@ const EvictionPhase: React.FC = () => {
         );
       case 'voting':
         return (
-          <EvictionVoting 
-            nominees={nominees} 
-            voters={nonNominees} 
-            hoh={hoh} 
-            votes={votes} 
-            onVoteSubmit={handleVoteSubmit} 
-            timeRemaining={timeRemaining} 
-            totalTime={VOTING_TIME_LIMIT} 
-          />
+          <>
+            {/* Final 4 sole voter banner */}
+            {isFinal4 && soleVoter && (
+              <div className="mb-4 p-4 bg-gradient-to-r from-bb-gold/20 to-amber-500/10 rounded-lg border border-bb-gold/30 text-center">
+                <Badge variant="outline" className="bg-bb-gold/10 text-bb-gold border-bb-gold/30 mb-2">
+                  <Crown className="h-3 w-3 mr-1" /> Final 4 - Sole Vote to Evict
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  {soleVoter.name} is the only houseguest who can vote. Their decision will determine who goes home.
+                </p>
+              </div>
+            )}
+            <EvictionVoting 
+              nominees={nominees} 
+              voters={nonNominees} 
+              hoh={hoh} 
+              votes={votes} 
+              onVoteSubmit={handleVoteSubmit} 
+              timeRemaining={timeRemaining} 
+              totalTime={VOTING_TIME_LIMIT}
+              isFinal4={isFinal4}
+              soleVoter={soleVoter}
+            />
+          </>
         );
       case 'tiebreaker':
         return hoh ? (

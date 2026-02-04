@@ -17,6 +17,8 @@ interface EvictionVotingProps {
   onVoteSubmit: (voterId: string, nomineeId: string) => void;
   timeRemaining: number;
   totalTime: number;
+  isFinal4?: boolean;
+  soleVoter?: Houseguest | null;
 }
 
 const EvictionVoting: React.FC<EvictionVotingProps> = ({
@@ -26,7 +28,9 @@ const EvictionVoting: React.FC<EvictionVotingProps> = ({
   votes,
   onVoteSubmit,
   timeRemaining,
-  totalTime
+  totalTime,
+  isFinal4 = false,
+  soleVoter = null
 }) => {
   const [currentVoter, setCurrentVoter] = useState<Houseguest | null>(null);
   const [showDecision, setShowDecision] = useState(false);

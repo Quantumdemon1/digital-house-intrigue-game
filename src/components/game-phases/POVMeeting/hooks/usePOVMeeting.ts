@@ -65,6 +65,23 @@ export const usePOVMeeting = () => {
   const getEligibleToSave = () => nominees;
   
   const getEligibleReplacements = () => {
+    const isFinal4 = activeHouseguests.length === 4;
+    
+    // At Final 4, if the off-block person (not HoH, not nominee) wins and uses veto,
+    // they must put themselves on the block as the replacement nominee
+    if (isFinal4 && povHolder) {
+      const povHolderHg = activeHouseguests.find(h => h.id === povHolder.id || h.id === (povHolder as any));
+      const isOffBlockPerson = povHolderHg && 
+        !povHolderHg.isHoH && 
+        !nominees.some(n => n.id === povHolderHg.id);
+      
+      if (isOffBlockPerson) {
+        // The only replacement option is themselves
+        return [povHolderHg];
+      }
+    }
+    
+    // Normal rules: anyone not HoH, not already nominated, not the one just saved, not PoV holder
     return activeHouseguests.filter(houseguest => 
       !houseguest.isHoH && 
       !houseguest.isNominated && 
