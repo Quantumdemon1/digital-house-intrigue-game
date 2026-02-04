@@ -5,9 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Crown, Target, Shield, UserX, Check } from 'lucide-react';
 import { Avatar3DConfig } from '@/models/avatar-config';
 import { MoodType } from '@/models/houseguest/types';
-
-// Lazy load 3D avatar to avoid bundle size impact
-const SimsAvatar = React.lazy(() => import('@/components/avatar-3d/SimsAvatar'));
+import { AvatarLoader } from '@/components/avatar-3d';
 
 export type AvatarStatus = 'hoh' | 'nominee' | 'pov' | 'safe' | 'evicted' | 'none';
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -121,19 +119,14 @@ const Avatar3DWrapper: React.FC<{
   name: string;
 }> = ({ config, size, status, mood, isPlayer, animated, name }) => {
   return (
-    <React.Suspense fallback={
-      <div className={cn(sizeClasses[size], 'bg-muted/30 rounded-full animate-pulse')} />
-    }>
-      <SimsAvatar
-        config={config}
-        size={size3DMap[size]}
-        status={status}
-        mood={mood}
-        isPlayer={isPlayer}
-        animated={animated}
-        showShadow={false}
-      />
-    </React.Suspense>
+    <AvatarLoader
+      avatarConfig={config}
+      size={size3DMap[size]}
+      status={status}
+      mood={mood}
+      isPlayer={isPlayer}
+      animated={animated}
+    />
   );
 };
 

@@ -6,7 +6,7 @@ import { PersonalityTrait } from '@/models/houseguest';
 import { AnimatedBadge } from '@/components/ui/animated-badge';
 import { Briefcase, MapPin, User, Wand2, ArrowLeft } from 'lucide-react';
 import AvatarImageOptions from './AvatarImageOptions';
-import { SimsAvatar } from '@/components/avatar-3d';
+import { AvatarLoader } from '@/components/avatar-3d';
 import { AvatarCustomizer } from '@/components/avatar-3d/AvatarCustomizer';
 import { generateDefaultConfig, Avatar3DConfig } from '@/models/avatar-config';
 import { Button } from '@/components/ui/button';
@@ -124,8 +124,8 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
           {has3DConfig ? (
-            <SimsAvatar 
-              config={avatarConfig || localConfig}
+            <AvatarLoader 
+              avatarConfig={avatarConfig || localConfig}
               size="xl"
               isPlayer={true}
               animated={true}
