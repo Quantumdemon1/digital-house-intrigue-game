@@ -19,15 +19,20 @@ const NominationPhase: React.FC = () => {
   const {
     gameState,
     dispatch,
-    getHouseguestById,
     getRelationship,
   } = useGame();
 
   const [stage, setStage] = useState<NominationStage>('pre-ceremony');
   const spectatorAutoStartRef = useRef(false);
   
-  const hohId = gameState?.hohWinner?.id;
-  const hoh = hohId ? getHouseguestById(hohId) : null;
+  // Look up HoH directly from reducer state to ensure isPlayer is accurate
+  const hohId = typeof gameState?.hohWinner === 'string' 
+    ? gameState.hohWinner 
+    : gameState?.hohWinner?.id;
+  
+  const hoh = hohId 
+    ? gameState.houseguests.find(h => h.id === hohId) || null
+    : null;
   
   const { 
     nominees, 
