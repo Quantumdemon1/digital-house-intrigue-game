@@ -1,322 +1,342 @@
 
-
-# Plan: Avatar Selector with AI-Generated Character Templates
+# Plan: Alliances Social Network Feature
 
 ## Overview
 
-Create a character selection system inspired by the Survivor game reference image, featuring premade houseguest templates with AI-generated realistic portraits. Players can browse through pre-designed characters in a visually appealing carousel/grid interface, select one as their template, and then customize the details.
+Create an interactive "Social" feature that allows players to visualize and track their connections with other houseguests in a social network graph. Inspired by the Survivor reference image, this feature will display houseguest avatars connected by relationship lines, with color-coded connections (green for friendship, red for enmity, yellow for neutral) and line thickness indicating relationship strength. Players can manually adjust their perceived connections, but this won't affect NPC views.
 
 ---
 
-## Part 1: AI Image Generation Service
+## Part 1: Social Network Visualization Component
 
-### New File: `src/services/avatar-generator.ts`
+### New File: `src/components/social-network/SocialNetworkGraph.tsx`
 
-Create a service to generate realistic character portraits using the Lovable AI image generation API (Nano banana model):
+Create an interactive SVG-based social network visualization:
+
+**Visual Elements:**
+- Circular layout with player ("YOU") positioned prominently on the left
+- Houseguest avatars in circular frames with metallic borders (similar to Survivor reference)
+- Connection lines between all houseguests using SVG paths
+- Line colors: Green (friendship 50+), Yellow/Neutral (0 to 50), Red (enmity, negative)
+- Line thickness: Thin (weak), Medium (moderate), Thick (strong)
+- Click on houseguest to see details or edit perception
+
+**Layout Algorithm:**
+- Player avatar larger and highlighted with "YOU" label
+- Other houseguests arranged in a circular or force-directed pattern
+- Smooth animations when updating connections
 
 ```typescript
-interface GeneratedAvatar {
-  id: string;
-  imageUrl: string;
-  name: string;
-  description: string;
+interface SocialNetworkGraphProps {
+  houseguests: Houseguest[];
+  playerId: string;
+  relationships: Map<string, Map<string, Relationship>>;
+  playerPerceptions?: PlayerPerceptions; // Custom player notes
+  alliances: Alliance[];
+  onHouseguestClick?: (houseguest: Houseguest) => void;
+  onEditPerception?: (houseguestId: string) => void;
 }
-
-// Generate character portrait based on description
-async function generateCharacterPortrait(
-  description: string,
-  style: 'realistic' | 'stylized'
-): Promise<string>
-
-// Batch generate multiple character portraits
-async function generateHouseguestPortraits(
-  count: number
-): Promise<GeneratedAvatar[]>
 ```
 
-The prompts will request:
-- High quality, realistic portrait headshots
-- Diverse ages, ethnicities, and appearances
-- Professional lighting, neutral background
-- Suitable for a reality TV game show contestant
+---
+
+## Part 2: Player Perception System
+
+### New File: `src/models/player-perception.ts`
+
+Create a model for player's personal tracking that doesn't affect NPC behavior:
+
+```typescript
+interface PlayerPerception {
+  houseguestId: string;
+  customRelationshipLevel: 'ally' | 'friend' | 'neutral' | 'rival' | 'enemy' | null;
+  inMyAlliance: boolean;           // Player's own alliance tracking
+  notes: string;                   // Custom notes
+  trustLevel: number;              // 1-5 scale for trust
+  threatLevel: number;             // 1-5 scale for perceived threat
+  lastUpdated: number;             // Timestamp
+}
+
+interface PlayerPerceptions {
+  perceptions: Map<string, PlayerPerception>;
+  customAlliances: CustomAlliance[];
+}
+
+interface CustomAlliance {
+  id: string;
+  name: string;
+  memberIds: string[];
+  color: string;                   // For visual grouping on graph
+  createdAt: number;
+}
+```
 
 ---
 
-## Part 2: Premade Character Templates
+## Part 3: Perception Editor Dialog
 
-### Modify: `src/components/game-setup/defaultHouseguests.ts`
+### New File: `src/components/social-network/PerceptionEditorDialog.tsx`
 
-Expand the default houseguests with more detailed character profiles and placeholder avatar URLs that will be replaced with generated images:
+Dialog for editing player's perception of a houseguest:
+
+```
++------------------------------------------+
+|  Edit Your View: [Houseguest Name]       |
++------------------------------------------+
+|  [Avatar]  Morgan Lee                    |
+|            Personal Trainer, 26          |
++------------------------------------------+
+|                                          |
+|  How do you see them?                    |
+|  [Ally] [Friend] [Neutral] [Rival] [Enemy]|
+|                                          |
+|  Threat Level:  [1] [2] [3] [4] [5]      |
+|                                          |
+|  Trust Level:   [1] [2] [3] [4] [5]      |
+|                                          |
+|  Your Notes:                             |
+|  +------------------------------------+  |
+|  | They seem loyal but watch out for |  |
+|  | their competitive nature...       |  |
+|  +------------------------------------+  |
+|                                          |
+|  Add to Alliance: [Select Alliance v]    |
+|                                          |
+|  [Cancel]              [Save Perception] |
++------------------------------------------+
+```
+
+---
+
+## Part 4: Custom Alliance Creator
+
+### New File: `src/components/social-network/CustomAllianceDialog.tsx`
+
+Allow players to create their own alliance groupings for visualization:
+
+**Features:**
+- Name your alliance
+- Select members from active houseguests
+- Choose a color for visual distinction
+- These are player-only notes, not affecting game mechanics
 
 ```typescript
-interface CharacterTemplate {
-  id: string;
-  name: string;
-  age: number;
-  occupation: string;
-  hometown: string;
-  bio: string;
-  imageUrl: string;          // Will store generated image
-  traits: PersonalityTrait[];
-  
-  // New fields for character selection
-  archetype: 'strategist' | 'competitor' | 'socialite' | 'wildcard' | 'underdog';
-  tagline: string;           // Short catchy description
-  appearance: {              // For AI generation prompts
-    gender: 'male' | 'female' | 'non-binary';
-    ageRange: string;
-    features: string;
+interface CustomAllianceDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  existingAlliance?: CustomAlliance;
+  houseguests: Houseguest[];
+  onSave: (alliance: CustomAlliance) => void;
+  onDelete?: (id: string) => void;
+}
+```
+
+---
+
+## Part 5: Social Network Screen Component
+
+### New File: `src/components/social-network/SocialNetworkScreen.tsx`
+
+Full-screen or dialog view for the social network:
+
+**Layout:**
+```
++------------------------------------------------------------------+
+|  SOCIAL NETWORK                                    [Close] [?]   |
++------------------------------------------------------------------+
+|                                                                  |
+|  Legend:                                                         |
+|  [===] Strong  [==] Medium  [=] Weak                            |
+|  [Green] Friendship  [Yellow] Neutral  [Red] Enmity             |
+|                                                                  |
++------------------------------------------------------------------+
+|                                                                  |
+|                     [Social Network Graph SVG]                   |
+|                                                                  |
+|       Shows all houseguests with relationship lines              |
+|       Alliance groupings shown as colored circles                |
+|       Click any avatar to edit your perception                   |
+|                                                                  |
++------------------------------------------------------------------+
+|                                                                  |
+|  Your Alliances:   [+ New Alliance]                             |
+|  [The Core Four] [Final 3 Deal]                                 |
+|                                                                  |
+|  [View: All | Alliances Only | Your Connections]                |
++------------------------------------------------------------------+
+```
+
+---
+
+## Part 6: Integration with Game UI
+
+### Modify: `src/components/game-screen/GameHeader.tsx`
+
+Add a "Social" button to access the network:
+
+```typescript
+// Add Users icon button
+<Button onClick={() => setShowSocialNetwork(true)}>
+  <Users className="h-4 w-4" />
+  Social
+</Button>
+```
+
+### Modify: `src/components/game-screen/GameScreen.tsx`
+
+Add state and dialog for social network:
+
+```typescript
+const [showSocialNetwork, setShowSocialNetwork] = useState(false);
+
+// Include SocialNetworkDialog component
+<SocialNetworkDialog 
+  open={showSocialNetwork}
+  onOpenChange={setShowSocialNetwork}
+/>
+```
+
+### Modify: `src/components/game-screen/GameSidebar.tsx`
+
+Add a tab or quick-access for the social network alongside Houseguests and Log.
+
+---
+
+## Part 7: Persistence in Game State
+
+### Modify: `src/models/game-state.ts`
+
+Add player perceptions to game state:
+
+```typescript
+interface GameState {
+  // ... existing fields
+  playerPerceptions?: {
+    perceptions: Record<string, PlayerPerception>;
+    customAlliances: CustomAlliance[];
   };
 }
 ```
 
-Create 16+ diverse character templates representing different archetypes:
-- **Strategists**: Calculating, always planning
-- **Competitors**: Physical threats, win competitions
-- **Socialites**: Charm everyone, alliance builders
-- **Wildcards**: Unpredictable, make big moves
-- **Underdogs**: Quiet threats, fly under radar
+### Modify: `src/contexts/reducers/game-reducer.ts`
 
----
-
-## Part 3: Avatar Selection Component
-
-### New File: `src/components/game-setup/AvatarSelector.tsx`
-
-Create a visually striking avatar selection grid inspired by the Survivor reference:
-
-**Visual Elements:**
-- Circular portrait frames with decorative borders (like the reference)
-- Gold/bronze ornate frame design around selected avatar
-- Name plates below each character
-- Smooth hover animations with scale and glow effects
-- Selected state with animated ring pulse
-
-**Layout:**
-- Horizontal scrollable carousel on mobile
-- 3x4 or 4x4 grid on desktop
-- Large preview of selected character on the side
+Add actions for perception management:
 
 ```typescript
-interface AvatarSelectorProps {
-  templates: CharacterTemplate[];
-  selectedId: string | null;
-  onSelect: (template: CharacterTemplate) => void;
-  isLoading?: boolean;
-}
-```
-
-### Component Structure:
-
-```
-+--------------------------------------------------+
-|  Choose Your Houseguest                          |
-+--------------------------------------------------+
-|                                                  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|  |  [img] |  |  [img] |  |  [img] |  |  [img] |  |
-|  |  Alex  |  |  Morgan|  |  Jordan|  |  Casey |  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|                                                  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|  |  [img] |  |  [img] |  |  [img] |  |  [img] |  |
-|  |  Riley |  |  Jamie |  |  Quinn |  |  Avery |  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|                                                  |
-|  [Generate New Characters]  [Create Custom]      |
-+--------------------------------------------------+
+case 'UPDATE_PLAYER_PERCEPTION':
+  // Update a single perception
+  
+case 'CREATE_CUSTOM_ALLIANCE':
+  // Create player's custom alliance
+  
+case 'UPDATE_CUSTOM_ALLIANCE':
+  // Update alliance members/name
+  
+case 'DELETE_CUSTOM_ALLIANCE':
+  // Remove custom alliance
 ```
 
 ---
 
-## Part 4: Character Portrait Frame Component
+## Part 8: Graph Connection Logic
 
-### New File: `src/components/game-setup/CharacterFrame.tsx`
+### New File: `src/components/social-network/utils/graph-layout.ts`
 
-A decorative frame component matching the Survivor aesthetic:
+Utility functions for calculating graph layout:
+
+```typescript
+// Calculate positions for circular layout
+function calculateCircularLayout(
+  houseguests: Houseguest[],
+  playerId: string,
+  containerSize: { width: number; height: number }
+): Map<string, { x: number; y: number }>
+
+// Calculate connection line style based on relationship
+function getConnectionStyle(
+  score: number
+): { color: string; width: number; opacity: number }
+
+// Get alliance circle bounds for visual grouping
+function calculateAllianceCircles(
+  alliances: Alliance[],
+  positions: Map<string, { x: number; y: number }>
+): AllianceCircle[]
+```
+
+### New File: `src/components/social-network/utils/connection-renderer.ts`
+
+SVG path generation for curved connection lines:
+
+```typescript
+// Generate curved path between two points
+function generateConnectionPath(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  curvature: number
+): string
+
+// Generate alliance enclosure path
+function generateAllianceEnclosure(
+  memberPositions: { x: number; y: number }[],
+  padding: number
+): string
+```
+
+---
+
+## Part 9: Connection Line Component
+
+### New File: `src/components/social-network/ConnectionLine.tsx`
+
+SVG component for relationship lines:
+
+```typescript
+interface ConnectionLineProps {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  relationshipScore: number;
+  isAlliance: boolean;
+  isPlayerConnection: boolean;
+  animated?: boolean;
+}
+```
 
 **Visual Features:**
-- Circular image container with gradient border
-- Ornate frame decoration (gold/bronze metallic look)
-- Name plate with styled background
-- Status indicators (Selected, Locked, etc.)
-- Hover state with glow effect
-- Click animation
+- Curved SVG paths (bezier curves)
+- Color based on relationship: green (positive), yellow (neutral), red (negative)
+- Width based on absolute strength
+- Dashed lines for uncertain/new relationships
+- Alliance connections have special styling
+
+---
+
+## Part 10: Network Node Component
+
+### New File: `src/components/social-network/NetworkNode.tsx`
+
+Individual houseguest node in the graph:
 
 ```typescript
-interface CharacterFrameProps {
-  template: CharacterTemplate;
+interface NetworkNodeProps {
+  houseguest: Houseguest;
+  position: { x: number; y: number };
+  isPlayer: boolean;
   isSelected: boolean;
-  isHovered?: boolean;
-  size: 'sm' | 'md' | 'lg';
+  perception?: PlayerPerception;
+  gameStatus: AvatarStatus;
+  size: 'small' | 'medium' | 'large';
   onClick: () => void;
-  showName?: boolean;
-  showTraits?: boolean;
 }
 ```
 
-**Styling Details:**
-- Frame border: Gradient from amber-500 to orange-600
-- Selected state: Animated gold glow pulse
-- Name plate: Dark background with contrasting text
-- Trait badges below name
-
----
-
-## Part 5: Character Detail Panel
-
-### New File: `src/components/game-setup/CharacterDetailPanel.tsx`
-
-Shows expanded details of the selected character:
-
-```
-+----------------------------------+
-|     [Large Portrait Image]       |
-|                                  |
-|     "ALEX CHEN"                  |
-|     The Mastermind               |
-|                                  |
-|     Age: 28                      |
-|     Occupation: Marketing Exec   |
-|     Hometown: San Francisco, CA  |
-|                                  |
-|     "Strategic player who        |
-|      excels at social            |
-|      manipulation."              |
-|                                  |
-|     [Strategic] [Social]         |
-|                                  |
-|     Stats Preview:               |
-|     Mental: ████████░░  8/10     |
-|     Social: ███████░░░  7/10     |
-|     Physical: █████░░░░  5/10    |
-|                                  |
-|     [Select This Character]      |
-+----------------------------------+
-```
-
----
-
-## Part 6: Integrate into Game Setup Flow
-
-### Modify: `src/components/GameSetup.tsx`
-
-Add a new step before the player form for character selection:
-
-**Updated Flow:**
-1. **Step 1 (NEW)**: Avatar Selection - Choose a premade character template
-2. **Step 2**: Customize Character - Modify name, bio, traits, stats
-3. **Step 3**: Review Cast - See all houseguests before entering
-
-```typescript
-const [step, setStep] = useState<1 | 2 | 3>(1);
-const [selectedTemplate, setSelectedTemplate] = useState<CharacterTemplate | null>(null);
-
-// When template selected, pre-fill form data
-const handleTemplateSelect = (template: CharacterTemplate) => {
-  setSelectedTemplate(template);
-  setPlayerFormData({
-    ...playerFormData,
-    playerName: template.name,
-    playerAge: template.age,
-    playerOccupation: template.occupation,
-    playerHometown: template.hometown,
-    playerBio: template.bio,
-    selectedTraits: template.traits,
-  });
-  setStep(2);
-};
-```
-
-### Modify: `src/components/game-setup/PlayerForm.tsx`
-
-Update to show the selected avatar image instead of just initials:
-- Display the generated portrait in the avatar preview
-- Allow "Change Avatar" to go back to selection
-- Keep all customization options available
-
----
-
-## Part 7: Generate Character Portraits on Demand
-
-### New File: `src/hooks/useAvatarGeneration.ts`
-
-Hook to manage avatar generation state:
-
-```typescript
-interface UseAvatarGenerationResult {
-  avatars: GeneratedAvatar[];
-  isGenerating: boolean;
-  error: string | null;
-  generateAvatars: (count: number) => Promise<void>;
-  regenerateAvatar: (id: string) => Promise<void>;
-}
-```
-
-**Generation Strategy:**
-1. Start with placeholder images initially
-2. "Generate New Looks" button triggers AI generation
-3. Generated images are stored in state
-4. Option to regenerate individual characters
-5. Loading states with skeleton UI
-
----
-
-## Part 8: Character Template Data
-
-### New File: `src/data/character-templates.ts`
-
-Comprehensive character template data:
-
-```typescript
-export const characterTemplates: CharacterTemplate[] = [
-  {
-    id: 'strategist-1',
-    name: 'Alex Chen',
-    archetype: 'strategist',
-    tagline: 'The Mastermind',
-    age: 28,
-    occupation: 'Marketing Executive',
-    hometown: 'San Francisco, CA',
-    bio: 'Strategic player who excels at social manipulation and long-term planning.',
-    traits: ['Strategic', 'Social'],
-    appearance: {
-      gender: 'male',
-      ageRange: '25-30',
-      features: 'East Asian, confident expression, professional look'
-    },
-    imageUrl: '/placeholder.svg'
-  },
-  // ... 15 more diverse characters
-];
-```
-
-**Character Diversity:**
-- Mix of genders, ages, ethnicities
-- Various occupations and backgrounds
-- Different play style archetypes
-- Unique personality combinations
-
----
-
-## Part 9: Custom Avatar Creation Mode
-
-### New File: `src/components/game-setup/CustomAvatarCreator.tsx`
-
-For players who want fully custom characters:
-
-**Features:**
-- Text input for appearance description
-- "Generate My Look" button to create custom portrait
-- Regenerate option if not satisfied
-- Fallback to gradient avatar if generation fails
-
-```typescript
-interface CustomAvatarCreatorProps {
-  onAvatarGenerated: (imageUrl: string) => void;
-  onCancel: () => void;
-}
-```
+**Visual Features:**
+- Circular avatar with metallic frame (like Survivor reference)
+- Name plate below
+- Status indicators (HoH crown, nominee target)
+- Player perception badge (ally/rival/etc)
+- Selection ring when clicked
+- "YOU" label for player
 
 ---
 
@@ -324,127 +344,118 @@ interface CustomAvatarCreatorProps {
 
 | File | Purpose |
 |------|---------|
-| `src/services/avatar-generator.ts` | AI image generation service |
-| `src/components/game-setup/AvatarSelector.tsx` | Main avatar selection grid |
-| `src/components/game-setup/CharacterFrame.tsx` | Decorative portrait frame |
-| `src/components/game-setup/CharacterDetailPanel.tsx` | Selected character details |
-| `src/components/game-setup/CustomAvatarCreator.tsx` | Custom avatar generation |
-| `src/hooks/useAvatarGeneration.ts` | Avatar generation hook |
-| `src/data/character-templates.ts` | Premade character data |
+| `src/models/player-perception.ts` | Player perception types |
+| `src/components/social-network/SocialNetworkGraph.tsx` | Main visualization |
+| `src/components/social-network/SocialNetworkScreen.tsx` | Full screen wrapper |
+| `src/components/social-network/SocialNetworkDialog.tsx` | Dialog version |
+| `src/components/social-network/NetworkNode.tsx` | Individual node |
+| `src/components/social-network/ConnectionLine.tsx` | Relationship line |
+| `src/components/social-network/PerceptionEditorDialog.tsx` | Edit perception |
+| `src/components/social-network/CustomAllianceDialog.tsx` | Create alliances |
+| `src/components/social-network/utils/graph-layout.ts` | Layout calculations |
+| `src/components/social-network/utils/connection-renderer.ts` | SVG path generation |
+| `src/components/social-network/index.ts` | Exports |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/GameSetup.tsx` | Add character selection step |
-| `src/components/game-setup/PlayerForm.tsx` | Show selected avatar, add change button |
-| `src/components/game-setup/AvatarPreview.tsx` | Support showing generated images |
-| `src/components/game-setup/defaultHouseguests.ts` | Enhanced character data |
-| `src/components/game-setup/HouseguestList.tsx` | Display generated portraits |
-| `src/components/game-setup/types.ts` | Add avatar URL to form data |
-| `src/config.ts` | Add avatar generation settings |
+| `src/models/game-state.ts` | Add playerPerceptions to GameState |
+| `src/contexts/reducers/game-reducer.ts` | Add perception actions |
+| `src/components/game-screen/GameHeader.tsx` | Add Social button |
+| `src/components/game-screen/GameScreen.tsx` | Include network dialog |
+| `src/components/game-screen/GameSidebar.tsx` | Add Social tab option |
 
 ---
 
-## Technical Details
+## Visual Style Details
 
-### AI Image Generation Prompts
+### Color Scheme (Big Brother themed)
+- **Strong Friendship (80+)**: Bright green (#22c55e)
+- **Friendship (50-79)**: Light green (#86efac)
+- **Neutral (0-49)**: Yellow/Amber (#fbbf24)
+- **Rivalry (-1 to -49)**: Light red (#fca5a5)
+- **Enmity (-50 to -100)**: Bright red (#ef4444)
 
-For generating realistic character portraits:
+### Line Thickness
+- **Strong (|score| > 70)**: 4px
+- **Medium (|score| 30-70)**: 2.5px
+- **Weak (|score| < 30)**: 1.5px
 
-```typescript
-const generatePrompt = (character: CharacterTemplate) => `
-  Professional headshot portrait of a ${character.appearance.ageRange} year old 
-  ${character.appearance.gender} for a reality TV show contestant.
-  ${character.appearance.features}.
-  High quality, studio lighting, neutral gray background.
-  Confident, friendly expression. Shoulders and face visible.
-  Photorealistic style, 4K quality.
-`;
-```
+### Node Frames (Survivor-inspired)
+- Circular avatar with gradient metallic border
+- Player node: Pink/magenta border with "YOU" label
+- HoH: Gold crown badge
+- Nominee: Red target indicator
+- PoV Holder: Gold shield badge
 
-### Character Frame Styling
-
-```css
-.character-frame {
-  /* Ornate border gradient */
-  background: linear-gradient(135deg, 
-    hsl(36 100% 50%) 0%, 
-    hsl(28 100% 45%) 50%, 
-    hsl(36 100% 40%) 100%
-  );
-  
-  /* Metallic effect */
-  box-shadow: 
-    inset 0 2px 4px rgba(255,255,255,0.3),
-    inset 0 -2px 4px rgba(0,0,0,0.2),
-    0 4px 12px rgba(0,0,0,0.3);
-}
-
-.character-frame.selected {
-  animation: glow-pulse-ring 2s ease-in-out infinite;
-}
-```
-
-### Form Data Type Update
-
-```typescript
-interface PlayerFormData {
-  // ... existing fields
-  avatarUrl?: string;        // Generated or selected avatar URL
-  templateId?: string;       // ID of selected template
-}
-```
+### Alliance Groupings
+- Dashed colored circles around alliance members
+- Color-coded per alliance
+- Semi-transparent fill for visual grouping
 
 ---
 
-## UI/UX Flow
+## Interaction Flow
 
 ```text
-App Start
+User clicks "Social" button in header
     |
     v
-[Character Selection Screen]
+[Social Network Dialog opens]
     |
-    +---> Browse premade characters
+    +---> View full network with all connections
     |
-    +---> Click character to see details
+    +---> Click on a houseguest node
+    |         |
+    |         v
+    |     [Perception Editor opens]
+    |         |
+    |         +---> Set relationship perception
+    |         +---> Add notes
+    |         +---> Assign to alliance
+    |         +---> Save
     |
-    +---> Select character or "Create Custom"
+    +---> Click "New Alliance" button
+    |         |
+    |         v
+    |     [Custom Alliance Dialog]
+    |         |
+    |         +---> Name alliance
+    |         +---> Select members
+    |         +---> Choose color
+    |         +---> Save
+    |
+    +---> Toggle views: All / Alliances / My Connections
     |
     v
-[Customization Screen]
-    |
-    +---> Modify name, bio, traits
-    |
-    +---> Adjust stats with point allocation
-    |
-    +---> "Change Avatar" returns to selection
-    |
-    v
-[Cast Review Screen]
-    |
-    +---> See all houseguests with portraits
-    |
-    +---> "Enter the House"
-    |
-    v
-[Game Begins]
+[Close dialog - perceptions saved]
 ```
 
 ---
 
-## Expected Visual Result
+## Technical Considerations
 
-The avatar selector will feature:
-- **Decorative circular frames** with gold/bronze metallic borders
-- **High-quality portraits** generated by AI (realistic style)
-- **Stylish name plates** below each character
-- **Smooth hover animations** with scale and glow
-- **Selected state** with animated pulsing ring
-- **Character archetype badges** (Strategist, Competitor, etc.)
-- **Large detail panel** showing full character info
-- **Generate buttons** to create new character looks
+### Performance
+- Use CSS transforms for node positioning (GPU-accelerated)
+- Memoize connection line calculations
+- Lazy render off-screen connections
+- Use requestAnimationFrame for smooth animations
 
-This matches the Survivor reference with its circular portrait frames, name plates, and polished game show aesthetic, but adapted for the Big Brother theme with the existing blue/gold color scheme.
+### Responsiveness
+- Scale graph to fit container
+- Zoom/pan on mobile via touch gestures
+- Simplified view on very small screens
+- Full-screen mode for detailed viewing
 
+### Data Persistence
+- Player perceptions stored in game state
+- Saved with game saves
+- Doesn't affect NPC AI decisions (player-only view)
+- Syncs with actual game relationships for display
+
+### Accessibility
+- Keyboard navigation between nodes
+- Screen reader announcements for relationships
+- High contrast mode support
+- Focus indicators on interactive elements
