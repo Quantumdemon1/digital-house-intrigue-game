@@ -1,275 +1,224 @@
 
+# Plan: Fix Skip-to-Next-Phase Eviction Bug
 
-# Plan: Out-of-Phase Social Action Limits
+## Problem Summary
 
-## Overview
+When clicking "Skip to next phase" repeatedly after being evicted (in spectator mode), the game breaks:
+- Houseguests stop being evicted
+- Active count gets stuck (e.g., at 6 despite weeks passing)
+- Eviction screen shows no nominees
 
-Change the social action system so that Talk, Bond, and Propose Deal actions are available in ALL phases (not just Social Interaction), but with a limited number of uses outside the social phase. The limit resets when entering the Social Interaction phase.
+## Root Causes
+
+### 1. No Eviction Guard
+When `useFastForward` is called during Eviction phase with empty nominees, it still advances the week without evicting anyone.
+
+### 2. Race Condition with Multiple Clicks
+Rapid clicks cause multiple fast-forward dispatches before state updates propagate, leading to:
+- Multiple `eviction_complete` or `advance_week` actions
+- Week number incrementing without evictions occurring
+- Nominees being cleared before eviction happens
+
+### 3. Stale Closure Data
+The `useCallback` in `useFastForward` captures `gameState.nominees` from render time. With rapid clicks, subsequent calls use stale data.
+
+### 4. No Validation Before Week Advance
+The `eviction_complete` and `advance_week` player actions don't verify that an eviction actually happened before advancing.
 
 ---
 
-## Limit Formula
+## Solution
 
-**Actions allowed per non-social phase period:**
+### Part 1: Add Eviction Validation Guard
+
+**Modify: `src/hooks/useFastForward.ts`**
+
+Add validation to ensure eviction phase has nominees before processing, and add a longer cooldown:
+
+```typescript
+// If Eviction phase has no nominees, this is an invalid state - don't advance
+if (gameState.phase === 'Eviction') {
+  if (!gameState.nominees || gameState.nominees.length < 2) {
+    logger?.warn("Fast-forward blocked: Eviction phase has no/insufficient nominees");
+    setInternalProcessing(false);
+    return; // Block the fast-forward entirely
+  }
+  
+  // Proceed with eviction...
+}
 ```
-limit = Math.floor(activePlayersRemaining / 3)
-```
 
-| Active Players | Allowed Actions (Outside Social Phase) |
-|----------------|----------------------------------------|
-| 16             | 5                                      |
-| 12             | 4                                      |
-| 9              | 3                                      |
-| 6              | 2                                      |
-| 3              | 1                                      |
-
-During Social Interaction phase: **Unlimited** actions
+Also increase the processing lock timeout from 1500ms to 3000ms to prevent rapid clicks.
 
 ---
 
-## Part 1: Add State Tracking
+### Part 2: Add Eviction State Tracking
 
 **Modify: `src/models/game-state.ts`**
 
-Add new properties to track out-of-phase actions:
+Add a flag to track if eviction happened this week:
 
 ```typescript
 export interface GameState {
-  // ... existing properties ...
-  
-  // Track out-of-phase social actions (resets on entering SocialInteraction phase)
-  outOfPhaseSocialActionsUsed?: number;
+  // ... existing properties
+  evictionCompletedThisWeek?: boolean;
 }
 ```
 
-**Modify: `createInitialGameState()`**
+**Modify: `src/contexts/reducers/reducers/eviction-reducer.ts`**
+
+Set the flag when eviction occurs:
 
 ```typescript
-outOfPhaseSocialActionsUsed: 0,
+case 'EVICT_HOUSEGUEST': {
+  // ... existing eviction logic
+  
+  return {
+    ...state,
+    // ... other updates
+    evictionCompletedThisWeek: true, // Mark eviction as complete
+  };
+}
 ```
 
 ---
 
-## Part 2: Reset Counter on Social Phase Entry
-
-**Modify: `src/contexts/reducers/reducers/game-progress-reducer.ts`**
-
-Reset the counter when entering Social Interaction phase:
-
-```typescript
-case 'SET_PHASE':
-  // ... existing phase logic ...
-  
-  // BB USA Format: Social Interaction happens AFTER Eviction, before next HoH
-  if (normalizedPhase === 'socialinteraction') {
-    return {
-      ...state,
-      phase: 'SocialInteraction' as GamePhase,
-      outOfPhaseSocialActionsUsed: 0,  // Reset action counter
-    };
-  }
-  
-  // ... rest of existing logic ...
-```
-
----
-
-## Part 3: Increment Counter on Social Actions
+### Part 3: Validate Before Week Advance
 
 **Modify: `src/contexts/reducers/reducers/player-action-reducer.ts`**
 
-Add logic to track out-of-phase action usage:
+In the `eviction_complete` and `advance_week` cases, add validation:
 
 ```typescript
-case 'talk_to': {
-  const playerId = state.houseguests.find(h => h.isPlayer)?.id;
-  const targetId = payload.params?.targetId;
-  
-  if (playerId && targetId) {
-    const isSocialPhase = state.phase === 'SocialInteraction';
-    
-    // Check if out-of-phase action limit is reached
-    if (!isSocialPhase) {
-      const activeCount = state.houseguests.filter(h => h.status === 'Active').length;
-      const maxActions = Math.floor(activeCount / 3);
-      const usedActions = state.outOfPhaseSocialActionsUsed ?? 0;
-      
-      if (usedActions >= maxActions) {
-        console.log('Out-of-phase action limit reached');
-        return state; // Don't allow action
-      }
-    }
-    
-    const improvement = Math.floor(Math.random() * 5) + 3;
-    const newState = updateRelationshipInState(state, playerId, targetId, improvement);
-    
-    // ... existing log/feedback code ...
-    
-    return {
-      ...newState,
-      // ... existing return properties ...
-      // Increment counter only if NOT in social phase
-      outOfPhaseSocialActionsUsed: isSocialPhase 
-        ? state.outOfPhaseSocialActionsUsed 
-        : (state.outOfPhaseSocialActionsUsed ?? 0) + 1
-    };
+case 'eviction_complete':
+case 'advance_week': {
+  // Don't advance if we're in eviction phase but no eviction happened
+  if (state.phase === 'Eviction' && !state.evictionCompletedThisWeek) {
+    console.warn('Blocking week advance: No eviction completed');
+    return state; // Don't advance
   }
-  break;
+  
+  // Reset flag for next week
+  return {
+    ...state,
+    week: state.week + 1,
+    // ... other resets
+    evictionCompletedThisWeek: false, // Reset for next week
+  };
 }
 ```
 
-Apply the same pattern to `relationship_building` and `strategic_discussion` cases.
+---
+
+### Part 4: Reset Flag on Week Advance
+
+**Modify: `src/contexts/reducers/reducers/game-progress-reducer.ts`**
+
+In the `ADVANCE_WEEK` case, reset the eviction flag:
+
+```typescript
+case 'ADVANCE_WEEK':
+  return {
+    ...state,
+    week: state.week + 1,
+    // ... existing resets
+    evictionCompletedThisWeek: false, // Ready for next week's eviction
+  };
+```
 
 ---
 
-## Part 4: Update HouseguestDialog UI
+### Part 5: Add Processing Lock to SpectatorBanner Button
 
-**Modify: `src/components/houseguest/HouseguestDialog.tsx`**
+**Modify: `src/components/game-screen/SpectatorBanner.tsx`**
 
-Replace phase-only restriction with limit-based logic:
+Disable the button while processing and add visual feedback:
 
 ```typescript
-const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
-  const { gameState, getRelationship, dispatch } = useGame();
-  const player = gameState.houseguests.find(h => h.isPlayer);
-  const [dealDialogOpen, setDealDialogOpen] = useState(false);
-  
-  // Calculate action availability
-  const isSocialPhase = gameState.phase === 'SocialInteraction';
-  const activeCount = gameState.houseguests.filter(h => h.status === 'Active').length;
-  const maxOutOfPhaseActions = Math.floor(activeCount / 3);
-  const usedActions = gameState.outOfPhaseSocialActionsUsed ?? 0;
-  const remainingActions = isSocialPhase ? Infinity : maxOutOfPhaseActions - usedActions;
-  const canAct = remainingActions > 0;
-  
-  // ... rest of existing code ...
-```
-
-Update the UI to show remaining actions instead of "Social Phase Only":
-
-```tsx
-{/* Actions section header */}
-<h4 className="font-medium text-sm flex items-center gap-2">
-  <Users className="h-4 w-4" />
-  Actions
-  {!isSocialPhase && (
-    <span className={cn(
-      "text-xs flex items-center gap-1 ml-auto",
-      remainingActions > 0 ? "text-blue-500" : "text-muted-foreground"
-    )}>
-      {remainingActions > 0 ? (
-        <>
-          <MessageCircle className="h-3 w-3" />
-          {remainingActions} action{remainingActions !== 1 ? 's' : ''} left
-        </>
-      ) : (
-        <>
-          <Lock className="h-3 w-3" />
-          Wait for Social Phase
-        </>
-      )}
-    </span>
+<Button 
+  variant="secondary" 
+  size="sm" 
+  onClick={handleFastForward}
+  disabled={isProcessing}
+  className={cn(
+    "bg-white/10 hover:bg-white/20 text-white border-white/20 shrink-0",
+    isProcessing && "opacity-50 cursor-not-allowed"
   )}
-  {isSocialPhase && (
-    <span className="text-xs text-green-500 ml-auto">
-      Unlimited
-    </span>
-  )}
-</h4>
-
-{/* Update button disabled states */}
-<Button
-  variant="outline"
-  size="sm"
-  onClick={handleTalkTo}
-  disabled={!canAct}
-  className="flex items-center gap-2"
 >
-  <MessageCircle className="h-4 w-4" />
-  Talk
+  {isProcessing ? (
+    <>
+      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+      Processing...
+    </>
+  ) : (
+    <>
+      <SkipForward className="h-4 w-4 mr-1" />
+      Skip to Next Phase
+    </>
+  )}
 </Button>
 ```
 
 ---
 
-## Visual Layout
+### Part 6: Fix Fast Forward to Use Fresh State Reference
 
-**During Social Phase:**
-```text
-+------------------------------------------+
-| 👥 Actions                    ✓ Unlimited |
-| +-------------+ +------------------+     |
-| | 💬 Talk     | | ❤️ Bond          |     |
-| +-------------+ +------------------+     |
-| +--------------------------------------+ |
-| | 🤝 Propose Deal                      | |
-| +--------------------------------------+ |
-+------------------------------------------+
-```
+**Modify: `src/hooks/useFastForward.ts`**
 
-**Outside Social Phase (with actions remaining):**
-```text
-+------------------------------------------+
-| 👥 Actions               💬 2 actions left |
-| +-------------+ +------------------+     |
-| | 💬 Talk     | | ❤️ Bond          |     |
-| +-------------+ +------------------+     |
-| +--------------------------------------+ |
-| | 🤝 Propose Deal                      | |
-| +--------------------------------------+ |
-+------------------------------------------+
-```
+Use a ref to always get fresh state, avoiding stale closures:
 
-**Outside Social Phase (limit reached):**
-```text
-+------------------------------------------+
-| 👥 Actions          🔒 Wait for Social Phase |
-| +-------------+ +------------------+     |
-| | 💬 Talk     | | ❤️ Bond          |     |
-| | (disabled)  | | (disabled)       |     |
-| +-------------+ +------------------+     |
-| +--------------------------------------+ |
-| | 🤝 Propose Deal (disabled)           | |
-| +--------------------------------------+ |
-+------------------------------------------+
+```typescript
+export function useFastForward() {
+  const { dispatch, gameState, logger } = useGame();
+  const gameStateRef = useRef(gameState);
+  
+  // Keep ref updated
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+  
+  const handleFastForward = useCallback(() => {
+    const currentState = gameStateRef.current; // Always fresh
+    
+    // Use currentState instead of gameState in all logic
+    if (currentState.phase === 'Eviction') {
+      if (currentState.nominees && currentState.nominees.length > 0) {
+        // ...
+      }
+    }
+  }, [dispatch, fastForward, logger, internalProcessing]);
+}
 ```
 
 ---
 
-## Files Summary
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/models/game-state.ts` | Add `outOfPhaseSocialActionsUsed` property |
-| `src/contexts/reducers/reducers/game-progress-reducer.ts` | Reset counter on SocialInteraction phase entry |
-| `src/contexts/reducers/reducers/player-action-reducer.ts` | Add limit checking and counter increment |
-| `src/components/houseguest/HouseguestDialog.tsx` | Update UI to show remaining actions, enable buttons based on limit |
+| `src/hooks/useFastForward.ts` | Add validation, increase cooldown, use ref for fresh state |
+| `src/models/game-state.ts` | Add `evictionCompletedThisWeek` tracking flag |
+| `src/contexts/reducers/reducers/eviction-reducer.ts` | Set flag on eviction |
+| `src/contexts/reducers/reducers/player-action-reducer.ts` | Block week advance without eviction |
+| `src/contexts/reducers/reducers/game-progress-reducer.ts` | Reset flag on week advance |
+| `src/components/game-screen/SpectatorBanner.tsx` | Add visual loading state, ensure button is disabled while processing |
 
 ---
 
-## Expected Behavior
+## Expected Behavior After Fix
 
-1. **In Social Phase:** Buttons always enabled, shows "Unlimited"
-2. **Outside Social Phase with actions remaining:** Buttons enabled, shows "X actions left"
-3. **Outside Social Phase with no actions remaining:** Buttons disabled, shows "Wait for Social Phase"
-4. **Counter resets:** When entering Social Interaction phase, counter resets to 0
-5. **Limit scales:** More players = more out-of-phase actions allowed (16 players = 5 actions, 6 players = 2 actions)
+1. **Single eviction per week guaranteed**: Week cannot advance until eviction flag is set
+2. **No rapid-click exploitation**: Button disabled during processing, 3s cooldown
+3. **No stale state issues**: Ref provides fresh state for fast-forward logic
+4. **Clear user feedback**: Button shows "Processing..." when disabled
+5. **Invalid state protection**: If somehow eviction phase has no nominees, fast-forward is blocked entirely
 
 ---
 
-## Technical Notes
+## Testing Checklist
 
-### Why Track in State vs Component
-- State-level tracking ensures persistence across navigation
-- Counter survives dialog close/reopen
-- All components see the same remaining count
-- Could extend to show count in other UI elements (sidebar, etc.)
-
-### Action Types That Count
-All three social actions count toward the limit:
-- `talk_to`
-- `relationship_building` 
-- `strategic_discussion`
-
-Proposing deals also counts (when implemented) since it's a social interaction.
-
+- [ ] Play game until eviction in spectator mode
+- [ ] Click "Skip to next phase" rapidly - verify only one week advances
+- [ ] Verify houseguest count decreases by exactly 1 per week
+- [ ] Verify nominees exist before each eviction ceremony
+- [ ] Test through Final 4 → Final 3 → Final 2 transitions
