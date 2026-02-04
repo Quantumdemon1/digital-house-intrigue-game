@@ -1,272 +1,335 @@
 
 
-# Plan: Modernize 3D Avatar System with Better Visual Style
+# Plan: Modernize 3D Avatar System - GLB Model Options
 
-## Current Problem
+## Current Situation
 
-The existing avatar system uses basic Three.js primitives (cylinders, spheres, capsules) that look blocky and dated - more like 2005 WebGL demos than modern stylized characters. The aesthetic lacks:
-- Soft, rounded edges with modern appeal
-- Stylized toon/cel shading
-- The charm of Nintendo-style characters (Mii, Animal Crossing, Splatoon)
-- Professional quality that matches modern casual games
+The existing avatar system uses **procedural Three.js primitives** (spheres, capsules, cylinders) with toon shading. While this approach offers full programmatic customization, the results look like basic geometric shapes rather than professional 3D characters.
 
----
-
-## Solution Options (Pick One Approach)
-
-### Option A: Toon-Shaded Soft Avatar (Recommended)
-Transform existing procedural geometry with modern rendering techniques:
-- **MeshToonMaterial** with custom gradient maps for cel-shading
-- Soft outline shader for cartoon edge effect
-- Rounded, "squishy" proportions (bigger heads, softer body shapes)
-- Pastel-friendly color palette with rim lighting
-- Inspired by: Fall Guys, Among Us, Animal Crossing
-
-### Option B: Pre-made GLB Models
-Load professionally designed 3D models:
-- Create/purchase stylized base character GLB models
-- Use morph targets for customization (face shapes, body types)
-- Higher quality but less customizable
-- Requires external 3D assets
-
-### Option C: Ready Player Me Integration
-Use Ready Player Me's avatar SDK:
-- Professional quality avatars
-- Requires external API connection
-- Less control over aesthetic
-
-**Recommendation: Option A** - It maintains full procedural customization while dramatically improving visual quality through modern shading techniques.
+The Prompt3D reference you shared demonstrates a much more sophisticated approach using:
+- Professional GLB models created in Blender
+- Real textures (diffuse, normal, roughness, specular maps)
+- Morph targets for facial expressions and lip-sync
+- Skeletal animations for idle/body movement
 
 ---
 
-## Technical Approach: Modern Toon-Shaded Avatar
+## Option Comparison
 
-### 1. Create Custom Toon Shader Material
+| Feature | Current (Procedural) | Ready Player Me | Custom GLB Models |
+|---------|---------------------|-----------------|-------------------|
+| Visual Quality | Basic | Excellent | Excellent |
+| Setup Complexity | Already done | Medium | Medium |
+| Customization | Full code control | RPM configurator | Manual in Blender |
+| Expressions | Limited | 52 ARKit blendshapes | Custom blendshapes |
+| Lip-sync | None | Supported via Visage | Supported |
+| File Size | Minimal | ~5-10MB per avatar | 2-5MB per base model |
+| External Dependencies | None | RPM SDK + API | None |
+| Cost | Free | Free tier limited | Free |
 
-Replace `MeshStandardMaterial` with `MeshToonMaterial` + custom gradient maps:
+---
 
-```typescript
-// Create 3-step or 5-step gradient texture for soft toon shading
-const gradientTexture = new THREE.DataTexture(
-  new Uint8Array([80, 160, 255, 255, 255]), // 5 brightness steps
-  5, 1, THREE.RedFormat
-);
-gradientTexture.needsUpdate = true;
-gradientTexture.magFilter = THREE.NearestFilter;
-gradientTexture.minFilter = THREE.NearestFilter;
+## Recommended Approach: Ready Player Me Integration
 
-// Apply to material
-const toonMaterial = new THREE.MeshToonMaterial({
-  color: skinTone,
-  gradientMap: gradientTexture
-});
-```
+Ready Player Me (RPM) offers the best balance of quality and ease of implementation:
 
-### 2. Add Soft Outline Effect
+### Why Ready Player Me?
 
-Use the Drei `<Outlines>` component or custom backface shader:
+1. **Professional Quality**: Realistic or stylized avatars with proper rigging
+2. **Built-in Customization**: Users can customize via RPM's polished interface
+3. **React Integration**: Official `@readyplayerme/visage` package for React Three Fiber
+4. **Morph Targets**: 52 ARKit-compatible blendshapes for expressions
+5. **Animation Ready**: Pre-rigged for Mixamo animations
+6. **No 3D Modeling Required**: Skip Blender entirely
 
-```typescript
-import { Outlines } from '@react-three/drei';
+### New Dependencies
 
-<mesh>
-  <sphereGeometry args={[0.2, 32, 32]} />
-  <meshToonMaterial color={skinColor} gradientMap={gradient} />
-  <Outlines thickness={0.015} color="#2a1f1a" />
-</mesh>
-```
-
-### 3. Redesign Body Proportions (Chibi/Kawaii Style)
-
-Current proportions are too realistic. Modern stylized avatars use:
-- **Head**: 35-40% of total height (currently ~25%)
-- **Body**: Shorter, rounder torso
-- **Limbs**: Stubby, soft cylinders with rounded ends
-- **Hands**: Larger, softer spheres
-
-```typescript
-// New "cute" proportions
-const CHIBI_PROPORTIONS = {
-  headScale: 1.4,      // 40% larger head
-  bodyHeight: 0.65,    // Shorter torso
-  armLength: 0.7,      // Stubby arms
-  legLength: 0.6,      // Short legs
-  limbRoundness: 0.9   // Very rounded
-};
-```
-
-### 4. Enhanced Facial Features
-
-Larger, more expressive anime-style eyes:
-- Bigger iris with gradient shading
-- Prominent white highlights (2-3 per eye)
-- Subtle eyelid shape
-- Blush spots on cheeks (optional)
-
-```typescript
-// Big anime-style eyes
-<group position={[0, 0.05, 0.14]}>
-  {/* Eye white - larger */}
-  <mesh>
-    <circleGeometry args={[0.045, 32]} />
-    <meshBasicMaterial color="white" />
-  </mesh>
-  {/* Iris - gradient colored */}
-  <mesh position={[0, -0.01, 0.001]}>
-    <circleGeometry args={[0.035, 32]} />
-    <meshToonMaterial color={eyeColor} />
-  </mesh>
-  {/* Highlight spots */}
-  <mesh position={[0.01, 0.01, 0.002]}>
-    <circleGeometry args={[0.012, 16]} />
-    <meshBasicMaterial color="white" />
-  </mesh>
-</group>
-```
-
-### 5. Soft Ambient Lighting
-
-Replace harsh directional lights with soft, diffused lighting:
-
-```typescript
-// Soft 3-point lighting
-<ambientLight intensity={0.7} color="#fff5f0" />
-<directionalLight 
-  position={[2, 4, 3]} 
-  intensity={0.5}
-  color="#fffaf5" 
-/>
-{/* Rim light for depth */}
-<directionalLight 
-  position={[-2, 2, -3]} 
-  intensity={0.3}
-  color="#e0f0ff" 
-/>
-{/* Fill light from below */}
-<hemisphereLight 
-  skyColor="#fff"
-  groundColor="#ffddcc"
-  intensity={0.4}
-/>
-```
-
-### 6. Create Utility Components
-
-**New: `ToonMaterials.tsx`**
-```typescript
-// Shared toon material factory
-export const createSkinMaterial = (color: string) => {
-  const gradient = createGradientTexture([0.4, 0.7, 1.0]);
-  return new THREE.MeshToonMaterial({ color, gradientMap: gradient });
-};
-
-export const createClothMaterial = (color: string) => {
-  const gradient = createGradientTexture([0.3, 0.6, 0.85, 1.0]);
-  return new THREE.MeshToonMaterial({ color, gradientMap: gradient });
-};
-```
-
-**New: `SoftOutline.tsx`**
-```typescript
-// Reusable outline wrapper
-export const SoftOutline: React.FC<{
-  children: React.ReactNode;
-  color?: string;
-  thickness?: number;
-}> = ({ children, color = '#2a1f1a', thickness = 0.015 }) => (
-  <group>
-    {children}
-    <Outlines thickness={thickness} color={color} />
-  </group>
-);
+```json
+{
+  "@readyplayerme/visage": "^5.0.0",
+  "@readyplayerme/react-avatar-creator": "^1.4.0"
+}
 ```
 
 ---
 
-## Visual Style Guide
+## Implementation Architecture
 
-### Before vs After
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    Avatar Creation Flow                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────┐     ┌───────────────────────┐         │
+│  │  "Create Custom" │────▶│ RPM Avatar Creator    │         │
+│  │      Button      │     │ (iframe widget)       │         │
+│  └──────────────────┘     │                       │         │
+│                           │  - Body type          │         │
+│                           │  - Face customization │         │
+│                           │  - Hair/clothing      │         │
+│                           │  - Accessories        │         │
+│                           └───────────┬───────────┘         │
+│                                       │                      │
+│                                       ▼                      │
+│                           ┌───────────────────────┐         │
+│                           │ Returns: avatar.glb   │         │
+│                           │ URL hosted by RPM     │         │
+│                           └───────────┬───────────┘         │
+│                                       │                      │
+│                                       ▼                      │
+│                           ┌───────────────────────┐         │
+│                           │ Store URL in player   │         │
+│                           │ config (database)     │         │
+│                           └───────────────────────┘         │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 
+┌─────────────────────────────────────────────────────────────┐
+│                    Avatar Rendering Flow                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────┐     ┌───────────────────────┐         │
+│  │ HouseguestAvatar │────▶│ @readyplayerme/visage │         │
+│  │   Component      │     │ <Avatar modelSrc=...> │         │
+│  └──────────────────┘     │                       │         │
+│                           │  - Loads GLB model    │         │
+│                           │  - Applies animations │         │
+│                           │  - Handles expressions│         │
+│                           └───────────────────────┘         │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
-CURRENT (Blocky/Basic)          NEW (Soft/Modern)
-========================        ========================
-     ___                             .-"""-.
-    /   \   <- small head           /  ^  ^  \   <- BIG head
-    |   |                          (  (o)(o)  )  <- Expressive eyes
-    -----                           \   __   /   <- Soft features
-   /|   |\                           '-.___.-'
-  / |   | \                            |||
-    |   |                           .-'   '-.
-   /     \                         (   ---   )  <- Round body
-  /_______\                         '._____.'
-  || | | ||                          /  |  \
-```
-
-### Color Improvements
-
-| Element | Current | New (Toon-Shaded) |
-|---------|---------|-------------------|
-| Skin | Flat color | 3-step gradient + rim light |
-| Hair | Single matte | Soft shine highlight zones |
-| Clothes | Flat matte | Fabric-appropriate shading |
-| Eyes | Basic spheres | Anime-style with highlights |
-| Outline | None | Soft dark brown edge |
 
 ---
 
-## File Changes Summary
+## File Changes
 
 ### New Files (3)
 
 | File | Purpose |
 |------|---------|
-| `src/components/avatar-3d/materials/ToonMaterials.tsx` | Toon material factory with gradient maps |
-| `src/components/avatar-3d/materials/GradientTextures.ts` | Gradient texture generation utilities |
-| `src/components/avatar-3d/SoftOutline.tsx` | Reusable outline effect component |
+| `src/components/avatar-3d/RPMAvatar.tsx` | Wrapper for Ready Player Me's Avatar component |
+| `src/components/avatar-3d/RPMAvatarCreator.tsx` | Avatar customization widget using RPM's creator |
+| `src/components/avatar-3d/AvatarLoader.tsx` | Smart loader that renders either RPM or fallback |
 
 ### Modified Files (5)
 
 | File | Changes |
 |------|---------|
-| `AvatarBody.tsx` | Replace StandardMaterial with ToonMaterial, adjust proportions for chibi style |
-| `AvatarHead.tsx` | Larger head, bigger anime-style eyes, add highlights and blush |
-| `AvatarHair.tsx` | Toon shading with shine highlights |
-| `AvatarClothing.tsx` | Toon materials for fabric |
-| `SimsAvatar.tsx` | Update lighting setup, add outline wrapper |
+| `src/models/avatar-config.ts` | Add `avatarUrl?: string` field for GLB URL storage |
+| `src/models/houseguest/model.ts` | Add `avatarUrl?: string` to Houseguest interface |
+| `src/components/game-setup/PlayerForm.tsx` | Replace custom customizer with RPM creator option |
+| `src/components/houseguest/HouseguestAvatar.tsx` | Render RPM avatar when URL available |
+| `src/components/avatar-3d/AvatarCustomizer.tsx` | Add tab/option to use RPM creator |
 
 ---
 
-## Proportions Comparison
+## RPMAvatar Component
 
-```
-Current Proportions:        New Chibi Proportions:
-                           
-Head:  25% of height       Head:  40% of height
-       ┌───┐                      ┌─────┐
-       │   │                      │     │
-       └───┘                      │     │
-Body:  45%                        └─────┘
-       ┌─────┐              Body: 35%
-       │     │                    ┌───┐
-       │     │                    │   │
-       └─────┘                    └───┘
-Legs:  30%                  Legs: 25%
-       ┌─┐ ┌─┐                    ┌┐ ┌┐
-       │ │ │ │                    ││ ││
-       └─┘ └─┘                    └┘ └┘
+```typescript
+// src/components/avatar-3d/RPMAvatar.tsx
+import React from 'react';
+import { Avatar } from '@readyplayerme/visage';
+
+interface RPMAvatarProps {
+  modelSrc: string;
+  animationSrc?: string;
+  emotion?: 'neutral' | 'happy' | 'sad' | 'surprised' | 'angry';
+  style?: React.CSSProperties;
+  onLoaded?: () => void;
+}
+
+export const RPMAvatar: React.FC<RPMAvatarProps> = ({
+  modelSrc,
+  animationSrc = '/animations/idle.fbx',
+  emotion = 'neutral',
+  style,
+  onLoaded
+}) => {
+  return (
+    <Avatar
+      modelSrc={modelSrc}
+      animationSrc={animationSrc}
+      emotion={emotion}
+      style={style}
+      onLoaded={onLoaded}
+      cameraInitDistance={5}
+      effects={{ ambientOcclusion: true }}
+    />
+  );
+};
 ```
 
 ---
 
-## Expected Result
+## RPMAvatarCreator Component
 
-The transformed avatar system will feature:
-- **Soft, rounded shapes** that feel modern and approachable
-- **Cel-shaded rendering** with visible light steps (like Zelda: Wind Waker)
-- **Dark outlines** that make characters pop
-- **Expressive anime-style eyes** with cute highlights
-- **Better proportions** inspired by Nintendo's Mii/Animal Crossing aesthetic
-- **Cohesive lighting** that flatters the toon style
+```typescript
+// src/components/avatar-3d/RPMAvatarCreator.tsx
+import React, { useState } from 'react';
+import { AvatarCreator } from '@readyplayerme/react-avatar-creator';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
-This maintains all existing customization options while dramatically improving visual quality to match modern indie game aesthetics.
+interface RPMAvatarCreatorProps {
+  open: boolean;
+  onClose: () => void;
+  onAvatarCreated: (avatarUrl: string) => void;
+}
+
+export const RPMAvatarCreator: React.FC<RPMAvatarCreatorProps> = ({
+  open,
+  onClose,
+  onAvatarCreated
+}) => {
+  const handleAvatarExported = (event: AvatarExportedEvent) => {
+    onAvatarCreated(event.data.url);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl h-[80vh]">
+        <AvatarCreator
+          subdomain="lovable-game"  // Would need RPM account
+          config={{
+            bodyType: 'halfbody',
+            quickStart: false,
+            language: 'en',
+          }}
+          style={{ width: '100%', height: '100%' }}
+          onAvatarExported={handleAvatarExported}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
+```
+
+---
+
+## Smart Avatar Loader
+
+```typescript
+// src/components/avatar-3d/AvatarLoader.tsx
+import React, { Suspense } from 'react';
+import { SimsAvatar } from './SimsAvatar';
+import { RPMAvatar } from './RPMAvatar';
+import { Avatar3DConfig } from '@/models/avatar-config';
+
+interface AvatarLoaderProps {
+  avatarUrl?: string;        // GLB URL from RPM
+  avatarConfig?: Avatar3DConfig;  // Fallback procedural config
+  size?: 'sm' | 'md' | 'lg';
+  animated?: boolean;
+}
+
+export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
+  avatarUrl,
+  avatarConfig,
+  size = 'md',
+  animated = true
+}) => {
+  // If we have a GLB URL, use Ready Player Me avatar
+  if (avatarUrl) {
+    return (
+      <Suspense fallback={<AvatarSkeleton size={size} />}>
+        <RPMAvatar modelSrc={avatarUrl} />
+      </Suspense>
+    );
+  }
+  
+  // Otherwise, use procedural chibi avatar
+  return (
+    <SimsAvatar 
+      config={avatarConfig} 
+      size={size} 
+      animated={animated} 
+    />
+  );
+};
+```
+
+---
+
+## Alternative: Self-Hosted GLB Models
+
+If you prefer not to depend on Ready Player Me, we could:
+
+1. **Source Free GLB Models**: Use models from Sketchfab, Mixamo, or create custom ones
+2. **Host in `/public`**: Store base models locally
+3. **Custom Material Swapping**: Modify colors/textures at runtime
+
+### Pros:
+- No external API dependency
+- Full control over appearance
+- Works offline
+
+### Cons:
+- Need 3D modeling skills for new characters
+- Manual rigging for animations
+- More development work
+
+---
+
+## Data Model Changes
+
+```typescript
+// Updated Avatar3DConfig
+export interface Avatar3DConfig {
+  // Existing procedural config...
+  bodyType: BodyType;
+  // ...etc
+  
+  // NEW: GLB model URL (from RPM or custom)
+  modelUrl?: string;
+  
+  // NEW: Source type
+  modelSource?: 'procedural' | 'ready-player-me' | 'custom-glb';
+}
+
+// Updated Houseguest
+export interface Houseguest {
+  // ...existing fields
+  avatarUrl?: string;  // Direct GLB URL for fast loading
+}
+```
+
+---
+
+## Migration Strategy
+
+1. **Phase 1**: Add RPM integration as an alternative option
+   - Keep existing chibi avatars working
+   - Add "Use Ready Player Me" button in customizer
+   
+2. **Phase 2**: Store avatar URLs in database
+   - Save GLB URLs when users create RPM avatars
+   - Load from URL during gameplay
+
+3. **Phase 3**: Optional - Replace all NPCs with RPM
+   - Pre-generate NPC avatars via RPM API
+   - Store URLs for faster loading
+
+---
+
+## Expected Results
+
+After implementation:
+- **Professional Quality**: Avatars that look like they belong in a modern game
+- **Rich Expressions**: 52 blendshapes for nuanced emotions
+- **Animation Ready**: Works with Mixamo animation library
+- **User Choice**: Players can use RPM or stick with chibi style
+- **Future-Proof**: Can add lip-sync, full body, VR support later
+
+---
+
+## Questions to Consider
+
+1. **RPM Account**: Ready Player Me requires setting up a free account and subdomain - is this acceptable?
+
+2. **Style Preference**: RPM offers realistic or stylized avatars - which fits the game better?
+
+3. **Fallback Strategy**: Should NPCs use RPM too, or stay procedural for faster loading?
+
+4. **Storage**: Where should avatar URLs be stored? (Database, localStorage, or regenerate each session?)
 
