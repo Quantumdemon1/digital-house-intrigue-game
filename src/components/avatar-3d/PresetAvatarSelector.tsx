@@ -174,7 +174,8 @@ export const PresetAvatarSelector: React.FC<PresetAvatarSelectorProps> = ({
                   "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                   selectedId === preset.id
                     ? "border-primary ring-2 ring-primary ring-offset-2"
-                    : "border-border hover:border-primary/50"
+                    : "border-border hover:border-primary/50",
+                  ('isPlaceholder' in preset && preset.isPlaceholder) && "opacity-70"
                 )}
               >
                 {/* Thumbnail */}
@@ -218,6 +219,16 @@ export const PresetAvatarSelector: React.FC<PresetAvatarSelectorProps> = ({
                     className="absolute top-2 left-2 text-[10px] px-1.5 py-0.5 capitalize"
                   >
                     {preset.style}
+                  </Badge>
+                )}
+
+                {/* Coming Soon badge for placeholders */}
+                {('isPlaceholder' in preset && preset.isPlaceholder) && (
+                  <Badge 
+                    variant="outline" 
+                    className="absolute bottom-8 right-2 text-[8px] px-1.5 py-0.5 bg-background/80"
+                  >
+                    Coming Soon
                   </Badge>
                 )}
               </motion.button>

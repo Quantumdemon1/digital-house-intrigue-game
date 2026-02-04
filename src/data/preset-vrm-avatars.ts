@@ -14,6 +14,8 @@ export interface VRMPresetAvatar {
   description?: string;
   license?: 'CC0' | 'CC-BY' | 'CC-BY-SA' | 'CC-BY-NC';
   author?: string;
+  /** When true, the model file doesn't exist yet - prevents loading errors */
+  isPlaceholder?: boolean;
 }
 
 /**
@@ -36,7 +38,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'anime-female',
     traits: ['cheerful', 'outgoing'],
     description: 'Bright and energetic personality',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-haruto',
@@ -46,7 +49,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'anime-male',
     traits: ['strategic', 'calm'],
     description: 'Cool and collected strategist',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-yuki',
@@ -56,7 +60,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'anime-female',
     traits: ['mysterious', 'observant'],
     description: 'Quiet observer with hidden depths',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-ren',
@@ -66,7 +71,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'anime-male',
     traits: ['competitive', 'honest'],
     description: 'Direct and competitive',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-miku',
@@ -76,7 +82,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'fantasy',
     traits: ['creative', 'unpredictable'],
     description: 'Whimsical and creative spirit',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-kai',
@@ -86,7 +93,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'modern',
     traits: ['social', 'charming'],
     description: 'Natural social butterfly',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-hana',
@@ -96,7 +104,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'chibi',
     traits: ['cute', 'sneaky'],
     description: 'Don\'t underestimate the cute ones',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-takeshi',
@@ -106,7 +115,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'anime-male',
     traits: ['athletic', 'loyal'],
     description: 'Loyal ally and fierce competitor',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-aoi',
@@ -116,7 +126,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'fantasy',
     traits: ['ethereal', 'wise'],
     description: 'Otherworldly wisdom',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   },
   {
     id: 'vrm-sora',
@@ -126,7 +137,8 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     style: 'modern',
     traits: ['confident', 'ambitious'],
     description: 'Eyes on the prize',
-    license: 'CC0'
+    license: 'CC0',
+    isPlaceholder: true
   }
 ];
 

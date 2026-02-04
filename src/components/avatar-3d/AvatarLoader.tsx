@@ -6,11 +6,10 @@
 import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useProgress } from '@react-three/drei';
-import { SimsAvatar } from './SimsAvatar';
 import { Avatar3DConfig } from '@/models/avatar-config';
 import { MoodType } from '@/models/houseguest';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
 import { AvatarThumbnail } from './AvatarThumbnail';
@@ -39,8 +38,7 @@ interface AvatarLoaderProps {
   isPlayer?: boolean;
   animated?: boolean;
   className?: string;
-  forceChibibAvatar?: boolean;
-  /** Timeout in ms before falling back to chibi (default: 8000) */
+  /** Timeout in ms before showing placeholder (default: 8000) */
   loadTimeout?: number;
 }
 
@@ -71,7 +69,7 @@ const RPMLoadingState: React.FC<{ progress: number; timedOut?: boolean }> = ({
       />
     </div>
     <p className="text-xs text-muted-foreground mt-1">
-      {timedOut ? 'Switching to chibi...' : 
+      {timedOut ? 'Loading...' : 
        progress < 100 ? `${Math.round(progress)}%` : 'Rendering...'}
     </p>
   </div>
@@ -252,8 +250,26 @@ const PresetAvatarCanvas: React.FC<{
 };
 
 /**
+ * Placeholder avatar state when no valid avatar is loaded
+ */
+const PlaceholderAvatarState: React.FC<{ size: AvatarSize; className?: string }> = ({ size, className }) => {
+  const sizeConfig = SIZE_CONFIG[size];
+  return (
+    <div className={cn(
+      sizeConfig.width,
+      sizeConfig.height,
+      'rounded-lg bg-muted/30 flex flex-col items-center justify-center',
+      className
+    )}>
+      <User className="w-8 h-8 text-muted-foreground mb-1" />
+      <p className="text-xs text-muted-foreground">No avatar</p>
+    </div>
+  );
+};
+
+/**
  * AvatarLoader - Smart router for multiple avatar sources
- * Supports: procedural (chibi), preset-glb, vrm, ready-player-me
+ * Supports: preset-glb, vrm, ready-player-me, custom-glb
  */
 export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   avatarUrl,
@@ -264,55 +280,51 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   isPlayer = false,
   animated = true,
   className,
-  forceChibibAvatar = false,
   loadTimeout = 8000
 }) => {
   const sizeConfig = SIZE_CONFIG[size];
-  const modelSource = avatarConfig?.modelSource || 'procedural';
+  const modelSource = avatarConfig?.modelSource;
   const [timedOut, setTimedOut] = useState(false);
   const [modelReady, setModelReady] = useState(false);
 
-  // Determine what to render based on modelSource
-  const shouldUseExternalModel = !forceChibibAvatar && modelSource !== 'procedural';
+  // Check if we have a valid model to load
+  const hasValidModel = Boolean(
+    (modelSource === 'ready-player-me' || modelSource === 'custom-glb') && (avatarUrl || avatarConfig?.modelUrl) ||
+    modelSource === 'vrm' && avatarConfig?.modelUrl ||
+    modelSource === 'preset-glb' && avatarConfig?.presetId
+  );
 
   // Timeout fallback
   useEffect(() => {
-    if (!shouldUseExternalModel || modelReady) return;
+    if (!hasValidModel || modelReady) return;
     
     const timeout = setTimeout(() => {
       if (!modelReady) {
-        console.warn('Avatar load timeout, falling back to chibi');
+        console.warn('Avatar load timeout');
         setTimedOut(true);
       }
     }, loadTimeout);
     
     return () => clearTimeout(timeout);
-  }, [shouldUseExternalModel, modelReady, loadTimeout]);
-
-  // For small sizes or timeout, always use procedural
-  const useProceduralForPerformance = size === 'sm' && avatarConfig;
-  if (timedOut || useProceduralForPerformance) {
-    return (
-      <SimsAvatar
-        config={avatarConfig}
-        size={size}
-        mood={mood}
-        status={status}
-        isPlayer={isPlayer}
-        animated={animated}
-      />
-    );
-  }
+  }, [hasValidModel, modelReady, loadTimeout]);
 
   // Get avatar ID for thumbnail caching
   const avatarId = getAvatarCacheKey(avatarUrl || avatarConfig?.modelUrl, avatarConfig?.presetId);
+
+  // Show placeholder if timed out or no valid model
+  if (timedOut || !hasValidModel) {
+    if (avatarConfig?.thumbnailUrl) {
+      return <AvatarThumbnail url={avatarConfig.thumbnailUrl} size={size === 'full' ? 'xl' : size} />;
+    }
+    return <PlaceholderAvatarState size={size} className={className} />;
+  }
 
   // Fallback component with thumbnail
   const FallbackWithThumbnail = () => (
     avatarConfig?.thumbnailUrl ? (
       <AvatarThumbnail url={avatarConfig.thumbnailUrl} size={size === 'full' ? 'xl' : size} />
     ) : (
-      <SimsAvatar config={avatarConfig} size={size} mood={mood} status={status} isPlayer={isPlayer} animated={animated} />
+      <PlaceholderAvatarState size={size} />
     )
   );
 
@@ -376,17 +388,8 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
       break;
   }
 
-  // Default: procedural SimsAvatar
-  return (
-    <SimsAvatar
-      config={avatarConfig}
-      size={size}
-      mood={mood}
-      status={status}
-      isPlayer={isPlayer}
-      animated={animated}
-    />
-  );
+  // Default: show placeholder since we have no valid model
+  return <PlaceholderAvatarState size={size} className={className} />;
 };
 
 /**

@@ -9,6 +9,7 @@ import { VRM, VRMLoaderPlugin, VRMExpressionPresetName, VRMHumanBoneName } from 
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 import { MoodType } from '@/models/houseguest';
+import { PRESET_VRM_AVATARS } from '@/data/preset-vrm-avatars';
 
 interface VRMAvatarProps {
   modelSrc: string;
@@ -54,6 +55,15 @@ export const VRMAvatar: React.FC<VRMAvatarProps> = ({
   useEffect(() => {
     let disposed = false;
     setLoading(true);
+
+    // Check if this is a placeholder that shouldn't be loaded
+    const preset = PRESET_VRM_AVATARS.find(p => p.url === modelSrc);
+    if (preset?.isPlaceholder) {
+      console.warn(`VRM "${preset.name}" is a placeholder - model file doesn't exist yet`);
+      onError?.(new Error(`VRM "${preset.name}" is a placeholder`));
+      setLoading(false);
+      return;
+    }
 
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
