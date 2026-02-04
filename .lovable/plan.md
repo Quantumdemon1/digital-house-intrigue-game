@@ -1,138 +1,184 @@
 
-# Plan: Fix Relationships, Alliances, and Promises System
+# Plan: Fix Final 4 Flow
 
-## Overview
+## Problem Summary
 
-The relationship system is broken due to a disconnect between where changes are dispatched and where they're read. Interactions show visual feedback (+5, +10, etc.) but the actual relationship values never persist because:
+The game incorrectly skips from Final 4 directly to Final 3 HoH. At Final 4, the game should run a **normal week** with special voting rules, not immediately transition to the Final HoH competition. The issues are:
 
-1. The wrong action type is dispatched
-2. The UI reads from a stale legacy object instead of reducer state
+1. Game transitions to `FinalHoH` when 4 houseguests remain instead of running a normal week
+2. At Final 4, only 1 person (non-HoH, non-nominee) should vote to evict
+3. The evicted person should join the jury
+4. Final 3 HoH should only trigger when exactly 3 houseguests remain
 
-This plan fixes all three systems (relationships, alliances, promises) to use consistent state management.
+## Correct Big Brother Final 4 Flow
+
+```text
+FINAL 4 WEEK (4 active houseguests):
+  HoH Competition (4 compete) → 1 becomes HoH
+       ↓
+  Nominations → HoH picks 2 nominees (1 person off the block)
+       ↓
+  PoV Player Selection → All 4 play (standard Final 4)
+       ↓
+  PoV Competition → Winner gets veto
+       ↓
+  PoV Meeting → Special rules:
+    - If off-block person wins: keep noms same OR use veto (puts themselves on block)
+    - If HoH or nominee wins: normal veto rules
+       ↓
+  Eviction → ONLY the 1 non-HoH, non-nominee votes
+       ↓
+  Evicted → Joins jury (now 7-9 jurors)
+
+FINAL 3 (3 active houseguests):
+  Final HoH Part 1 (Endurance) → All 3 compete
+       ↓
+  Final HoH Part 2 (Skill) → 2 losers compete
+       ↓
+  Final HoH Part 3 (Q&A) → Part 1 + Part 2 winners compete
+       ↓
+  Final HoH → Evicts 1 of the other 2 → Joins jury
+       ↓
+  FINAL 2 → Proceed to Jury Questioning
+```
 
 ---
 
-## Root Cause Analysis
+## Technical Changes
 
-### Problem 1: Interactions Dispatch Wrong Action
-`EvictionInteractionDialog` dispatches:
-```tsx
-dispatch({ type: 'PLAYER_ACTION', payload: { actionId: 'update_relationship', ... } })
-```
-But `playerActionReducer` does NOT handle `update_relationship` - it just logs and returns unchanged state.
+### 1. Fix Phase Detection Logic
 
-### Problem 2: InteractionResults Never Persists Changes
-`InteractionResults` calls `addImpact()` for the visual popup but never dispatches `UPDATE_RELATIONSHIPS` to actually save the change.
+**Files**: 
+- `src/contexts/reducers/reducers/player-action-reducer.ts`
+- `src/contexts/reducers/reducers/game-progress-reducer.ts`
+- `src/components/game-phases/HOHCompetition/index.tsx`
 
-### Problem 3: getRelationship() Reads from Legacy Object
-```tsx
-// GameProvider.tsx - reads from stale legacy system
-const getRelationship = useCallback((guest1Id, guest2Id) => {
-  return relationshipSystem?.getRelationship(guest1Id, guest2Id) || 0;
-}, [relationshipSystem]);
-```
-This reads from the class-based `RelationshipSystem` which is never synced with reducer state.
+**Change**: Trigger `FinalHoH` only when exactly 3 houseguests remain, not when "3 or fewer" remain.
 
-### Problem 4: PromiseManager Uses Legacy Object
-```tsx
-// PromiseManager.tsx
-const { game } = useGame();
-// ...
-game.promises.filter(p => p.status === 'pending')
-```
-Should use `gameState.promises` instead.
-
----
-
-## Solution
-
-### Fix 1: Update EvictionInteractionDialog to Dispatch Correct Action
-
-**File**: `src/components/game-phases/EvictionPhase/EvictionInteractionDialog.tsx`
-
-Replace `PLAYER_ACTION` with `UPDATE_RELATIONSHIPS`:
-```tsx
-dispatch({
-  type: 'UPDATE_RELATIONSHIPS',
-  payload: {
-    guestId1: player.id,
-    guestId2: houseguest.id,
-    change: option.relationshipChange,
-    note: `${player.name} interacted with ${houseguest.name}`
-  }
-});
+**Current (broken):**
+```typescript
+if (activeCount <= 3) {
+  // Go to FinalHoH
+}
 ```
 
-### Fix 2: Update InteractionResults to Persist Changes
-
-**File**: `src/components/game-phases/EvictionPhase/InteractionResults.tsx`
-
-Add `dispatch` and actually persist the relationship change:
-```tsx
-const { gameState, dispatch } = useGame();
-
-useEffect(() => {
-  if (actualChange !== 0) {
-    // Visual feedback
-    addImpact(houseguest.id, houseguest.name, actualChange);
-    
-    // Persist to reducer state
-    dispatch({
-      type: 'UPDATE_RELATIONSHIPS',
-      payload: {
-        guestId1: player?.id,
-        guestId2: houseguest.id,
-        change: actualChange,
-        note: succeeded 
-          ? `${selectedOption.text} interaction succeeded`
-          : `${selectedOption.text} interaction backfired`
-      }
-    });
-  }
-}, [...]); // Run once on mount
+**Fixed:**
+```typescript
+if (activeCount === 3) {
+  // Go to FinalHoH
+}
+if (activeCount === 2) {
+  // Go to JuryQuestioning (shouldn't happen normally)
+}
 ```
 
-### Fix 3: Update getRelationship() to Read from Reducer State
+### 2. Add Final 4 Detection Flag
 
-**File**: `src/contexts/game/GameProvider.tsx`
+**File**: `src/models/game-state.ts`
 
-Replace legacy system read with reducer state read:
-```tsx
-const getRelationship = useCallback((guest1Id: string, guest2Id: string) => {
-  // Read from reducer state instead of legacy system
-  const guestRelationships = gameState.relationships.get(guest1Id);
-  if (!guestRelationships) return 0;
-  
-  const relationship = guestRelationships.get(guest2Id);
-  return relationship?.score || 0;
-}, [gameState.relationships]);
+Add a new flag to track when we're at Final 4:
+```typescript
+isFinal4: boolean; // True when 4 houseguests remain - affects voting rules
 ```
 
-### Fix 4: Update PromiseManager to Use Reducer State
+### 3. Handle Final 4 Voting Rules
 
-**File**: `src/components/promise/PromiseManager.tsx`
+**File**: `src/components/game-phases/EvictionPhase/useEvictionPhase.ts`
 
-Replace `game.promises` with `gameState.promises`:
-```tsx
-const { gameState } = useGame();
+Add special voting logic for Final 4:
+```typescript
+const isFinal4 = activeHouseguests.length === 4;
 
-useEffect(() => {
-  if (!gameState?.promises) return;
-  
-  setActivePromises(
-    gameState.promises.filter(p => p.status === 'pending' || p.status === 'active')
+// At Final 4, only 1 person votes (non-HoH, non-nominee)
+const nonNominees = isFinal4
+  ? activeHouseguests.filter(
+      guest => !nominees.some(n => n.id === guest.id) && !guest.isHoH
+    )
+  : activeHouseguests.filter(
+      guest => !nominees.some(n => n.id === guest.id) && !guest.isHoH
+    );
+```
+
+The current logic already does this correctly, but we need to display messaging about Final 4 rules.
+
+### 4. Add Final 4 UI Messaging
+
+**File**: `src/components/game-phases/EvictionPhase.tsx`
+
+Add special UI for Final 4 eviction:
+```typescript
+if (isFinal4) {
+  return (
+    <div className="text-center">
+      <h3>Final 4 Eviction</h3>
+      <p>Only {soleVoter.name} can vote to evict.</p>
+      {/* Show nominees */}
+      {/* Single voter casts deciding vote */}
+    </div>
   );
-  // ...
-}, [gameState.promises]);
+}
 ```
 
-Also update houseguest lookups to use `gameState.houseguests.find()` instead of `game.getHouseguestById()`.
+### 5. Fix PoV Meeting at Final 4
 
-### Fix 5: Remove Double Dispatch in EvictionInteractionDialog
+**File**: `src/components/game-phases/POVMeeting/hooks/usePOVMeeting.ts`
 
-Currently `EvictionInteractionDialog` dispatches immediately when an option is selected, then `InteractionResults` shows the result. But with the stat-based success/failure system, the actual change should only be determined in `InteractionResults`.
+Add special rule for when the off-block person wins veto at Final 4:
+```typescript
+const getEligibleReplacements = () => {
+  const isFinal4 = activeHouseguests.length === 4;
+  
+  // At Final 4, if the off-block person wins veto and uses it,
+  // they put themselves on the block
+  if (isFinal4 && povHolder && !nominees.some(n => n.id === povHolder.id) && !povHolder.isHoH) {
+    // The only replacement option is themselves
+    return [povHolder];
+  }
+  
+  // Normal rules
+  return activeHouseguests.filter(houseguest => 
+    !houseguest.isHoH && 
+    !houseguest.isNominated && 
+    houseguest.id !== savedNominee?.id &&
+    !houseguest.isPovHolder
+  );
+};
+```
 
-**Solution**: Remove the relationship dispatch from `handleOptionSelected` in `EvictionInteractionDialog` and only dispatch from `InteractionResults` after success/failure is determined.
+### 6. Fix Final 3 HoH Logic
+
+**File**: `src/components/game-phases/FinalHoHPhase.tsx`
+
+The current logic correctly handles Final 3, but we need to ensure it only triggers with exactly 3 houseguests. Add a guard:
+```typescript
+// Redirect if not exactly 3 active houseguests
+useEffect(() => {
+  if (finalThree.length !== 3) {
+    if (finalThree.length > 3) {
+      dispatch({ type: 'SET_PHASE', payload: 'HoH' }); // Go back to normal week
+    } else if (finalThree.length === 2) {
+      dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
+    }
+  }
+}, [finalThree.length]);
+```
+
+### 7. Fix Final 3 Eviction (HoH Choice)
+
+**File**: `src/components/game-phases/EvictionPhase.tsx`
+
+The current `isFinal3` check is correct, but we need to ensure the evicted houseguest is properly added to jury:
+```typescript
+const handleFinal3Eviction = (evicted: Houseguest) => {
+  dispatch({
+    type: 'EVICT_HOUSEGUEST',
+    payload: { evicted, toJury: true }
+  });
+  // Then proceed to JuryQuestioning
+};
+```
+
+Wait, looking at the code, the Final 3 decision is in `FinalHoHPhase.tsx` (the HoH chooses who to take to Final 2), not in `EvictionPhase.tsx`. The current code in `chooseFinalist()` correctly handles this.
 
 ---
 
@@ -140,49 +186,35 @@ Currently `EvictionInteractionDialog` dispatches immediately when an option is s
 
 | File | Changes |
 |------|---------|
-| `src/components/game-phases/EvictionPhase/EvictionInteractionDialog.tsx` | Remove premature relationship dispatch, let InteractionResults handle it |
-| `src/components/game-phases/EvictionPhase/InteractionResults.tsx` | Add `dispatch` call to persist relationship change with correct action type |
-| `src/contexts/game/GameProvider.tsx` | Update `getRelationship()` to read from `gameState.relationships` instead of legacy system |
-| `src/components/promise/PromiseManager.tsx` | Use `gameState.promises` and `gameState.houseguests.find()` instead of legacy `game` object |
+| `src/contexts/reducers/reducers/player-action-reducer.ts` | Change `<= 3` to `=== 3` for FinalHoH detection; add `=== 4` handling |
+| `src/contexts/reducers/reducers/game-progress-reducer.ts` | Change `<= 3` to `=== 3` for FinalHoH detection |
+| `src/components/game-phases/HOHCompetition/index.tsx` | Change `<= 3` to `=== 3` for redirect check |
+| `src/components/game-phases/EvictionPhase/useEvictionPhase.ts` | Add `isFinal4` flag and pass to component |
+| `src/components/game-phases/EvictionPhase.tsx` | Add Final 4 UI messaging for single-voter scenario |
+| `src/components/game-phases/POVMeeting/hooks/usePOVMeeting.ts` | Add Final 4 veto replacement logic |
+| `src/components/game-phases/FinalHoHPhase.tsx` | Add guard for exactly 3 houseguests |
+| `src/models/game-state.ts` | (Optional) Add `isFinal4` flag if needed for state tracking |
 
 ---
 
 ## Expected Behavior After Fix
 
-1. **Interactions persist**: When you talk to a houseguest during eviction, the relationship change (+5, -10, etc.) is saved to reducer state
-2. **UI reflects changes**: `HouseguestCard`, `HouseguestDialog`, and sidebar show updated relationship scores
-3. **Success/failure works**: The stat-based interaction success system properly applies positive or negative changes
-4. **Promises display correctly**: Promise manager shows all promises from reducer state
-5. **State consistency**: All components read from the same source of truth (`gameState`)
+1. **Final 4**: Normal week runs (HoH → Nom → PoV → Meeting → Eviction)
+2. **Final 4 Voting**: Only 1 person (non-HoH, non-nominee) votes
+3. **Final 4 Veto**: If off-block person wins and uses veto, they go on the block
+4. **Final 4 Eviction**: Evicted person joins jury correctly
+5. **Final 3 HoH**: Only triggers when exactly 3 houseguests remain
+6. **Final 3 Decision**: HoH picks from 2 other houseguests (not 3)
+7. **Jury**: All evicted houseguests after jury starts are added to jury
+8. **Final 2**: Two finalists proceed to Jury Questioning
 
 ---
 
-## Technical Flow After Fix
+## Summary of Phase Transitions
 
-```text
-User clicks interaction option
-         |
-         v
-EvictionInteractionDialog shows InteractionResults
-         |
-         v
-InteractionResults calculates success/failure based on Social stat
-         |
-         v
-InteractionResults dispatches UPDATE_RELATIONSHIPS
-         |
-         v
-relationshipReducer updates gameState.relationships
-         |
-         v
-getRelationship() reads from gameState.relationships
-         |
-         v
-HouseguestCard/Dialog shows updated score
-```
-
----
-
-## Backward Compatibility
-
-The legacy `RelationshipSystem` class will continue to work for AI decisions and other systems that use it directly. We're adding reducer state as the source of truth for UI display without breaking existing functionality.
+| Active Count | Next Phase |
+|--------------|------------|
+| 5+ | Normal HoH competition |
+| 4 | Normal HoH competition (Final 4 week) |
+| 3 | Final HoH (3-part competition) |
+| 2 | Jury Questioning (should only happen from Final HoH) |
