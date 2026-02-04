@@ -4,7 +4,7 @@
  */
 
 import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, useProgress } from '@react-three/drei';
 import { Avatar3DConfig } from '@/models/avatar-config';
 import { MoodType } from '@/models/houseguest';
@@ -15,6 +15,7 @@ import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
 import { AvatarThumbnail } from './AvatarThumbnail';
 import { getAvatarCacheKey } from '@/utils/avatar-cache';
 import type { AvatarContext } from './RPMAvatar';
+import * as THREE from 'three';
 
 // Lazy load RPM avatar component
 const LazyRPMAvatar = lazy(() => 
@@ -106,6 +107,27 @@ const useLoadingProgress = () => {
 };
 
 /**
+ * Dynamic camera controller that updates position when zoom changes
+ */
+const CameraController: React.FC<{ 
+  baseY: number; 
+  baseZ: number; 
+  zoom: number 
+}> = ({ baseY, baseZ, zoom }) => {
+  const { camera } = useThree();
+  
+  useEffect(() => {
+    const zoomedZ = baseZ / zoom;
+    const zoomedY = baseY * (zoom > 1 ? 1 + (zoom - 1) * 0.3 : 1);
+    
+    camera.position.set(0, zoomedY, zoomedZ);
+    camera.updateProjectionMatrix();
+  }, [camera, baseY, baseZ, zoom]);
+  
+  return null;
+};
+
+/**
  * RPM Avatar Canvas - Primary renderer for Ready Player Me avatars
  */
 const RPMAvatarCanvas: React.FC<{
@@ -145,10 +167,6 @@ const RPMAvatarCanvas: React.FC<{
     return null;
   }
 
-  // Apply zoom by adjusting camera Z position (closer = more zoomed)
-  const zoomedZ = sizeConfig.camera.z / zoom;
-  const zoomedY = sizeConfig.camera.y * (zoom > 1 ? 1 + (zoom - 1) * 0.3 : 1);
-
   return (
     <div className={cn(
       sizeConfig.width,
@@ -158,12 +176,18 @@ const RPMAvatarCanvas: React.FC<{
     )}>
       <Canvas
         camera={{ 
-          position: [0, zoomedY, zoomedZ], 
+          position: [0, sizeConfig.camera.y, sizeConfig.camera.z], 
           fov: sizeConfig.camera.fov 
         }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
         onError={handleError}
       >
+        {/* Dynamic camera controller for zoom */}
+        <CameraController 
+          baseY={sizeConfig.camera.y} 
+          baseZ={sizeConfig.camera.z} 
+          zoom={zoom} 
+        />
         <ambientLight intensity={0.6} />
         <directionalLight position={[2, 3, 4]} intensity={0.8} />
         <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
