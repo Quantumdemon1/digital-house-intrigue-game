@@ -241,13 +241,13 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState: propGameState }) =
         </Table>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
+        <Card className="overflow-hidden">
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
             <div className="text-center">
-              <Trophy className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
-              <h3 className="text-xl font-semibold mb-1">Competition Beast</h3>
-              <p className="text-sm text-muted-foreground mb-4">Most competitions won</p>
+              <Trophy className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-yellow-500 mb-2" />
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-1 truncate">Competition Beast</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">Most competitions won</p>
               
               {(() => {
                 const sorted = [...gameState.houseguests].sort(
@@ -256,15 +256,15 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState: propGameState }) =
                 const top = sorted[0];
                 return top ? (
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl mb-2 overflow-hidden">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-muted rounded-full flex items-center justify-center text-lg sm:text-xl mb-2 overflow-hidden flex-shrink-0">
                       {top.avatarUrl ? (
                         <img src={top.avatarUrl} alt={top.name} className="w-full h-full object-cover" />
                       ) : (
                         top.name.charAt(0)
                       )}
                     </div>
-                    <p className="font-medium">{top.name}</p>
-                    <p className="text-sm">{getTotalCompetitions(top)} wins</p>
+                    <p className="font-medium text-sm sm:text-base truncate max-w-full">{top.name}</p>
+                    <p className="text-xs sm:text-sm">{getTotalCompetitions(top)} wins</p>
                   </div>
                 ) : null;
               })()}
@@ -272,12 +272,12 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState: propGameState }) =
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="overflow-hidden">
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
             <div className="text-center">
-              <User className="h-8 w-8 mx-auto text-red-500 mb-2" />
-              <h3 className="text-xl font-semibold mb-1">Block Star</h3>
-              <p className="text-sm text-muted-foreground mb-4">Most times nominated</p>
+              <User className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-bb-red mb-2" />
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-1 truncate">Block Star</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">Most times nominated</p>
               
               {(() => {
                 const sorted = [...gameState.houseguests].sort(
@@ -291,30 +291,30 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState: propGameState }) =
                 const nomCount = getNominationsCount(top.nominations);
                 return top && nomCount > 0 ? (
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl mb-2 overflow-hidden">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-muted rounded-full flex items-center justify-center text-lg sm:text-xl mb-2 overflow-hidden flex-shrink-0">
                       {top.avatarUrl ? (
                         <img src={top.avatarUrl} alt={top.name} className="w-full h-full object-cover" />
                       ) : (
                         top.name.charAt(0)
                       )}
                     </div>
-                    <p className="font-medium">{top.name}</p>
-                    <p className="text-sm">{nomCount} nominations</p>
+                    <p className="font-medium text-sm sm:text-base truncate max-w-full">{top.name}</p>
+                    <p className="text-xs sm:text-sm">{nomCount} nominations</p>
                   </div>
                 ) : (
-                  <p className="text-sm italic">No nominations recorded</p>
+                  <p className="text-xs sm:text-sm italic">No nominations recorded</p>
                 );
               })()}
             </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="overflow-hidden sm:col-span-2 lg:col-span-1">
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
             <div className="text-center">
-              <Award className="h-8 w-8 mx-auto text-blue-500 mb-2" />
-              <h3 className="text-xl font-semibold mb-1">HoH Champion</h3>
-              <p className="text-sm text-muted-foreground mb-4">Most HoH wins</p>
+              <Award className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-bb-blue mb-2" />
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-1 truncate">HoH Champion</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">Most HoH wins</p>
               
               {(() => {
                 const sorted = [...gameState.houseguests].sort(
@@ -323,18 +323,18 @@ const PlayerStats: React.FC<PlayerStatsProps> = ({ gameState: propGameState }) =
                 const top = sorted[0];
                 return top && top.competitionsWon.hoh > 0 ? (
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xl mb-2 overflow-hidden">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-muted rounded-full flex items-center justify-center text-lg sm:text-xl mb-2 overflow-hidden flex-shrink-0">
                       {top.avatarUrl ? (
                         <img src={top.avatarUrl} alt={top.name} className="w-full h-full object-cover" />
                       ) : (
                         top.name.charAt(0)
                       )}
                     </div>
-                    <p className="font-medium">{top.name}</p>
-                    <p className="text-sm">{top.competitionsWon.hoh} HoH wins</p>
+                    <p className="font-medium text-sm sm:text-base truncate max-w-full">{top.name}</p>
+                    <p className="text-xs sm:text-sm">{top.competitionsWon.hoh} HoH wins</p>
                   </div>
                 ) : (
-                  <p className="text-sm italic">No HoH wins recorded</p>
+                  <p className="text-xs sm:text-sm italic">No HoH wins recorded</p>
                 );
               })()}
             </div>

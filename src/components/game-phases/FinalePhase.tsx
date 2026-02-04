@@ -132,30 +132,30 @@ const FinalePhase: React.FC = () => {
           </div>
           
           {/* Finalists */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-8">
             {finalists.map((finalist, index) => (
               <React.Fragment key={finalist.id}>
-                <div className="flex flex-col items-center p-8 rounded-2xl bg-gradient-to-b from-bb-gold/10 to-card border-2 border-bb-gold/30 shadow-game-lg">
+                <div className="flex flex-col items-center p-4 sm:p-6 md:p-8 rounded-2xl bg-gradient-to-b from-bb-gold/10 to-card border-2 border-bb-gold/30 shadow-game-lg w-full sm:w-auto max-w-[200px] sm:max-w-none">
                   <div className="relative">
                     <StatusAvatar
                       name={finalist.name}
                       imageUrl={finalist.imageUrl}
-                      size="xl"
+                      size="lg"
                       isPlayer={finalist.isPlayer}
                     />
-                    <div className="absolute -top-3 -right-3 p-2 rounded-full bg-bb-gold shadow-lg">
-                      <Star className="h-5 w-5 text-white" />
+                    <div className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 p-1.5 sm:p-2 rounded-full bg-bb-gold shadow-lg">
+                      <Star className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" />
                     </div>
                   </div>
-                  <h4 className="text-xl font-bold mt-4 text-foreground">{finalist.name}</h4>
-                  <p className="text-muted-foreground">{finalist.occupation}</p>
+                  <h4 className="text-base sm:text-lg md:text-xl font-bold mt-3 sm:mt-4 text-foreground truncate max-w-full">{finalist.name}</h4>
+                  <p className="text-sm text-muted-foreground truncate max-w-full">{finalist.occupation}</p>
                   {finalist.isPlayer && (
-                    <Badge className="mt-2 bg-bb-blue text-white">You</Badge>
+                    <Badge className="mt-2 bg-bb-blue text-white text-xs">You</Badge>
                   )}
                 </div>
                 {index === 0 && finalists.length > 1 && (
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <span className="text-3xl font-display font-bold text-bb-gold">VS</span>
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground py-2 sm:py-0">
+                    <span className="text-2xl sm:text-3xl font-display font-bold text-bb-gold">VS</span>
                   </div>
                 )}
               </React.Fragment>
@@ -164,21 +164,21 @@ const FinalePhase: React.FC = () => {
           
           {/* Jury */}
           {jurors.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                <Users className="h-5 w-5" />
-                <span className="font-semibold">The Jury ({jurors.length} members)</span>
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="font-semibold text-sm sm:text-base">The Jury ({jurors.length} members)</span>
               </div>
-              <div className="flex flex-wrap justify-center gap-4">
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4">
                 {jurors.map(juror => (
                   <div key={juror.id} className="flex flex-col items-center">
                     <StatusAvatar
                       name={juror.name}
                       imageUrl={juror.imageUrl}
-                      size="md"
+                      size="sm"
                       showBadge={false}
                     />
-                    <span className="text-sm font-medium mt-1 text-foreground">{juror.name}</span>
+                    <span className="text-xs sm:text-sm font-medium mt-1 text-foreground truncate max-w-[60px] sm:max-w-[80px]">{juror.name}</span>
                   </div>
                 ))}
               </div>

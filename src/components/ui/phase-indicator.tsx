@@ -125,7 +125,7 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
   return (
     <TooltipProvider delayDuration={200}>
       <div className={cn(
-        'flex items-center justify-between gap-1 py-3 px-4 bg-muted/30 rounded-lg',
+        'flex items-center justify-between gap-0.5 xs:gap-1 py-2 sm:py-3 px-2 sm:px-4 bg-muted/30 rounded-lg overflow-x-auto scrollbar-hide',
         className
       )}>
         {weeklyPhases.map((phase, index) => {
@@ -139,31 +139,31 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
               {index > 0 && (
                 <div 
                   className={cn(
-                    'flex-1 h-0.5 max-w-8 transition-all duration-300',
+                    'flex-1 h-0.5 min-w-2 max-w-4 sm:max-w-8 transition-all duration-300',
                     isCompleted ? 'bg-game-success' : 'bg-border'
                   )}
                 />
               )}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex flex-col items-center gap-1 min-w-[48px] cursor-default">
+                  <div className="flex flex-col items-center gap-0.5 sm:gap-1 min-w-[32px] xs:min-w-[40px] sm:min-w-[48px] cursor-default">
                     <div 
                       className={cn(
-                        'w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300',
+                        'w-7 h-7 xs:w-8 xs:h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all duration-300',
                         isCompleted && 'bg-game-success text-white',
-                        isActive && 'bg-primary text-primary-foreground scale-110 shadow-glow-primary animate-pulse-glow',
+                        isActive && 'bg-primary text-primary-foreground scale-105 sm:scale-110 shadow-glow-primary animate-pulse-glow',
                         !isCompleted && !isActive && 'bg-muted text-muted-foreground'
                       )}
                     >
                       {isCompleted ? (
-                        <Check className="w-4 h-4" />
+                        <Check className="w-3 h-3 sm:w-4 sm:h-4" />
                       ) : (
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
                       )}
                     </div>
                     <span 
                       className={cn(
-                        'text-[10px] font-semibold uppercase tracking-wide text-center whitespace-nowrap',
+                        'text-[8px] xs:text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-center whitespace-nowrap',
                         isActive && 'text-primary font-bold',
                         isCompleted && 'text-game-success',
                         !isActive && !isCompleted && 'text-muted-foreground'

@@ -28,9 +28,9 @@ const GameStatusIndicator: React.FC = () => {
   const povName = getPoVName();
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full bg-card/80 backdrop-blur-sm rounded-lg p-3 border shadow-game-sm">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 w-full bg-card/80 backdrop-blur-sm rounded-lg p-2 sm:p-3 border shadow-game-sm max-w-full overflow-hidden">
       {/* Left: Action Buttons */}
-      <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-start">
         <SaveLoadButton />
         <GameRecapButton />
         <PromiseButton />
@@ -38,30 +38,32 @@ const GameStatusIndicator: React.FC = () => {
       </div>
       
       {/* Right: Status badges */}
-      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
-        <Badge variant="outline" className="bb-badge muted">
+      <div className="flex flex-wrap items-center gap-1 sm:gap-2 justify-center sm:justify-end">
+        <Badge variant="outline" className="bb-badge muted text-xs">
           <Users className="h-3 w-3" />
-          {activeHouseguests.length} Active
+          <span className="hidden xs:inline">{activeHouseguests.length} Active</span>
+          <span className="xs:hidden">{activeHouseguests.length}</span>
         </Badge>
         
         {hohName && (
-          <Badge variant="outline" className="bb-badge gold">
+          <Badge variant="outline" className="bb-badge gold text-xs">
             <Crown className="h-3 w-3" />
-            HoH: {hohName}
+            <span className="hidden sm:inline">HoH:</span> <span className="truncate max-w-[60px] sm:max-w-none">{hohName}</span>
           </Badge>
         )}
         
         {povName && (
-          <Badge variant="outline" className="bb-badge gold">
+          <Badge variant="outline" className="bb-badge gold text-xs">
             <Shield className="h-3 w-3" />
-            PoV: {povName}
+            <span className="hidden sm:inline">PoV:</span> <span className="truncate max-w-[60px] sm:max-w-none">{povName}</span>
           </Badge>
         )}
         
         {gameState.nominees.length > 0 && (
-          <Badge variant="outline" className="bb-badge danger">
+          <Badge variant="outline" className="bb-badge danger text-xs">
             <Target className="h-3 w-3" />
-            {gameState.nominees.length} Nominee{gameState.nominees.length > 1 ? 's' : ''}
+            <span className="hidden xs:inline">{gameState.nominees.length} Nom{gameState.nominees.length > 1 ? 's' : ''}</span>
+            <span className="xs:hidden">{gameState.nominees.length}</span>
           </Badge>
         )}
       </div>

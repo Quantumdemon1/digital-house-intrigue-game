@@ -46,7 +46,7 @@ export const GameCard: React.FC<GameCardProps> = ({
   return (
     <div
       className={cn(
-        'game-card relative overflow-hidden rounded-xl border transition-all duration-300',
+        'game-card relative overflow-hidden rounded-xl border transition-all duration-300 max-w-full',
         variantClasses[variant],
         hoverable && 'hover-lift',
         className
@@ -73,11 +73,11 @@ export const GameCardHeader: React.FC<GameCardHeaderProps> = ({
   };
 
   return (
-    <div className={cn('p-4 md:p-6', variantClasses[variant], className)}>
+    <div className={cn('p-3 sm:p-4 md:p-6', variantClasses[variant], className)}>
       {Icon ? (
-        <div className="flex items-center gap-3">
-          <Icon className={cn('w-6 h-6', iconClassName)} />
-          <div className="flex-1">{children}</div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Icon className={cn('w-5 h-5 sm:w-6 sm:h-6', iconClassName)} />
+          <div className="flex-1 min-w-0">{children}</div>
         </div>
       ) : (
         children
@@ -108,7 +108,7 @@ export const GameCardContent: React.FC<GameCardContentProps> = ({
   children,
   className
 }) => (
-  <div className={cn('game-card-content p-4 md:p-6', className)}>
+  <div className={cn('game-card-content p-3 sm:p-4 md:p-6', className)}>
     {children}
   </div>
 );
@@ -117,7 +117,7 @@ export const GameCardFooter: React.FC<GameCardFooterProps> = ({
   children,
   className
 }) => (
-  <div className={cn('game-card-footer p-4 md:p-6 border-t border-border flex items-center justify-between', className)}>
+  <div className={cn('game-card-footer p-3 sm:p-4 md:p-6 border-t border-border flex items-center justify-between gap-2 flex-wrap', className)}>
     {children}
   </div>
 );
