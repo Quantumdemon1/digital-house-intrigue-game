@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera, Upload, Sparkles, X, Loader2, RefreshCw } from 'lucide-react';
+import { Upload, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -72,42 +73,22 @@ export const AvatarImageOptions: React.FC<AvatarImageOptionsProps> = ({
     setGenerationError(null);
 
     try {
-      // Build a detailed prompt for realistic character portrait
-      const fullPrompt = `Professional headshot portrait of ${generationPrompt}. 
-        Reality TV show contestant, high quality studio lighting, neutral background.
-        Confident, friendly expression. Shoulders and face visible.
-        Photorealistic style, high resolution. Ultra high resolution.`;
-
-      // Call the AI image generation API
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_LOVABLE_API_KEY || ''}`,
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image',
-          messages: [
-            {
-              role: 'user',
-              content: fullPrompt
-            }
-          ],
-          modalities: ['image', 'text']
-        })
+      // Call edge function for avatar generation
+      const { data, error } = await supabase.functions.invoke('generate-avatar', {
+        body: { prompt: generationPrompt }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate image');
+      if (error) {
+        console.error('Avatar generation error:', error);
+        throw new Error(error.message || 'Failed to generate image');
       }
 
-      const data = await response.json();
-      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-      if (imageUrl) {
-        onImageGenerated(imageUrl);
+      if (data?.imageUrl) {
+        onImageGenerated(data.imageUrl);
         setIsGenerateDialogOpen(false);
         setGenerationPrompt('');
+      } else if (data?.error) {
+        throw new Error(data.error);
       } else {
         throw new Error('No image returned from API');
       }
