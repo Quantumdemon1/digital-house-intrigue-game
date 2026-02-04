@@ -2,10 +2,6 @@
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Separator } from '@/components/ui/separator';
-import SaveLoadButton from './SaveLoadButton';
-import FastForwardButton from './FastForwardButton';
-import PromiseButton from './PromiseButton';
-import GameRecapButton from './GameRecapButton';
 import ProfileButton from '../auth/ProfileButton';
 import { PhaseIndicator, WeekIndicator } from '@/components/ui/phase-indicator';
 
@@ -18,44 +14,30 @@ const GameHeader: React.FC = () => {
       <div className="absolute inset-0 bg-surveillance-pattern opacity-5" />
       
       <div className="relative p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        {/* Top row: Title, Week, Profile */}
+        <div className="flex items-center justify-between gap-4">
           {/* Left side: Title and Week */}
           <div className="flex items-center gap-4">
-            <div>
-              <h1 className="game-title text-lg md:text-xl">Digital House Intrigue</h1>
-            </div>
+            <h1 className="game-title text-lg md:text-xl">Digital House Intrigue</h1>
             <Separator orientation="vertical" className="h-8 hidden md:block" />
             <WeekIndicator week={gameState.week} className="hidden md:flex" />
           </div>
           
-          {/* Center: Phase Indicator (hidden on mobile) */}
-          <div className="hidden lg:block flex-1 max-w-2xl mx-4">
-            <PhaseIndicator 
-              currentPhase={gameState.phase} 
-              week={gameState.week} 
-              compact={true}
-            />
-          </div>
-          
-          {/* Right side: Action buttons */}
-          <div className="flex items-center gap-2">
-            <GameRecapButton />
-            <PromiseButton />
-            <FastForwardButton />
-            <SaveLoadButton />
-            <Separator orientation="vertical" className="h-6 mx-1" />
-            <ProfileButton />
-          </div>
+          {/* Right side: Profile only */}
+          <ProfileButton />
         </div>
         
-        {/* Mobile: Week and Phase below title */}
-        <div className="lg:hidden mt-3 flex items-center justify-between">
-          <WeekIndicator week={gameState.week} />
+        {/* Phase Indicator - Full width below title */}
+        <div className="mt-4">
           <PhaseIndicator 
             currentPhase={gameState.phase} 
-            week={gameState.week}
-            compact={true}
+            week={gameState.week} 
           />
+        </div>
+        
+        {/* Mobile: Week indicator below phase on small screens */}
+        <div className="md:hidden mt-3 flex justify-center">
+          <WeekIndicator week={gameState.week} />
         </div>
       </div>
     </header>

@@ -2,11 +2,14 @@
 import React from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Crown, Users, Shield, Target } from 'lucide-react';
-import { PhaseBadge } from '@/components/ui/phase-indicator';
+import { Crown, Users, Shield, Target } from 'lucide-react';
+import SaveLoadButton from './SaveLoadButton';
+import FastForwardButton from './FastForwardButton';
+import PromiseButton from './PromiseButton';
+import GameRecapButton from './GameRecapButton';
 
 const GameStatusIndicator: React.FC = () => {
-  const { gameState, getActiveHouseguests, getHouseguestById } = useGame();
+  const { gameState, getActiveHouseguests } = useGame();
   const activeHouseguests = getActiveHouseguests();
 
   // Get HoH name directly from gameState (it's already a full Houseguest object)
@@ -25,19 +28,17 @@ const GameStatusIndicator: React.FC = () => {
   const povName = getPoVName();
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 w-full bg-card/50 backdrop-blur-sm rounded-lg p-3 border shadow-game-sm">
-      {/* Left: Week and Phase */}
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="bb-badge muted">
-          <Clock className="h-3 w-3" />
-          Week {gameState.week}
-        </Badge>
-        
-        <PhaseBadge phase={gameState.phase} />
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full bg-card/80 backdrop-blur-sm rounded-lg p-3 border shadow-game-sm">
+      {/* Left: Action Buttons */}
+      <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+        <SaveLoadButton />
+        <GameRecapButton />
+        <PromiseButton />
+        <FastForwardButton />
       </div>
       
       {/* Right: Status badges */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
         <Badge variant="outline" className="bb-badge muted">
           <Users className="h-3 w-3" />
           {activeHouseguests.length} Active

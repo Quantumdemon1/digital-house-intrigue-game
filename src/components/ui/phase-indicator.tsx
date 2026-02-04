@@ -13,6 +13,12 @@ import {
   Play
 } from 'lucide-react';
 import { GamePhase } from '@/models/game-state';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface PhaseConfig {
   icon: React.ElementType;
@@ -91,7 +97,7 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
   if (isEndGame) {
     const config = getPhaseConfig(currentPhase);
     return (
-      <div className={cn('flex items-center justify-center gap-3 p-4', className)}>
+      <div className={cn('flex items-center justify-center gap-3 py-3 px-4 bg-muted/30 rounded-lg', className)}>
         <div className="phase-step-circle active">
           <config.icon className="w-5 h-5" />
         </div>
@@ -107,7 +113,7 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
   if (currentPhase === 'Setup' || currentPhase === 'Initialization' || currentPhase === 'SocialInteraction') {
     const config = getPhaseConfig(currentPhase);
     return (
-      <div className={cn('flex items-center justify-center gap-3 p-4', className)}>
+      <div className={cn('flex items-center justify-center gap-3 py-3 px-4 bg-muted/30 rounded-lg', className)}>
         <div className="phase-step-circle active">
           <config.icon className="w-5 h-5" />
         </div>
@@ -117,53 +123,65 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
   }
 
   return (
-    <div className={cn('phase-indicator', className)}>
-      {weeklyPhases.map((phase, index) => {
-        const config = getPhaseConfig(phase);
-        const isCompleted = currentIndex > index;
-        const isActive = normalizedCurrent === phase;
-        const Icon = config.icon;
+    <TooltipProvider delayDuration={200}>
+      <div className={cn(
+        'flex items-center justify-between gap-1 py-3 px-4 bg-muted/30 rounded-lg',
+        className
+      )}>
+        {weeklyPhases.map((phase, index) => {
+          const config = getPhaseConfig(phase);
+          const isCompleted = currentIndex > index;
+          const isActive = normalizedCurrent === phase;
+          const Icon = config.icon;
 
-        return (
-          <React.Fragment key={phase}>
-            {index > 0 && (
-              <div 
-                className={cn(
-                  'phase-step-connector',
-                  isCompleted && 'completed'
-                )}
-              />
-            )}
-            <div className="phase-step">
-              <div 
-                className={cn(
-                  'phase-step-circle',
-                  isCompleted && 'completed',
-                  isActive && 'active'
-                )}
-                title={config.label}
-              >
-                {isCompleted ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Icon className={cn('w-4 h-4', compact && 'w-3 h-3')} />
-                )}
-              </div>
-              {!compact && (
-                <span 
+          return (
+            <React.Fragment key={phase}>
+              {index > 0 && (
+                <div 
                   className={cn(
-                    'phase-step-label',
-                    isActive && 'active'
+                    'flex-1 h-0.5 max-w-8 transition-all duration-300',
+                    isCompleted ? 'bg-game-success' : 'bg-border'
                   )}
-                >
-                  {config.shortLabel}
-                </span>
+                />
               )}
-            </div>
-          </React.Fragment>
-        );
-      })}
-    </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center gap-1 min-w-[48px] cursor-default">
+                    <div 
+                      className={cn(
+                        'w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300',
+                        isCompleted && 'bg-game-success text-white',
+                        isActive && 'bg-primary text-primary-foreground scale-110 shadow-glow-primary animate-pulse-glow',
+                        !isCompleted && !isActive && 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {isCompleted ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Icon className="w-4 h-4" />
+                      )}
+                    </div>
+                    <span 
+                      className={cn(
+                        'text-[10px] font-semibold uppercase tracking-wide text-center whitespace-nowrap',
+                        isActive && 'text-primary font-bold',
+                        isCompleted && 'text-game-success',
+                        !isActive && !isCompleted && 'text-muted-foreground'
+                      )}
+                    >
+                      {config.shortLabel}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="font-medium">
+                  {config.label}
+                </TooltipContent>
+              </Tooltip>
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 };
 
