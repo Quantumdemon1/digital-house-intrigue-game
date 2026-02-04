@@ -23,7 +23,7 @@ export type TopStyle = 'tshirt' | 'tanktop' | 'blazer' | 'hoodie' | 'dress';
 export type BottomStyle = 'pants' | 'shorts' | 'skirt' | 'jeans';
 
 // Avatar model source types
-export type AvatarModelSource = 'procedural' | 'preset-glb' | 'vrm' | 'ready-player-me' | 'custom-glb';
+export type AvatarModelSource = 'preset-glb' | 'vrm' | 'ready-player-me' | 'custom-glb';
 
 /**
  * Complete 3D avatar configuration
