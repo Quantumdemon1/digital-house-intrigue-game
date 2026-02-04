@@ -1,128 +1,204 @@
 
-# Plan: Fix Avatar Portrait Camera Framing
+# Plan: Manual Profile Photo Capture for Player Setup
 
-## Root Cause Analysis
+## Problem Analysis
 
-The avatar portrait shows the torso instead of the head because:
+The current implementation has a fundamental conflict:
+1. **Customizer Canvas**: Uses `full` size with camera at Y=0, Z=2.5, showing the full body
+2. **Auto-capture**: Tries to crop the head from this full-body view, which doesn't work reliably
+3. **Profile Preview**: Uses `xl` size with camera at Y=0.55, Z=1.5 for head portrait, but this is a different canvas instance
 
-1. **Static camera in `AvatarLoader.tsx`**: Uses fixed `camera={{ position: [0, 0, 2.5], fov: 35 }}` for all contexts
-2. **Model position mismatch**: `RPMAvatar.tsx` positions the model based on context (e.g., `profile: [0, -0.55, 0]`), but the camera doesn't compensate
-3. **No camera Y adjustment**: The camera looks straight ahead at Y=0, but the head is ~1.6 units above the model origin
+The auto-capture runs on the customizer's full-body canvas, so no matter how we crop, we're extracting from a view where the head is small.
 
-## Solution: Context-Aware Camera Settings
+## Solution: Dedicated Profile Photo Capture Canvas
 
-Add camera configuration that varies by context to properly frame the head for portrait views.
+Replace the unreliable auto-capture with a **manual "Take Photo" workflow** inside the customizer dialog:
 
-### Camera Configuration Table
+1. **Add a dedicated portrait preview** inside the customizer that shows how the profile photo will look (head-focused camera)
+2. **Add a prominent "Take Profile Photo" button** that captures from this portrait preview
+3. **Show preview with confirm/retake** before saving
+4. **Require profile photo** before allowing the player to continue to the game
 
-| Context | Camera Y | Camera Z | FOV | Model Y | Result |
-|---------|----------|----------|-----|---------|--------|
-| `thumbnail` | 0.55 | 1.2 | 25 | -0.5 | Tight head shot |
-| `profile` | 0.55 | 1.5 | 30 | -0.55 | Head portrait |
-| `game` | 0.4 | 2.0 | 35 | -0.7 | Upper body |
-| `customizer` | 0 | 2.5 | 35 | -1.5 | Full body |
+## User Flow
 
-### File Changes
+```text
+1. Player opens "Customize Avatar" dialog
+2. Creates/selects avatar in RPM creator panel
+3. Full-body preview shows on the left (existing)
+4. NEW: "Profile Photo" section appears below with:
+   - Small portrait preview (head-focused camera)
+   - "Take Photo" button
+5. Clicking "Take Photo" opens preview modal
+6. Player can "Use Photo" or "Retake"
+7. Photo saved to avatarConfig.profilePhotoUrl
+8. Continue button enabled
+```
 
-**`src/components/avatar-3d/AvatarLoader.tsx`**:
+## File Changes
+
+### 1. `src/components/avatar-3d/AvatarCustomizer.tsx`
+
+**Remove**: Auto-capture logic (lines 50-103)
+
+**Add**: 
+- Portrait preview component with dedicated head-focused camera
+- Manual "Take Profile Photo" button
+- Photo preview section showing captured photo or capture prompt
+- Require photo before "Continue" button works
 
 ```typescript
-// Size configurations with context-aware CAMERA settings
-const SIZE_CONFIG: Record<AvatarSize, { 
-  width: string; 
-  height: string; 
-  scale: number; 
-  context: AvatarContext;
-  camera: { y: number; z: number; fov: number }
-}> = {
-  sm: { 
-    width: 'w-12', height: 'h-12', scale: 0.8, 
-    context: 'thumbnail',
-    camera: { y: 0.55, z: 1.2, fov: 25 }  // Tight head
-  },
-  md: { 
-    width: 'w-20', height: 'h-20', scale: 1, 
-    context: 'game',
-    camera: { y: 0.4, z: 2.0, fov: 35 }   // Upper body
-  },
-  lg: { 
-    width: 'w-32', height: 'h-32', scale: 1.2, 
-    context: 'game',
-    camera: { y: 0.4, z: 2.0, fov: 35 }   // Upper body
-  },
-  xl: { 
-    width: 'w-48', height: 'h-48', scale: 1.5, 
-    context: 'profile',
-    camera: { y: 0.55, z: 1.5, fov: 30 }  // Head portrait
-  },
-  full: { 
-    width: 'w-full', height: 'h-full', scale: 1, 
-    context: 'customizer',
-    camera: { y: 0, z: 2.5, fov: 35 }     // Full body
-  },
+// New state
+const [profilePhotoCapture, setProfilePhotoCapture] = useState<string | null>(null);
+
+// New component: ProfilePhotoCapture section
+<div className="mt-6 p-4 rounded-lg border border-border/50 bg-muted/20">
+  <h4 className="font-semibold mb-3 flex items-center gap-2">
+    <Camera className="w-4 h-4" />
+    Profile Photo
+  </h4>
+  
+  {/* Portrait preview canvas - head-focused */}
+  <div className="flex items-center gap-4">
+    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary/30">
+      {config.modelUrl ? (
+        <ProfilePortraitCanvas avatarUrl={config.modelUrl} />
+      ) : (
+        <div className="w-full h-full bg-muted flex items-center justify-center">
+          <User className="w-8 h-8 text-muted-foreground" />
+        </div>
+      )}
+    </div>
+    
+    {config.profilePhotoUrl ? (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-sm text-primary">
+          <Check className="w-4 h-4" />
+          Photo saved
+        </div>
+        <Button variant="outline" size="sm" onClick={handleRetake}>
+          <Camera className="w-4 h-4 mr-2" />
+          Retake
+        </Button>
+      </div>
+    ) : (
+      <Button onClick={handleTakePhoto}>
+        <Camera className="w-4 h-4 mr-2" />
+        Take Profile Photo
+      </Button>
+    )}
+  </div>
+</div>
+
+// Disable Continue button if no profile photo
+<Button
+  onClick={onComplete}
+  disabled={!config.modelUrl || !config.profilePhotoUrl}
+>
+  Continue
+</Button>
+```
+
+### 2. New Component: `src/components/avatar-3d/ProfilePortraitCanvas.tsx`
+
+A small, dedicated canvas component with head-focused camera settings:
+
+```typescript
+interface ProfilePortraitCanvasProps {
+  avatarUrl: string;
+  size?: number;
+  onCapture?: (dataUrl: string) => void;
+}
+
+// Camera settings optimized for head portrait
+const PORTRAIT_CAMERA = {
+  position: [0, 0.6, 1.3] as const,
+  fov: 25
 };
 
-// In RPMAvatarCanvas - use dynamic camera settings
-<Canvas
-  camera={{ 
-    position: [0, sizeConfig.camera.y, sizeConfig.camera.z], 
-    fov: sizeConfig.camera.fov 
-  }}
-  gl={{ preserveDrawingBuffer: true, antialias: true }}
->
+// Renders just the head/face area for profile photos
+export const ProfilePortraitCanvas: React.FC<ProfilePortraitCanvasProps> = ({
+  avatarUrl,
+  size = 96,
+  onCapture
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Capture function reads from THIS canvas
+  const capture = useCallback(() => {
+    if (canvasRef.current) {
+      const dataUrl = canvasRef.current.toDataURL('image/webp', 0.85);
+      onCapture?.(dataUrl);
+    }
+  }, [onCapture]);
+
+  return (
+    <div style={{ width: size, height: size }} className="rounded-full overflow-hidden">
+      <Canvas
+        ref={canvasRef}
+        camera={PORTRAIT_CAMERA}
+        gl={{ preserveDrawingBuffer: true }}
+      >
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[2, 2, 3]} intensity={0.8} />
+        <Suspense fallback={null}>
+          <RPMAvatar 
+            modelSrc={avatarUrl} 
+            context="profile"
+            position={[0, -0.55, 0]}
+          />
+        </Suspense>
+      </Canvas>
+    </div>
+  );
+};
 ```
 
-### Updated RPMAvatarCanvas Props
+### 3. Update `src/components/game-setup/AvatarPreview.tsx`
+
+Show the captured profile photo (circular) instead of the 3D canvas when available:
 
 ```typescript
-const RPMAvatarCanvas: React.FC<{
-  avatarUrl: string;
-  mood: MoodType;
-  scale: number;
-  context: AvatarContext;
-  sizeConfig: { 
-    width: string; 
-    height: string; 
-    camera: { y: number; z: number; fov: number } 
-  };
-  className?: string;
-  onLoaded?: () => void;
-  onError?: () => void;
-}>
+// In the avatar display section
+<motion.div className="w-32 h-32 rounded-full relative overflow-hidden">
+  {avatarConfig?.profilePhotoUrl ? (
+    // Show captured 2D profile photo
+    <img 
+      src={avatarConfig.profilePhotoUrl}
+      alt={playerName}
+      className="w-full h-full object-cover"
+    />
+  ) : has3DConfig ? (
+    // Fallback to 3D loader
+    <AvatarLoader avatarConfig={avatarConfig || localConfig} ... />
+  ) : (
+    // Gradient placeholder
+    ...
+  )}
+</motion.div>
 ```
 
-## Visual Guide
+## Visual Comparison
 
-**Current (broken)**: Camera at Y=0, Z=2.5 with fixed FOV
-```text
-    Camera [0, 0, 2.5] ---> looks at Y=0
-                    
-    Head    ~1.6y  [not visible]
-    Torso   ~0.8y  [visible] <-- what you see
-    Legs    ~0.0y  [visible]
-```
-
-**Fixed**: Camera raised to Y=0.55, moved closer Z=1.5, narrower FOV
-```text
-    Camera [0, 0.55, 1.5] ---> looks at head area
-                    
-    Head    ~1.6y  [visible] <-- what you see
-    Shoulders      [visible]
-    Torso          [cut off]
-```
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/avatar-3d/AvatarLoader.tsx` | Add camera config per size, pass to Canvas |
+| Before | After |
+|--------|-------|
+| Auto-capture from full-body canvas | Manual capture from portrait canvas |
+| Crops torso/lower body | Captures exactly the head area |
+| Silent capture, often wrong | Preview + confirm workflow |
+| Can continue without photo | Must take photo to continue |
 
 ## Expected Result
 
-After this fix:
-- **Profile/xl size**: Camera focused on head/face
-- **Thumbnail/sm size**: Tight head shot for small displays  
-- **Game/md/lg size**: Upper body visible
-- **Customizer/full size**: Full body for avatar editing
+1. Player creates avatar in RPM creator
+2. Portrait preview updates to show head close-up
+3. Player clicks "Take Profile Photo" 
+4. Preview modal shows the captured headshot
+5. Player confirms or retakes
+6. Photo saved and shown in setup page
+7. Photo used throughout game UI
 
-The avatar portrait preview will now show the face properly centered instead of showing the torso.
+## Technical Notes
+
+- The `ProfilePortraitCanvas` uses `preserveDrawingBuffer: true` to enable screenshot capture
+- Camera position Y=0.6, Z=1.3 with FOV 25 frames just the head
+- Model position Y=-0.55 shifts avatar up so head is centered
+- Photo stored as base64 WebP data URL in `avatarConfig.profilePhotoUrl`
