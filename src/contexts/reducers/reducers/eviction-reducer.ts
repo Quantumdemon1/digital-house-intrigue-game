@@ -18,6 +18,12 @@ export function evictionReducer(state: GameState, action: GameAction): GameState
     case 'EVICT_HOUSEGUEST': {
       const { evicted, toJury } = action.payload;
       
+      // Guard: if evicted is undefined, return state unchanged
+      if (!evicted || !evicted.id) {
+        console.warn('EVICT_HOUSEGUEST called with undefined evicted houseguest');
+        return state;
+      }
+      
       // Update the houseguest's status
       const updatedHouseguestsAfterEviction = state.houseguests.map(guest => {
         if (guest.id === evicted.id) {
