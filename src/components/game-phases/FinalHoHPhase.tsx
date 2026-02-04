@@ -96,8 +96,17 @@ const FinalHoHPhase: React.FC = () => {
     return () => clearTimeout(timer);
   }, [gameState.isSpectatorMode, showResults]);
   
-  const finalHoH = gameState.hohWinner ? 
-    gameState.houseguests.find(hg => hg.id === gameState.hohWinner) : null;
+  // Get the final HoH - could be an ID or object depending on how SET_HOH was dispatched
+  const finalHoH = (() => {
+    if (!gameState.hohWinner) return null;
+    // If hohWinner is a string (ID), look up the houseguest
+    if (typeof gameState.hohWinner === 'string') {
+      return gameState.houseguests.find(hg => hg.id === gameState.hohWinner);
+    }
+    // If it's already an object, use it directly but verify it exists in houseguests
+    const hohId = (gameState.hohWinner as Houseguest)?.id;
+    return hohId ? gameState.houseguests.find(hg => hg.id === hohId) : null;
+  })();
   
   // Spectator mode: auto-select finalist (AI decision)
   useEffect(() => {
@@ -381,7 +390,23 @@ const FinalHoHPhase: React.FC = () => {
   };
   
   // Render finalist selection stage
-  if (currentPart === 'selection' && finalHoH) {
+  if (currentPart === 'selection') {
+    // Must have a final HoH to proceed - if not, show loading/error state
+    if (!finalHoH) {
+      return (
+        <GameCard variant="gold">
+          <GameCardHeader icon={Crown} variant="gold">
+            <GameCardTitle>Final Decision</GameCardTitle>
+            <GameCardDescription>Week {gameState.week} - Waiting for Final HoH...</GameCardDescription>
+          </GameCardHeader>
+          <GameCardContent className="p-8 text-center">
+            <Crown className="h-12 w-12 mx-auto mb-4 text-bb-gold animate-pulse" />
+            <p className="text-muted-foreground">Determining Final Head of Household...</p>
+          </GameCardContent>
+        </GameCard>
+      );
+    }
+    
     const otherFinalists = finalThree.filter(h => h.id !== finalHoH.id);
     
     return (
