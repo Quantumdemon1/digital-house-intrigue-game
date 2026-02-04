@@ -1,6 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Houseguest } from '@/models/houseguest';
+import { config } from '@/config';
 
 interface AIThought {
   houseguestId: string;
@@ -12,9 +13,30 @@ interface AIThought {
 export function useAIThoughts() {
   const [thoughts, setThoughts] = useState<Record<string, AIThought>>({});
   const [isVisible, setIsVisible] = useState<boolean>(true);
+  const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Remove thought for a specific houseguest
+  const removeThought = useCallback((houseguestId: string) => {
+    // Clear any existing timeout
+    if (timeoutRefs.current[houseguestId]) {
+      clearTimeout(timeoutRefs.current[houseguestId]);
+      delete timeoutRefs.current[houseguestId];
+    }
+    
+    setThoughts(prev => {
+      const newThoughts = { ...prev };
+      delete newThoughts[houseguestId];
+      return newThoughts;
+    });
+  }, []);
 
   // Add a new thought for a houseguest
-  const addThought = (houseguest: Houseguest, thought: string, type: 'thought' | 'decision' | 'strategy' = 'thought') => {
+  const addThought = useCallback((houseguest: Houseguest, thought: string, type: 'thought' | 'decision' | 'strategy' = 'thought') => {
+    // Clear any existing timeout for this houseguest
+    if (timeoutRefs.current[houseguest.id]) {
+      clearTimeout(timeoutRefs.current[houseguest.id]);
+    }
+    
     setThoughts(prev => ({
       ...prev,
       [houseguest.id]: {
@@ -24,31 +46,30 @@ export function useAIThoughts() {
         type
       }
     }));
-  };
+    
+    // Auto-remove thought after display time
+    timeoutRefs.current[houseguest.id] = setTimeout(() => {
+      removeThought(houseguest.id);
+    }, config.NPC_THOUGHT_DISPLAY_TIME);
+  }, [removeThought]);
 
   // Add a decision thought
-  const addDecision = (houseguest: Houseguest, thought: string) => {
+  const addDecision = useCallback((houseguest: Houseguest, thought: string) => {
     addThought(houseguest, thought, 'decision');
-  };
+  }, [addThought]);
 
   // Add a strategy thought
-  const addStrategy = (houseguest: Houseguest, thought: string) => {
+  const addStrategy = useCallback((houseguest: Houseguest, thought: string) => {
     addThought(houseguest, thought, 'strategy');
-  };
-
-  // Remove thought for a specific houseguest
-  const removeThought = (houseguestId: string) => {
-    setThoughts(prev => {
-      const newThoughts = { ...prev };
-      delete newThoughts[houseguestId];
-      return newThoughts;
-    });
-  };
+  }, [addThought]);
 
   // Clear all thoughts
-  const clearThoughts = () => {
+  const clearThoughts = useCallback(() => {
+    // Clear all timeouts
+    Object.values(timeoutRefs.current).forEach(timeout => clearTimeout(timeout));
+    timeoutRefs.current = {};
     setThoughts({});
-  };
+  }, []);
 
   // Toggle visibility
   const toggleVisibility = () => {

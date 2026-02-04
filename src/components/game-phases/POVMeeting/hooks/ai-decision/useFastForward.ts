@@ -3,6 +3,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { Houseguest } from '@/models/houseguest';
 import { GameState } from '@/contexts/types/game-context-types';
 import { Logger } from '@/utils/logger';
+import { config } from '@/config';
 
 interface UseFastForwardProps {
   meetingStage: 'initial' | 'selectSaved' | 'selectReplacement' | 'complete';
@@ -34,7 +35,10 @@ export const useFastForward = ({
           // POV holder saves self if nominated
           if (povHolder.isNominated) {
             decision = true;
-            handleVetoDecision(true);
+            // Delay to show decision process
+            setTimeout(() => {
+              handleVetoDecision(true);
+            }, config.NPC_NOMINATION_REVEAL_DELAY);
           } else {
             // Decide based on relationship with nominees
             const relationships = nominees.map(nominee => {
@@ -50,10 +54,16 @@ export const useFastForward = ({
             const bestRelationship = Math.max(...relationships);
             if (bestRelationship > 30) {
               decision = true;
-              handleVetoDecision(true);
+              // Delay to show decision process
+              setTimeout(() => {
+                handleVetoDecision(true);
+              }, config.NPC_NOMINATION_REVEAL_DELAY);
             } else {
               decision = false;
-              handleVetoDecision(false);
+              // Delay to show decision process
+              setTimeout(() => {
+                handleVetoDecision(false);
+              }, config.NPC_NOMINATION_REVEAL_DELAY);
             }
           }
         } catch (error: any) {
