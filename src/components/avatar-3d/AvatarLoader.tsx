@@ -54,13 +54,13 @@ const SIZE_CONFIG: Record<AvatarSize, {
   },
   md: { 
     width: 'w-20', height: 'h-20', scale: 1, 
-    context: 'game',
-    camera: { y: 0.4, z: 2.0, fov: 35 }   // Upper body
+    context: 'profile',
+    camera: { y: 0.55, z: 1.4, fov: 28 }  // Head-focused
   },
   lg: { 
     width: 'w-32', height: 'h-32', scale: 1.2, 
-    context: 'game',
-    camera: { y: 0.4, z: 2.0, fov: 35 }   // Upper body
+    context: 'profile',
+    camera: { y: 0.55, z: 1.5, fov: 30 }  // Head-focused
   },
   xl: { 
     width: 'w-48', height: 'h-48', scale: 1.5, 
