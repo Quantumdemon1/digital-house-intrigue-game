@@ -360,6 +360,56 @@
     background: hsl(var(--game-success));
   }
 
+  /* Enhanced shadow utilities */
+  .shadow-glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  .shadow-glow-gold {
+    box-shadow: var(--shadow-glow-gold);
+  }
+
+  .shadow-glow-danger {
+    box-shadow: var(--shadow-glow-danger);
+  }
+
+  .shadow-glow-success {
+    box-shadow: var(--shadow-glow-success);
+  }
+
+  /* Game status semantic colors */
+  .bg-game-success {
+    background-color: hsl(var(--game-success));
+  }
+
+  .text-game-success {
+    color: hsl(var(--game-success));
+  }
+
+  .bg-game-warning {
+    background-color: hsl(var(--game-warning));
+  }
+
+  .text-game-warning {
+    color: hsl(var(--game-warning));
+  }
+
+  .bg-game-danger {
+    background-color: hsl(var(--game-danger));
+  }
+
+  .text-game-danger {
+    color: hsl(var(--game-danger));
+  }
+
+  .bg-game-info {
+    background-color: hsl(var(--game-info));
+  }
+
+  .text-game-info {
+    color: hsl(var(--game-info));
+  }
+
   /* Vote Counter Animation */
   .vote-counter {
     @apply relative flex flex-col items-center;
