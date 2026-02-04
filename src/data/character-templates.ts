@@ -59,22 +59,22 @@ export const archetypeInfo: Record<Archetype, { label: string; color: string; de
   }
 };
 
-// RPM avatar URLs - verified public avatars from Ready Player Me
-// Using official RPM visage package hosted avatars and documented sample avatars
+// RPM avatar URLs - Currently disabled (set to undefined) to use 2D profile photos
+// RPM avatars require user-created URLs from readyplayer.me - there's no public avatar catalog
+// To enable 3D avatars: Create avatars at demo.readyplayer.me, copy the .glb URL here
 const NPC_RPM_AVATARS: Record<string, string | undefined> = {
-  // Verified working public avatars
-  'alex-chen': 'https://models.readyplayer.me/638df693d72bffc6fa17943c.glb', // Male from RPM animation docs
-  'morgan-lee': 'https://readyplayerme.github.io/visage/male.glb', // From official visage package
-  'jordan-taylor': 'https://models.readyplayer.me/62ea7bc28a6d28ec134bbcce.glb', // Male from 3d-profile-avatars
-  'casey-wilson': 'https://readyplayerme.github.io/visage/half-body.glb', // From official visage package
-  'riley-johnson': 'https://models.readyplayer.me/638df693d72bffc6fa17943c.glb', // Male
-  'jamie-roberts': 'https://readyplayerme.github.io/visage/male.glb', // From visage
-  'quinn-martinez': 'https://readyplayerme.github.io/visage/half-body.glb', // From visage
-  'avery-thompson': 'https://models.readyplayer.me/62ea7bc28a6d28ec134bbcce.glb', // Male
-  'taylor-kim': 'https://models.readyplayer.me/638df693d72bffc6fa17943c.glb', // Male
-  'sam-williams': 'https://readyplayerme.github.io/visage/male.glb', // From visage
-  'blake-peterson': 'https://models.readyplayer.me/62ea7bc28a6d28ec134bbcce.glb', // Male
-  'maya-hassan': 'https://readyplayerme.github.io/visage/half-body.glb', // From visage
+  'alex-chen': undefined,
+  'morgan-lee': undefined,
+  'jordan-taylor': undefined,
+  'casey-wilson': undefined,
+  'riley-johnson': undefined,
+  'jamie-roberts': undefined,
+  'quinn-martinez': undefined,
+  'avery-thompson': undefined,
+  'taylor-kim': undefined,
+  'sam-williams': undefined,
+  'blake-peterson': undefined,
+  'maya-hassan': undefined,
 };
 
 // Helper to create avatar config for NPCs with RPM 3D avatars
