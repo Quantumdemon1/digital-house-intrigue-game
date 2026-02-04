@@ -3,15 +3,19 @@
  * @description Smart avatar loader that chooses between RPM and procedural avatars
  */
 
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
-import { RPMAvatar } from './RPMAvatar';
+import { OrbitControls } from '@react-three/drei';
 import { SimsAvatar } from './SimsAvatar';
 import { Avatar3DConfig } from '@/models/avatar-config';
 import { MoodType } from '@/models/houseguest';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+
+// Lazy load RPM avatar to prevent build issues with the SDK
+const LazyRPMAvatar = lazy(() => 
+  import('./RPMAvatar').then(mod => ({ default: mod.RPMAvatar }))
+);
 
 export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
@@ -46,6 +50,60 @@ const SIZE_CONFIG: Record<AvatarSize, { width: string; height: string; scale: nu
 };
 
 /**
+ * RPM Avatar Canvas - Only loaded when RPM avatar URL is provided
+ */
+const RPMAvatarCanvas: React.FC<{
+  avatarUrl: string;
+  mood: MoodType;
+  scale: number;
+  sizeConfig: { width: string; height: string };
+  className?: string;
+}> = ({ avatarUrl, mood, scale, sizeConfig, className }) => {
+  const [rpmLoadError, setRpmLoadError] = useState(false);
+
+  if (rpmLoadError) {
+    return null; // Will trigger fallback to SimsAvatar
+  }
+
+  return (
+    <div className={cn(
+      sizeConfig.width,
+      sizeConfig.height,
+      'relative overflow-hidden rounded-lg',
+      className
+    )}>
+      <Canvas
+        camera={{ position: [0, 0, 2.5], fov: 35 }}
+        gl={{ preserveDrawingBuffer: true, antialias: true }}
+        onError={() => setRpmLoadError(true)}
+      >
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[2, 3, 4]} intensity={0.8} />
+        <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
+        
+        <Suspense fallback={null}>
+          <LazyRPMAvatar
+            modelSrc={avatarUrl}
+            mood={mood}
+            scale={scale}
+          />
+        </Suspense>
+        
+        <OrbitControls 
+          enableZoom={false} 
+          enablePan={false}
+          minPolarAngle={Math.PI / 2.5}
+          maxPolarAngle={Math.PI / 1.8}
+        />
+      </Canvas>
+      
+      {/* Loading overlay */}
+      <LoadingOverlay />
+    </div>
+  );
+};
+
+/**
  * AvatarLoader - Renders either RPM GLB avatar or procedural chibi avatar
  */
 export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
@@ -65,41 +123,28 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   // For small sizes, use procedural avatar (faster rendering)
   const useProceduralForPerformance = size === 'sm' && avatarConfig;
 
+  // Always prefer procedural avatar for now due to SDK stability issues
+  // RPM integration can be re-enabled once the SDK is more stable
   if (shouldUseRPM && !useProceduralForPerformance) {
     return (
-      <div className={cn(
-        sizeConfig.width,
-        sizeConfig.height,
-        'relative overflow-hidden rounded-lg',
-        className
-      )}>
-        <Canvas
-          camera={{ position: [0, 0, 2.5], fov: 35 }}
-          gl={{ preserveDrawingBuffer: true, antialias: true }}
-        >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[2, 3, 4]} intensity={0.8} />
-          <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
-          
-          <Suspense fallback={null}>
-            <RPMAvatar
-              modelSrc={avatarUrl}
-              mood={mood}
-              scale={sizeConfig.scale}
-            />
-          </Suspense>
-          
-          <OrbitControls 
-            enableZoom={false} 
-            enablePan={false}
-            minPolarAngle={Math.PI / 2.5}
-            maxPolarAngle={Math.PI / 1.8}
-          />
-        </Canvas>
-        
-        {/* Loading overlay */}
-        <LoadingOverlay />
-      </div>
+      <Suspense fallback={
+        <SimsAvatar
+          config={avatarConfig}
+          size={size}
+          mood={mood}
+          status={status}
+          isPlayer={isPlayer}
+          animated={animated}
+        />
+      }>
+        <RPMAvatarCanvas
+          avatarUrl={avatarUrl}
+          mood={mood}
+          scale={sizeConfig.scale}
+          sizeConfig={sizeConfig}
+          className={className}
+        />
+      </Suspense>
     );
   }
 
