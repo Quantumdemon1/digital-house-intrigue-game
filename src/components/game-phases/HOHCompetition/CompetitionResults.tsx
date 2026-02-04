@@ -50,6 +50,7 @@ const CompetitionResults: React.FC<CompetitionResultsProps> = ({
         <div className="flex flex-col items-center pt-4 space-y-4">
           <StatusAvatar 
             name={winner.name}
+            imageUrl={winner.avatarUrl}
             status="hoh"
             size="xl"
             isPlayer={winner.isPlayer}

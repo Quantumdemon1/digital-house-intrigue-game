@@ -58,7 +58,8 @@ const GameSidebar: React.FC = () => {
                   exit={{ opacity: 0, x: 20 }}
                 >
                   <StatusAvatar 
-                    name={hohHouseguest.name} 
+                    name={hohHouseguest.name}
+                    imageUrl={hohHouseguest.avatarUrl}
                     status="hoh" 
                     size="sm" 
                     isPlayer={hohHouseguest.isPlayer}
@@ -80,7 +81,8 @@ const GameSidebar: React.FC = () => {
                   exit={{ opacity: 0, x: 20 }}
                 >
                   <StatusAvatar 
-                    name={povHouseguest.name} 
+                    name={povHouseguest.name}
+                    imageUrl={povHouseguest.avatarUrl}
                     status="pov" 
                     size="sm"
                     isPlayer={povHouseguest.isPlayer}
@@ -113,7 +115,8 @@ const GameSidebar: React.FC = () => {
                         transition={{ delay: index * 0.1 }}
                       >
                         <StatusAvatar 
-                          name={nominee.name} 
+                          name={nominee.name}
+                          imageUrl={nominee.avatarUrl}
                           status="nominee" 
                           size="sm"
                           showBadge={false}

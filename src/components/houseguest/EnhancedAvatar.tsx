@@ -174,31 +174,41 @@ export const EnhancedAvatar: React.FC<EnhancedAvatarProps> = ({
           statusCfg.glowColor
         )}
       >
-        {/* Gradient background */}
-        <div className={cn(
-          'absolute inset-0 bg-gradient-to-br',
-          gradient
-        )} />
-        
-        {/* Lens overlay effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/20" />
-        
-        {/* Scan line effect */}
-        {animated && isActive && (
-          <motion.div
-            className="absolute inset-x-0 h-1/4 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"
-            animate={{ y: ['-100%', '400%'] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+        {houseguest.avatarUrl ? (
+          <img 
+            src={houseguest.avatarUrl} 
+            alt={houseguest.name}
+            className="absolute inset-0 w-full h-full object-cover"
           />
+        ) : (
+          <>
+            {/* Gradient background */}
+            <div className={cn(
+              'absolute inset-0 bg-gradient-to-br',
+              gradient
+            )} />
+            
+            {/* Lens overlay effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/20" />
+            
+            {/* Scan line effect */}
+            {animated && isActive && (
+              <motion.div
+                className="absolute inset-x-0 h-1/4 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"
+                animate={{ y: ['-100%', '400%'] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+              />
+            )}
+            
+            {/* Initials */}
+            <div className={cn(
+              'absolute inset-0 flex items-center justify-center font-bold text-white drop-shadow-lg',
+              sizeConfig.text
+            )}>
+              {initials}
+            </div>
+          </>
         )}
-        
-        {/* Initials */}
-        <div className={cn(
-          'absolute inset-0 flex items-center justify-center font-bold text-white drop-shadow-lg',
-          sizeConfig.text
-        )}>
-          {initials}
-        </div>
       </div>
 
       {/* Status badge */}

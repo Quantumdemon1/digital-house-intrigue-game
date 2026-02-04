@@ -15,6 +15,7 @@ interface StatusAvatarProps {
   showBadge?: boolean;
   className?: string;
   imageUrl?: string;
+  avatarUrl?: string; // Alias for imageUrl to match Houseguest model
   isPlayer?: boolean;
   animated?: boolean;
 }
@@ -98,11 +99,13 @@ export const StatusAvatar: React.FC<StatusAvatarProps> = ({
   showBadge = true,
   className,
   imageUrl,
+  avatarUrl,
   isPlayer = false,
   animated = true
 }) => {
   const config = statusConfig[status];
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const actualImageUrl = imageUrl || avatarUrl;
 
   const hasActiveStatus = status !== 'none' && status !== 'evicted';
 
@@ -145,8 +148,8 @@ export const StatusAvatar: React.FC<StatusAvatarProps> = ({
           isPlayer && 'ring-2 ring-bb-green ring-offset-2 ring-offset-background'
         )}
       >
-        {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover rounded-full" />
+        {actualImageUrl ? (
+          <img src={actualImageUrl} alt={name} className="w-full h-full object-cover rounded-full" />
         ) : (
           <AvatarFallback 
             className={cn(
