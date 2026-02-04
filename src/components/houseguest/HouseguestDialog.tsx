@@ -6,10 +6,13 @@ import { Crown, Award, Target, Heart, HeartOff, MessageCircle, Handshake, Users,
 import { Houseguest } from '@/models/houseguest';
 import { useGame } from '@/contexts/GameContext';
 import HouseguestAvatar from './HouseguestAvatar';
+import RelationshipTierBadge from './RelationshipTierBadge';
 import CustomProgress from '../game-phases/NominationPhase/CustomProgress';
 import ProposeDealDialog from '@/components/deals/ProposeDealDialog';
+import ConversationTopicDialog from '@/components/dialogs/ConversationTopicDialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ConversationTopicType } from '@/models/conversation-topic';
 
 interface HouseguestDialogProps {
   houseguest: Houseguest;
@@ -19,6 +22,7 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
   const { gameState, getRelationship, dispatch } = useGame();
   const player = gameState.houseguests.find(h => h.isPlayer);
   const [dealDialogOpen, setDealDialogOpen] = useState(false);
+  const [talkDialogOpen, setTalkDialogOpen] = useState(false);
   
   // Calculate action availability
   const isSocialPhase = gameState.phase === 'SocialInteraction';
@@ -50,11 +54,23 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
       toast.error('No actions remaining. Wait for Social Phase.');
       return;
     }
+    // Open topic selection dialog
+    setTalkDialogOpen(true);
+  };
+  
+  const handleTopicSelected = (topic: ConversationTopicType, ventTargetId?: string) => {
     dispatch({ 
       type: 'PLAYER_ACTION', 
-      payload: { actionId: 'talk_to', params: { targetId: houseguest.id } }
+      payload: { 
+        actionId: 'talk_to', 
+        params: { 
+          targetId: houseguest.id,
+          conversationType: topic,
+          ventTargetId
+        } 
+      }
     });
-    toast.success(`You had a conversation with ${houseguest.name}`);
+    toast.success(`You talked with ${houseguest.name}`);
   };
 
   const handleBuildRelationship = () => {
@@ -108,7 +124,10 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
         
         {player && !houseguest.isPlayer && (
           <div className="bg-muted p-3 rounded-lg">
-            <h4 className="font-medium text-sm mb-2">Relationship with you:</h4>
+            <h4 className="font-medium text-sm mb-2 flex items-center justify-between">
+              <span>Relationship with you:</span>
+              <RelationshipTierBadge score={relationshipScore} size="sm" />
+            </h4>
             <div className="flex items-center gap-2">
               {relationshipScore > 0 ? (
                 <Heart className="h-4 w-4 text-green-500" />
@@ -206,6 +225,15 @@ const HouseguestDialog: React.FC<HouseguestDialogProps> = ({ houseguest }) => {
           targetId: houseguest.id,
           targetName: houseguest.name
         }}
+      />
+      
+      {/* Conversation Topic Dialog */}
+      <ConversationTopicDialog
+        open={talkDialogOpen}
+        onOpenChange={setTalkDialogOpen}
+        targetId={houseguest.id}
+        targetName={houseguest.name}
+        onTopicSelected={handleTopicSelected}
       />
     </DialogContent>
   );

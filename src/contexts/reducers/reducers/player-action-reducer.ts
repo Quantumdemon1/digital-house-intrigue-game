@@ -53,6 +53,8 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
       case 'talk_to': {
         const playerId = state.houseguests.find(h => h.isPlayer)?.id;
         const targetId = payload.params?.targetId;
+        const conversationType = payload.params?.conversationType; // Optional topic
+        const ventTargetId = payload.params?.ventTargetId; // For vent_about topic
         
         if (playerId && targetId) {
           const isSocialPhase = state.phase === 'SocialInteraction';
@@ -69,15 +71,73 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
             }
           }
           
-          const improvement = Math.floor(Math.random() * 5) + 3; // 3-7 points
-          console.log(`Talk to: ${targetId}, improvement: +${improvement}`);
+          // Calculate relationship change based on conversation topic
+          let improvement: number;
+          let description: string;
+          let isRisky = false;
+          let backfired = false;
+          
+          const targetName = state.houseguests.find(h => h.id === targetId)?.name || 'Unknown';
+          const playerName = state.houseguests.find(h => h.isPlayer)?.name || 'Player';
+          
+          switch (conversationType) {
+            case 'small_talk':
+              improvement = Math.floor(Math.random() * 3) + 3; // 3-5 points
+              description = `${playerName} had a casual chat with ${targetName}`;
+              break;
+            case 'personal_chat':
+              improvement = Math.floor(Math.random() * 4) + 5; // 5-8 points
+              description = `${playerName} shared personal stories with ${targetName}`;
+              break;
+            case 'discuss_game':
+              // Medium risk - 50% chance of full reward, otherwise reduced
+              isRisky = true;
+              if (Math.random() > 0.3) {
+                improvement = Math.floor(Math.random() * 7) + 4; // 4-10 points
+                description = `${playerName} discussed game strategy with ${targetName}`;
+              } else {
+                improvement = -5;
+                backfired = true;
+                description = `${playerName}'s game talk made ${targetName} suspicious`;
+              }
+              break;
+            case 'vent_about':
+              // High risk - check if they're allied with the vent target
+              isRisky = true;
+              if (Math.random() > 0.4) {
+                improvement = Math.floor(Math.random() * 8) + 8; // 8-15 points
+                const ventTargetName = ventTargetId 
+                  ? state.houseguests.find(h => h.id === ventTargetId)?.name || 'another houseguest'
+                  : 'another houseguest';
+                description = `${playerName} vented about ${ventTargetName} with ${targetName}`;
+              } else {
+                improvement = -10;
+                backfired = true;
+                description = `${targetName} didn't appreciate ${playerName}'s gossip`;
+              }
+              break;
+            case 'share_secret':
+              // Highest risk, highest reward
+              isRisky = true;
+              if (Math.random() > 0.35) {
+                improvement = Math.floor(Math.random() * 9) + 10; // 10-18 points
+                description = `${playerName} shared game intel with ${targetName}, building deep trust`;
+              } else {
+                improvement = -15;
+                backfired = true;
+                description = `${targetName} plans to use ${playerName}'s secrets against them`;
+              }
+              break;
+            default:
+              // Legacy behavior - random 3-7 for basic talk
+              improvement = Math.floor(Math.random() * 5) + 3;
+              description = `${playerName} had a conversation with ${targetName}`;
+          }
+          
+          console.log(`Talk to: ${targetId}, topic: ${conversationType || 'default'}, change: ${improvement > 0 ? '+' : ''}${improvement}`);
           
           // Update state with relationship change
           const newState = updateRelationshipInState(state, playerId, targetId, improvement);
-          
-          // Log the event
-          const targetName = state.houseguests.find(h => h.id === targetId)?.name || 'Unknown';
-          const playerName = state.houseguests.find(h => h.isPlayer)?.name || 'Player';
           
           return {
             ...newState,
@@ -86,9 +146,9 @@ export function playerActionReducer(state: GameState, action: GameAction): GameS
               {
                 week: state.week,
                 phase: state.phase,
-                type: 'CONVERSATION',
-                description: `${playerName} had a conversation with ${targetName} (+${improvement} relationship)`,
-                involvedHouseguests: [playerId, targetId],
+                type: backfired ? 'CONVERSATION_BACKFIRED' : 'CONVERSATION',
+                description: `${description} (${improvement > 0 ? '+' : ''}${improvement} relationship)`,
+                involvedHouseguests: ventTargetId ? [playerId, targetId, ventTargetId] : [playerId, targetId],
                 timestamp: Date.now()
               }
             ],
