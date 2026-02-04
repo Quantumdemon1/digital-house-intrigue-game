@@ -14,6 +14,9 @@ export const useAINomination = ({
   confirmNominations,
   setNominees,
 }: UseAINominationProps): UseAINominationReturn => {
+  // Early detection of player HoH - skip all AI processing
+  const isPlayerHoH = hoh?.isPlayer ?? false;
+  
   const [aiProcessed, setAiProcessed] = useState(false);
   const [showAIDecision, setShowAIDecision] = useState(false);
   const [aiDecision, setAIDecision] = useState<AIDecision | null>(null);
@@ -48,12 +51,18 @@ export const useAINomination = ({
     confirmNominations
   });
 
-  // AI nomination logic - immediate execution with cleanup
+  // AI nomination logic - ONLY for AI HoH after ceremony starts
   useEffect(() => {
-    // Only process if HoH exists, HoH is AI, and we haven't already processed
+    // Explicit guard: never run for player HoH
+    if (isPlayerHoH) {
+      return;
+    }
+    
+    // Only process if ceremony has started and conditions are met
     if (
       hoh && 
       !hoh.isPlayer && 
+      isNominating &&  // Must have started ceremony
       !ceremonyComplete && 
       !aiProcessed && 
       !processingRef.current
@@ -71,7 +80,17 @@ export const useAINomination = ({
         clearTimeout(aiTimeoutRef.current);
       }
     };
-  }, [hoh, isNominating, ceremonyComplete, aiProcessed, processAIDecision, processingRef, aiTimeoutRef]);
+  }, [isPlayerHoH, hoh, isNominating, ceremonyComplete, aiProcessed, processAIDecision, processingRef, aiTimeoutRef]);
+
+  // Return early with empty state if player is HoH
+  if (isPlayerHoH) {
+    return { 
+      aiProcessed: false,
+      showAIDecision: false,
+      aiDecision: null,
+      handleCloseAIDecision: () => {}
+    };
+  }
 
   return { 
     aiProcessed,
