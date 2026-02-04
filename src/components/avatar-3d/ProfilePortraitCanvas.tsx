@@ -1,79 +1,51 @@
 /**
  * @file ProfilePortraitCanvas.tsx
- * @description Dedicated head-focused canvas for capturing profile photos
+ * @description Profile photo preview and capture helper (no separate Canvas)
  */
 
-import React, { Suspense, useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { Avatar } from '@readyplayerme/visage';
+import React from 'react';
 import { cn } from '@/lib/utils';
 import { User, Loader2 } from 'lucide-react';
 
-// Camera settings optimized for head portrait
-const PORTRAIT_CAMERA = {
-  position: [0, 0.6, 1.3] as [number, number, number],
-  fov: 25
-};
-
-export interface ProfilePortraitCanvasRef {
-  capture: () => string | null;
-}
-
-interface ProfilePortraitCanvasProps {
-  avatarUrl: string;
+interface ProfilePortraitPreviewProps {
+  profilePhotoUrl?: string;
+  isLoading?: boolean;
   size?: number;
   className?: string;
 }
 
-export const ProfilePortraitCanvas = forwardRef<ProfilePortraitCanvasRef, ProfilePortraitCanvasProps>(({
-  avatarUrl,
-  size = 128,
+/**
+ * Shows the captured profile photo or a placeholder
+ * The actual capture is done from the main AvatarLoader canvas
+ */
+export const ProfilePortraitPreview: React.FC<ProfilePortraitPreviewProps> = ({
+  profilePhotoUrl,
+  isLoading = false,
+  size = 80,
   className
-}, ref) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-
-  // Reset states when URL changes
-  useEffect(() => {
-    setIsLoading(true);
-    setHasError(false);
-    
-    // Set loaded after a delay to allow model to render
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-  }, [avatarUrl]);
-
-  // Expose capture function to parent
-  useImperativeHandle(ref, () => ({
-    capture: () => {
-      const canvas = canvasRef.current;
-      if (!canvas) {
-        console.warn('Portrait canvas not found for capture');
-        return null;
-      }
-      
-      try {
-        const dataUrl = canvas.toDataURL('image/webp', 0.9);
-        return dataUrl;
-      } catch (error) {
-        console.error('Failed to capture portrait:', error);
-        return null;
-      }
-    }
-  }), []);
-
-  if (hasError) {
+}) => {
+  if (isLoading) {
     return (
       <div 
         style={{ width: size, height: size }} 
-        className={cn('rounded-full overflow-hidden bg-muted flex items-center justify-center', className)}
+        className={cn('rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-primary/30', className)}
       >
-        <User className="w-1/3 h-1/3 text-muted-foreground" />
+        <Loader2 className="w-1/3 h-1/3 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (profilePhotoUrl) {
+    return (
+      <div 
+        style={{ width: size, height: size }} 
+        className={cn('rounded-full overflow-hidden border-2 border-primary/30 shadow-lg', className)}
+      >
+        <img 
+          src={profilePhotoUrl} 
+          alt="Profile photo" 
+          className="w-full h-full object-cover"
+        />
       </div>
     );
   }
@@ -81,54 +53,59 @@ export const ProfilePortraitCanvas = forwardRef<ProfilePortraitCanvasRef, Profil
   return (
     <div 
       style={{ width: size, height: size }} 
-      className={cn('rounded-full overflow-hidden bg-gradient-to-b from-muted/50 to-muted relative', className)}
+      className={cn('rounded-full overflow-hidden bg-gradient-to-b from-muted/50 to-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30', className)}
     >
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/80 z-10">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      )}
-      
-      <Canvas
-        ref={canvasRef}
-        camera={{
-          position: PORTRAIT_CAMERA.position,
-          fov: PORTRAIT_CAMERA.fov,
-          near: 0.1,
-          far: 100
-        }}
-        gl={{ 
-          preserveDrawingBuffer: true,
-          antialias: true,
-          alpha: true
-        }}
-        style={{ background: 'transparent' }}
-        onCreated={() => {
-          // Canvas created successfully
-        }}
-      >
-        {/* Lighting optimized for portraits */}
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[2, 2, 3]} intensity={0.9} />
-        <directionalLight position={[-2, 1, 2]} intensity={0.4} />
-        
-        <Suspense fallback={null}>
-          <group position={[0, -0.55, 0]}>
-            <Avatar 
-              modelSrc={avatarUrl}
-              halfBody={false}
-              onLoaded={() => setIsLoading(false)}
-            />
-          </group>
-        </Suspense>
-        
-        {/* Disable controls for static portrait view */}
-        <OrbitControls enabled={false} />
-      </Canvas>
+      <User className="w-1/3 h-1/3 text-muted-foreground/50" />
     </div>
   );
-});
+};
 
-ProfilePortraitCanvas.displayName = 'ProfilePortraitCanvas';
+/**
+ * Captures a head-focused screenshot from a canvas element
+ * Crops to focus on the upper portion (head area)
+ */
+export const captureHeadPortrait = (canvas: HTMLCanvasElement): string | null => {
+  try {
+    const sourceWidth = canvas.width;
+    const sourceHeight = canvas.height;
+    
+    // Focus on upper 60% of the canvas (head area in full-body view)
+    const cropHeight = sourceHeight * 0.6;
+    const cropWidth = sourceWidth * 0.7; // Slightly narrower for portrait
+    const cropX = (sourceWidth - cropWidth) / 2;
+    const cropY = sourceHeight * 0.05; // Start slightly below top
+    
+    // Create output canvas
+    const outputSize = 256;
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = outputSize;
+    outputCanvas.height = outputSize;
+    const ctx = outputCanvas.getContext('2d');
+    
+    if (!ctx) return null;
+    
+    // Fill with gradient background
+    const gradient = ctx.createRadialGradient(
+      outputSize / 2, outputSize / 2, 0,
+      outputSize / 2, outputSize / 2, outputSize / 2
+    );
+    gradient.addColorStop(0, '#1a1a2e');
+    gradient.addColorStop(1, '#16162a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, outputSize, outputSize);
+    
+    // Draw cropped head region, scaled to fill output
+    ctx.drawImage(
+      canvas,
+      cropX, cropY, cropWidth, cropHeight,
+      0, 0, outputSize, outputSize
+    );
+    
+    return outputCanvas.toDataURL('image/webp', 0.9);
+  } catch (error) {
+    console.error('Failed to capture head portrait:', error);
+    return null;
+  }
+};
 
-export default ProfilePortraitCanvas;
+export default ProfilePortraitPreview;

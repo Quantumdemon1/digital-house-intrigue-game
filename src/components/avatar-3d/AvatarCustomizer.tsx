@@ -3,7 +3,7 @@
  * @description Streamlined avatar customization using Ready Player Me with manual profile photo capture
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { User, Sparkles, Globe, RotateCcw, ChevronLeft, ChevronRight, Check, Camera, AlertCircle } from 'lucide-react';
@@ -11,7 +11,7 @@ import { Avatar3DConfig, generateDefaultConfig } from '@/models/avatar-config';
 import { RPMAvatarCreator } from './RPMAvatarCreator';
 import { RPMAvatarCreatorPanel } from './RPMAvatarCreatorPanel';
 import { AvatarLoader } from './AvatarLoader';
-import { ProfilePortraitCanvas, ProfilePortraitCanvasRef } from './ProfilePortraitCanvas';
+import { ProfilePortraitPreview, captureHeadPortrait } from './ProfilePortraitCanvas';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 
@@ -37,9 +37,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [showRPMCreator, setShowRPMCreator] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
-  
-  // Ref for portrait canvas capture
-  const portraitCanvasRef = useRef<ProfilePortraitCanvasRef>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const updateConfig = useCallback((updates: Partial<Avatar3DConfig>) => {
     const newConfig = { ...config, ...updates };
@@ -59,11 +57,14 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
     setIsModelLoaded(false); // Reset load state for new model
     
     // Give model time to load before allowing capture
-    setTimeout(() => setIsModelLoaded(true), 2000);
+    setTimeout(() => setIsModelLoaded(true), 2500);
   }, [updateConfig]);
 
   const handleTakePhoto = useCallback(() => {
-    if (!portraitCanvasRef.current) {
+    // Find the avatar canvas (rendered by AvatarLoader)
+    const canvas = document.querySelector('.sims-turntable canvas') as HTMLCanvasElement;
+    
+    if (!canvas) {
       toast({
         title: "Unable to capture",
         description: "Please wait for the avatar to load fully.",
@@ -72,22 +73,29 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
       return;
     }
 
-    const dataUrl = portraitCanvasRef.current.capture();
-    
-    if (dataUrl && dataUrl.length > 1000) {
-      updateConfig({ profilePhotoUrl: dataUrl });
-      toast({
-        title: "Profile photo saved!",
-        description: "Your avatar photo is ready for the game.",
-        duration: 2000,
-      });
-    } else {
-      toast({
-        title: "Capture failed",
-        description: "Please try again in a moment.",
-        variant: "destructive",
-      });
-    }
+    setIsCapturing(true);
+
+    // Small delay to ensure any animations settle
+    setTimeout(() => {
+      const dataUrl = captureHeadPortrait(canvas);
+      
+      if (dataUrl && dataUrl.length > 1000) {
+        updateConfig({ profilePhotoUrl: dataUrl });
+        toast({
+          title: "Profile photo saved!",
+          description: "Your avatar photo is ready for the game.",
+          duration: 2000,
+        });
+      } else {
+        toast({
+          title: "Capture failed",
+          description: "Please try again in a moment.",
+          variant: "destructive",
+        });
+      }
+      
+      setIsCapturing(false);
+    }, 100);
   }, [updateConfig]);
 
   const handleRetakePhoto = useCallback(() => {
@@ -231,23 +239,13 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
               </h4>
               
               <div className="flex items-center gap-4">
-                {/* Portrait preview canvas - head focused */}
+                {/* Portrait preview */}
                 <div className="relative">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg">
-                    {hasProfilePhoto ? (
-                      <img 
-                        src={config.profilePhotoUrl} 
-                        alt="Profile photo" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <ProfilePortraitCanvas 
-                        ref={portraitCanvasRef}
-                        avatarUrl={config.modelUrl!}
-                        size={80}
-                      />
-                    )}
-                  </div>
+                  <ProfilePortraitPreview 
+                    profilePhotoUrl={config.profilePhotoUrl}
+                    isLoading={isCapturing}
+                    size={80}
+                  />
                   
                   {hasProfilePhoto && (
                     <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
@@ -295,10 +293,10 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                           onClick={handleTakePhoto}
                           size="sm"
                           className="w-full"
-                          disabled={!isModelLoaded}
+                          disabled={!isModelLoaded || isCapturing}
                         >
                           <Camera className="w-4 h-4 mr-2" />
-                          Take Photo
+                          {isCapturing ? 'Capturing...' : 'Take Photo'}
                         </Button>
                       </motion.div>
                     )}
