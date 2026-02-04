@@ -17,6 +17,7 @@ import {
   Position 
 } from './utils/graph-layout';
 import { generateAllianceEnclosure } from './utils/connection-renderer';
+import { cn } from '@/lib/utils';
 
 interface SocialNetworkGraphProps {
   houseguests: Houseguest[];
@@ -28,6 +29,7 @@ interface SocialNetworkGraphProps {
   onEditPerception?: (houseguestId: string) => void;
   showOnlyPlayerConnections?: boolean;
   showOnlyAlliances?: boolean;
+  isMobile?: boolean;
 }
 
 const SocialNetworkGraph: React.FC<SocialNetworkGraphProps> = ({
@@ -39,25 +41,12 @@ const SocialNetworkGraph: React.FC<SocialNetworkGraphProps> = ({
   onHouseguestClick,
   onEditPerception,
   showOnlyPlayerConnections = false,
-  showOnlyAlliances = false
+  showOnlyAlliances = false,
+  isMobile = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  
-  // Track container size
-  useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: rect.width, height: Math.max(rect.height, 500) });
-      }
-    };
-    
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
   
   // Filter active houseguests
   const activeHouseguests = useMemo(() => 
@@ -65,6 +54,27 @@ const SocialNetworkGraph: React.FC<SocialNetworkGraphProps> = ({
     [houseguests]
   );
   
+  // Track container size with minimum dimensions based on houseguest count
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        // Ensure minimum dimensions for good spacing
+        const minHeight = isMobile 
+          ? Math.max(450, activeHouseguests.length * 40)
+          : Math.max(500, activeHouseguests.length * 45);
+        const minWidth = isMobile ? 350 : 500;
+        setContainerSize({ 
+          width: Math.max(rect.width, minWidth), 
+          height: Math.max(rect.height, minHeight) 
+        });
+      }
+    };
+    
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, [activeHouseguests.length, isMobile]);
   // Calculate positions
   const positions = useMemo(() => 
     calculateCircularLayout(activeHouseguests, playerId, containerSize),
@@ -163,7 +173,13 @@ const SocialNetworkGraph: React.FC<SocialNetworkGraphProps> = ({
   }, [playerId, onEditPerception, onHouseguestClick]);
   
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[500px] relative">
+    <div 
+      ref={containerRef} 
+      className={cn(
+        "w-full h-full relative",
+        isMobile ? "min-h-[450px] touch-pan-x touch-pan-y" : "min-h-[500px]"
+      )}
+    >
       <svg
         width={containerSize.width}
         height={containerSize.height}
