@@ -7,7 +7,7 @@
 import { Houseguest } from "./houseguest";
 
 export type PromiseStatus = 'pending' | 'active' | 'fulfilled' | 'broken' | 'expired';
-export type PromiseType = 'safety' | 'vote' | 'final_2' | 'alliance_loyalty' | 'information';
+export type PromiseType = 'safety' | 'vote' | 'final_2' | 'alliance_loyalty' | 'information' | 'veto_use' | 'hoh_protection';
 
 export interface Promise {
   id: string;

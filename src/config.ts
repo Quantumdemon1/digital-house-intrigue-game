@@ -76,6 +76,13 @@ export const config = {
   NPC_NOMINATION_REVEAL_DELAY: 2500,     // Delay when revealing nomination decisions
   NPC_PLAYER_VOTE_DISPLAY_TIME: 2000,    // Time to show player's vote
   
+  // NPC Social Behavior
+  NPC_ALLIANCE_MIN_RELATIONSHIP: 25,     // Min relationship to propose alliance
+  NPC_ALLIANCE_MAX_PER_PERSON: 3,        // Max alliances an NPC will join
+  NPC_PROMISE_THRESHOLD: 30,             // Relationship threshold for promises
+  NPC_ACTION_DELAY_MS: 1500,             // Delay between NPC actions for visibility
+  NPC_ACTIVITY_DISPLAY_TIME: 4000,       // How long to show NPC activity in feed
+  
   // Development flags
   DEBUG_MODE: true,
   SKIP_ANIMATIONS: false,

@@ -6,6 +6,7 @@
 import type { Houseguest } from '@/models/houseguest';
 import type { BigBrotherGame } from '@/models/game/BigBrotherGame';
 import type { RelationshipSystem } from '../relationship-system';
+import type { InteractionTracker } from './interaction-tracker';
 import { config } from '@/config';
 
 /**
@@ -266,17 +267,25 @@ export function getDecisionFactors(
   target: Houseguest,
   game: BigBrotherGame,
   relationshipSystem: RelationshipSystem | null,
-  threatAssessment: (e: Houseguest, t: Houseguest, g: BigBrotherGame) => number
+  threatAssessment: (e: Houseguest, t: Houseguest, g: BigBrotherGame) => number,
+  interactionTracker?: InteractionTracker
 ): DecisionFactors {
   const relationship = relationshipSystem?.getRelationship(evaluator.id, target.id) ?? 0;
   const reciprocity = relationshipSystem?.calculateReciprocityModifier(target.id, evaluator.id) ?? 0;
+
+  // Get recent events impact from interaction tracker
+  let recentEvents = 0;
+  if (interactionTracker) {
+    const summary = interactionTracker.getInteractionSummary(evaluator.id, target.id);
+    recentEvents = summary.recentImpact;
+  }
 
   return {
     relationship,
     threatLevel: threatAssessment(evaluator, target, game),
     allianceLoyalty: calculateAllianceLoyalty(evaluator.id, target.id, game),
     reciprocity,
-    recentEvents: 0, // Will be calculated from memory system
+    recentEvents,
     personalityBias: calculatePersonalityBias(evaluator, target),
     strategicValue: calculateStrategicValue(evaluator, target, game),
     promiseObligations: calculatePromiseObligations(evaluator.id, target.id, game),
@@ -312,6 +321,9 @@ export function calculateDecisionScore(
   // Personality bias (minor influence)
   score += factors.personalityBias;
 
+  // Recent events impact (significant influence)
+  score += factors.recentEvents * 0.8;
+
   // Reciprocity adjustment (if they don't like us back, reduce positive feelings)
   if (factors.relationship > 0 && factors.reciprocity < -0.3) {
     score *= (1 + factors.reciprocity * 0.5); // Reduce positive feelings
@@ -329,12 +341,13 @@ export function rankHouseguestsByScore(
   targets: Houseguest[],
   game: BigBrotherGame,
   relationshipSystem: RelationshipSystem | null,
-  threatAssessment: (e: Houseguest, t: Houseguest, g: BigBrotherGame) => number
+  threatAssessment: (e: Houseguest, t: Houseguest, g: BigBrotherGame) => number,
+  interactionTracker?: InteractionTracker
 ): { houseguest: Houseguest; score: number }[] {
   const weights = getTraitWeights(evaluator.traits);
 
   const ranked = targets.map(target => {
-    const factors = getDecisionFactors(evaluator, target, game, relationshipSystem, threatAssessment);
+    const factors = getDecisionFactors(evaluator, target, game, relationshipSystem, threatAssessment, interactionTracker);
     const score = calculateDecisionScore(factors, weights);
     return { houseguest: target, score };
   });
