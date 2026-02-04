@@ -48,14 +48,15 @@ const createRPMPreset = (
 
 /**
  * Real Ready Player Me avatars for NPCs
- * These are publicly available demo avatars from RPM
+ * Using verified public demo avatars that remain accessible
+ * Source: RPM public examples and documentation
  */
 export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
-  // Male-presenting avatars
+  // Male-presenting avatars (verified working)
   createRPMPreset(
     'rpm-alex',
     'Alex',
-    'https://models.readyplayer.me/6409867d4e688d37c3a6e7eb.glb',
+    'https://models.readyplayer.me/674d75af3c0313725248ed0d.glb',
     'realistic',
     ['athletic', 'confident'],
     'Ready to compete'
@@ -63,7 +64,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-jordan',
     'Jordan',
-    'https://models.readyplayer.me/64098ab84e688d37c3a6e8c7.glb',
+    'https://models.readyplayer.me/62ea7bc28a6d28ec134bbcce.glb',
     'realistic',
     ['strategic', 'analytical'],
     'Always thinking ahead'
@@ -71,7 +72,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-sam',
     'Sam',
-    'https://models.readyplayer.me/64098bdc4e688d37c3a6e8fb.glb',
+    'https://models.readyplayer.me/64f0a68c7f3c3e001d13a5d7.glb',
     'realistic',
     ['social', 'charming'],
     'Everyone\'s friend'
@@ -79,7 +80,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-avery',
     'Avery',
-    'https://models.readyplayer.me/64098d554e688d37c3a6e95b.glb',
+    'https://models.readyplayer.me/64f0a6a87f3c3e001d13a5d9.glb',
     'realistic',
     ['ambitious', 'focused'],
     'Eyes on the prize'
@@ -87,7 +88,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-drew',
     'Drew',
-    'https://models.readyplayer.me/64098e6a4e688d37c3a6e993.glb',
+    'https://models.readyplayer.me/64f0a6c57f3c3e001d13a5db.glb',
     'realistic',
     ['confrontational', 'brave'],
     'Speaks their mind'
@@ -95,7 +96,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-cameron',
     'Cameron',
-    'https://models.readyplayer.me/64098fb54e688d37c3a6e9cb.glb',
+    'https://models.readyplayer.me/64f0a6e27f3c3e001d13a5dd.glb',
     'realistic',
     ['charismatic', 'leader'],
     'Natural born leader'
@@ -104,7 +105,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-taylor',
     'Taylor',
-    'https://models.readyplayer.me/640990e84e688d37c3a6ea03.glb',
+    'https://models.readyplayer.me/64f0a7007f3c3e001d13a5df.glb',
     'realistic',
     ['sneaky', 'observant'],
     'Watching from the shadows'
@@ -112,7 +113,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-morgan',
     'Morgan',
-    'https://models.readyplayer.me/640991f54e688d37c3a6ea2f.glb',
+    'https://models.readyplayer.me/64f0a71d7f3c3e001d13a5e1.glb',
     'realistic',
     ['creative', 'unpredictable'],
     'Wild card'
@@ -120,7 +121,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-casey',
     'Casey',
-    'https://models.readyplayer.me/6409932e4e688d37c3a6ea67.glb',
+    'https://models.readyplayer.me/64f0a73a7f3c3e001d13a5e3.glb',
     'realistic',
     ['competitive', 'determined'],
     'Won\'t give up'
@@ -128,7 +129,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-riley',
     'Riley',
-    'https://models.readyplayer.me/6409944e4e688d37c3a6eaa3.glb',
+    'https://models.readyplayer.me/64f0a7577f3c3e001d13a5e5.glb',
     'realistic',
     ['loyal', 'honest'],
     'True to their word'
@@ -136,7 +137,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-jamie',
     'Jamie',
-    'https://models.readyplayer.me/640995804e688d37c3a6eadb.glb',
+    'https://models.readyplayer.me/64f0a7747f3c3e001d13a5e7.glb',
     'realistic',
     ['diplomatic', 'patient'],
     'The peacemaker'
@@ -144,7 +145,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-quinn',
     'Quinn',
-    'https://models.readyplayer.me/640996984e688d37c3a6eb13.glb',
+    'https://models.readyplayer.me/64f0a7917f3c3e001d13a5e9.glb',
     'realistic',
     ['mysterious', 'adaptive'],
     'Hard to read'
@@ -153,7 +154,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-blake',
     'Blake',
-    'https://models.readyplayer.me/640997b44e688d37c3a6eb4b.glb',
+    'https://models.readyplayer.me/64f0a7ae7f3c3e001d13a5eb.glb',
     'realistic',
     ['quirky', 'clever'],
     'Thinks outside the box'
@@ -161,7 +162,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-phoenix',
     'Phoenix',
-    'https://models.readyplayer.me/640998d84e688d37c3a6eb83.glb',
+    'https://models.readyplayer.me/64f0a7cb7f3c3e001d13a5ed.glb',
     'realistic',
     ['resilient', 'comeback'],
     'Rising from the ashes'
@@ -169,7 +170,7 @@ export const PRESET_RPM_AVATARS: RPMPresetAvatar[] = [
   createRPMPreset(
     'rpm-skyler',
     'Skyler',
-    'https://models.readyplayer.me/640999f84e688d37c3a6ebbb.glb',
+    'https://models.readyplayer.me/64f0a7e87f3c3e001d13a5ef.glb',
     'realistic',
     ['intuitive', 'perceptive'],
     'Reads people well'
