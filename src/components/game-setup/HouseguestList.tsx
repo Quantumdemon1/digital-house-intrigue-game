@@ -74,19 +74,26 @@ const HouseguestList: React.FC<HouseguestListProps> = ({
                     'p-0.5 shadow-lg'
                   )}>
                     <div className="w-full h-full rounded-full overflow-hidden ring-1 ring-amber-200/30">
-                      {guest.imageUrl && guest.imageUrl !== '/placeholder.svg' ? (
-                        <img
-                          src={guest.imageUrl}
-                          alt={guest.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center">
-                          <span className="text-xl font-bold text-white">
-                            {guest.name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        // Get the best available avatar image
+                        const avatarImage = guest.avatarConfig?.profilePhotoUrl 
+                          || guest.avatarUrl 
+                          || guest.imageUrl;
+                        
+                        return avatarImage && avatarImage !== '/placeholder.svg' ? (
+                          <img
+                            src={avatarImage}
+                            alt={guest.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center">
+                            <span className="text-xl font-bold text-white">
+                              {guest.name.charAt(0)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
