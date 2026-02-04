@@ -70,9 +70,9 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     thumbnail: '/avatars/thumbnails/ren.webp',
     style: 'anime-male',
     traits: ['competitive', 'honest'],
-    description: 'Direct and competitive',
+    description: 'VRM 1.0 sample humanoid character',
     license: 'CC0',
-    isPlaceholder: true
+    isPlaceholder: false
   },
   {
     id: 'vrm-miku',
@@ -81,9 +81,9 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     thumbnail: '/avatars/thumbnails/miku.webp',
     style: 'fantasy',
     traits: ['creative', 'unpredictable'],
-    description: 'Whimsical and creative spirit',
+    description: 'Orion-style VRM avatar with unique style',
     license: 'CC0',
-    isPlaceholder: true
+    isPlaceholder: false
   },
   {
     id: 'vrm-kai',
@@ -92,16 +92,16 @@ export const PRESET_VRM_AVATARS: VRMPresetAvatar[] = [
     thumbnail: '/avatars/thumbnails/kai.webp',
     style: 'modern',
     traits: ['social', 'charming'],
-    description: 'Natural social butterfly',
+    description: 'Cryptovoxels-inspired blocky avatar',
     license: 'CC0',
-    isPlaceholder: true
+    isPlaceholder: false
   },
   {
     id: 'vrm-hana',
     name: 'Hana',
     url: '/avatars/vrm/hana.vrm',
     thumbnail: '/avatars/thumbnails/hana.webp',
-    style: 'chibi',
+    style: 'anime-female',
     traits: ['cute', 'sneaky'],
     description: 'Don\'t underestimate the cute ones',
     license: 'CC0',
