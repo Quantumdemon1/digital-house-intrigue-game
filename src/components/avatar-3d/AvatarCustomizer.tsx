@@ -3,15 +3,16 @@
  * @description Streamlined avatar customization using Ready Player Me only
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { User, Sparkles, Globe, RotateCcw, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { User, Sparkles, Globe, RotateCcw, ChevronLeft, ChevronRight, Check, Camera, RefreshCw } from 'lucide-react';
 import { Avatar3DConfig, generateDefaultConfig } from '@/models/avatar-config';
 import { RPMAvatarCreator } from './RPMAvatarCreator';
 import { RPMAvatarCreatorPanel } from './RPMAvatarCreatorPanel';
 import { AvatarLoader } from './AvatarLoader';
-import { AvatarScreenshotCapture } from './AvatarScreenshotCapture';
+import { captureAvatarScreenshot } from './AvatarScreenshotCapture';
+import { toast } from '@/hooks/use-toast';
 
 interface AvatarCustomizerProps {
   initialConfig?: Avatar3DConfig;
@@ -34,6 +35,11 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [showRPMCreator, setShowRPMCreator] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  
+  // Track avatar URL for auto-capture
+  const lastCapturedUrlRef = useRef<string | null>(null);
+  const captureTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const updateConfig = useCallback((updates: Partial<Avatar3DConfig>) => {
     const newConfig = { ...config, ...updates };
@@ -41,18 +47,79 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
     onChange(newConfig);
   }, [config, onChange]);
 
+  // Auto-capture profile photo when avatar changes
+  const performAutoCapture = useCallback(() => {
+    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+    if (!canvas) {
+      console.warn('Canvas not found for auto-capture');
+      return;
+    }
+
+    setIsCapturing(true);
+
+    const dataUrl = captureAvatarScreenshot(canvas, {
+      width: 256,
+      height: 256,
+      focusTop: true,
+      zoomFactor: 1.3,
+      verticalOffset: 0.05,
+    });
+
+    if (dataUrl && dataUrl.length > 1000) {
+      updateConfig({ profilePhotoUrl: dataUrl });
+      lastCapturedUrlRef.current = config.modelUrl || null;
+      
+      toast({
+        title: "Profile photo captured!",
+        description: "Click 'Retake' below to capture a new one.",
+        duration: 3000,
+      });
+    }
+
+    setIsCapturing(false);
+  }, [config.modelUrl, updateConfig]);
+
+  // Trigger auto-capture when avatar URL changes
+  useEffect(() => {
+    if (!config.modelUrl || config.modelUrl === lastCapturedUrlRef.current) {
+      return;
+    }
+
+    // Clear any existing timeout
+    if (captureTimeoutRef.current) {
+      clearTimeout(captureTimeoutRef.current);
+    }
+
+    // Wait for avatar to load and render before capturing
+    captureTimeoutRef.current = setTimeout(() => {
+      performAutoCapture();
+    }, 2500); // Give avatar time to load
+
+    return () => {
+      if (captureTimeoutRef.current) {
+        clearTimeout(captureTimeoutRef.current);
+      }
+    };
+  }, [config.modelUrl, performAutoCapture]);
+
   const handleRPMAvatarCreated = useCallback((avatarUrl: string, thumbnailUrl?: string) => {
+    // Reset the captured URL to trigger new auto-capture
+    lastCapturedUrlRef.current = null;
+    
     updateConfig({
       modelSource: 'ready-player-me',
       modelUrl: avatarUrl,
       presetId: undefined,
-      thumbnailUrl: thumbnailUrl
+      thumbnailUrl: thumbnailUrl,
+      profilePhotoUrl: undefined, // Clear old photo, will be auto-captured
     });
   }, [updateConfig]);
 
-  const handleProfilePhotoCaptured = useCallback((dataUrl: string) => {
-    updateConfig({ profilePhotoUrl: dataUrl });
-  }, [updateConfig]);
+  const handleRetakePhoto = useCallback(() => {
+    // Force re-capture by clearing the last captured URL
+    lastCapturedUrlRef.current = null;
+    performAutoCapture();
+  }, [performAutoCapture]);
 
   const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: { delta: { x: number } }) => {
     setRotation(r => r + info.delta.x * 0.5);
@@ -176,23 +243,50 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             </motion.button>
           )}
 
-          {/* Profile Photo Capture Button */}
+          {/* Profile Photo Status & Retake Button */}
           {hasValidAvatar && (
             <div className="mt-4 flex flex-col items-center gap-2">
-              <AvatarScreenshotCapture
-                canvasSelector="canvas"
-                onCapture={handleProfilePhotoCaptured}
-              />
-              
-              {hasProfilePhoto && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 text-xs text-primary"
-                >
-                  <Check className="w-3 h-3" />
-                  Profile photo saved
-                </motion.div>
+              {isCapturing ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Capturing profile photo...
+                </div>
+              ) : hasProfilePhoto ? (
+                <>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-sm text-primary"
+                  >
+                    <Check className="w-4 h-4" />
+                    Profile photo saved
+                  </motion.div>
+                  
+                  {/* Mini preview of captured photo */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/30">
+                      <img 
+                        src={config.profilePhotoUrl} 
+                        alt="Profile preview" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    
+                    <motion.button
+                      onClick={handleRetakePhoto}
+                      className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-sm flex items-center gap-2 hover:bg-secondary/80 transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Camera className="w-4 h-4" />
+                      Retake
+                    </motion.button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-muted-foreground">
+                  Profile photo will be captured automatically...
+                </div>
               )}
             </div>
           )}

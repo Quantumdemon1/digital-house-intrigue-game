@@ -16,15 +16,29 @@ interface AvatarScreenshotCaptureProps {
   className?: string;
 }
 
+export interface ScreenshotOptions {
+  width?: number;
+  height?: number;
+  focusTop?: boolean;
+  zoomFactor?: number;
+  verticalOffset?: number;
+}
+
 /**
- * Captures the Three.js canvas as a profile photo
+ * Captures the Three.js canvas as a profile photo with face-focused framing
  */
 export const captureAvatarScreenshot = (
   canvas: HTMLCanvasElement,
-  options?: { width?: number; height?: number; focusTop?: boolean }
+  options?: ScreenshotOptions
 ): string | null => {
   try {
-    const { width = 256, height = 256, focusTop = true } = options || {};
+    const { 
+      width = 256, 
+      height = 256, 
+      focusTop = true,
+      zoomFactor = 1.0,
+      verticalOffset = 0.1
+    } = options || {};
     
     // Create cropping canvas
     const cropCanvas = document.createElement('canvas');
@@ -34,10 +48,24 @@ export const captureAvatarScreenshot = (
     
     if (!ctx) return null;
     
-    // Calculate crop region (square, centered, focus on upper half for face)
-    const sourceSize = Math.min(canvas.width, canvas.height);
+    // Calculate crop region with zoom and offset for better face framing
+    const baseSize = Math.min(canvas.width, canvas.height);
+    const sourceSize = baseSize / zoomFactor; // Zoom in by reducing source area
+    
+    // Center horizontally
     const sx = (canvas.width - sourceSize) / 2;
-    const sy = focusTop ? 0 : (canvas.height - sourceSize) / 2;
+    
+    // Vertical positioning - move up to focus on face/head
+    let sy: number;
+    if (focusTop) {
+      // Offset from top to capture head/shoulders area
+      sy = canvas.height * verticalOffset;
+    } else {
+      sy = (canvas.height - sourceSize) / 2;
+    }
+    
+    // Clamp sy to valid range
+    sy = Math.max(0, Math.min(sy, canvas.height - sourceSize));
     
     // Fill with transparent background
     ctx.fillStyle = 'transparent';
@@ -46,7 +74,7 @@ export const captureAvatarScreenshot = (
     // Draw cropped region
     ctx.drawImage(
       canvas,
-      sx, sy, sourceSize, sourceSize,  // Source crop
+      sx, sy, sourceSize, sourceSize,  // Source crop (zoomed/offset)
       0, 0, width, height               // Destination
     );
     

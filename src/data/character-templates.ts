@@ -1,5 +1,6 @@
 import { PersonalityTrait } from '@/models/houseguest';
-import { Avatar3DConfig, generateAvatarConfig } from '@/models/avatar-config';
+import { Avatar3DConfig } from '@/models/avatar-config';
+import { PRESET_RPM_AVATARS, getRPMPresetByIndex } from './preset-rpm-avatars';
 
 // Import generated avatars (2D fallback)
 import alexChenAvatar from '@/assets/avatars/alex-chen.jpg';
@@ -59,6 +60,18 @@ export const archetypeInfo: Record<Archetype, { label: string; color: string; de
   }
 };
 
+// Helper to create avatar config with RPM model
+const createRPMAvatarConfig = (index: number, legacyConfig: Partial<Avatar3DConfig>): Avatar3DConfig => {
+  const preset = getRPMPresetByIndex(index);
+  return {
+    ...legacyConfig,
+    modelSource: 'ready-player-me',
+    modelUrl: preset.url,
+    thumbnailUrl: preset.thumbnail,
+    profilePhotoUrl: preset.thumbnail, // Use thumbnail as profile photo
+  } as Avatar3DConfig;
+};
+
 export const characterTemplates: CharacterTemplate[] = [
   {
     id: 'alex-chen',
@@ -71,22 +84,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Strategic', 'Social'],
     archetype: 'strategist',
     tagline: 'The Mastermind',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(0, {
       bodyType: 'slim',
       height: 'average',
       skinTone: '#E8C4A0',
-      headShape: 'oval',
-      eyeShape: 'almond',
-      eyeColor: '#3E2723',
-      noseType: 'medium',
-      mouthType: 'thin',
-      hairStyle: 'short',
-      hairColor: '#1A1A1A',
-      topStyle: 'blazer',
-      topColor: '#2C3E50',
-      bottomStyle: 'pants',
-      bottomColor: '#1A1A1A'
-    }
+    })
   },
   {
     id: 'morgan-lee',
@@ -99,22 +101,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Competitive', 'Loyal'],
     archetype: 'competitor',
     tagline: 'The Athlete',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(1, {
       bodyType: 'athletic',
       height: 'tall',
       skinTone: '#C4956A',
-      headShape: 'square',
-      eyeShape: 'wide',
-      eyeColor: '#5D4037',
-      noseType: 'medium',
-      mouthType: 'full',
-      hairStyle: 'buzz',
-      hairColor: '#2C1810',
-      topStyle: 'tanktop',
-      topColor: '#E91E63',
-      bottomStyle: 'shorts',
-      bottomColor: '#1A1A1A'
-    }
+    })
   },
   {
     id: 'jordan-taylor',
@@ -127,22 +118,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Social', 'Sneaky'],
     archetype: 'socialite',
     tagline: 'The Charmer',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(2, {
       bodyType: 'average',
       height: 'average',
       skinTone: '#D4A574',
-      headShape: 'heart',
-      eyeShape: 'almond',
-      eyeColor: '#1565C0',
-      noseType: 'small',
-      mouthType: 'wide',
-      hairStyle: 'medium',
-      hairColor: '#3E2723',
-      topStyle: 'tshirt',
-      topColor: '#9C27B0',
-      bottomStyle: 'jeans',
-      bottomColor: '#1565C0'
-    }
+    })
   },
   {
     id: 'casey-wilson',
@@ -155,22 +135,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Social', 'Strategic'],
     archetype: 'wildcard',
     tagline: 'The Party Animal',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(3, {
       bodyType: 'average',
       height: 'short',
       skinTone: '#FFD9B3',
-      headShape: 'round',
-      eyeShape: 'round',
-      eyeColor: '#2E7D32',
-      noseType: 'button',
-      mouthType: 'wide',
-      hairStyle: 'curly',
-      hairColor: '#FF8F00',
-      topStyle: 'tshirt',
-      topColor: '#FF5722',
-      bottomStyle: 'jeans',
-      bottomColor: '#3F51B5'
-    }
+    })
   },
   {
     id: 'riley-johnson',
@@ -183,22 +152,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Analytical', 'Strategic'],
     archetype: 'underdog',
     tagline: 'The Brainiac',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(4, {
       bodyType: 'slim',
       height: 'average',
       skinTone: '#FFECD2',
-      headShape: 'oval',
-      eyeShape: 'narrow',
-      eyeColor: '#616161',
-      noseType: 'medium',
-      mouthType: 'thin',
-      hairStyle: 'short',
-      hairColor: '#5D4037',
-      topStyle: 'hoodie',
-      topColor: '#607D8B',
-      bottomStyle: 'jeans',
-      bottomColor: '#37474F'
-    }
+    })
   },
   {
     id: 'jamie-roberts',
@@ -211,22 +169,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Emotional', 'Strategic'],
     archetype: 'socialite',
     tagline: 'The Caregiver',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(5, {
       bodyType: 'average',
       height: 'average',
       skinTone: '#E8C4A0',
-      headShape: 'heart',
-      eyeShape: 'wide',
-      eyeColor: '#1565C0',
-      noseType: 'small',
-      mouthType: 'full',
-      hairStyle: 'ponytail',
-      hairColor: '#8D6E63',
-      topStyle: 'tshirt',
-      topColor: '#4CAF50',
-      bottomStyle: 'pants',
-      bottomColor: '#2196F3'
-    }
+    })
   },
   {
     id: 'quinn-martinez',
@@ -239,22 +186,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Confrontational', 'Social'],
     archetype: 'wildcard',
     tagline: 'The Influencer',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(6, {
       bodyType: 'slim',
       height: 'tall',
       skinTone: '#D4A574',
-      headShape: 'oval',
-      eyeShape: 'almond',
-      eyeColor: '#F57F17',
-      noseType: 'small',
-      mouthType: 'full',
-      hairStyle: 'long',
-      hairColor: '#1A1A1A',
-      topStyle: 'dress',
-      topColor: '#E91E63',
-      bottomStyle: 'skirt',
-      bottomColor: '#E91E63'
-    }
+    })
   },
   {
     id: 'avery-thompson',
@@ -267,22 +203,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Loyal', 'Competitive'],
     archetype: 'competitor',
     tagline: 'The Protector',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(7, {
       bodyType: 'stocky',
       height: 'tall',
       skinTone: '#6B4423',
-      headShape: 'square',
-      eyeShape: 'narrow',
-      eyeColor: '#3E2723',
-      noseType: 'large',
-      mouthType: 'wide',
-      hairStyle: 'buzz',
-      hairColor: '#1A1A1A',
-      topStyle: 'tshirt',
-      topColor: '#1A237E',
-      bottomStyle: 'pants',
-      bottomColor: '#1A1A1A'
-    }
+    })
   },
   {
     id: 'taylor-kim',
@@ -295,22 +220,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Competitive', 'Confrontational'],
     archetype: 'competitor',
     tagline: 'The Firebrand',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(8, {
       bodyType: 'athletic',
       height: 'average',
       skinTone: '#E8C4A0',
-      headShape: 'oval',
-      eyeShape: 'almond',
-      eyeColor: '#3E2723',
-      noseType: 'small',
-      mouthType: 'thin',
-      hairStyle: 'ponytail',
-      hairColor: '#1A1A1A',
-      topStyle: 'tanktop',
-      topColor: '#F44336',
-      bottomStyle: 'shorts',
-      bottomColor: '#1A1A1A'
-    }
+    })
   },
   {
     id: 'sam-williams',
@@ -323,22 +237,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Strategic', 'Loyal'],
     archetype: 'strategist',
     tagline: 'The Leader',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(9, {
       bodyType: 'stocky',
       height: 'average',
       skinTone: '#A67B5B',
-      headShape: 'round',
-      eyeShape: 'wide',
-      eyeColor: '#5D4037',
-      noseType: 'large',
-      mouthType: 'full',
-      hairStyle: 'short',
-      hairColor: '#2C1810',
-      topStyle: 'blazer',
-      topColor: '#795548',
-      bottomStyle: 'pants',
-      bottomColor: '#3E2723'
-    }
+    })
   },
   {
     id: 'blake-peterson',
@@ -351,22 +254,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Analytical', 'Sneaky'],
     archetype: 'underdog',
     tagline: 'The Shadow',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(10, {
       bodyType: 'slim',
       height: 'tall',
       skinTone: '#FFD9B3',
-      headShape: 'oval',
-      eyeShape: 'narrow',
-      eyeColor: '#616161',
-      noseType: 'medium',
-      mouthType: 'thin',
-      hairStyle: 'medium',
-      hairColor: '#D7CCC8',
-      topStyle: 'hoodie',
-      topColor: '#263238',
-      bottomStyle: 'jeans',
-      bottomColor: '#37474F'
-    }
+    })
   },
   {
     id: 'maya-hassan',
@@ -379,22 +271,11 @@ export const characterTemplates: CharacterTemplate[] = [
     traits: ['Strategic', 'Social'],
     archetype: 'strategist',
     tagline: 'The Diplomat',
-    avatar3DConfig: {
+    avatar3DConfig: createRPMAvatarConfig(11, {
       bodyType: 'slim',
       height: 'average',
       skinTone: '#C4956A',
-      headShape: 'heart',
-      eyeShape: 'almond',
-      eyeColor: '#3E2723',
-      noseType: 'small',
-      mouthType: 'full',
-      hairStyle: 'long',
-      hairColor: '#1A1A1A',
-      topStyle: 'blazer',
-      topColor: '#880E4F',
-      bottomStyle: 'pants',
-      bottomColor: '#1A1A1A'
-    }
+    })
   }
 ];
 
