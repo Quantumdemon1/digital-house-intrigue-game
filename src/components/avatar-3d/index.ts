@@ -24,6 +24,8 @@ export { RPMAvatar } from './RPMAvatar';
 // Thumbnail and screenshot utilities
 export { AvatarThumbnail, captureAvatarThumbnail, ThumbnailCapture, useAvatarThumbnail } from './AvatarThumbnail';
 export { AvatarScreenshotCapture, captureAvatarScreenshot } from './AvatarScreenshotCapture';
+export type { ScreenshotOptions } from './AvatarScreenshotCapture';
+export { AutoCaptureProfilePhoto } from './AutoCaptureProfilePhoto';
 export { AvatarProfilePicture } from './AvatarProfilePicture';
 
 // Body parts (for legacy/Sims avatar)

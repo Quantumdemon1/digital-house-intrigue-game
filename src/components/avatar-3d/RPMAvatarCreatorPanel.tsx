@@ -85,6 +85,7 @@ export const RPMAvatarCreatorPanel: React.FC<RPMAvatarCreatorPanelProps> = ({
   const [activeTab, setActiveTab] = useState<TabValue>('gallery');
   const [isCreatorLoading, setIsCreatorLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | undefined>();
   const creatorContainerRef = useRef<HTMLDivElement>(null);
   const iframeLoadedRef = useRef(false);
 
@@ -158,6 +159,7 @@ export const RPMAvatarCreatorPanel: React.FC<RPMAvatarCreatorPanelProps> = ({
 
   // Handle selection from gallery
   const handleGallerySelect = useCallback((avatar: SavedRPMAvatar) => {
+    setSelectedAvatarUrl(avatar.url);
     onAvatarSelected(avatar.url, avatar.thumbnail);
   }, [onAvatarSelected]);
 
@@ -223,6 +225,7 @@ export const RPMAvatarCreatorPanel: React.FC<RPMAvatarCreatorPanelProps> = ({
             <div className="space-y-4">
               <RPMAvatarGallery
                 avatars={avatars}
+                selectedUrl={selectedAvatarUrl}
                 onSelect={handleGallerySelect}
                 onDelete={(id) => setDeleteConfirmId(id)}
               />
