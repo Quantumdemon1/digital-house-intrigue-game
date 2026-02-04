@@ -48,8 +48,8 @@ export const useCompetitionLogic = () => {
         return;
       }
 
-      // Process the results and get positions
-      const positions = processResults(competitionWinner, activeHouseguests);
+      // Process the results and get positions (pass competition type for stat-based scoring)
+      const positions = processResults(competitionWinner, activeHouseguests, type);
       
       // Update state with results in proper sequence to prevent race conditions
       setTimeout(() => {

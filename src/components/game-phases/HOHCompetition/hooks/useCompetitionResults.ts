@@ -1,7 +1,7 @@
 
 import { useToast } from '@/components/ui/use-toast';
 import { useGame } from '@/contexts/GameContext';
-import { Houseguest } from '@/models/houseguest';
+import { Houseguest, CompetitionType } from '@/models/houseguest';
 import { useRef } from 'react';
 
 /**
@@ -17,7 +17,8 @@ export const useCompetitionResults = () => {
    */
   const processResults = (
     competitionWinner: Houseguest,
-    activeHouseguests: Houseguest[]
+    activeHouseguests: Houseguest[],
+    competitionType?: CompetitionType
   ) => {
     if (processingRef.current) {
       logger?.warn("Already processing results, ignoring duplicate call");
@@ -27,24 +28,36 @@ export const useCompetitionResults = () => {
     processingRef.current = true;
     logger?.info(`Competition winner selected: ${competitionWinner.name}`);
 
-    // Generate random results
-    const positions = activeHouseguests.map(guest => ({
-      name: guest.name,
-      id: guest.id,
-      position: Math.random() // random value for sorting
-    })).sort((a, b) => a.position - b.position).map((guest, index) => ({
-      name: guest.name,
-      id: guest.id,
+    // Generate score-based results instead of random
+    const type = competitionType || 'mental';
+    const scoredResults = activeHouseguests.map(guest => {
+      let score = 1;
+      
+      switch (type) {
+        case 'physical': score = guest.stats.physical; break;
+        case 'mental': score = guest.stats.mental; break;
+        case 'endurance': score = guest.stats.endurance; break;
+        case 'social': score = guest.stats.social; break;
+        case 'luck': score = guest.stats.luck + 5; break;
+      }
+      // Add randomness to make results more varied
+      score *= (0.75 + Math.random() * 0.5);
+      
+      return { id: guest.id, name: guest.name, score };
+    }).sort((a, b) => b.score - a.score);
+
+    // Ensure the designated winner is at the top
+    const winnerIdx = scoredResults.findIndex(r => r.id === competitionWinner.id);
+    if (winnerIdx > 0) {
+      [scoredResults[0], scoredResults[winnerIdx]] = [scoredResults[winnerIdx], scoredResults[0]];
+    }
+
+    // Convert to positions - winner guaranteed to have position: 1
+    const positions = scoredResults.map((result, index) => ({
+      name: result.name,
+      id: result.id,
       position: index + 1
     }));
-
-    // Make sure the winner is in first place
-    const winnerIndex = positions.findIndex(p => p.id === competitionWinner.id);
-    if (winnerIndex > 0) {
-      const temp = positions[0];
-      positions[0] = positions[winnerIndex];
-      positions[winnerIndex] = temp;
-    }
     
     logger?.info("Setting competition results for display");
     
