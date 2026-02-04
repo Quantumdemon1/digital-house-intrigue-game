@@ -97,16 +97,17 @@ const NominationPhase: React.FC = () => {
 
   // Redirect to final stages if not enough houseguests
   useEffect(() => {
-    const activeHouseguests = gameState.houseguests.filter(h => h.status === 'Active');
+    const activeCount = gameState.houseguests.filter(h => h.status === 'Active').length;
     
     // If only 2 houseguests, go to Jury Questioning
-    if (activeHouseguests.length <= 2) {
+    if (activeCount <= 2) {
       dispatch({ type: 'SET_PHASE', payload: 'JuryQuestioning' });
       return;
     }
     
-    // If 3 or fewer houseguests, shouldn't be in Nomination - redirect to Final HoH
-    if (activeHouseguests.length <= 3 && !gameState.isFinalStage) {
+    // If exactly 3 houseguests, redirect to Final HoH
+    // Note: 4 houseguests (Final 4) should run a normal nomination week
+    if (activeCount === 3 && !gameState.isFinalStage) {
       dispatch({ type: 'SET_PHASE', payload: 'FinalHoH' });
     }
   }, [gameState.houseguests, gameState.isFinalStage, dispatch]);
