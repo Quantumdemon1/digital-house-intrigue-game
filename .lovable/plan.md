@@ -1,306 +1,202 @@
 
-
-# Plan: Enhanced Character Avatar Poses, Look-At Logic & Future Improvements
+# Plan: Add House View to Social Interaction Phase
 
 ## Overview
 
-This plan introduces three major enhancements to make the House Scene avatars more lifelike and varied:
-1. **Pose Variety System** - Different poses per character (standing, arms crossed, hands on hips, sitting)
-2. **Look-At System** - Characters dynamically look at the selected character or camera
-3. **Brainstormed Future Improvements** - Additional ideas for even more immersive avatars
+Add the interactive 3D House View alongside the Social Phase UI, allowing players to see all houseguests in the Big Brother house environment while making social decisions. The House View will be displayed as a collapsible/toggleable panel next to (or above) the existing social interaction controls.
 
 ---
 
-## 1. Pose Variety System
+## Design Approach
 
-### Current State
-All characters use the same `IDLE_POSE` in `useIdlePose.ts` - arms relaxed at sides with subtle sway.
+### Layout Options
 
-### Enhanced System: Per-Character Pose Types
+The Social Interaction Phase currently uses a single-column card layout. We'll add a **split-view layout** where:
+- **Left/Top**: 3D House View showing all active houseguests
+- **Right/Bottom**: Existing social interaction controls (actions, NPC feed, etc.)
 
-Create a pose assignment system that varies poses based on character personality or archetype:
-
-| Pose Type | Bone Rotations | Best For |
-|-----------|----------------|----------|
-| `relaxed` | Arms down, natural stance | Underdogs, Socialites |
-| `crossed-arms` | Arms folded across chest | Strategists, Competitors |
-| `hands-on-hips` | Hands resting on hips | Wildcards, Confident types |
-| `thinking` | One hand to chin | Strategists, Analytical |
-| `casual-lean` | Weight shifted to one leg | Socialites, Relaxed types |
-
-### Pose Rotation Values
+On desktop: Side-by-side layout (House View left, Controls right)
+On mobile: Stacked layout with collapsible House View
 
 ```text
-CROSSED_ARMS Pose:
-├── LeftArm:     Z: 0.6,  X: 0.8   (arm across body)
-├── RightArm:    Z: -0.6, X: 0.8   (arm across body)
-├── LeftForeArm: Z: 1.8            (forearm bent up)
-├── RightForeArm: Z: -1.8          (forearm bent up)
-└── Subtle animation: Arms shift slightly
-
-HANDS_ON_HIPS Pose:
-├── LeftArm:     Z: 0.8,  X: 0.2   (elbow out)
-├── RightArm:    Z: -0.8, X: 0.2   (elbow out)
-├── LeftForeArm: Z: 1.5, Y: -0.3   (hand towards hip)
-├── RightForeArm: Z: -1.5, Y: 0.3  (hand towards hip)
-└── Subtle animation: Weight shift side-to-side
-
-THINKING Pose:
-├── LeftArm:     Same as relaxed
-├── RightArm:    Z: -0.2, X: 1.0   (arm raised)
-├── RightForeArm: Z: -2.0          (hand to chin)
-├── Head:        X: -0.1, Z: 0.05  (head tilted, looking thoughtful)
-└── Subtle animation: Head sway as if contemplating
+┌─────────────────────────────────────────────────────────────┐
+│                    SOCIAL PHASE - WEEK 3                     │
+├───────────────────────────────┬─────────────────────────────┤
+│                               │  📍 Current Location         │
+│    🏠 THE BIG BROTHER HOUSE   │  ⚡ 3 Actions Remaining      │
+│                               │                             │
+│     ○  ○  ○     ← 3D View →   │  📣 NPC Activity Feed       │
+│        ○     ○                │    • Alex talked to Morgan  │
+│     ○          ○              │    • Casey proposed deal    │
+│        ○  ○  ○                │                             │
+│                               │  🎯 Available Actions       │
+│   [Character Carousel]        │    Talk | Bond | Strategy   │
+└───────────────────────────────┴─────────────────────────────┘
 ```
 
-### Archetype-to-Pose Mapping
+### Key Features
 
-```typescript
-const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
-  strategist: ['crossed-arms', 'thinking'],
-  competitor: ['hands-on-hips', 'crossed-arms'],
-  socialite: ['relaxed', 'casual-lean'],
-  wildcard: ['hands-on-hips', 'relaxed'],
-  underdog: ['relaxed', 'thinking'],
-};
-
-// Assign pose based on character index for variety
-const getPoseForCharacter = (archetype: Archetype, index: number): PoseType => {
-  const poses = ARCHETYPE_POSES[archetype];
-  return poses[index % poses.length];
-};
-```
+1. **Houseguest-to-CharacterTemplate Mapping**: Convert active `Houseguest` objects to `CharacterTemplate` format for HouseScene
+2. **Visual Status Indicators**: Show HoH, nominees, PoV holder with visual badges in the 3D scene
+3. **Interactive Selection**: Clicking a character in House View opens their interaction options
+4. **Relationship Indicators**: Optional visual connection lines between allied houseguests
+5. **Toggle View**: Button to show/hide House View for performance on lower-end devices
 
 ---
 
-## 2. Look-At System (Bone-Based Head Tracking)
+## Files to Create/Modify
 
-### Behavior
+### 1. Create `src/components/game-phases/social-interaction/HouseViewPanel.tsx`
 
-When a character is selected:
-- **Non-selected characters** turn their heads toward the selected character
-- When **no one is selected**, all characters look toward the camera
-- Smooth interpolation for natural head movement
-- Respect pose limits (don't over-rotate)
+New component that:
+- Wraps HouseScene for use in social phase
+- Converts active `Houseguest[]` to `CharacterTemplate[]` format
+- Handles character selection to trigger social actions
+- Shows character status overlays (HoH crown, nominee ring, etc.)
+- Includes toggle button to collapse/expand
 
-### Technical Approach
-
-**New Hook: `useLookAt.ts`**
-
+**Key mapping function:**
 ```typescript
-interface LookAtConfig {
-  targetPosition: THREE.Vector3 | null;  // Selected char or camera
-  characterPosition: [number, number, number];
-  maxHeadRotationY: number;  // Limit: ~60 degrees (1.04 rad)
-  maxHeadRotationX: number;  // Limit: ~30 degrees (0.52 rad)
-  lerpSpeed: number;         // Smooth transition speed
-}
-
-const useLookAt = (
-  scene: THREE.Object3D | null,
-  config: LookAtConfig
-) => {
-  const headBone = useRef<THREE.Bone | null>(null);
-  const neckBone = useRef<THREE.Bone | null>(null);
+const mapHouseguestToTemplate = (hg: Houseguest): CharacterTemplate => {
+  const original = characterTemplates.find(t => t.id === hg.id) || characterTemplates.find(t => t.name === hg.name);
   
-  // Find Head and Neck bones
-  useEffect(() => {
-    if (!scene) return;
-    headBone.current = findBone(scene, 'Head');
-    neckBone.current = findBone(scene, 'Neck');
-  }, [scene]);
+  return {
+    id: hg.id,
+    name: hg.name,
+    age: hg.age,
+    occupation: hg.occupation,
+    hometown: hg.hometown,
+    bio: hg.bio,
+    imageUrl: hg.imageUrl || original?.imageUrl || '',
+    traits: hg.traits,
+    archetype: original?.archetype || 'underdog',
+    tagline: getStatusTagline(hg), // "HoH", "Nominee", etc.
+    avatar3DConfig: hg.avatarConfig || original?.avatar3DConfig
+  };
+};
+```
+
+### 2. Modify `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`
+
+Updates:
+- Import and add HouseViewPanel component
+- Add state for selected houseguest from House View
+- Connect House View selection to social action dialogs
+- Restructure layout to accommodate split view
+- Add "View House" toggle button in header
+
+**Layout change:**
+```tsx
+<div className="flex flex-col lg:flex-row gap-4">
+  {/* House View (optional, collapsible) */}
+  {showHouseView && (
+    <div className="lg:w-1/2 xl:w-3/5 h-[400px] lg:h-auto">
+      <HouseViewPanel
+        houseguests={game.getActiveHouseguests()}
+        selectedId={selectedHouseguest}
+        onSelect={handleHouseSelect}
+        hohId={game.hohWinner}
+        nomineeIds={game.nominees}
+        povHolderId={game.povWinner}
+      />
+    </div>
+  )}
   
-  useFrame(() => {
-    if (!headBone.current || !config.targetPosition) return;
-    
-    // Calculate direction to target
-    const charPos = new THREE.Vector3(...config.characterPosition);
-    const direction = config.targetPosition.clone().sub(charPos);
-    
-    // Convert to local head rotation
-    const targetRotY = Math.atan2(direction.x, direction.z);
-    const targetRotX = Math.atan2(-direction.y, direction.length());
-    
-    // Clamp to limits
-    const clampedY = THREE.MathUtils.clamp(targetRotY, -config.maxHeadRotationY, config.maxHeadRotationY);
-    const clampedX = THREE.MathUtils.clamp(targetRotX, -config.maxHeadRotationX, config.maxHeadRotationX);
-    
-    // Smoothly interpolate
-    headBone.current.rotation.y = THREE.MathUtils.lerp(
-      headBone.current.rotation.y,
-      clampedY * 0.7,  // Head takes 70% of rotation
-      config.lerpSpeed
-    );
-    neckBone.current?.rotation.y = THREE.MathUtils.lerp(
-      neckBone.current.rotation.y,
-      clampedY * 0.3,  // Neck takes 30%
-      config.lerpSpeed
-    );
-  });
+  {/* Existing social controls */}
+  <div className={showHouseView ? 'lg:w-1/2 xl:w-2/5' : 'w-full'}>
+    {/* Location, Actions, NPC Feed, etc. */}
+  </div>
+</div>
+```
+
+### 3. Create `src/components/game-phases/social-interaction/HouseViewToggle.tsx`
+
+Simple toggle button component:
+- Shows "🏠 Show House" / "📋 Hide House" 
+- Saves preference to localStorage
+- Animated transition
+
+### 4. Modify `src/components/avatar-3d/HouseScene.tsx`
+
+Minor updates to support game state display:
+- Add optional `statusOverlay` prop for HoH/nominee badges
+- Add `compact` mode prop for smaller embedded view
+- Reduce default camera distance for embedded use
+
+---
+
+## Technical Details
+
+### Houseguest to CharacterTemplate Conversion
+
+The HouseScene expects `CharacterTemplate[]` with `avatar3DConfig.modelUrl` for 3D avatars. We need to:
+
+1. Match houseguests to their original templates by ID or name
+2. Fall back to the original template's 3D config if houseguest doesn't have one
+3. Generate dynamic taglines based on game status (HoH, Nominee, etc.)
+
+```typescript
+const getStatusTagline = (hg: Houseguest): string => {
+  if (hg.isHoH) return '👑 Head of Household';
+  if (hg.isPovHolder) return '🏆 PoV Holder';
+  if (hg.isNominated) return '⚠️ Nominated';
+  if (hg.isPlayer) return '⭐ You';
+  return hg.occupation; // Default fallback
 };
 ```
 
-### Integration in HouseScene
+### Selection Integration
 
-```typescript
-// In CharacterSpot component:
-const lookAtTarget = useMemo(() => {
-  if (selectedId === template.id) {
-    // Selected character looks at camera
-    return camera.position.clone();
-  } else if (selectedId && selectedPosition) {
-    // Other characters look at selected character
-    return new THREE.Vector3(...selectedPosition);
-  }
-  // Default: slight variation, mostly forward
-  return null;
-}, [selectedId, selectedPosition, camera]);
+When a character is selected in House View:
+1. Update `selectedHouseguest` state
+2. If clicking same character again, open their profile/action dialog
+3. Pass selected houseguest to ActionSections for context-aware buttons
 
-// Pass to RPMAvatar via new prop
-<RPMAvatar
-  modelSrc={modelUrl}
-  lookAtTarget={lookAtTarget}
-  ...
-/>
+### Performance Considerations
+
+- Make House View lazy-loaded to avoid impacting initial load
+- Add toggle to hide House View (saves in localStorage)
+- Use `React.memo` on HouseViewPanel
+- Consider reduced avatar quality for embedded view
+
+### Responsive Behavior
+
+| Screen Size | Layout |
+|-------------|--------|
+| Mobile (<768px) | House View above controls, collapsible |
+| Tablet (768-1024px) | Side-by-side, 50/50 split |
+| Desktop (>1024px) | Side-by-side, 60/40 split (House larger) |
+
+---
+
+## Component Hierarchy
+
+```text
+SocialInteractionPhase
+├── GameCard (container)
+│   ├── GameCardHeader (with House toggle button)
+│   └── GameCardContent
+│       └── Split Layout
+│           ├── HouseViewPanel (new)
+│           │   ├── HouseScene
+│           │   └── CharacterCarousel (simplified)
+│           └── Controls Column
+│               ├── LocationDisplay
+│               ├── InteractionsCounter
+│               ├── NPCActivityFeed
+│               └── ActionSections
+└── Dialogs (unchanged)
 ```
 
 ---
 
-## 3. File Changes
-
-### Create `src/components/avatar-3d/hooks/usePoseVariety.ts`
-
-New hook that:
-- Defines multiple pose configurations (relaxed, crossed-arms, hands-on-hips, thinking)
-- Accepts a `poseType` parameter
-- Applies the initial bone rotations
-- Runs pose-specific subtle animations
-
-### Create `src/components/avatar-3d/hooks/useLookAt.ts`
-
-New hook that:
-- Finds Head and Neck bones
-- Calculates direction to target (selected character or camera)
-- Applies clamped, smooth rotations
-- Blends naturally with existing animations
-
-### Modify `src/components/avatar-3d/RPMAvatar.tsx`
-
-- Add `poseType?: PoseType` prop (default: 'relaxed')
-- Add `lookAtTarget?: THREE.Vector3` prop
-- Integrate `usePoseVariety` and `useLookAt` hooks
-- Keep backward compatibility (existing behavior when props not provided)
-
-### Modify `src/components/avatar-3d/HouseScene.tsx`
-
-- Calculate look-at targets for each character
-- Pass `lookAtTarget` and `poseType` to RPMAvatar
-- Map character archetype to appropriate pose type
-- Pass camera position for characters to look at when selected
-
----
-
-## 4. Brainstormed Future Improvements
-
-### Implemented in This Phase
-1. Pose variety (crossed arms, hands on hips, thinking)
-2. Dynamic head look-at toward selected character/camera
-
-### Future Enhancement Ideas
-
-| Category | Enhancement | Description |
-|----------|-------------|-------------|
-| **Expressions** | Mood-reactive expressions | Change facial expression when another character is selected (curious, jealous, supportive) |
-| **Interactions** | Social reactions | Characters near selected one lean in or react |
-| **Animations** | Gesture library | Occasional gestures (wave, nod, shrug) on events |
-| **Positioning** | Dynamic clustering | Characters form groups based on alliances |
-| **Audio** | Lip sync mumble | Subtle mouth movement with ambient audio |
-| **Eye Tracking** | Eye bone targeting | Eyes track independently of head for more realism |
-| **Body Language** | Personality-based stance | Nervous characters fidget more, confident ones stand taller |
-| **Props** | Character accessories | Coffee cups, phones, or items based on occupation |
-| **Lighting** | Character spotlight | Subtle rim light on selected character |
-| **VFX** | Aura/mood particles | Subtle particles around characters based on mood |
-
-### Priority Recommendations for Next Phase
-1. **Eye tracking** - Eyes are the first thing we look at; independent eye movement is high impact
-2. **Mood-reactive expressions** - Connects game state to visual feedback
-3. **Gesture library** - Occasional animations add life without being distracting
-
----
-
-## Technical Implementation Details
-
-### Pose Types Enum
-
-```typescript
-type PoseType = 
-  | 'relaxed'       // Current default - arms at sides
-  | 'crossed-arms'  // Arms folded across chest
-  | 'hands-on-hips' // Confident power pose
-  | 'thinking'      // One hand to chin
-  | 'casual-lean';  // Weight on one leg, relaxed
-```
-
-### Pose Bone Configurations
-
-```typescript
-const POSE_CONFIGS: Record<PoseType, PoseBoneRotations> = {
-  relaxed: {
-    LeftArm: { x: 0.1, y: 0, z: 1.2 },
-    RightArm: { x: 0.1, y: 0, z: -1.2 },
-    // ... current idle pose
-  },
-  'crossed-arms': {
-    LeftArm: { x: 0.8, y: 0.2, z: 0.5 },
-    RightArm: { x: 0.8, y: -0.2, z: -0.5 },
-    LeftForeArm: { x: 0, y: 0.4, z: 1.7 },
-    RightForeArm: { x: 0, y: -0.4, z: -1.7 },
-    LeftHand: { x: 0, y: -0.3, z: 0 },
-    RightHand: { x: 0, y: 0.3, z: 0 },
-    Spine: { x: -0.03, y: 0, z: 0 },  // Slight lean back
-  },
-  'hands-on-hips': {
-    LeftArm: { x: 0.15, y: -0.2, z: 0.7 },
-    RightArm: { x: 0.15, y: 0.2, z: -0.7 },
-    LeftForeArm: { x: 0, y: 0.5, z: 1.4 },
-    RightForeArm: { x: 0, y: -0.5, z: -1.4 },
-    Spine: { x: -0.02, y: 0, z: 0 },
-    Hips: { x: 0, y: 0, z: 0.03 },  // Slight hip shift
-  },
-  thinking: {
-    LeftArm: { x: 0.1, y: 0, z: 1.2 },  // Left arm relaxed
-    RightArm: { x: 0.9, y: 0, z: -0.2 },  // Right arm up
-    RightForeArm: { x: 0, y: 0, z: -2.0 },  // Hand to chin
-    RightHand: { x: -0.3, y: 0, z: 0 },
-    Head: { x: -0.08, y: 0, z: 0.04 },  // Head tilted thoughtfully
-    Spine: { x: -0.02, y: 0.02, z: 0 },
-  },
-  'casual-lean': {
-    LeftArm: { x: 0.1, y: 0, z: 1.3 },
-    RightArm: { x: 0.1, y: 0, z: -1.1 },
-    Hips: { x: 0, y: 0, z: 0.04 },  // Weight to one side
-    LeftUpLeg: { x: 0, y: 0, z: 0.05 },  // Leg out slightly
-    Spine: { x: -0.01, y: 0.02, z: 0.02 },  // Slight lean
-  },
-};
-```
-
-### Animation Variations Per Pose
-
-Each pose type has unique subtle animations:
-- **Crossed-arms**: Gentle tightening/loosening of arm grip
-- **Hands-on-hips**: Hip sway side-to-side
-- **Thinking**: Occasional head tilt, finger tap
-- **Casual-lean**: Weight shift between legs
-
----
-
-## Expected Results
+## Expected Result
 
 After implementation:
-- Characters have visually distinct poses based on personality
-- When you click a character, others turn their heads to look at them
-- Clicking away, characters return to looking at camera/forward
-- The scene feels alive with natural variety and social awareness
-- Performance remains smooth (bone rotations are cheap operations)
-
+- Social Phase displays the 3D House View with all active houseguests
+- Characters show their game status (HoH crown, nominee glow, etc.)
+- Clicking a character in the 3D view selects them for interaction
+- Characters turn their heads toward the selected person
+- Players can toggle House View off if preferred
+- Layout adapts responsively to screen size
+- Performance remains smooth with lazy loading
