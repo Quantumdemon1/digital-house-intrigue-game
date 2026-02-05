@@ -1,93 +1,72 @@
 
-# Visual Enhancement for Ceremony and Competition Screens
+# Visual Enhancement: Add Profile Photos to Ceremony Screens
 
-## Problem
+## Problem Analysis
 
-The ceremony and competition screens (Nomination, Eviction, etc.) display text placeholders instead of profile photos because they incorrectly pass `houseguest.imageUrl` (which is often empty) instead of `houseguest.avatarUrl` (which contains the captured profile photo).
+Three ceremony/competition screens currently display text placeholders (initials like "MH") instead of profile photos:
 
-The sidebar's "Current Power" section works correctly because it uses `imageUrl={houseguest.avatarUrl}`.
+1. **Pre-ceremony HOH display** (`NominationContent.tsx`) - Shows HOH name but no avatar
+2. **Nominations Complete** (`NominationPhase/index.tsx`) - Nominees cards show icons but no photos
+3. **PoV Competition Results** (`POVCompetition/CompetitionResults.tsx`) - Shows "MH" initials instead of winner's photo
 
----
-
-## Solution
-
-Update all ceremony and competition components to consistently use `avatarUrl` when passing image data to `StatusAvatar`.
+The root cause is that `StatusAvatar` is being called without the `avatarUrl` prop in some components, causing it to fall back to initials.
 
 ---
 
-## Files to Update
+## Changes Required
 
-| File | Current Issue | Fix |
-|------|--------------|-----|
-| `NominationCeremonyResult.tsx` | Uses `imageUrl={nominee.imageUrl}` | Change to `avatarUrl={nominee.avatarUrl}` |
-| `KeyCeremony.tsx` | Uses `imageUrl={hoh.avatarUrl}` (correct) and `imageUrl={nominee.avatarUrl}` (correct) | Already correct, but verify consistency |
-| `NominationPhase/index.tsx` | Complete stage shows initials only | Add `StatusAvatar` with `avatarUrl` |
-| `EvictionResults.tsx` | Uses `imageUrl={houseguest.imageUrl}` | Change to `avatarUrl={houseguest.avatarUrl}` |
-| `NomineeDisplay.tsx` | Uses `imageUrl={nominee.imageUrl}` | Change to `avatarUrl={nominee.avatarUrl}` |
-| `HOHCompetition/CompetitionResults.tsx` | Uses `imageUrl={winner.avatarUrl}` | Verify correct |
-| `NomineeSelector.tsx` | Check if using correct prop | Update if needed |
+### 1. Add HOH Avatar to Pre-Ceremony Screen
 
----
+**File**: `src/components/game-phases/NominationPhase/components/NominationContent.tsx`
 
-## Detailed Changes
+Add a `StatusAvatar` showing the HOH with their profile photo above the ceremony title:
 
-### 1. NominationCeremonyResult.tsx (Lines 73-79)
+- Import `StatusAvatar` component
+- Add HOH avatar with `status="hoh"` and `avatarUrl={hoh.avatarUrl}`
+- Position it prominently at the top
 
-Change:
+### 2. Add Profile Photos to PoV Competition Results
+
+**File**: `src/components/game-phases/POVCompetition/CompetitionResults.tsx`
+
+The `StatusAvatar` is already being used but missing the `avatarUrl` prop:
+
 ```tsx
-<StatusAvatar
-  name={nominee.name}
-  imageUrl={nominee.imageUrl}  // Wrong
-  status="nominee"
+// Current (line 31-36):
+<StatusAvatar 
+  name={winner.name}
+  status="pov"
+  size="xl"
+  ...
+/>
+
+// Fixed:
+<StatusAvatar 
+  name={winner.name}
+  avatarUrl={winner.avatarUrl}  // ADD THIS
+  status="pov"
+  size="xl"
   ...
 />
 ```
 
-To:
-```tsx
-<StatusAvatar
-  name={nominee.name}
-  avatarUrl={nominee.avatarUrl}  // Correct
-  status="nominee"
-  ...
-/>
-```
+### 3. Enhance Nominee Cards in Complete Stage
 
-### 2. EvictionResults.tsx (Multiple locations)
+**File**: `src/components/game-phases/NominationPhase/index.tsx`
 
-Update all `StatusAvatar` calls that use `imageUrl={houseguest.imageUrl}` to use `avatarUrl={houseguest.avatarUrl}`.
-
-There are approximately 8 instances in this file.
-
-### 3. NomineeDisplay.tsx (Lines 21-26)
-
-Change `imageUrl={nominee.imageUrl}` to `avatarUrl={nominee.avatarUrl}`.
-
-### 4. NominationPhase/index.tsx (Lines 261-268)
-
-The "complete" stage shows initials in a circle. Replace with `StatusAvatar`:
-
-```tsx
-// Before - just initials
-<div className="w-16 h-16 rounded-full bg-bb-red/20 border-2 border-bb-red flex items-center justify-center mb-2">
-  <span className="text-2xl font-bold text-bb-red">
-    {nominee.name.charAt(0)}
-  </span>
-</div>
-
-// After - proper avatar
-<StatusAvatar
-  name={nominee.name}
-  avatarUrl={nominee.avatarUrl}
-  status="nominee"
-  size="lg"
-/>
-```
+The `StatusAvatar` is already being used correctly (lines 264-269), but could use larger size. This was already fixed in the previous update.
 
 ---
 
-## Summary
+## Summary of Changes
 
-This is a prop naming consistency fix. The houseguest model stores the captured profile photo in `avatarUrl`, but some older ceremony components were looking for `imageUrl` which is typically empty.
+| File | Change |
+|------|--------|
+| `NominationContent.tsx` | Add HOH avatar display with crown status |
+| `POVCompetition/CompetitionResults.tsx` | Add `avatarUrl={winner.avatarUrl}` prop |
 
-After these changes, all ceremony screens will display proper profile photos matching the sidebar's "Current Power" section.
+---
+
+## Technical Notes
+
+The `StatusAvatar` component properly handles the `avatarUrl` prop (line 149 combines `imageUrl || avatarUrl`), so simply passing the correct prop will display the profile photo.
