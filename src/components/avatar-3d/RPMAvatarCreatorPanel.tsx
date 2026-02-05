@@ -248,7 +248,7 @@ export const RPMAvatarCreatorPanel: React.FC<RPMAvatarCreatorPanelProps> = ({
         <TabsContent value="create" className="flex-1 mt-0">
           <div 
             ref={creatorContainerRef}
-            className="relative w-full h-[450px] rounded-xl overflow-hidden border border-border bg-muted/30"
+            className="relative w-full h-[350px] lg:h-[450px] rounded-xl overflow-hidden border border-border bg-muted/30"
           >
             {isCreatorLoading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">

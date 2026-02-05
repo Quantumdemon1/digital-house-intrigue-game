@@ -217,18 +217,21 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+            {/* Add touch-action style for mobile scrolling */}
+            <DialogHeader className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 pb-2">
               <DialogTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
                 Create Your Avatar
               </DialogTitle>
             </DialogHeader>
-            <AvatarCustomizer
-              initialConfig={avatarConfig || localConfig}
-              onChange={handleCustomizerChange}
-              onComplete={handleCustomizerComplete}
-              showCompleteButton={true}
-            />
+            <div className="touch-pan-y overscroll-contain">
+              <AvatarCustomizer
+                initialConfig={avatarConfig || localConfig}
+                onChange={handleCustomizerChange}
+                onComplete={handleCustomizerComplete}
+                showCompleteButton={true}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       )}
