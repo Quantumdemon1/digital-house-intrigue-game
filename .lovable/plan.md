@@ -1,342 +1,323 @@
 
-# Plan: Expand Big Brother House with Ornate Multi-Room Layout
+# Plan: Separate Circular (Selection) and Expanded (In-Game) House Layouts
 
 ## Overview
 
-Transform the current circular stage into a full Big Brother USA-style house with multiple distinct rooms, modern ornate furnishings, and the signature BB aesthetic with LED accents, glass walls, and technology-inspired design elements.
+Create two distinct 3D house environments:
+1. **CircularHouseScene** - Original circular platform layout for character selection (simpler, focused on avatar showcase)
+2. **ExpandedHouseScene** - Full multi-room Big Brother house for in-game exploration (accessible via "House" button)
+
+Additionally, add a "House" button in the game header near "Social" that opens a fullscreen 3D house view.
 
 ---
 
-## Current State Analysis
-
-The house currently consists of:
-- A circular platform (radius 10) with a center BB logo
-- Basic furniture: 2 couches, coffee table, plants, light fixtures
-- TV entertainment area at the back
-- Kitchen area on the right side
-- Diary Room door on the left
-- Wall panels for basic backdrop
-- Characters arranged in a circle (radius 5)
-
----
-
-## Proposed Room Layout
-
-Expand to a rectangular house with distinct areas reflecting modern BB USA design:
+## Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                         BACKYARD/POOL AREA                          │
-│                           (future phase)                            │
-├──────────────────┬──────────────────┬───────────────────────────────┤
-│                  │                  │                               │
-│   🛏️ BEDROOM 1   │   🛏️ BEDROOM 2   │      👑 HOH SUITE             │
-│   (Bunk beds)    │  (Have-Not?)     │   (Elevated platform)         │
-│                  │                  │                               │
-├──────────────────┴──────────────────┴───────────────────────────────┤
-│                              HALLWAY                                │
-├────────────────┬────────────────────────────────────┬───────────────┤
-│                │                                    │               │
-│  🚿 BATHROOM   │          LIVING ROOM               │   🍳 KITCHEN  │
-│   (Vanity,     │    (Main gathering area)           │   (Island,    │
-│    mirrors)    │    (Characters positioned here)    │    stools)    │
-│                │                                    │               │
-├────────────────┼────────────────────────────────────┼───────────────┤
-│                │                                    │               │
-│   🗣️ DIARY     │       LOUNGE / NOMINATION          │   🎮 GAME     │
-│     ROOM       │           AREA                     │    ROOM       │
-│                │                                    │               │
-└────────────────┴────────────────────────────────────┴───────────────┘
+Character Selection (AvatarSelector)     In-Game (GameScreen)
+           │                                      │
+           ▼                                      ▼
+   ┌─────────────────┐              ┌─────────────────────────┐
+   │ CircularHouseScene │              │   GameHeader            │
+   │  - Circular floor  │              │   [Social] [🏠 House]   │
+   │  - Simple furniture│              └───────────┬─────────────┘
+   │  - Character ring  │                          │
+   └─────────────────┘                          │
+                                                   ▼
+                                      ┌─────────────────────────┐
+                                      │   HouseViewDialog       │
+                                      │   (Fullscreen 3D)       │
+                                      │                         │
+                                      │   ExpandedHouseScene    │
+                                      │   - Multi-room layout   │
+                                      │   - All rooms furnished │
+                                      │   - Character clusters  │
+                                      └─────────────────────────┘
 ```
 
 ---
 
-## New Room Components to Create
+## Files to Create
 
-### 1. Living Room (Expanded Center)
-**The main character interaction area**
+### 1. `src/components/avatar-3d/CircularHouseScene.tsx`
 
-| Element | Description |
-|---------|-------------|
-| Sectional Sofa | Large L-shaped modern sectional with tufted cushions |
-| Memory Wall | Photo frames for all houseguests with LED backlighting |
-| LED Strip Accents | Ceiling coves with color-changing ambient lighting |
-| Glass Coffee Table | Geometric modern design with chrome legs |
-| Statement Chandelier | Modern crystal/LED hybrid fixture |
-| Decorative Pillows | BB-themed accent colors (blue, gold, red) |
+A new component that preserves the **original circular stage layout** for character selection.
 
-### 2. HOH Suite (Elevated Platform)
-**The coveted Head of Household room**
+**Key features:**
+- Circular floor from original `HouseFloor` component
+- Characters arranged in a circle (radius 5)
+- Simple furniture: 2 couches, coffee table, plants, TV stand, kitchen area
+- Diary Room door as backdrop
+- No room walls or partitions
+- Optimized for quick loading and avatar showcase
 
-| Element | Description |
-|---------|-------------|
-| Platform Base | Elevated 0.3m platform with LED edge lighting |
-| King Bed | Luxurious bed with upholstered headboard |
-| HOH Throne Chair | Ornate high-back chair |
-| Mini Fridge | Stocked amenities area |
-| Private TV | Personal entertainment screen |
-| Gold Accents | Crown motifs and premium finishes |
-| Sliding Glass Door | Frosted glass partition |
-
-### 3. Bedrooms (2 rooms)
-**Where houseguests sleep**
-
-| Element | Description |
-|---------|-------------|
-| Bunk Beds | 4 bunks per room (8 sleeping spots each) |
-| LED Under-Lighting | Purple/blue accent glow |
-| Wardrobe Closets | Tall cabinets with mirrors |
-| Nightstands | Modern floating designs |
-| Have-Not Variant | One room with less comfortable beds |
-
-### 4. Bathroom/Vanity Area
-**Getting ready for eviction**
-
-| Element | Description |
-|---------|-------------|
-| Vanity Counter | Long counter with Hollywood-style mirror lights |
-| Mirrors | Large illuminated mirrors |
-| Shower Stall | Frosted glass enclosure |
-| Decorative Tiles | Geometric pattern floor |
-| Modern Sinks | Vessel sinks with chrome fixtures |
-
-### 5. Expanded Kitchen
-**The gathering spot for late-night conversations**
-
-| Element | Description |
-|---------|-------------|
-| Large Island | Extended counter with waterfall edge |
-| Pendant Lights | 3-4 modern globe pendants |
-| Refrigerator | Modern stainless steel double-door |
-| Stove/Oven | Commercial-style range |
-| Open Shelving | Displayed kitchenware |
-| Breakfast Nook | Built-in bench seating |
-
-### 6. Nomination/Lounge Area
-**Where the dramatic ceremonies happen**
-
-| Element | Description |
-|---------|-------------|
-| Nomination Box | Iconic BB key box/nomination display |
-| Curved Seating | Semi-circular couch arrangement |
-| Spotlight | Dramatic overhead lighting |
-| BB Eye Display | Large illuminated logo |
-| Glass Partition | Separates from main living area |
-
-### 7. Game Room
-**Competition preparation area**
-
-| Element | Description |
-|---------|-------------|
-| Pool Table | Full-size with LED edge |
-| Arcade Cabinet | Retro-styled game machine |
-| Dart Board | With protective surround |
-| Lounge Seating | Bean bags and gaming chairs |
-| Neon Signs | BB-themed decorative signs |
-
-### 8. Enhanced Diary Room
-**Expanded from current door**
-
-| Element | Description |
-|---------|-------------|
-| Interior View | Show inside the DR when camera zooms |
-| Diary Chair | Iconic confession chair |
-| Camera Array | Visible camera rig |
-| Dramatic Lighting | Spotlight on chair |
-| Sound Panels | Acoustic wall treatment |
-
----
-
-## Architecture & Walls
-
-### Wall System Components
-
-| Component | Details |
-|-----------|---------|
-| Exterior Walls | 4m height, gradient dark blue to black |
-| Interior Partitions | 3m height, frosted glass panels with chrome frames |
-| LED Cove Lighting | Recessed ceiling strips (blue/amber programmable) |
-| Doorways | Arched openings with metallic trim |
-| Glass Walls | Strategic placement for open sightlines |
-| Accent Panels | Geometric 3D wall art with BB motifs |
-
-### Floor Design
-
-| Area | Material |
-|------|----------|
-| Living Room | Dark polished concrete with inlaid BB logo |
-| Kitchen | White marble tile pattern |
-| Bedrooms | Dark hardwood planks |
-| Bathroom | Geometric black/white tiles |
-| HOH Suite | Plush carpet with gold trim |
-
----
-
-## Technical Implementation
-
-### File Changes
-
-**1. `src/components/avatar-3d/HouseFurniture.tsx`**
-
-Add new components:
-- `SectionalSofa` - L-shaped modern couch
-- `MemoryWall` - Photo display with LED frames
-- `HOHBed` - Luxurious king bed
-- `HOHPlatform` - Elevated room base
-- `BunkBed` - Stackable bed unit
-- `Vanity` - Bathroom counter with lights
-- `ShowerStall` - Frosted glass enclosure
-- `NominationPodium` - Ceremony display
-- `PoolTable` - Game room centerpiece
-- `ArcadeCabinet` - Decorative game machine
-- `Refrigerator` - Kitchen appliance
-- `KitchenIsland` - Extended counter
-- `GlassWall` - Frosted partition
-- `LEDCoveLighting` - Ambient accent lights
-- `CrystalChandelier` - Statement lighting
-- `NeonSign` - Decorative text signs
-
-**2. `src/components/avatar-3d/HouseScene.tsx`**
-
-Modifications:
-- Expand floor from circular to rectangular
-- Update character positioning to living room area
-- Add room sections with proper placement
-- Create room navigation system
-- Update camera bounds for larger space
-- Add room labels/overlays
-- Implement dynamic lighting zones
-
-**3. New file: `src/components/avatar-3d/HouseRooms.tsx`**
-
-Create room presets:
+**Character positioning (circular):**
 ```typescript
-export const LivingRoom: React.FC<{ position: [number, number, number] }>
-export const HOHSuite: React.FC<{ position: [number, number, number] }>
-export const Bedroom: React.FC<{ position: [number, number, number]; variant: 'regular' | 'havenot' }>
-export const BathroomArea: React.FC<{ position: [number, number, number] }>
-export const NominationLounge: React.FC<{ position: [number, number, number] }>
-export const GameRoom: React.FC<{ position: [number, number, number] }>
-export const DiaryRoomInterior: React.FC<{ position: [number, number, number] }>
+const getCirclePositions = (count: number) => {
+  const radius = 5;
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+    return {
+      position: [Math.cos(angle) * radius, 0, Math.sin(angle) * radius],
+      rotation: [0, -angle + Math.PI, 0],
+      angle
+    };
+  });
+};
+```
+
+### 2. `src/components/game-screen/HouseViewDialog.tsx`
+
+A fullscreen dialog that displays the expanded 3D house with all active houseguests.
+
+**Features:**
+- Opens when clicking "House" button in header
+- Full viewport 3D canvas
+- Converts `gameState.houseguests` to `CharacterTemplate[]`
+- Shows character status (HoH crown, nominee indicators)
+- Close button to return to game
+- Integrates existing `HouseScene` (expanded layout)
+
+### 3. `src/components/game-screen/HouseViewButton.tsx`
+
+Header button component to open the House View dialog.
+
+**Design (matching Social button):**
+```tsx
+<Button variant="ghost" size="sm" onClick={onOpenHouseView}>
+  <Home className="h-4 w-4" />
+  <span className="hidden sm:inline">House</span>
+</Button>
 ```
 
 ---
 
-## Visual Styling (BB USA Aesthetic)
+## Files to Modify
 
-### Color Palette
+### 1. `src/components/avatar-3d/HouseScene.tsx`
 
-| Purpose | Color | Hex |
-|---------|-------|-----|
-| Primary Blue | BB Blue | `#3b82f6` |
-| Accent Gold | Winner Gold | `#fbbf24` |
-| Danger Red | Eviction Red | `#dc2626` |
-| Safe Green | Safety | `#22c55e` |
-| Dark Base | Walls/Floor | `#0f172a` |
-| Chrome | Metal Accents | `#94a3b8` |
-| Glass Tint | Partitions | `#1e40af` (20% opacity) |
+**Rename internal logic to clarify it's the expanded version:**
+- Keep as `HouseScene` (exported name unchanged for compatibility)
+- Ensure it uses `LIVING_ROOM_POSITIONS` (social clusters)
+- Uses `ExpandedHouseFloor`, `HouseWalls`, `InteriorWalls`
+- Imports room components from `HouseRooms.tsx`
 
-### Material Themes
+**No major changes needed** - this file already has the expanded layout.
+
+### 2. `src/components/game-setup/AvatarSelector.tsx`
+
+**Update imports to use CircularHouseScene:**
+```typescript
+// Before
+import { HouseScene, CharacterCarousel } from '@/components/avatar-3d';
+
+// After
+import { CircularHouseScene, CharacterCarousel } from '@/components/avatar-3d';
+```
+
+**Update usage:**
+```tsx
+// In house view mode, use circular layout
+<CircularHouseScene
+  characters={characterTemplates}
+  selectedId={selectedTemplate?.id || null}
+  onSelect={handleHouseSelect}
+/>
+```
+
+### 3. `src/components/avatar-3d/index.ts`
+
+**Export the new circular scene:**
+```typescript
+export { CircularHouseScene } from './CircularHouseScene';
+export { HouseScene } from './HouseScene'; // Expanded version (unchanged)
+```
+
+### 4. `src/components/game-screen/GameHeader.tsx`
+
+**Add House button next to Social:**
+```tsx
+import { Network, Home } from 'lucide-react';
+
+interface GameHeaderProps {
+  onShowSocialNetwork?: () => void;
+  onShowHouseView?: () => void;  // NEW
+}
+
+// In JSX:
+<div className="flex items-center gap-1 sm:gap-2">
+  {onShowHouseView && (
+    <Button variant="ghost" size="sm" onClick={onShowHouseView}>
+      <Home className="h-4 w-4" />
+      <span className="hidden sm:inline">House</span>
+    </Button>
+  )}
+  {onShowSocialNetwork && (
+    <Button variant="ghost" size="sm" onClick={onShowSocialNetwork}>
+      <Network className="h-4 w-4" />
+      <span className="hidden sm:inline">Social</span>
+    </Button>
+  )}
+  <SettingsDialog />
+  <ProfileButton />
+</div>
+```
+
+### 5. `src/components/game-screen/GameScreen.tsx`
+
+**Add House View state and dialog:**
+```typescript
+import HouseViewDialog from './HouseViewDialog';
+
+const GameScreen: React.FC = () => {
+  const [showSocialNetwork, setShowSocialNetwork] = useState(false);
+  const [showHouseView, setShowHouseView] = useState(false);  // NEW
+  
+  // ...
+  
+  return (
+    <>
+      {/* ... existing content ... */}
+      
+      <GameHeader 
+        onShowSocialNetwork={canShowSocial ? () => setShowSocialNetwork(true) : undefined}
+        onShowHouseView={canShowSocial ? () => setShowHouseView(true) : undefined}
+      />
+      
+      {/* ... */}
+      
+      {/* House View Dialog */}
+      <HouseViewDialog
+        open={showHouseView}
+        onOpenChange={setShowHouseView}
+      />
+    </>
+  );
+};
+```
+
+### 6. `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`
+
+**Keep existing HouseViewPanel integration** - no changes needed. The inline toggle for House View in Social Phase remains functional alongside the new header button which opens a fullscreen dialog.
+
+---
+
+## Technical Details
+
+### CircularHouseScene - Scene Content
 
 ```typescript
-// Luxury materials for HOH
-const goldAccent = new THREE.MeshStandardMaterial({
-  color: '#fbbf24',
-  metalness: 0.9,
-  roughness: 0.2,
-  emissive: '#fbbf24',
-  emissiveIntensity: 0.1
-});
-
-// Frosted glass for partitions
-const frostedGlass = new THREE.MeshPhysicalMaterial({
-  color: '#ffffff',
-  transmission: 0.9,
-  roughness: 0.1,
-  ior: 1.5,
-  thickness: 0.5
-});
-
-// Velvet upholstery
-const velvetFabric = new THREE.MeshStandardMaterial({
-  color: '#1e3a5f',
-  roughness: 0.95,
-  metalness: 0
-});
+// Circular positions for character showcase
+const CIRCLE_RADIUS = 5;
+const getCirclePositions = (count: number) => {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+    return {
+      position: [
+        Math.cos(angle) * CIRCLE_RADIUS,
+        0,
+        Math.sin(angle) * CIRCLE_RADIUS
+      ] as [number, number, number],
+      rotation: [0, -angle + Math.PI, 0] as [number, number, number],
+      angle
+    };
+  });
+};
 ```
 
----
-
-## Layout Dimensions
-
-| Area | Size (meters) | Position |
-|------|---------------|----------|
-| Total House | 30 x 25 | Centered |
-| Living Room | 12 x 10 | Center |
-| HOH Suite | 8 x 8 | Top right (+10, 0, -10) |
-| Bedroom 1 | 8 x 6 | Top left (-10, 0, -10) |
-| Bedroom 2 | 8 x 6 | Top center (0, 0, -10) |
-| Kitchen | 8 x 8 | Right (+12, 0, 0) |
-| Bathroom | 6 x 5 | Left (-12, 0, 3) |
-| Nomination | 10 x 6 | Front center (0, 0, 10) |
-| Diary Room | 4 x 4 | Left (-12, 0, -3) |
-| Game Room | 6 x 6 | Right (+12, 0, 8) |
-
----
-
-## Character Positioning Update
-
-Move characters from circular to living room groupings:
+### CircularHouseScene - Simple Furniture Layout
 
 ```typescript
-// Living room conversation clusters
-const LIVING_ROOM_POSITIONS = [
-  // Main sofa group
-  { position: [-3, 0, 0], rotation: [0, Math.PI/4, 0] },
-  { position: [-1, 0, 1], rotation: [0, Math.PI/6, 0] },
-  { position: [1, 0, 1], rotation: [0, -Math.PI/6, 0] },
-  { position: [3, 0, 0], rotation: [0, -Math.PI/4, 0] },
-  // Kitchen area
-  { position: [8, 0, 0], rotation: [0, -Math.PI/2, 0] },
-  { position: [8, 0, 2], rotation: [0, -Math.PI/3, 0] },
-  // Lounge area
-  { position: [-2, 0, 6], rotation: [0, Math.PI, 0] },
-  { position: [0, 0, 7], rotation: [0, Math.PI, 0] },
-  { position: [2, 0, 6], rotation: [0, Math.PI, 0] },
-  // Standing by memory wall
-  { position: [-6, 0, -3], rotation: [0, Math.PI/2, 0] },
-  { position: [-6, 0, -1], rotation: [0, Math.PI/2, 0] },
-  { position: [-6, 0, 1], rotation: [0, Math.PI/2, 0] },
-];
+// Minimal furniture for selection scene
+<HouseFloor />  // Original circular floor from HouseFurniture.tsx
+<Couch position={[-5, 0, -4]} rotation={[0, Math.PI / 4, 0]} />
+<Couch position={[5, 0, -4]} rotation={[0, -Math.PI / 4, 0]} />
+<CoffeeTable position={[0, 0, -3]} />
+<TVStand position={[0, 0, -7]} />
+<KitchenArea position={[6, 0, 2]} />
+<DiaryRoomDoor position={[-7, 0, 0]} />
+<Plant position={[-4, 0, 3]} />
+<Plant position={[4, 0, 3]} />
+<LightFixture position={[0, 4, 0]} />
+```
+
+### HouseViewDialog - Houseguest Mapping
+
+```typescript
+// Convert active houseguests to CharacterTemplate format
+const mapHouseguestToCharacter = (hg: Houseguest): CharacterTemplate => {
+  const original = characterTemplates.find(t => t.id === hg.id);
+  return {
+    id: hg.id,
+    name: hg.name,
+    // ... other fields
+    tagline: getStatusTagline(hg),  // "👑 HoH", "⚠️ Nominated", etc.
+    avatar3DConfig: hg.avatarConfig || original?.avatar3DConfig
+  };
+};
 ```
 
 ---
 
-## Lighting Design
+## Component Relationships
 
-### Zone-Based Lighting
+```text
+Before:
+  AvatarSelector ───uses───► HouseScene (expanded)
+  SocialInteractionPhase ──► HouseViewPanel ──► HouseScene (expanded)
+  GameHeader ──► [Social button only]
 
-| Zone | Primary Light | Accent | Mood |
-|------|--------------|--------|------|
-| Living Room | Chandelier (warm white) | Blue LED strips | Social |
-| HOH Suite | Recessed spots | Gold accent LEDs | Luxurious |
-| Bedrooms | Soft overhead | Purple under-bed | Intimate |
-| Kitchen | Bright pendants | White LED | Functional |
-| Nomination | Dramatic spot | Red accent | Tense |
-| Bathroom | Hollywood bulbs | White | Glam |
+After:
+  AvatarSelector ───uses───► CircularHouseScene (simple circular)
+  SocialInteractionPhase ──► HouseViewPanel ──► HouseScene (expanded inline)
+  GameScreen ──► HouseViewDialog ──► HouseScene (expanded fullscreen)
+  GameHeader ──► [House button] + [Social button]
+```
+
+---
+
+## UI Layout
+
+### Header Button Placement (matching screenshot)
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  DIGITAL HOUSE INTRIGUE  │  WEEK 1              🏠 House  👥 Social ⚙️ │
+├────────────────────────────────────────────────────────────────────────┤
+│  [HOH] ─── [NOMS] ─── [POV PICK] ─── [POV] ─── [VETO] ─── [EVICT]     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### HouseViewDialog Layout
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ✕  THE BIG BROTHER HOUSE                                    [Close]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│                     ┌─────────────────────────────┐                     │
+│                     │      3D HOUSE SCENE         │                     │
+│                     │   (Full expanded layout)    │                     │
+│                     │                             │                     │
+│                     │   Characters in clusters    │                     │
+│                     │   All rooms visible         │                     │
+│                     │   Orbit controls enabled    │                     │
+│                     │                             │                     │
+│                     └─────────────────────────────┘                     │
+│                                                                         │
+│              [Character Carousel - Bottom Navigation]                   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Expected Results
 
 After implementation:
-- House expands from ~20m to ~30m diameter
-- 7+ distinct room areas with unique furnishings
-- Modern BB USA aesthetic with glass, chrome, and LED accents
-- Characters naturally positioned in living room clusters
-- HOH suite elevated and visually distinct
-- Memory wall showcasing all houseguests
-- Nomination area with dramatic ceremony staging
-- Improved lighting with zone-based ambiance
-- Game room and bathroom add immersive detail
-- Camera can explore full house layout
+- **Character Selection** uses the original circular stage layout
+- **In-Game Header** has a new "House" button next to "Social"  
+- **House View Dialog** opens fullscreen with expanded multi-room layout
+- **Social Phase** retains its inline House View toggle (split layout)
+- Both scenes work independently with appropriate character positioning
+- Performance optimized: circular scene loads faster for selection
+- Consistent navigation between 2D game UI and 3D house exploration
