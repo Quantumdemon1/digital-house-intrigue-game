@@ -30,3 +30,9 @@ export {
   FEMALE_POSE_BONES,
   FEMALE_CHARACTER_NAMES,
 } from './femalePoseDefaults';
+
+export {
+  isMaleCharacter,
+  MALE_POSE_BONES,
+  MALE_CHARACTER_NAMES,
+} from './malePoseDefaults';

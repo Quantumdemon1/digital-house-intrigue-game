@@ -6,6 +6,7 @@
 
 import type { BoneRotation } from '../types';
 import { isFemaleCharacter, FEMALE_POSE_BONES } from './femalePoseDefaults';
+import { isMaleCharacter, MALE_POSE_BONES } from './malePoseDefaults';
 import { getCharacterPoseDefault } from './characterPoseDefaults';
 
 export type StaticPoseType = 'neutral' | 'relaxed' | 'confident' | 'defensive' | 'open' | 'wave';
@@ -230,7 +231,12 @@ export function getEffectivePose(poseType: StaticPoseType, characterName?: strin
     return { ...basePose, bones: FEMALE_POSE_BONES[poseType] };
   }
   
-  // 5. Base pose
+  // 5. Male template defaults
+  if (isMaleCharacter(characterName)) {
+    return { ...basePose, bones: MALE_POSE_BONES[poseType] };
+  }
+  
+  // 6. Base pose
   return basePose;
 }
 
