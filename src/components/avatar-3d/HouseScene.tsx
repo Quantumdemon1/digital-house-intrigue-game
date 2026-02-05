@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { CharacterTemplate } from '@/data/character-templates';
  import { RPMAvatar, preloadRPMAvatar } from './RPMAvatar';
  import { PoseType } from './hooks/usePoseVariety';
+ import { GestureType } from './hooks/useGestureAnimation';
  import { Archetype } from '@/data/character-templates';
 import { 
   HouseFloor, Couch, CoffeeTable, Plant, LightFixture,
@@ -25,6 +26,11 @@ interface HouseSceneProps {
   characters: CharacterTemplate[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  playerId?: string;
+  playerGesture?: GestureType | null;
+  onGestureComplete?: () => void;
+  /** Relationship data for reactive expressions: characterId -> score */
+  relationships?: Record<string, number>;
 }
 
 // Calculate circular positions for characters
@@ -89,9 +95,17 @@ const CharacterSpot: React.FC<{
   index: number;
    selectedPosition: [number, number, number] | null;
    selectedId: string | null;
+   isPlayer?: boolean;
+   playerGesture?: GestureType | null;
+   onGestureComplete?: () => void;
+   relationshipToSelected?: number;
   onSelect: () => void;
   onHover: (hovered: boolean) => void;
- }> = ({ template, position, rotation, isSelected, isHovered, index, selectedPosition, selectedId, onSelect, onHover }) => {
+ }> = ({ 
+   template, position, rotation, isSelected, isHovered, index, 
+   selectedPosition, selectedId, isPlayer, playerGesture, onGestureComplete,
+   relationshipToSelected, onSelect, onHover 
+ }) => {
   const groupRef = useRef<THREE.Group>(null);
   const idleGroupRef = useRef<THREE.Group>(null);
   const modelUrl = template.avatar3DConfig?.modelUrl;
@@ -189,6 +203,16 @@ const CharacterSpot: React.FC<{
                 lookAtTarget={lookAtTarget}
                 worldPosition={position}
                 worldRotationY={rotation[1]}
+                isPlayer={isPlayer}
+                enableGestures={isPlayer}
+                gestureToPlay={isPlayer ? playerGesture : null}
+                onGestureComplete={isPlayer ? onGestureComplete : undefined}
+                enableEyeTracking={true}
+                enableReactiveExpressions={true}
+                relationshipToSelected={relationshipToSelected ?? 0}
+                selectedIsNominee={false}
+                selectedIsHoH={false}
+                hasSelection={!!selectedId}
               />
             </Suspense>
           ) : (
@@ -346,10 +370,17 @@ const CameraController: React.FC<{
 };
 
 // Main scene content
-const SceneContent: React.FC<HouseSceneProps & { hoveredId: string | null; onHover: (id: string | null) => void }> = ({
+const SceneContent: React.FC<HouseSceneProps & { 
+  hoveredId: string | null; 
+  onHover: (id: string | null) => void;
+}> = ({
   characters,
   selectedId,
   onSelect,
+  playerId,
+  playerGesture,
+  onGestureComplete,
+  relationships = {},
   hoveredId,
   onHover
 }) => {
@@ -430,6 +461,10 @@ const SceneContent: React.FC<HouseSceneProps & { hoveredId: string | null; onHov
             index={i}
             selectedPosition={selectedPosition || null}
             selectedId={selectedId}
+            isPlayer={char.id === playerId}
+            playerGesture={char.id === playerId ? playerGesture : null}
+            onGestureComplete={char.id === playerId ? onGestureComplete : undefined}
+            relationshipToSelected={selectedId ? relationships[selectedId] : 0}
             onSelect={() => onSelect(char.id)}
             onHover={(hovered) => onHover(hovered ? char.id : null)}
           />
@@ -462,7 +497,11 @@ const SceneContent: React.FC<HouseSceneProps & { hoveredId: string | null; onHov
 export const HouseScene: React.FC<HouseSceneProps> = ({
   characters,
   selectedId,
-  onSelect
+  onSelect,
+  playerId,
+  playerGesture,
+  onGestureComplete,
+  relationships,
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   
@@ -484,6 +523,10 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
             characters={characters}
             selectedId={selectedId}
             onSelect={onSelect}
+            playerId={playerId}
+            playerGesture={playerGesture}
+            onGestureComplete={onGestureComplete}
+            relationships={relationships}
             hoveredId={hoveredId}
             onHover={setHoveredId}
           />

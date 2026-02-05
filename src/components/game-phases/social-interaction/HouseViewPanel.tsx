@@ -3,10 +3,12 @@
   * @description Wrapper for HouseScene that converts active houseguests to CharacterTemplate format
   */
  
- import React, { memo, useMemo, lazy, Suspense } from 'react';
+ import React, { memo, useMemo, useState, useCallback, lazy, Suspense } from 'react';
  import { Houseguest } from '@/models/houseguest';
  import { characterTemplates, CharacterTemplate, Archetype } from '@/data/character-templates';
  import { Loader2 } from 'lucide-react';
+ import { GestureType } from '@/components/avatar-3d/hooks/useGestureAnimation';
+ import AvatarControlPanel from './AvatarControlPanel';
  
  // Lazy load HouseScene for better performance
  const HouseScene = lazy(() => import('@/components/avatar-3d/HouseScene').then(m => ({ default: m.HouseScene })));
@@ -19,6 +21,8 @@
    nomineeIds?: string[];
    povHolderId?: string;
    playerId?: string;
+   /** Callback when player triggers a quick socialize action */
+   onQuickSocialize?: (targetId: string) => void;
  }
  
  // Generate status-based tagline for houseguest
@@ -96,8 +100,13 @@
    hohId,
    nomineeIds,
    povHolderId,
-   playerId
+   playerId,
+   onQuickSocialize,
  }) => {
+   // Gesture state for player avatar
+   const [playerGesture, setPlayerGesture] = useState<GestureType | null>(null);
+   const [gestureInProgress, setGestureInProgress] = useState(false);
+   
    // Convert houseguests to CharacterTemplate format
    const characters = useMemo(() => {
      return houseguests.map(hg => 
@@ -105,15 +114,72 @@
      );
    }, [houseguests, hohId, nomineeIds, povHolderId, playerId]);
    
+   // Build relationship map for reactive expressions
+  // Note: Relationships are managed in game state, not on houseguest objects
+  // For now, we'll use an empty map - parent can pass relationship data if needed
+   const relationships = useMemo(() => {
+     const map: Record<string, number> = {};
+    // Relationship data would be populated from game state
+    // Currently using empty map as placeholder - reactive expressions will show neutral/curiosity
+     return map;
+  }, []);
+   
+   // Gesture handlers
+   const handleGesture = useCallback((gesture: GestureType) => {
+     setPlayerGesture(gesture);
+     setGestureInProgress(true);
+   }, []);
+   
+   const handleGestureComplete = useCallback(() => {
+     setPlayerGesture(null);
+     setGestureInProgress(false);
+   }, []);
+   
+   const handleQuickSocialize = useCallback((targetId: string) => {
+     onSelect(targetId);
+     onQuickSocialize?.(targetId);
+   }, [onSelect, onQuickSocialize]);
+   
+   // Check if player is selected to show control panel
+   const playerSelected = selectedId === playerId;
+   
+   // Build character options for control panel
+   const characterOptions = useMemo(() => {
+     return characters.map(c => ({
+       id: c.id,
+       name: c.name,
+       tagline: c.tagline,
+     }));
+   }, [characters]);
+   
    return (
-     <div className="w-full h-full min-h-[350px] rounded-lg overflow-hidden border border-border/50 bg-card">
+     <div className="w-full h-full min-h-[350px] rounded-lg overflow-hidden border border-border/50 bg-card relative">
        <Suspense fallback={<HouseSceneLoader />}>
          <HouseScene
            characters={characters}
            selectedId={selectedId}
            onSelect={onSelect}
+           playerId={playerId}
+           playerGesture={playerGesture}
+           onGestureComplete={handleGestureComplete}
+           relationships={relationships}
          />
        </Suspense>
+       
+       {/* Player avatar control panel */}
+       {playerId && (
+         <div className="absolute bottom-16 left-4 z-10">
+           <AvatarControlPanel
+             isVisible={playerSelected}
+             onGesture={handleGesture}
+             onQuickSocialize={handleQuickSocialize}
+             characters={characterOptions}
+             playerId={playerId}
+             currentGesture={playerGesture}
+             gestureInProgress={gestureInProgress}
+           />
+         </div>
+       )}
      </div>
    );
  });

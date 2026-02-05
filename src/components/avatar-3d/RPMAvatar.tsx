@@ -3,7 +3,7 @@
  * @description Ready Player Me avatar component wrapper for React Three Fiber
  */
 
-import React, { Suspense, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { Suspense, useRef, useEffect, useMemo } from 'react';
 import { useFrame, useGraph } from '@react-three/fiber';
 import { useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
@@ -12,6 +12,9 @@ import { MoodType } from '@/models/houseguest';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
  import { usePoseVariety, type PoseType } from './hooks/usePoseVariety';
  import { useLookAt } from './hooks/useLookAt';
+ import { useGestureAnimation, type GestureType } from './hooks/useGestureAnimation';
+ import { useReactiveExpressions } from './hooks/useReactiveExpressions';
+ import { useEyeTracking } from './hooks/useEyeTracking';
 
 // ARKit blendshape names for expressions (52 blendshapes available)
 const EXPRESSION_MORPHS: Record<string, Record<string, number>> = {
@@ -100,6 +103,26 @@ interface RPMAvatarProps {
    worldPosition?: [number, number, number];
    /** Character's Y rotation for look-at calculations */
    worldRotationY?: number;
+   /** Whether this is the player's avatar */
+   isPlayer?: boolean;
+   /** Enable gesture animations (player only) */
+   enableGestures?: boolean;
+   /** Gesture to play */
+   gestureToPlay?: GestureType | null;
+   /** Callback when gesture completes */
+   onGestureComplete?: () => void;
+   /** Enable independent eye tracking */
+   enableEyeTracking?: boolean;
+   /** Enable reactive expressions */
+   enableReactiveExpressions?: boolean;
+   /** Relationship score with selected character (-100 to 100) */
+   relationshipToSelected?: number;
+   /** Whether the selected character is a nominee */
+   selectedIsNominee?: boolean;
+   /** Whether the selected character is HoH */
+   selectedIsHoH?: boolean;
+   /** Whether someone is currently selected */
+   hasSelection?: boolean;
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
@@ -120,6 +143,16 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
    lookAtTarget = null,
    worldPosition = [0, 0, 0],
    worldRotationY = 0,
+   isPlayer = false,
+   enableGestures = false,
+   gestureToPlay = null,
+   onGestureComplete,
+   enableEyeTracking = true,
+   enableReactiveExpressions = true,
+   relationshipToSelected = 0,
+   selectedIsNominee = false,
+   selectedIsHoH = false,
+   hasSelection = false,
   onLoaded,
   onError
 }) => {
@@ -158,17 +191,6 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes } = useGraph(clone);
   
-   // Apply varied pose to skeleton bones based on pose type
-   usePoseVariety(clone, poseType, applyIdlePose, phaseOffset);
-   
-   // Apply look-at behavior for head tracking
-   useLookAt(clone, {
-     targetPosition: lookAtTarget,
-     characterPosition: worldPosition,
-     characterRotationY: worldRotationY,
-     enabled: applyIdlePose && lookAtTarget !== null,
-   });
-  
   // Get all skinned meshes for morph target manipulation
   const skinnedMeshes = useMemo(() => {
     const meshes: THREE.SkinnedMesh[] = [];
@@ -179,6 +201,49 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
     });
     return meshes;
   }, [clone]);
+ 
+   // Apply varied pose to skeleton bones based on pose type
+   usePoseVariety(clone, poseType, applyIdlePose, phaseOffset);
+   
+   // Apply look-at behavior for head tracking
+   useLookAt(clone, {
+     targetPosition: lookAtTarget,
+     characterPosition: worldPosition,
+     characterRotationY: worldRotationY,
+     enabled: applyIdlePose && lookAtTarget !== null,
+   });
+   
+   // Gesture animation (player only)
+   const { playGesture, isPlaying: gestureIsPlaying } = useGestureAnimation(clone, {
+     enabled: enableGestures && isPlayer,
+     onComplete: onGestureComplete,
+   });
+   
+   // Trigger gesture when prop changes
+   useEffect(() => {
+     if (gestureToPlay && enableGestures && isPlayer) {
+       playGesture(gestureToPlay);
+     }
+   }, [gestureToPlay, enableGestures, isPlayer, playGesture]);
+   
+   // Eye tracking (independent of head look-at)
+   useEyeTracking(skinnedMeshes, {
+     targetPosition: lookAtTarget,
+     characterPosition: worldPosition,
+     characterRotationY: worldRotationY,
+     enabled: enableEyeTracking && lookAtTarget !== null,
+     enableMicroSaccades: true,
+   });
+   
+   // Reactive expressions based on social context
+   useReactiveExpressions(skinnedMeshes, {
+     relationshipScore: relationshipToSelected,
+     selectedIsNominee,
+     selectedIsHoH,
+     isSelf: false, // Will be set by parent based on selection
+     hasSelection,
+     enabled: enableReactiveExpressions && !gestureIsPlaying,
+   });
 
   // Apply expression based on mood
   useEffect(() => {
