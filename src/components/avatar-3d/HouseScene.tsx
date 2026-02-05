@@ -148,6 +148,8 @@ const CharacterSpot: React.FC<{
                 context="game"
                 scale={1}
                 position={[0, 0, 0]}
+                applyIdlePose={true}
+                phaseOffset={index * 0.7}
               />
             </Suspense>
           ) : (

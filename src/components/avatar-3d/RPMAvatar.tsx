@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { SkeletonUtils } from 'three-stdlib';
 import { MoodType } from '@/models/houseguest';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
+import { useIdlePose } from './hooks/useIdlePose';
 
 // ARKit blendshape names for expressions (52 blendshapes available)
 const EXPRESSION_MORPHS: Record<string, Record<string, number>> = {
@@ -86,6 +87,10 @@ interface RPMAvatarProps {
   position?: [number, number, number];
   /** UI context for quality optimization */
   context?: AvatarContext;
+  /** Apply natural idle standing pose (arms down, subtle sway) */
+  applyIdlePose?: boolean;
+  /** Phase offset for staggered idle animations */
+  phaseOffset?: number;
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
@@ -100,6 +105,8 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   scale = 1,
   position,
   context = 'game',
+  applyIdlePose = false,
+  phaseOffset = 0,
   onLoaded,
   onError
 }) => {
@@ -137,6 +144,9 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   // Clone the scene to prevent issues with multiple instances
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes } = useGraph(clone);
+  
+  // Apply natural idle pose to skeleton bones (arms down, subtle animation)
+  useIdlePose(clone, applyIdlePose, phaseOffset);
   
   // Get all skinned meshes for morph target manipulation
   const skinnedMeshes = useMemo(() => {
