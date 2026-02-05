@@ -60,6 +60,7 @@ export const CharacterDetailPanel: React.FC<CharacterDetailPanelProps> = ({
                       avatarConfig={template.avatar3DConfig}
                       size="full"
                       animated={true}
+                      characterName={template.name}
                     />
                   </React.Suspense>
                 ) : (
