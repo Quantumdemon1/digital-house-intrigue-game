@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGame } from '@/contexts/GameContext';
 import PhaseContent from './PhaseContent';
-import GameSidebar from './GameSidebar';
+import CollapsibleMobileSidebar from './CollapsibleMobileSidebar';
 import GameHeader from './GameHeader';
 import GameStatusIndicator from './GameStatusIndicator';
 import SpectatorBanner from './SpectatorBanner';
@@ -71,13 +71,13 @@ const GameScreen: React.FC = () => {
           
           {/* Sidebar */}
           <motion.div 
-            className="lg:w-80 xl:w-96 shrink-0"
+            className="w-full lg:w-80 xl:w-96 shrink-0"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3, duration: 0.4 }}
           >
             <div className="lg:sticky lg:top-4">
-              <GameSidebar />
+              <CollapsibleMobileSidebar />
             </div>
           </motion.div>
         </div>

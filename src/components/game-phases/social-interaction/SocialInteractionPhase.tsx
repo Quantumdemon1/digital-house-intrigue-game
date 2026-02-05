@@ -228,7 +228,7 @@ const SocialInteractionPhase: React.FC = () => {
      <div className={`flex flex-col ${showHouseView ? 'lg:flex-row' : ''} gap-4`}>
        {/* House View Panel */}
        {showHouseView && (
-         <div className="lg:w-1/2 xl:w-3/5 h-[400px] lg:h-[600px]">
+         <div className="w-full h-[280px] sm:h-[350px] lg:w-1/2 xl:w-3/5 lg:h-[600px]">
            <HouseViewPanel
              houseguests={game.getActiveHouseguests()}
              selectedId={selectedFromHouse}

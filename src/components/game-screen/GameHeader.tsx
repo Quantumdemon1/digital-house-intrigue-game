@@ -53,7 +53,7 @@ interface GameHeaderProps {
                  variant="ghost"
                  size="sm"
                  onClick={onShowHouseView}
-                 className="flex items-center gap-1.5"
+                 className="flex items-center gap-1.5 min-h-[44px] min-w-[44px]"
                >
                  <Home className="h-4 w-4" />
                  <span className="hidden sm:inline">House</span>
@@ -64,7 +64,7 @@ interface GameHeaderProps {
                 variant="ghost"
                 size="sm"
                 onClick={onShowSocialNetwork}
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-1.5 min-h-[44px] min-w-[44px]"
               >
                 <Network className="h-4 w-4" />
                 <span className="hidden sm:inline">Social</span>

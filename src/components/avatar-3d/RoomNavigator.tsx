@@ -6,6 +6,7 @@
  import React, { useMemo } from 'react';
  import { Button } from '@/components/ui/button';
  import { motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
  import { 
    Home, Crown, MessageSquare, ChefHat, Tv, Gamepad2, 
    AlertTriangle, Bed, Waves, X
@@ -97,6 +98,7 @@
    if (!isOpen) return null;
    
    const rooms = Object.entries(ROOM_CAMERA_POSITIONS);
+  const isMobile = useIsMobile();
    
    // Mini-map scaling constants
    const MAP_SCALE = 3; // pixels per unit
@@ -123,8 +125,8 @@
          )}
        </div>
        
- {/* Mini-map (if characters provided) */}
- {characterPositions.length > 0 && (
+{/* Mini-map (if characters provided) - hidden on mobile */}
+{characterPositions.length > 0 && !isMobile && (
    <div className="mb-2 p-2 rounded bg-muted/50 border border-border">
      <div className="relative w-full h-20 bg-background/80 rounded overflow-hidden">
        {/* House outline */}

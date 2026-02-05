@@ -3,7 +3,7 @@
  * @description Big Brother House 3D environment with characters arranged in a circle
  */
 
- import React, { Suspense, useRef, useState, useCallback, useEffect, useMemo } from 'react';
+ import React, { Suspense, useRef, useState, useCallback, useEffect, useMemo, lazy } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
  import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
@@ -981,16 +981,18 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
            onRippleComplete={handleRippleComplete}
           />
            
-           {/* Post-processing effects */}
-           <EffectComposer>
-             <Bloom
-               intensity={0.4}
-               luminanceThreshold={0.7}
-               luminanceSmoothing={0.9}
-               mipmapBlur
-             />
-             <Vignette eskil={false} offset={0.1} darkness={0.4} />
-           </EffectComposer>
+           {/* Post-processing effects - disabled on mobile for performance */}
+           {!isMobile && (
+             <EffectComposer>
+               <Bloom
+                 intensity={0.4}
+                 luminanceThreshold={0.7}
+                 luminanceSmoothing={0.9}
+                 mipmapBlur
+               />
+               <Vignette eskil={false} offset={0.1} darkness={0.4} />
+             </EffectComposer>
+           )}
         </Suspense>
       </Canvas>
      
