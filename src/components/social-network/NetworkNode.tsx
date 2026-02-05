@@ -17,6 +17,7 @@ interface NetworkNodeProps {
   isSelected: boolean;
   perception?: PlayerPerception;
   size?: 'small' | 'medium' | 'large';
+  isMobile?: boolean;
   onClick: () => void;
 }
 
@@ -26,6 +27,13 @@ const SIZE_MAP = {
   large: { node: 72, ring: 80, fontSize: 14, iconSize: 16 }
 };
 
+// Mobile-specific size map - smaller nodes to prevent overlap
+const MOBILE_SIZE_MAP = {
+  small: { node: 28, ring: 32, fontSize: 8, iconSize: 9 },
+  medium: { node: 40, ring: 44, fontSize: 10, iconSize: 12 },
+  large: { node: 52, ring: 58, fontSize: 11, iconSize: 14 }
+};
+
 const NetworkNode: React.FC<NetworkNodeProps> = memo(({
   houseguest,
   position,
@@ -33,9 +41,10 @@ const NetworkNode: React.FC<NetworkNodeProps> = memo(({
   isSelected,
   perception,
   size = 'medium',
+  isMobile = false,
   onClick
 }) => {
-  const sizeConfig = SIZE_MAP[size];
+  const sizeConfig = isMobile ? MOBILE_SIZE_MAP[size] : SIZE_MAP[size];
   const isHoH = houseguest.isHoH;
   const isNominated = houseguest.isNominated;
   const isPovHolder = houseguest.isPovHolder;

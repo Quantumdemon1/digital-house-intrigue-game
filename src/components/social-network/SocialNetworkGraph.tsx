@@ -77,8 +77,8 @@ const SocialNetworkGraph: React.FC<SocialNetworkGraphProps> = ({
   }, [activeHouseguests.length, isMobile]);
   // Calculate positions
   const positions = useMemo(() => 
-    calculateCircularLayout(activeHouseguests, playerId, containerSize),
-    [activeHouseguests, playerId, containerSize]
+    calculateCircularLayout(activeHouseguests, playerId, containerSize, isMobile),
+    [activeHouseguests, playerId, containerSize, isMobile]
   );
   
   // Get custom alliances from player perceptions
@@ -264,6 +264,7 @@ const SocialNetworkGraph: React.FC<SocialNetworkGraphProps> = ({
                 isSelected={selectedId === houseguest.id}
                 perception={perception}
                 size={isPlayer ? 'large' : 'medium'}
+                isMobile={isMobile}
                 onClick={() => handleNodeClick(houseguest)}
               />
             );

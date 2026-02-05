@@ -31,13 +31,16 @@ export interface AllianceCircle {
 export function calculateCircularLayout(
   houseguests: Houseguest[],
   playerId: string,
-  containerSize: { width: number; height: number }
+  containerSize: { width: number; height: number },
+  isMobile: boolean = false
 ): Map<string, Position> {
   const positions = new Map<string, Position>();
   const { width, height } = containerSize;
   
-  // Generous padding to keep nodes and labels visible
-  const padding = 90; // Account for node size (56px) + name label + badges
+  // Smaller padding on mobile for smaller nodes
+  const padding = isMobile ? 60 : 90;
+  const nodeSize = isMobile ? 40 : 56;
+  
   const usableWidth = width - padding * 2;
   const usableHeight = height - padding * 2;
   const centerX = width / 2;
@@ -50,23 +53,33 @@ export function calculateCircularLayout(
   // Player position - left side but within bounds
   if (player) {
     positions.set(player.id, {
-      x: padding + 60, // Ensure visible with margin for "YOU" label
+      x: padding + (isMobile ? 40 : 60),
       y: centerY
     });
   }
   
-  // Adaptive radius based on container and player count
-  const maxRadius = Math.min(usableWidth * 0.38, usableHeight * 0.38);
-  const minRadius = Math.max(80, others.length * 18);
-  const radius = Math.min(maxRadius, Math.max(minRadius, 120));
+  // Mobile: use larger percentage of available space
+  const radiusMultiplier = isMobile ? 0.42 : 0.38;
+  const maxRadius = Math.min(usableWidth * radiusMultiplier, usableHeight * radiusMultiplier);
   
-  // Center point for the arc (shifted right from center for better distribution)
-  const arcCenterX = centerX + radius * 0.2;
+  // Ensure minimum spacing between nodes based on node size
+  const minNodeSpacing = nodeSize * 1.4; // 40% gap between nodes
+  const circumferenceNeeded = others.length * minNodeSpacing;
+  const radiusForSpacing = circumferenceNeeded / (Math.PI * 1.5); // For ~270° arc
   
-  // Adaptive arc angle based on number of houseguests
-  // More houseguests = wider arc to prevent overlap
-  const baseAngle = Math.PI * 0.8;
-  const totalAngle = Math.min(Math.PI * 1.4, baseAngle + (others.length * 0.08));
+  const radius = Math.max(
+    Math.min(maxRadius, radiusForSpacing),
+    isMobile ? 100 : 120
+  );
+  
+  // Arc center shifted right to balance with player on left
+  const arcCenterX = centerX + (isMobile ? radius * 0.15 : radius * 0.2);
+  
+  // Use wider arc on mobile to prevent clustering
+  const totalAngle = isMobile 
+    ? Math.min(Math.PI * 1.6, Math.PI * 0.9 + others.length * 0.12)
+    : Math.min(Math.PI * 1.4, Math.PI * 0.8 + others.length * 0.08);
+  
   const angleStart = -totalAngle / 2;
   const angleStep = others.length > 1 ? totalAngle / (others.length - 1) : 0;
   
@@ -75,7 +88,7 @@ export function calculateCircularLayout(
     let x = arcCenterX + radius * Math.cos(angle);
     let y = centerY + radius * Math.sin(angle);
     
-    // Clamp to visible bounds with padding
+    // Clamp with reduced padding for mobile
     x = Math.max(padding, Math.min(width - padding, x));
     y = Math.max(padding, Math.min(height - padding, y));
     
