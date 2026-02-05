@@ -6,6 +6,7 @@
 
 import type { BoneRotation } from '../types';
 import { isFemaleCharacter, FEMALE_POSE_BONES } from './femalePoseDefaults';
+import { getCharacterPoseDefault } from './characterPoseDefaults';
 
 export type StaticPoseType = 'neutral' | 'relaxed' | 'confident' | 'defensive' | 'open' | 'wave';
 
@@ -195,14 +196,15 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
  * Resolution chain:
  * 1. Character-specific localStorage override (poseName:characterId)
  * 2. Global localStorage override (poseName)
- * 3. Female template defaults (if character is female)
- * 4. Base static pose definition
+ * 3. Character-specific code defaults (characterPoseDefaults.ts)
+ * 4. Female template defaults (if character is female)
+ * 5. Base static pose definition
  */
 export function getEffectivePose(poseType: StaticPoseType, characterName?: string): PoseDefinition {
   const basePose = STATIC_POSES[poseType];
   const overrides = getPoseOverrides();
   
-  // 1. Check character-specific override
+  // 1. Check character-specific localStorage override
   if (characterName) {
     const charKey = `${poseType}:${characterName.toLowerCase().replace(/\s+/g, '-')}`;
     if (overrides[charKey]) {
@@ -210,17 +212,25 @@ export function getEffectivePose(poseType: StaticPoseType, characterName?: strin
     }
   }
   
-  // 2. Check global override
+  // 2. Check global localStorage override
   if (overrides[poseType]) {
     return { ...basePose, bones: { ...basePose.bones, ...overrides[poseType] } };
   }
   
-  // 3. Use female template defaults if applicable
+  // 3. Character-specific code defaults
+  if (characterName) {
+    const charDefault = getCharacterPoseDefault(characterName, poseType);
+    if (charDefault) {
+      return { ...basePose, bones: charDefault };
+    }
+  }
+  
+  // 4. Female template defaults
   if (isFemaleCharacter(characterName)) {
     return { ...basePose, bones: FEMALE_POSE_BONES[poseType] };
   }
   
-  // 4. Base pose
+  // 5. Base pose
   return basePose;
 }
 
