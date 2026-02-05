@@ -1,6 +1,7 @@
 /**
  * @file poses/PoseLibrary.ts
  * @description Static pose definitions for avatars - applied once, no animation loop
+ * Now with admin override support for manual pose adjustments
  */
 
 import type { BoneRotation } from '../types';
@@ -14,8 +15,55 @@ export interface PoseDefinition {
 }
 
 /**
+ * Admin pose overrides stored in localStorage
+ * Format: { [poseName]: { [boneName]: BoneRotation } }
+ */
+const POSE_OVERRIDES_KEY = 'avatar_pose_overrides';
+
+/**
+ * Get admin pose overrides from localStorage
+ */
+export function getPoseOverrides(): Record<string, Record<string, BoneRotation>> {
+  try {
+    const stored = localStorage.getItem(POSE_OVERRIDES_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Save admin pose overrides to localStorage
+ */
+export function savePoseOverrides(overrides: Record<string, Record<string, BoneRotation>>): void {
+  try {
+    localStorage.setItem(POSE_OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch (e) {
+    console.warn('[PoseLibrary] Failed to save pose overrides:', e);
+  }
+}
+
+/**
+ * Save a single pose override
+ */
+export function saveSinglePoseOverride(poseName: string, bones: Record<string, BoneRotation>): void {
+  const overrides = getPoseOverrides();
+  overrides[poseName] = bones;
+  savePoseOverrides(overrides);
+}
+
+/**
+ * Clear a pose override (revert to default)
+ */
+export function clearPoseOverride(poseName: string): void {
+  const overrides = getPoseOverrides();
+  delete overrides[poseName];
+  savePoseOverrides(overrides);
+}
+
+/**
  * Static pose library - bone rotations in radians
- * These are applied once during clone creation
+ * REFINED: Better arm angles to prevent body collision/clipping
  */
 export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
   neutral: {
@@ -27,30 +75,36 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
       Spine2: { x: 0.01, y: 0, z: 0 },
       Neck: { x: 0, y: 0, z: 0 },
       Head: { x: 0, y: 0, z: 0 },
-      LeftShoulder: { x: 0, y: 0, z: 0.05 },
-      LeftArm: { x: 0.1, y: 0, z: 0.3 },
-      LeftForeArm: { x: 0.1, y: 0, z: 0 },
-      RightShoulder: { x: 0, y: 0, z: -0.05 },
-      RightArm: { x: 0.1, y: 0, z: -0.3 },
-      RightForeArm: { x: 0.1, y: 0, z: 0 },
+      // Shoulders slightly forward to prevent arm-torso collision
+      LeftShoulder: { x: 0.05, y: 0.1, z: 0.08 },
+      LeftArm: { x: 0.12, y: 0.05, z: 0.35 },
+      LeftForeArm: { x: 0.15, y: 0.02, z: 0.05 },
+      LeftHand: { x: 0, y: 0, z: 0.08 },
+      RightShoulder: { x: 0.05, y: -0.1, z: -0.08 },
+      RightArm: { x: 0.12, y: -0.05, z: -0.35 },
+      RightForeArm: { x: 0.15, y: -0.02, z: -0.05 },
+      RightHand: { x: 0, y: 0, z: -0.08 },
     },
   },
 
   relaxed: {
     name: 'relaxed',
-    description: 'Arms at sides, natural stance',
+    description: 'Arms at sides, natural stance - REFINED for no clipping',
     bones: {
       Spine: { x: 0.03, y: 0, z: 0 },
       Spine1: { x: 0.02, y: 0, z: 0 },
       Spine2: { x: 0.01, y: 0, z: 0 },
       Neck: { x: 0.02, y: 0, z: 0 },
       Head: { x: -0.02, y: 0, z: 0 },
-      LeftShoulder: { x: 0, y: 0, z: 0.08 },
-      LeftArm: { x: 0.15, y: 0, z: 0.5 },
-      LeftForeArm: { x: 0.2, y: 0, z: 0 },
-      RightShoulder: { x: 0, y: 0, z: -0.08 },
-      RightArm: { x: 0.15, y: 0, z: -0.5 },
-      RightForeArm: { x: 0.2, y: 0, z: 0 },
+      // Key fix: rotate shoulders outward, arms away from body
+      LeftShoulder: { x: 0.02, y: 0.12, z: 0.12 },
+      LeftArm: { x: 0.08, y: 0.08, z: 0.55 }, // More Z rotation outward
+      LeftForeArm: { x: 0.18, y: 0.05, z: 0.08 },
+      LeftHand: { x: 0.05, y: 0, z: 0.1 },
+      RightShoulder: { x: 0.02, y: -0.12, z: -0.12 },
+      RightArm: { x: 0.08, y: -0.08, z: -0.55 },
+      RightForeArm: { x: 0.18, y: -0.05, z: -0.08 },
+      RightHand: { x: 0.05, y: 0, z: -0.1 },
     },
   },
 
@@ -63,12 +117,15 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
       Spine2: { x: -0.02, y: 0, z: 0 },
       Neck: { x: 0.02, y: 0, z: 0 },
       Head: { x: 0.03, y: 0, z: 0 },
-      LeftShoulder: { x: 0, y: 0.1, z: 0.1 },
-      LeftArm: { x: 0.3, y: 0.4, z: 0.8 },
-      LeftForeArm: { x: 0.8, y: 0.3, z: 0 },
-      RightShoulder: { x: 0, y: -0.1, z: -0.1 },
-      RightArm: { x: 0.3, y: -0.4, z: -0.8 },
-      RightForeArm: { x: 0.8, y: -0.3, z: 0 },
+      // Refined hands-on-hips with proper elbow angles
+      LeftShoulder: { x: 0.05, y: 0.15, z: 0.15 },
+      LeftArm: { x: 0.35, y: 0.45, z: 0.75 },
+      LeftForeArm: { x: 0.7, y: 0.25, z: 0.1 },
+      LeftHand: { x: 0.1, y: 0.1, z: 0.15 },
+      RightShoulder: { x: 0.05, y: -0.15, z: -0.15 },
+      RightArm: { x: 0.35, y: -0.45, z: -0.75 },
+      RightForeArm: { x: 0.7, y: -0.25, z: -0.1 },
+      RightHand: { x: 0.1, y: -0.1, z: -0.15 },
     },
   },
 
@@ -81,12 +138,15 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
       Spine2: { x: 0.02, y: 0, z: 0 },
       Neck: { x: 0.03, y: 0, z: 0 },
       Head: { x: -0.02, y: 0, z: 0 },
-      LeftShoulder: { x: 0.1, y: 0.2, z: 0.2 },
-      LeftArm: { x: 0.5, y: 0.8, z: 0.6 },
-      LeftForeArm: { x: 1.2, y: 0.5, z: -0.3 },
-      RightShoulder: { x: 0.1, y: -0.2, z: -0.2 },
-      RightArm: { x: 0.5, y: -0.8, z: -0.6 },
-      RightForeArm: { x: 1.2, y: -0.5, z: 0.3 },
+      // Refined crossed arms - proper layering
+      LeftShoulder: { x: 0.12, y: 0.22, z: 0.18 },
+      LeftArm: { x: 0.55, y: 0.75, z: 0.5 },
+      LeftForeArm: { x: 1.1, y: 0.45, z: -0.25 },
+      LeftHand: { x: 0.15, y: 0.1, z: 0.1 },
+      RightShoulder: { x: 0.12, y: -0.22, z: -0.18 },
+      RightArm: { x: 0.55, y: -0.75, z: -0.5 },
+      RightForeArm: { x: 1.1, y: -0.45, z: 0.25 },
+      RightHand: { x: 0.15, y: -0.1, z: -0.1 },
     },
   },
 
@@ -99,17 +159,38 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
       Spine2: { x: 0, y: 0, z: 0 },
       Neck: { x: 0, y: 0, z: 0 },
       Head: { x: 0.02, y: 0, z: 0 },
-      LeftShoulder: { x: 0, y: 0, z: 0.1 },
-      LeftArm: { x: 0.2, y: 0.3, z: 0.6 },
-      LeftForeArm: { x: 0.3, y: 0.5, z: 0 },
-      LeftHand: { x: 0, y: 0, z: -0.5 },
-      RightShoulder: { x: 0, y: 0, z: -0.1 },
-      RightArm: { x: 0.2, y: -0.3, z: -0.6 },
-      RightForeArm: { x: 0.3, y: -0.5, z: 0 },
-      RightHand: { x: 0, y: 0, z: 0.5 },
+      // Open welcoming pose with arms spread
+      LeftShoulder: { x: 0.02, y: 0.08, z: 0.12 },
+      LeftArm: { x: 0.18, y: 0.32, z: 0.55 },
+      LeftForeArm: { x: 0.28, y: 0.45, z: 0.08 },
+      LeftHand: { x: 0.05, y: 0.1, z: -0.4 },
+      RightShoulder: { x: 0.02, y: -0.08, z: -0.12 },
+      RightArm: { x: 0.18, y: -0.32, z: -0.55 },
+      RightForeArm: { x: 0.28, y: -0.45, z: -0.08 },
+      RightHand: { x: 0.05, y: -0.1, z: 0.4 },
     },
   },
 };
+
+/**
+ * Get effective pose with admin overrides applied
+ */
+export function getEffectivePose(poseType: StaticPoseType): PoseDefinition {
+  const basePose = STATIC_POSES[poseType];
+  const overrides = getPoseOverrides();
+  const poseOverride = overrides[poseType];
+  
+  if (!poseOverride) return basePose;
+  
+  // Merge base pose with overrides
+  return {
+    ...basePose,
+    bones: {
+      ...basePose.bones,
+      ...poseOverride,
+    },
+  };
+}
 
 /**
  * Get a random static pose for variety
@@ -132,3 +213,25 @@ export function getPoseForContext(context: {
   if (context.isSafe) return 'relaxed';
   return 'neutral';
 }
+
+/**
+ * List of all bone names that can be adjusted
+ */
+export const ADJUSTABLE_BONES = [
+  'Hips',
+  'Spine',
+  'Spine1',
+  'Spine2',
+  'Neck',
+  'Head',
+  'LeftShoulder',
+  'LeftArm',
+  'LeftForeArm',
+  'LeftHand',
+  'RightShoulder',
+  'RightArm',
+  'RightForeArm',
+  'RightHand',
+] as const;
+
+export type AdjustableBone = typeof ADJUSTABLE_BONES[number];
