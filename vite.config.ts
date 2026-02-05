@@ -18,7 +18,6 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    // Prevent duplicate React/Three.js instances that cause "Cannot read properties of undefined" errors
     dedupe: [
       "react", 
       "react-dom", 
@@ -27,12 +26,9 @@ export default defineConfig(({ mode }) => ({
       "@react-three/fiber", 
       "@react-three/drei",
       "three-stdlib",
-      "@react-three/postprocessing",
-      "postprocessing"
     ],
   },
   optimizeDeps: {
-    // Force these packages to be pre-bundled together to avoid duplicate instances
     include: [
       "react",
       "react-dom",
@@ -40,10 +36,6 @@ export default defineConfig(({ mode }) => ({
       "@react-three/fiber",
       "@react-three/drei",
       "three-stdlib",
-      "@react-three/postprocessing",
-      "postprocessing"
     ],
-    // Force rebuild of optimized deps cache to clear any corrupted instances
-    force: true,
   },
 }));
