@@ -1,282 +1,262 @@
 
-# 3D House & Avatar System: Improvements and Refinements
+# Spring Physics & NPC Conversation Grouping Implementation
 
-Based on extensive analysis of the codebase, here's a comprehensive outline of potential improvements organized by category.
+## Overview
+
+This plan implements two interconnected improvements to the 3D avatar system:
+1. **Spring Physics** - Adds follow-through motion for head, hands, and spine bones
+2. **NPC Conversation Grouping** - Dynamically positions allied characters near each other
 
 ---
 
-## 1. Avatar Animation Enhancements
+## Part 1: Spring Physics for Secondary Motion
 
-### 1.1 Physics System (Not Yet Implemented)
-The animation types define spring physics, but the physics system isn't wired up yet.
+### Current State
+The spring physics system is **defined but not connected**:
+- `springPhysics.ts` has `SpringConfig`, `Spring3DState`, `updateSpring3D` utilities
+- `SPRING_CONFIGS` defines tuning for head, spine, hand, etc.
+- `AnimationController.ts` does NOT use spring physics - it applies bone rotations directly
 
-| Component | Current State | Improvement |
-|-----------|--------------|-------------|
-| `SpringConfig` | Defined in types.ts | Implement actual spring physics in animation loop |
-| Secondary Motion | Not implemented | Add spring-based follow-through for head, hands, spine |
-| Hair/Clothing Physics | Missing | Add soft-body simulation for hair strands and loose clothing |
+### Implementation Approach
 
-**Implementation:**
-- Create `physics/SecondaryMotion.ts` that applies spring dynamics to bone rotations
-- Add momentum/inertia to gesture endings for natural deceleration
+Create a new **SecondaryMotionLayer** that wraps the final bone output and applies spring physics for natural follow-through:
 
-### 1.2 Expanded Gesture Library
-Current gestures: `wave`, `nod`, `shrug`, `clap`, `point`, `thumbsUp`, `headShake`, `celebrate`, `thinkingPose`, `welcome`, `dismiss`, `listenNod`
-
-**Missing Gestures to Add:**
-- `facepalm` - Frustration gesture
-- `crossArms` - Defensive/skeptical pose
-- `handOnHip` - Assertive stance
-- `nervousFidget` - Anxiety animation
-- `emphasize` - Talking with hands
-- `sad` - Shoulders slump, head down
-- `angry` - Clenched fists, rigid posture
-
-### 1.3 Facial Expression Depth
-Current reactive expressions are limited to 8 types with basic morph targets.
-
-**Improvements:**
-- Add micro-expressions (subtle, quick flashes of emotion)
-- Implement emotion blending (e.g., 60% happy + 40% surprised)
-- Add procedural lip movement for "talking" simulation
-- Enhance blink patterns with personality variance (nervous = faster blinks)
-
-### 1.4 Eye Tracking Refinements
 ```text
-Current: Head turns toward target
-Missing: Eye-lead behavior, break-away glances
+Layer Flow (Updated):
+┌─────────────────────────┐
+│ Final Bone Rotations    │ ← Blended from all layers
+└───────────┬─────────────┘
+            ▼
+┌─────────────────────────┐
+│ Secondary Motion Layer  │ ← NEW: Spring physics applied
+└───────────┬─────────────┘
+            ▼
+┌─────────────────────────┐
+│ Apply to Skeleton       │
+└─────────────────────────┘
 ```
 
-**Improvements:**
-- Eyes should target 150-200ms before head follows
-- Add procedural "break-away" glances (look away briefly for realism)
-- Implement micro-saccades (tiny rapid eye movements)
-- Add pupil dilation based on emotional state
+### Files to Create
 
----
+**`src/components/avatar-3d/animation/physics/SecondaryMotionSystem.ts`**
+- Spring state management for each tracked bone
+- Per-bone spring configurations
+- Function to apply spring filtering to final bone rotations
 
-## 2. House Environment Improvements
+```typescript
+interface SecondaryMotionState {
+  head: Spring3DState;
+  neck: Spring3DState;
+  spine2: Spring3DState;
+  leftHand: Spring3DState;
+  rightHand: Spring3DState;
+}
 
-### 2.1 Room Detail Enhancements
-
-| Room | Current State | Suggested Improvements |
-|------|--------------|----------------------|
-| Living Room | Sofa, coffee table, memory wall | Add TV screen with animated content, more seating variety |
-| HOH Suite | Bed, throne, mini fridge | Add letter display, photos on walls, door with "HOH" signage |
-| Kitchen | Island, appliances | Add animated cooking effects, dishes, food items |
-| Backyard | Pool, hot tub, BBQ | Add vegetation, string lights, outdoor furniture variety |
-| Diary Room | Chair, cameras | Add iconic red curtain, BB logo screen, mood lighting |
-| Game Room | Pool table, arcade | Add more games, trophy shelf, party decorations |
-
-### 2.2 Dynamic Environment Features
-
-**Time-of-Day Lighting:**
-- Morning: Warm golden light from windows
-- Afternoon: Bright neutral lighting
-- Evening: Dimmer amber/orange tones
-- Night: Blue-tinted ambient with practical lights on
-
-**Weather Effects (Backyard):**
-- Sunny: Bright shadows, heat shimmer
-- Overcast: Soft diffuse lighting
-- Night: Stars, moon reflection in pool
-
-### 2.3 Interactive Elements
-
-**Clickable Props:**
-- Memory Wall photos (show houseguest details)
-- Nomination box (highlight during ceremony)
-- Diary Room chair (trigger confessional UI)
-- Kitchen items (social interaction opportunities)
-
-**Animated Props:**
-- TV screens with BB content
-- Pool water with realistic ripples
-- Fireplace flames (if added)
-- Ceiling fans spinning
-
----
-
-## 3. Character Interaction Improvements
-
-### 3.1 Social Positioning
-Currently characters stand in fixed positions.
-
-**Improvements:**
-- Dynamic grouping based on alliances (allied characters cluster)
-- Conversation circles (2-4 characters face each other)
-- Personal space awareness (characters don't overlap)
-- Room-appropriate activities (kitchen = eating poses, bedroom = sitting)
-
-### 3.2 NPC Autonomous Behavior
-```text
-Current: All characters stand idle
-Goal: Characters naturally move and interact
+function createSecondaryMotionState(): SecondaryMotionState;
+function updateSecondaryMotion(
+  state: SecondaryMotionState,
+  targetBones: BoneMap,
+  deltaTime: number,
+  enabled: boolean
+): { bones: BoneMap; state: SecondaryMotionState };
 ```
 
-**Features to Add:**
-- Random room wandering with path-finding
-- Spontaneous NPC-to-NPC conversations (animated talking)
-- Activity simulation (reading, eating, exercising)
-- Reactive movement (gather around events)
+### Files to Modify
 
-### 3.3 Player Interaction Feedback
-When player approaches/selects a character:
-- Character turns to face player (already implemented)
-- Add greeting gesture (wave, nod)
-- Relationship-appropriate expression (smile for ally, scowl for enemy)
-- Speech bubble with contextual line
+**`src/components/avatar-3d/animation/AnimationController.ts`**
+- Import secondary motion system
+- Add `secondaryMotion: SecondaryMotionState` to `ControllerState`
+- After blending layers, pass result through secondary motion filter
+- Only apply when `qualityConfig.enablePhysics` is true (high quality)
+
+**`src/components/avatar-3d/animation/types.ts`**
+- Ensure `QualityConfig.enablePhysics` is properly utilized
+
+### Spring Configuration
+
+| Bone | Stiffness | Damping | Mass | Effect |
+|------|-----------|---------|------|--------|
+| Head | 0.25 | 0.75 | 0.4 | Subtle head lag and overshoot |
+| Neck | 0.30 | 0.70 | 0.3 | Natural neck follow |
+| Spine2 | 0.40 | 0.80 | 0.6 | Body momentum |
+| LeftHand | 0.15 | 0.55 | 0.15 | Loose hand follow-through |
+| RightHand | 0.15 | 0.55 | 0.15 | Loose hand follow-through |
+
+### Expected Behavior
+- When head turns to look at someone, it **overshoots slightly** then settles
+- Hands continue moving briefly **after gesture ends**
+- Body sways have natural **momentum and follow-through**
+- Effect is subtle but adds significant realism
 
 ---
 
-## 4. Performance Optimizations
+## Part 2: NPC Conversation Grouping
 
-### 4.1 Level of Detail (LOD)
+### Current State
+- Characters are placed at **fixed positions** defined in `LIVING_ROOM_POSITIONS`
+- `HouseScene.tsx` uses `getCharacterPositions(count)` to assign spots
+- No awareness of alliances or relationships
+
+### Implementation Approach
+
+Create a **position calculation system** that groups allied characters together:
+
 ```text
-Distance-Based Quality:
-- Close (< 5m): Full animation, high-res textures
-- Medium (5-15m): Reduced animation, normal textures  
-- Far (> 15m): Minimal animation, lower textures
+Input: Characters + Alliance Data + Relationships
+                    ▼
+┌─────────────────────────────────┐
+│ Calculate Alliance Groups       │
+│ - Find active alliances         │
+│ - Group characters by alliance  │
+│ - Sort by relationship strength │
+└───────────────┬─────────────────┘
+                ▼
+┌─────────────────────────────────┐
+│ Assign Cluster Positions        │
+│ - Allied groups get adjacent    │
+│   positions in "conversation    │
+│   circle" formations            │
+│ - Unallied characters fill gaps │
+└───────────────┬─────────────────┘
+                ▼
+┌─────────────────────────────────┐
+│ Apply Social Facing Rotations   │
+│ - Characters face inward toward │
+│   their cluster center          │
+└─────────────────────────────────┘
 ```
 
-### 4.2 Frustum Culling
-- Pause animation updates for off-screen characters
-- Only render visible room contents
-- Defer lighting calculations for distant areas
+### Files to Create
 
-### 4.3 Instance Optimization
-- Instance repeated furniture (chairs, lights)
-- Batch similar materials
-- Use texture atlases for furniture
+**`src/components/avatar-3d/utils/conversationGrouping.ts`**
+Core logic for grouping and positioning:
 
-### 4.4 Animation Batching
-Currently each avatar runs independent animation loops.
+```typescript
+interface CharacterGroup {
+  characters: string[];  // Character IDs
+  positions: Array<{
+    position: [number, number, number];
+    rotation: [number, number, number];
+  }>;
+}
 
-**Improvement:**
-- Group characters by animation state
-- Batch bone transformations
-- Share morph target updates across similar expressions
+function calculateConversationGroups(
+  characterIds: string[],
+  alliances: Alliance[],
+  relationships: Map<string, Map<string, { score: number }>>,
+  basePositions: Array<{ position: [number, number, number] }>
+): Map<string, { position: [number, number, number]; rotation: [number, number, number] }>;
+```
 
----
+### Grouping Algorithm
 
-## 5. Camera & Navigation Improvements
+1. **Identify alliance clusters**
+   - Get all active alliances with 2+ members present
+   - Sort alliances by size (larger groups get priority)
 
-### 5.1 Cinematic Camera Modes
-- **Follow Mode**: Camera smoothly follows selected character
-- **Conversation Mode**: Frames 2-3 characters in dialogue
-- **Event Mode**: Dramatic angles for ceremonies
-- **Free Roam**: Full player control
+2. **Assign cluster positions**
+   - Pick a "cluster center" position for each alliance
+   - Place members in a semicircle around center, facing inward
+   - Offset: ~1.2m between characters for personal space
 
-### 5.2 Room Transition Polish
-Current room navigation uses instant fly-to.
+3. **Handle non-allied characters**
+   - Characters not in alliances get remaining positions
+   - Pair high-relationship characters (score > 50) together
+   - Enemies (score < -30) get distant positions
 
-**Improvements:**
-- Add door/threshold transitions
-- Smooth acceleration/deceleration curves
-- Optional first-person walkthrough mode
-- Mini-map overlay for orientation
+4. **Face toward group center**
+   - Calculate rotation to face cluster midpoint
+   - Allied characters subtly angle toward each other
 
-### 5.3 Mobile/Touch Controls
-- Pinch-to-zoom support
-- Swipe for room navigation
-- Tap-to-select characters
-- Double-tap for quick actions
+### Visual Layout Example
 
----
+```text
+Before (Static):
+  1  2  3  4     (arbitrary positions)
+  5  6  7  8
 
-## 6. Visual Polish
+After (Grouped):
+  ╭───────────╮
+  │ Alliance A │ ← Characters 2,4,6 face each other
+  │  2   4    │
+  │    6      │
+  ╰───────────╯
+       1 3      ← Non-allied fill remaining spots
+  ╭───────────╮
+  │ Alliance B │ ← Characters 5,7 face each other
+  │  5   7    │
+  ╰───────────╯
+       8        ← Loner in corner
+```
 
-### 6.1 Post-Processing Effects
-Currently minimal visual effects.
+### Files to Modify
 
-**Add:**
-- Bloom for emissive lights (LED strips, chandeliers)
-- Subtle vignette for atmosphere
-- Depth of field when focusing on character
-- Color grading for mood (warm/cool shifts)
+**`src/components/avatar-3d/HouseScene.tsx`**
+- Import new grouping utilities
+- Receive `alliances` and `relationships` as props
+- Replace `getCharacterPositions` call with new grouped calculation
+- Pass computed positions to `CharacterSpot` components
 
-### 6.2 Material Upgrades
-- PBR materials for realistic surfaces
-- Reflective surfaces (glass, metal, water)
-- Subsurface scattering for skin
-- Fabric shader for clothing realism
+**`src/components/game-phases/social-interaction/HouseViewPanel.tsx`**
+- Pass alliances from game state to HouseScene
+- Extract relationship data from game context
 
-### 6.3 Shadow Quality
-Current shadows use ContactShadows.
+### Props Changes
 
-**Improvements:**
-- Soft shadow cascades for outdoor areas
-- Ambient occlusion for depth
-- Character self-shadowing
-- Dynamic shadow resolution
-
----
-
-## 7. Audio Integration (Future)
-
-### 7.1 Spatial Audio
-- 3D positioned sounds (pool splashing, kitchen sizzling)
-- Distance-based volume falloff
-- Room reverb differences (bathroom echo vs bedroom dampening)
-
-### 7.2 Character Audio
-- Footstep sounds when characters move
-- Ambient conversation murmurs
-- Gesture sound effects (clap, high-five)
-- Mood-appropriate background music per room
-
----
-
-## 8. Accessibility Improvements
-
-### 8.1 Visual Accessibility
-- High contrast mode for character highlighting
-- Larger name labels option
-- Color-blind friendly selection indicators
-- Reduced motion mode (disable camera fly-to)
-
-### 8.2 Input Accessibility
-- Keyboard navigation through rooms/characters
-- Screen reader support for character info
-- Customizable control sensitivity
-- One-handed control scheme
+```typescript
+interface HouseSceneProps {
+  // ... existing props ...
+  alliances?: Alliance[];  // NEW: For grouping
+  relationships?: Map<string, Map<string, { score: number }>>;  // Enhanced type
+}
+```
 
 ---
 
-## Priority Implementation Order
+## Implementation Order
 
-### Phase 1: Quick Wins
-1. ~~Add 5 missing gestures (facepalm, crossArms, etc.)~~ ✅ DONE
-2. ~~Implement eye-lead behavior in look-at~~ ✅ DONE
-3. Add basic room props (TV content, more furniture) - TODO
-4. ~~Enable post-processing bloom~~ ✅ DONE
+### Phase 1: Spring Physics (Simpler, Self-Contained)
+1. Create `SecondaryMotionSystem.ts`
+2. Add state to AnimationController
+3. Wire up spring filtering in animation loop
+4. Test with high-quality preset
 
-### Phase 2: Core Improvements
-5. Implement spring physics for secondary motion
-6. Add NPC conversation grouping
-7. Create time-of-day lighting system
-8. Add interactive memory wall
-
-### Phase 3: Polish
-9. Full LOD system implementation
-10. Mobile touch controls
-11. Cinematic camera modes
-12. Audio integration groundwork
-
-### Phase 4: Advanced Features
-13. NPC autonomous wandering
-14. Weather effects
-15. Full accessibility suite
-16. Performance profiling and optimization
+### Phase 2: Conversation Grouping
+1. Create `conversationGrouping.ts` utilities
+2. Update HouseViewPanel to pass alliance data
+3. Update HouseScene to use grouped positions
+4. Add facing rotation calculations
 
 ---
 
-## Technical Debt to Address
+## Files Summary
 
-| Issue | Location | Fix |
-|-------|----------|-----|
-| Duplicate idle animation | CharacterSpot + IdleProceduralLayer | Remove redundant group-level sway |
-| Unused pose types | ARCHETYPE_POSES always returns 'relaxed' | Enable pose variety or remove mapping |
-| Missing physics layer | SpringConfig defined but not used | Wire up or remove dead code |
-| Hard-coded magic numbers | Camera positions, animation timing | Extract to configuration constants |
-| Memory leaks | No cleanup in useAnimationController | Add proper ref cleanup on unmount |
+### Create
+| File | Purpose |
+|------|---------|
+| `src/components/avatar-3d/animation/physics/SecondaryMotionSystem.ts` | Spring physics for bones |
+| `src/components/avatar-3d/utils/conversationGrouping.ts` | Alliance-based positioning |
+
+### Modify
+| File | Changes |
+|------|---------|
+| `AnimationController.ts` | Integrate secondary motion layer |
+| `HouseScene.tsx` | Use grouped positions, accept alliance props |
+| `HouseViewPanel.tsx` | Pass alliances and relationships |
+| `animation/index.ts` | Export new physics module |
+
+---
+
+## Testing Checklist
+
+### Spring Physics
+- [ ] Head overshoots when turning to look at selected character
+- [ ] Hands continue moving briefly after wave gesture ends
+- [ ] Effect disabled on low/medium quality (performance)
+- [ ] No jitter or instability at high frame rates
+
+### Conversation Grouping
+- [ ] Alliance members cluster together in scene
+- [ ] Characters face toward their group
+- [ ] Non-allied characters fill remaining positions
+- [ ] Positions update when alliances change
