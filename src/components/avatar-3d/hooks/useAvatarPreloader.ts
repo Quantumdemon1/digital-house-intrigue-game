@@ -18,12 +18,17 @@ export const preloadRPMModel = (url: string, context: 'thumbnail' | 'game' | 'pr
       const optimizedUrl = getOptimizedUrl(url, context);
       
       // useGLTF.preload triggers the cache
-      useGLTF.preload(optimizedUrl);
+      try {
+        useGLTF.preload(optimizedUrl);
+      } catch (e) {
+        console.warn('GLB preload failed:', e);
+      }
       
       // Also fetch to warm the network cache
       fetch(optimizedUrl, { method: 'HEAD' })
-        .then(() => resolve())
-        .catch(() => resolve()); // Don't fail on HEAD request issues
+        .catch(() => {}); // Ignore network errors
+      
+      resolve();
     } catch (error) {
       console.warn('Failed to preload RPM model:', url, error);
       resolve(); // Don't block on preload failures
