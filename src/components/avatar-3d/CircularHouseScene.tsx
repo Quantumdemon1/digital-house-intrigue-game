@@ -6,6 +6,7 @@
  import React, { Suspense, useRef, useState, useEffect } from 'react';
  import { Canvas, useFrame, useThree } from '@react-three/fiber';
  import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
  import * as THREE from 'three';
  import { CharacterTemplate, Archetype } from '@/data/character-templates';
  import { RPMAvatar, PoseType } from './RPMAvatar';
@@ -404,6 +405,16 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
              hoveredId={hoveredId}
              onHover={setHoveredId}
            />
+         
+         {/* Post-processing effects */}
+         <EffectComposer>
+           <Bloom
+             intensity={0.35}
+             luminanceThreshold={0.75}
+             luminanceSmoothing={0.9}
+             mipmapBlur
+           />
+         </EffectComposer>
          </Suspense>
        </Canvas>
        

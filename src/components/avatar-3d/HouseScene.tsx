@@ -7,6 +7,7 @@ import React, { Suspense, useRef, useState, useCallback, useEffect } from 'react
  import { useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
+ import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { CharacterTemplate } from '@/data/character-templates';
  import { RPMAvatar, preloadRPMAvatar, PoseType, GestureType } from './RPMAvatar';
@@ -875,6 +876,17 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
            roomTarget={roomTarget}
            lightingState={lightingState}
           />
+           
+           {/* Post-processing effects */}
+           <EffectComposer>
+             <Bloom
+               intensity={0.4}
+               luminanceThreshold={0.7}
+               luminanceSmoothing={0.9}
+               mipmapBlur
+             />
+             <Vignette eskil={false} offset={0.1} darkness={0.4} />
+           </EffectComposer>
         </Suspense>
       </Canvas>
      
