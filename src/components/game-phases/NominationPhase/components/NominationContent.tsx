@@ -3,6 +3,7 @@ import React from 'react';
 import { Target, Gavel } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Houseguest } from '@/models/houseguest';
+import { StatusAvatar } from '@/components/ui/status-avatar';
 
 export interface NominationContentProps {
   hoh: Houseguest;
@@ -17,10 +18,14 @@ const NominationContent: React.FC<NominationContentProps> = ({
 }) => {
   return (
     <div className="text-center space-y-8 py-8">
-      {/* Decorative Icon */}
-      <div className="inline-flex items-center justify-center p-4 rounded-full bg-gradient-to-br from-bb-red/20 to-bb-gold/20">
-        <Gavel className="h-10 w-10 text-bb-red" />
-      </div>
+      {/* HOH Avatar */}
+      <StatusAvatar
+        name={hoh.name}
+        avatarUrl={hoh.avatarUrl}
+        status="hoh"
+        size="xl"
+        isPlayer={hoh.isPlayer}
+      />
       
       {/* Title */}
       <div className="space-y-3">
