@@ -1,168 +1,306 @@
 
 
-# Plan: Fix T-Pose - Create Natural Standing Idle Pose for House Scene Characters
+# Plan: Enhanced Character Avatar Poses, Look-At Logic & Future Improvements
 
-## Problem
+## Overview
 
-Ready Player Me avatars in the House Scene display in their default T-pose (arms straight out) rather than a natural standing pose. This looks unnatural and breaks immersion.
-
-## Root Cause
-
-RPM GLB avatars are exported in a T-pose bind pose by default. Without loading external animation files (FBX/GLB), the skeleton remains in this default state. The current code only animates:
-- Morph targets (facial expressions, blinking)
-- The outer group rotation (head movement)
-- Scale breathing effects on the wrapper group
-
-None of these affect the actual skeleton bones that control arm/body position.
-
-## Solution
-
-Programmatically manipulate the avatar skeleton bones to create a natural "idle standing" pose, then add subtle per-frame bone animations for lifelike movement. This avoids needing external animation files.
-
-### RPM Skeleton Bone Names (Standard)
-
-Based on Ready Player Me's armature:
-- `Hips` - Root bone
-- `Spine`, `Spine1`, `Spine2` - Torso
-- `Neck`, `Head` - Head area
-- `LeftShoulder`, `RightShoulder` - Shoulders
-- `LeftArm`, `RightArm` - Upper arms
-- `LeftForeArm`, `RightForeArm` - Lower arms
-- `LeftHand`, `RightHand` - Hands
-
-### Natural Standing Pose Values
-
-To move arms down from T-pose to a relaxed position:
-
-| Bone | Rotation (radians) | Effect |
-|------|-------------------|--------|
-| `LeftArm` | Z: +1.2, X: +0.1 | Arm down at side, slight forward |
-| `RightArm` | Z: -1.2, X: +0.1 | Arm down at side, slight forward |
-| `LeftForeArm` | Z: +0.3 | Slight elbow bend |
-| `RightForeArm` | Z: -0.3 | Slight elbow bend |
-| `Spine` | X: -0.02 | Very slight chest-out posture |
+This plan introduces three major enhancements to make the House Scene avatars more lifelike and varied:
+1. **Pose Variety System** - Different poses per character (standing, arms crossed, hands on hips, sitting)
+2. **Look-At System** - Characters dynamically look at the selected character or camera
+3. **Brainstormed Future Improvements** - Additional ideas for even more immersive avatars
 
 ---
 
-## Implementation
+## 1. Pose Variety System
 
-### 1. Create New Hook: `useIdlePose.ts`
+### Current State
+All characters use the same `IDLE_POSE` in `useIdlePose.ts` - arms relaxed at sides with subtle sway.
 
-Create a new hook that:
-1. Finds skeleton bones in the cloned scene
-2. Applies a natural standing pose on mount
-3. Adds subtle per-frame bone micro-movements (arm sway, weight shift)
+### Enhanced System: Per-Character Pose Types
 
-```typescript
-// Key bone adjustments for natural pose
-const IDLE_POSE = {
-  LeftArm: { x: 0.1, y: 0, z: 1.2 },       // Arm down
-  RightArm: { x: 0.1, y: 0, z: -1.2 },     // Arm down  
-  LeftForeArm: { x: 0, y: 0, z: 0.3 },     // Slight bend
-  RightForeArm: { x: 0, y: 0, z: -0.3 },   // Slight bend
-  Spine: { x: -0.02, y: 0, z: 0 },         // Slight posture
-};
+Create a pose assignment system that varies poses based on character personality or archetype:
 
-// Per-frame subtle animations
-useFrame(({ clock }) => {
-  const time = clock.elapsedTime + phase;
-  
-  // Subtle arm sway
-  leftArmBone.rotation.z = 1.2 + Math.sin(time * 0.5) * 0.03;
-  rightArmBone.rotation.z = -1.2 + Math.sin(time * 0.5 + 0.5) * 0.03;
-  
-  // Weight shift in spine
-  spineBone.rotation.z = Math.sin(time * 0.3) * 0.01;
-});
+| Pose Type | Bone Rotations | Best For |
+|-----------|----------------|----------|
+| `relaxed` | Arms down, natural stance | Underdogs, Socialites |
+| `crossed-arms` | Arms folded across chest | Strategists, Competitors |
+| `hands-on-hips` | Hands resting on hips | Wildcards, Confident types |
+| `thinking` | One hand to chin | Strategists, Analytical |
+| `casual-lean` | Weight shifted to one leg | Socialites, Relaxed types |
+
+### Pose Rotation Values
+
+```text
+CROSSED_ARMS Pose:
+├── LeftArm:     Z: 0.6,  X: 0.8   (arm across body)
+├── RightArm:    Z: -0.6, X: 0.8   (arm across body)
+├── LeftForeArm: Z: 1.8            (forearm bent up)
+├── RightForeArm: Z: -1.8          (forearm bent up)
+└── Subtle animation: Arms shift slightly
+
+HANDS_ON_HIPS Pose:
+├── LeftArm:     Z: 0.8,  X: 0.2   (elbow out)
+├── RightArm:    Z: -0.8, X: 0.2   (elbow out)
+├── LeftForeArm: Z: 1.5, Y: -0.3   (hand towards hip)
+├── RightForeArm: Z: -1.5, Y: 0.3  (hand towards hip)
+└── Subtle animation: Weight shift side-to-side
+
+THINKING Pose:
+├── LeftArm:     Same as relaxed
+├── RightArm:    Z: -0.2, X: 1.0   (arm raised)
+├── RightForeArm: Z: -2.0          (hand to chin)
+├── Head:        X: -0.1, Z: 0.05  (head tilted, looking thoughtful)
+└── Subtle animation: Head sway as if contemplating
 ```
 
-### 2. Update `RPMAvatar.tsx`
-
-Add a new prop `applyIdlePose` (default: false) and integrate the pose hook:
-
-- When `applyIdlePose={true}`, find skeleton bones after scene clone
-- Apply initial pose rotations
-- Run per-frame subtle bone animations
-- Stagger animations by passing an optional `phaseOffset` prop
-
-### 3. Update `HouseScene.tsx`
-
-Pass `applyIdlePose={true}` to RPMAvatar instances in CharacterSpot:
+### Archetype-to-Pose Mapping
 
 ```typescript
+const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
+  strategist: ['crossed-arms', 'thinking'],
+  competitor: ['hands-on-hips', 'crossed-arms'],
+  socialite: ['relaxed', 'casual-lean'],
+  wildcard: ['hands-on-hips', 'relaxed'],
+  underdog: ['relaxed', 'thinking'],
+};
+
+// Assign pose based on character index for variety
+const getPoseForCharacter = (archetype: Archetype, index: number): PoseType => {
+  const poses = ARCHETYPE_POSES[archetype];
+  return poses[index % poses.length];
+};
+```
+
+---
+
+## 2. Look-At System (Bone-Based Head Tracking)
+
+### Behavior
+
+When a character is selected:
+- **Non-selected characters** turn their heads toward the selected character
+- When **no one is selected**, all characters look toward the camera
+- Smooth interpolation for natural head movement
+- Respect pose limits (don't over-rotate)
+
+### Technical Approach
+
+**New Hook: `useLookAt.ts`**
+
+```typescript
+interface LookAtConfig {
+  targetPosition: THREE.Vector3 | null;  // Selected char or camera
+  characterPosition: [number, number, number];
+  maxHeadRotationY: number;  // Limit: ~60 degrees (1.04 rad)
+  maxHeadRotationX: number;  // Limit: ~30 degrees (0.52 rad)
+  lerpSpeed: number;         // Smooth transition speed
+}
+
+const useLookAt = (
+  scene: THREE.Object3D | null,
+  config: LookAtConfig
+) => {
+  const headBone = useRef<THREE.Bone | null>(null);
+  const neckBone = useRef<THREE.Bone | null>(null);
+  
+  // Find Head and Neck bones
+  useEffect(() => {
+    if (!scene) return;
+    headBone.current = findBone(scene, 'Head');
+    neckBone.current = findBone(scene, 'Neck');
+  }, [scene]);
+  
+  useFrame(() => {
+    if (!headBone.current || !config.targetPosition) return;
+    
+    // Calculate direction to target
+    const charPos = new THREE.Vector3(...config.characterPosition);
+    const direction = config.targetPosition.clone().sub(charPos);
+    
+    // Convert to local head rotation
+    const targetRotY = Math.atan2(direction.x, direction.z);
+    const targetRotX = Math.atan2(-direction.y, direction.length());
+    
+    // Clamp to limits
+    const clampedY = THREE.MathUtils.clamp(targetRotY, -config.maxHeadRotationY, config.maxHeadRotationY);
+    const clampedX = THREE.MathUtils.clamp(targetRotX, -config.maxHeadRotationX, config.maxHeadRotationX);
+    
+    // Smoothly interpolate
+    headBone.current.rotation.y = THREE.MathUtils.lerp(
+      headBone.current.rotation.y,
+      clampedY * 0.7,  // Head takes 70% of rotation
+      config.lerpSpeed
+    );
+    neckBone.current?.rotation.y = THREE.MathUtils.lerp(
+      neckBone.current.rotation.y,
+      clampedY * 0.3,  // Neck takes 30%
+      config.lerpSpeed
+    );
+  });
+};
+```
+
+### Integration in HouseScene
+
+```typescript
+// In CharacterSpot component:
+const lookAtTarget = useMemo(() => {
+  if (selectedId === template.id) {
+    // Selected character looks at camera
+    return camera.position.clone();
+  } else if (selectedId && selectedPosition) {
+    // Other characters look at selected character
+    return new THREE.Vector3(...selectedPosition);
+  }
+  // Default: slight variation, mostly forward
+  return null;
+}, [selectedId, selectedPosition, camera]);
+
+// Pass to RPMAvatar via new prop
 <RPMAvatar
   modelSrc={modelUrl}
-  context="game"
-  scale={1}
-  position={[0, 0, 0]}
-  applyIdlePose={true}
-  phaseOffset={index * 0.7}  // Stagger animations
+  lookAtTarget={lookAtTarget}
+  ...
 />
 ```
 
 ---
 
-## Files to Modify
+## 3. File Changes
 
-### 1. Create `src/components/avatar-3d/hooks/useIdlePose.ts`
+### Create `src/components/avatar-3d/hooks/usePoseVariety.ts`
 
 New hook that:
-- Accepts a cloned THREE scene
-- Traverses to find bones by name using `scene.getObjectByName()`
-- Applies initial rotation values for natural pose
-- Runs subtle per-frame bone animations with phase offset
+- Defines multiple pose configurations (relaxed, crossed-arms, hands-on-hips, thinking)
+- Accepts a `poseType` parameter
+- Applies the initial bone rotations
+- Runs pose-specific subtle animations
 
-### 2. Modify `src/components/avatar-3d/RPMAvatar.tsx`
+### Create `src/components/avatar-3d/hooks/useLookAt.ts`
 
-- Add `applyIdlePose?: boolean` and `phaseOffset?: number` props
-- Import and call `useIdlePose` hook when enabled
-- Pass the cloned scene to the hook for bone manipulation
-- Keep existing morph target animations (blink, expressions)
+New hook that:
+- Finds Head and Neck bones
+- Calculates direction to target (selected character or camera)
+- Applies clamped, smooth rotations
+- Blends naturally with existing animations
 
-### 3. Modify `src/components/avatar-3d/HouseScene.tsx`
+### Modify `src/components/avatar-3d/RPMAvatar.tsx`
 
-- Update RPMAvatar usage in CharacterSpot to include:
-  - `applyIdlePose={true}`
-  - `phaseOffset={index * 0.7}` for staggered animations
+- Add `poseType?: PoseType` prop (default: 'relaxed')
+- Add `lookAtTarget?: THREE.Vector3` prop
+- Integrate `usePoseVariety` and `useLookAt` hooks
+- Keep backward compatibility (existing behavior when props not provided)
 
----
+### Modify `src/components/avatar-3d/HouseScene.tsx`
 
-## Technical Details
-
-### Finding Bones
-
-```typescript
-const findBone = (scene: THREE.Object3D, name: string): THREE.Bone | null => {
-  let bone: THREE.Bone | null = null;
-  scene.traverse((child) => {
-    if (child instanceof THREE.Bone && child.name === name) {
-      bone = child;
-    }
-  });
-  return bone;
-};
-```
-
-### Applying Pose with Euler Rotations
-
-```typescript
-const applyPoseRotation = (bone: THREE.Bone, rot: {x: number, y: number, z: number}) => {
-  bone.rotation.set(rot.x, rot.y, rot.z);
-};
-```
-
-### Animation Phase Offset
-
-Each character gets a unique phase offset (e.g., `index * 0.7`) so their micro-movements aren't synchronized, creating natural variation.
+- Calculate look-at targets for each character
+- Pass `lookAtTarget` and `poseType` to RPMAvatar
+- Map character archetype to appropriate pose type
+- Pass camera position for characters to look at when selected
 
 ---
 
-## Expected Result
+## 4. Brainstormed Future Improvements
+
+### Implemented in This Phase
+1. Pose variety (crossed arms, hands on hips, thinking)
+2. Dynamic head look-at toward selected character/camera
+
+### Future Enhancement Ideas
+
+| Category | Enhancement | Description |
+|----------|-------------|-------------|
+| **Expressions** | Mood-reactive expressions | Change facial expression when another character is selected (curious, jealous, supportive) |
+| **Interactions** | Social reactions | Characters near selected one lean in or react |
+| **Animations** | Gesture library | Occasional gestures (wave, nod, shrug) on events |
+| **Positioning** | Dynamic clustering | Characters form groups based on alliances |
+| **Audio** | Lip sync mumble | Subtle mouth movement with ambient audio |
+| **Eye Tracking** | Eye bone targeting | Eyes track independently of head for more realism |
+| **Body Language** | Personality-based stance | Nervous characters fidget more, confident ones stand taller |
+| **Props** | Character accessories | Coffee cups, phones, or items based on occupation |
+| **Lighting** | Character spotlight | Subtle rim light on selected character |
+| **VFX** | Aura/mood particles | Subtle particles around characters based on mood |
+
+### Priority Recommendations for Next Phase
+1. **Eye tracking** - Eyes are the first thing we look at; independent eye movement is high impact
+2. **Mood-reactive expressions** - Connects game state to visual feedback
+3. **Gesture library** - Occasional animations add life without being distracting
+
+---
+
+## Technical Implementation Details
+
+### Pose Types Enum
+
+```typescript
+type PoseType = 
+  | 'relaxed'       // Current default - arms at sides
+  | 'crossed-arms'  // Arms folded across chest
+  | 'hands-on-hips' // Confident power pose
+  | 'thinking'      // One hand to chin
+  | 'casual-lean';  // Weight on one leg, relaxed
+```
+
+### Pose Bone Configurations
+
+```typescript
+const POSE_CONFIGS: Record<PoseType, PoseBoneRotations> = {
+  relaxed: {
+    LeftArm: { x: 0.1, y: 0, z: 1.2 },
+    RightArm: { x: 0.1, y: 0, z: -1.2 },
+    // ... current idle pose
+  },
+  'crossed-arms': {
+    LeftArm: { x: 0.8, y: 0.2, z: 0.5 },
+    RightArm: { x: 0.8, y: -0.2, z: -0.5 },
+    LeftForeArm: { x: 0, y: 0.4, z: 1.7 },
+    RightForeArm: { x: 0, y: -0.4, z: -1.7 },
+    LeftHand: { x: 0, y: -0.3, z: 0 },
+    RightHand: { x: 0, y: 0.3, z: 0 },
+    Spine: { x: -0.03, y: 0, z: 0 },  // Slight lean back
+  },
+  'hands-on-hips': {
+    LeftArm: { x: 0.15, y: -0.2, z: 0.7 },
+    RightArm: { x: 0.15, y: 0.2, z: -0.7 },
+    LeftForeArm: { x: 0, y: 0.5, z: 1.4 },
+    RightForeArm: { x: 0, y: -0.5, z: -1.4 },
+    Spine: { x: -0.02, y: 0, z: 0 },
+    Hips: { x: 0, y: 0, z: 0.03 },  // Slight hip shift
+  },
+  thinking: {
+    LeftArm: { x: 0.1, y: 0, z: 1.2 },  // Left arm relaxed
+    RightArm: { x: 0.9, y: 0, z: -0.2 },  // Right arm up
+    RightForeArm: { x: 0, y: 0, z: -2.0 },  // Hand to chin
+    RightHand: { x: -0.3, y: 0, z: 0 },
+    Head: { x: -0.08, y: 0, z: 0.04 },  // Head tilted thoughtfully
+    Spine: { x: -0.02, y: 0.02, z: 0 },
+  },
+  'casual-lean': {
+    LeftArm: { x: 0.1, y: 0, z: 1.3 },
+    RightArm: { x: 0.1, y: 0, z: -1.1 },
+    Hips: { x: 0, y: 0, z: 0.04 },  // Weight to one side
+    LeftUpLeg: { x: 0, y: 0, z: 0.05 },  // Leg out slightly
+    Spine: { x: -0.01, y: 0.02, z: 0.02 },  // Slight lean
+  },
+};
+```
+
+### Animation Variations Per Pose
+
+Each pose type has unique subtle animations:
+- **Crossed-arms**: Gentle tightening/loosening of arm grip
+- **Hands-on-hips**: Hip sway side-to-side
+- **Thinking**: Occasional head tilt, finger tap
+- **Casual-lean**: Weight shift between legs
+
+---
+
+## Expected Results
 
 After implementation:
-- All 12 characters in the House Scene will have arms naturally at their sides
-- Subtle breathing and arm micro-sway will make them appear alive
-- Each character will have slightly different animation timing (staggered)
-- Existing facial expressions and blinking continue to work
-- No external animation files required
+- Characters have visually distinct poses based on personality
+- When you click a character, others turn their heads to look at them
+- Clicking away, characters return to looking at camera/forward
+- The scene feels alive with natural variety and social awareness
+- Performance remains smooth (bone rotations are cheap operations)
 
