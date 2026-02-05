@@ -6,7 +6,6 @@
  import React, { Suspense, useRef, useState, useCallback, useEffect, useMemo, lazy } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
- import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
  import { useIsMobile } from '@/hooks/use-mobile';
 import { CharacterTemplate } from '@/data/character-templates';
@@ -1093,18 +1092,7 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
            onMoveComplete={handleMoveComplete}
           />
            
-           {/* Post-processing effects - disabled on mobile for performance */}
-           {!isMobile && (
-             <EffectComposer>
-               <Bloom
-                 intensity={0.4}
-                 luminanceThreshold={0.7}
-                 luminanceSmoothing={0.9}
-                 mipmapBlur
-               />
-               <Vignette eskil={false} offset={0.1} darkness={0.4} />
-             </EffectComposer>
-           )}
+            {/* Post-processing disabled due to @react-three/postprocessing version incompatibility */}
         </Suspense>
       </Canvas>
      
