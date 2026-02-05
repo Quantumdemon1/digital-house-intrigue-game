@@ -72,7 +72,7 @@ const NominationCeremonyResult: React.FC<NominationCeremonyResultProps> = ({
           >
             <StatusAvatar
               name={nominee.name}
-              imageUrl={nominee.imageUrl}
+              avatarUrl={nominee.avatarUrl}
               status="nominee"
               size="lg"
               className="mb-3"

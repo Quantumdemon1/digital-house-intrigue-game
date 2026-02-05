@@ -20,7 +20,7 @@ const NomineeDisplay: React.FC<NomineeDisplayProps> = ({
       <div className="relative">
         <StatusAvatar
           name={nominee.name}
-          imageUrl={nominee.imageUrl}
+          avatarUrl={nominee.avatarUrl}
           status="nominee"
           size="lg"
         />

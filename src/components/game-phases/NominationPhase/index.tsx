@@ -4,6 +4,7 @@ import { useGame } from '@/contexts/GameContext';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
 import NominationContent from './components/NominationContent';
 import NomineeSelector from './NomineeSelector';
+import { StatusAvatar } from '@/components/ui/status-avatar';
 import KeyCeremony from './KeyCeremony';
 import { useNominationCeremony } from './hooks/useNominationCeremony';
 import { useAINomination } from './hooks/useAINomination';
@@ -260,12 +261,13 @@ const NominationPhase: React.FC = () => {
             <div className="flex justify-center gap-8">
               {nominees.map(nominee => (
                 <div key={nominee.id} className="flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-bb-red/20 border-2 border-bb-red flex items-center justify-center mb-2">
-                    <span className="text-2xl font-bold text-bb-red">
-                      {nominee.name.charAt(0)}
-                    </span>
-                  </div>
-                  <span className="font-semibold">{nominee.name}</span>
+                  <StatusAvatar
+                    name={nominee.name}
+                    avatarUrl={nominee.avatarUrl}
+                    status="nominee"
+                    size="lg"
+                  />
+                  <span className="font-semibold mt-2">{nominee.name}</span>
                   {nominee.isPlayer && <Badge variant="secondary" className="mt-1">You</Badge>}
                 </div>
               ))}
