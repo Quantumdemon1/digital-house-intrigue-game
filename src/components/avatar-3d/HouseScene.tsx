@@ -1223,13 +1223,13 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
         </div>
       )}
       
-      {/* Admin Pose Editor Toggle */}
+      {/* Admin Pose Editor Toggle - positioned below the close button */}
       <button
         onClick={() => setShowPoseEditor(prev => !prev)}
-        className="absolute top-4 right-4 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-muted transition-colors z-40"
+        className="absolute top-16 right-4 p-2.5 rounded-lg bg-amber-500/20 backdrop-blur-sm border border-amber-500/40 hover:bg-amber-500/30 transition-colors z-50"
         title="Open Pose Editor (Admin)"
       >
-        <Settings2 className="w-5 h-5 text-muted-foreground" />
+        <Settings2 className="w-5 h-5 text-amber-400" />
       </button>
       
       {/* Pose Editor Panel */}
