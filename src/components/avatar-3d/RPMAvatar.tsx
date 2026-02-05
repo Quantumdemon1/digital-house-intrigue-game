@@ -4,7 +4,7 @@
  */
 
 import React, { Suspense, useRef, useEffect, useMemo, useLayoutEffect, Component, ReactNode, forwardRef, useImperativeHandle } from 'react';
-import { useFrame } from '@react-three/fiber';
+ import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, useProgress } from '@react-three/drei';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
@@ -113,8 +113,9 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   onError
 }) => {
   const group = useRef<THREE.Group>(null);
-  const cloneRef = useRef<THREE.Group>(null);
-  const [cloneReady, setCloneReady] = React.useState(false);
+   
+   // Generate a unique instance ID for this component to ensure skeleton isolation
+   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
   // Context-aware default positions (head-centered for portraits, full-body for customizer)
   const getDefaultPosition = (ctx: AvatarContext): [number, number, number] => {
@@ -157,23 +158,23 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   
   const { scene } = useGLTF(optimizedUrl);
   
-  // Clone the scene with pose applied
+   // Clone the scene with pose applied and unique instance ID
   const clone = useMemo(() => {
     const cloned = SkeletonUtils.clone(scene) as THREE.Group;
+     
+     // Mark this clone with a unique instance ID for bone cache isolation
+     cloned.userData.instanceId = instanceId.current;
+     
     if (applyIdlePose) {
       applyPoseToBones(cloned, poseType);
     }
     return cloned;
   }, [scene, applyIdlePose, poseType]);
   
-  // Track clone ready state
-  useLayoutEffect(() => {
-    if (clone) {
-      cloneRef.current = clone;
-      setCloneReady(true);
-      if (onLoaded) onLoaded();
-    }
-  }, [clone, onLoaded]);
+   // Notify when clone is ready
+   useEffect(() => {
+     if (clone && onLoaded) onLoaded();
+   }, [clone, onLoaded]);
   
   // Get all skinned meshes for morph target manipulation (after clone is ready)
   const skinnedMeshes = useMemo(() => {
@@ -197,7 +198,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
    
    // Unified animation controller - replaces all individual hooks
    useAnimationController({
-     scene: applyIdlePose && cloneRef.current ? cloneRef.current : null,
+     scene: applyIdlePose ? clone : null,  // Pass clone directly, not ref
      skinnedMeshes,
      basePose: poseType,
      phaseOffset,
@@ -208,7 +209,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
      gestureToPlay: enableGestures && isPlayer ? gestureToPlay : null,
      onGestureComplete,
      quality: animationQuality,
-     enabled: isAnimated && applyIdlePose && cloneReady,
+     enabled: isAnimated && applyIdlePose,
    });
 
    // Note: Mood-based expressions are now handled by the ReactiveLayer
