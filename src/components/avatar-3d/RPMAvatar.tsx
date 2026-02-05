@@ -1,27 +1,27 @@
- /**
-  * @file avatar-3d/RPMAvatar.tsx
-  * @description Ready Player Me avatar component using unified animation system
-  */
- 
- import React, { Suspense, useRef, useEffect, useMemo } from 'react';
- import { useFrame, useGraph } from '@react-three/fiber';
- import { useGLTF, useProgress } from '@react-three/drei';
- import * as THREE from 'three';
- import { SkeletonUtils } from 'three-stdlib';
- import { MoodType } from '@/models/houseguest';
- import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
- import {
-   useAnimationController,
-   PoseType,
-   GestureType,
-   QualityLevel,
-   RelationshipContext,
- } from './animation';
+/**
+ * @file avatar-3d/RPMAvatar.tsx
+ * @description Ready Player Me avatar component using unified animation system
+ */
 
- export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
- 
- // Re-export types for backwards compatibility
- export type { PoseType, GestureType };
+import React, { Suspense, useRef, useEffect, useMemo, Component, ReactNode } from 'react';
+import { useFrame, useGraph } from '@react-three/fiber';
+import { useGLTF, useProgress } from '@react-three/drei';
+import * as THREE from 'three';
+import { SkeletonUtils } from 'three-stdlib';
+import { MoodType } from '@/models/houseguest';
+import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
+import {
+  useAnimationController,
+  PoseType,
+  GestureType,
+  QualityLevel,
+  RelationshipContext,
+} from './animation';
+
+export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
+
+// Re-export types for backwards compatibility
+export type { PoseType, GestureType };
 
 interface RPMAvatarProps {
   modelSrc: string;
@@ -213,33 +213,70 @@ export const RPMLoadingProgress: React.FC<{ className?: string }> = ({ className
 };
 
 /**
- * RPMAvatarWithSuspense - Wrapped version with loading fallback
+ * Error boundary for catching GLB loading failures
  */
-export const RPMAvatarWithSuspense: React.FC<RPMAvatarProps> = (props) => {
-  return (
-    <Suspense fallback={<RPMAvatarFallback />}>
-      <RPMAvatar {...props} />
-    </Suspense>
-  );
-};
+interface AvatarErrorBoundaryProps {
+  children: ReactNode;
+  onError?: (error: Error) => void;
+}
+
+interface AvatarErrorBoundaryState {
+  hasError: boolean;
+}
+
+class AvatarErrorBoundary extends Component<AvatarErrorBoundaryProps, AvatarErrorBoundaryState> {
+  constructor(props: AvatarErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): AvatarErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error): void {
+    console.warn('Avatar loading failed:', error.message);
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <RPMAvatarFallback isError />;
+    }
+    return this.props.children;
+  }
+}
 
 /**
  * Simple loading fallback mesh
  */
-const RPMAvatarFallback: React.FC = () => {
+const RPMAvatarFallback: React.FC<{ isError?: boolean }> = ({ isError = false }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
   useFrame(({ clock }) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y = clock.getElapsedTime();
+      meshRef.current.rotation.y = isError ? 0 : clock.getElapsedTime();
     }
   });
   
   return (
     <mesh ref={meshRef} position={[0, 0, 0]}>
       <capsuleGeometry args={[0.3, 0.6, 4, 16]} />
-      <meshStandardMaterial color="#666" wireframe />
+      <meshStandardMaterial color={isError ? "#994444" : "#666"} wireframe />
     </mesh>
+  );
+};
+
+/**
+ * RPMAvatarWithSuspense - Wrapped version with loading fallback and error handling
+ */
+export const RPMAvatarWithSuspense: React.FC<RPMAvatarProps> = (props) => {
+  return (
+    <AvatarErrorBoundary onError={props.onError}>
+      <Suspense fallback={<RPMAvatarFallback />}>
+        <RPMAvatar {...props} />
+      </Suspense>
+    </AvatarErrorBoundary>
   );
 };
 
@@ -248,7 +285,11 @@ export const preloadRPMAvatar = (url: string, context: AvatarContext = 'game') =
   // Map customizer to profile for preloading
   const preloadContext = context === 'customizer' ? 'profile' : context;
   const optimizedUrl = getOptimizedUrl(url, preloadContext as 'thumbnail' | 'game' | 'profile');
-  useGLTF.preload(optimizedUrl);
+  try {
+    useGLTF.preload(optimizedUrl);
+  } catch (e) {
+    console.warn('Failed to preload avatar:', url, e);
+  }
 };
 
 export default RPMAvatar;
