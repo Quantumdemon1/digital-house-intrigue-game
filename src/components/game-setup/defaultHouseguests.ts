@@ -1,6 +1,19 @@
 
 import { PersonalityTrait } from '@/models/houseguest';
 
+import alexChenAvatar from '@/assets/avatars/alex-chen.jpg';
+import morganLeeAvatar from '@/assets/avatars/morgan-lee.jpg';
+import jordanTaylorAvatar from '@/assets/avatars/jordan-taylor.jpg';
+import caseyWilsonAvatar from '@/assets/avatars/casey-wilson.jpg';
+import rileyJohnsonAvatar from '@/assets/avatars/riley-johnson.jpg';
+import jamieRobertsAvatar from '@/assets/avatars/jamie-roberts.jpg';
+import quinnMartinezAvatar from '@/assets/avatars/quinn-martinez.jpg';
+import averyThompsonAvatar from '@/assets/avatars/avery-thompson.jpg';
+import taylorKimAvatar from '@/assets/avatars/taylor-kim.jpg';
+import samWilliamsAvatar from '@/assets/avatars/sam-williams.jpg';
+import blakePetersonAvatar from '@/assets/avatars/blake-peterson.jpg';
+import mayaHassanAvatar from '@/assets/avatars/maya-hassan.jpg';
+
 export interface DefaultHouseguest {
   name: string;
   age: number;
@@ -18,8 +31,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 28,
     occupation: 'Marketing Executive',
     hometown: 'San Francisco, CA',
-    bio: 'Strategic player who excels at social manipulation.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Strategic mastermind who excels at social manipulation and long-term planning. Always three steps ahead.',
+    imageUrl: alexChenAvatar,
     traits: ['Strategic', 'Social'],
   },
   {
@@ -27,8 +40,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 26,
     occupation: 'Personal Trainer',
     hometown: 'Miami, FL',
-    bio: 'Physical competitor who forms genuine alliances.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Physical powerhouse who dominates competitions. Forms genuine alliances based on loyalty.',
+    imageUrl: morganLeeAvatar,
     traits: ['Competitive', 'Loyal'],
   },
   {
@@ -36,8 +49,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 31,
     occupation: 'Sales Representative',
     hometown: 'Chicago, IL',
-    bio: 'Charismatic and cunning, will do anything to win.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Charismatic charmer who can talk anyone into anything. Will do whatever it takes to win.',
+    imageUrl: jordanTaylorAvatar,
     traits: ['Social', 'Sneaky'],
   },
   {
@@ -45,8 +58,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 24,
     occupation: 'Bartender',
     hometown: 'New Orleans, LA',
-    bio: 'Party-loving socialite with a surprising strategic mind.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Life of the party with a surprisingly sharp strategic mind. Nobody suspects the fun one.',
+    imageUrl: caseyWilsonAvatar,
     traits: ['Social', 'Strategic'],
   },
   {
@@ -54,8 +67,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 29,
     occupation: 'Software Engineer',
     hometown: 'Seattle, WA',
-    bio: 'Analytical thinker who struggles with social game.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Analytical genius who calculates every move. May struggle socially but never in puzzles.',
+    imageUrl: rileyJohnsonAvatar,
     traits: ['Analytical', 'Strategic'],
   },
   {
@@ -63,8 +76,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 27,
     occupation: 'Nurse',
     hometown: 'Boston, MA',
-    bio: 'Empathetic but not afraid to make big moves.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Empathetic caregiver who everyone trusts. Not afraid to make bold moves when necessary.',
+    imageUrl: jamieRobertsAvatar,
     traits: ['Emotional', 'Strategic'],
   },
   {
@@ -72,8 +85,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 25,
     occupation: 'Social Media Influencer',
     hometown: 'Los Angeles, CA',
-    bio: 'Fame-seeking and manipulative, plays for the cameras.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Fame-seeking manipulator who plays for the cameras. Will create drama for entertainment.',
+    imageUrl: quinnMartinezAvatar,
     traits: ['Confrontational', 'Social'],
   },
   {
@@ -81,8 +94,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 32,
     occupation: 'Police Officer',
     hometown: 'Dallas, TX',
-    bio: 'Strong-willed and straightforward, values loyalty.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Strong-willed protector with unwavering loyalty. Once you have their trust, they never betray.',
+    imageUrl: averyThompsonAvatar,
     traits: ['Loyal', 'Competitive'],
   },
   {
@@ -90,8 +103,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 27,
     occupation: 'Fitness Instructor',
     hometown: 'Portland, OR',
-    bio: 'Competitive and disciplined, but has a short temper.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Competitive and disciplined but has a short fuse. Never back down from a challenge.',
+    imageUrl: taylorKimAvatar,
     traits: ['Competitive', 'Confrontational'],
   },
   {
@@ -99,8 +112,8 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 34,
     occupation: 'Restaurant Owner',
     hometown: 'Nashville, TN',
-    bio: 'Charismatic leader who builds strong alliances.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Natural born leader who builds alliances through genuine connections and strategic vision.',
+    imageUrl: samWilliamsAvatar,
     traits: ['Strategic', 'Loyal'],
   },
   {
@@ -108,9 +121,18 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     age: 26,
     occupation: 'Architect',
     hometown: 'Denver, CO',
-    bio: 'Quiet observer who strikes at the perfect moment.',
-    imageUrl: '/placeholder.svg',
+    bio: 'Quiet observer who strikes at the perfect moment. Sees everything but reveals nothing.',
+    imageUrl: blakePetersonAvatar,
     traits: ['Analytical', 'Sneaky'],
+  },
+  {
+    name: 'Maya Hassan',
+    age: 30,
+    occupation: 'Lawyer',
+    hometown: 'New York, NY',
+    bio: 'Sophisticated strategist with impeccable social skills. Every word is carefully chosen.',
+    imageUrl: mayaHassanAvatar,
+    traits: ['Strategic', 'Social'],
   },
 ];
 
