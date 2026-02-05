@@ -3,7 +3,7 @@
  * @description Ready Player Me avatar component with new modular animation system
  */
 
-import React, { Suspense, useRef, useMemo, useEffect, Component, ReactNode } from 'react';
+import React, { Suspense, useRef, useMemo, useEffect, useState, Component, ReactNode } from 'react';
 import { useGLTF, useProgress } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { SkeletonUtils } from 'three-stdlib';
@@ -62,6 +62,42 @@ interface RPMAvatarProps {
 }
 
 /**
+ * Error boundary for catching useGLTF errors during render
+ */
+interface AvatarRenderBoundaryProps {
+  children: ReactNode;
+  onError?: (error: Error) => void;
+}
+
+interface AvatarRenderBoundaryState {
+  hasError: boolean;
+}
+
+class AvatarRenderBoundary extends Component<AvatarRenderBoundaryProps, AvatarRenderBoundaryState> {
+  constructor(props: AvatarRenderBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): AvatarRenderBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error): void {
+    console.warn('[AvatarRenderBoundary] Caught error:', error.message);
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Return empty group - parent will show fallback
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
+/**
  * Map legacy PoseType to new StaticPoseType
  */
 function mapToStaticPose(poseType?: PoseType): StaticPoseType {
@@ -76,7 +112,64 @@ function mapToStaticPose(poseType?: PoseType): StaticPoseType {
 }
 
 /**
+ * Inner component that uses useGLTF - will throw on network error
+ */
+const RPMAvatarInner: React.FC<{
+  optimizedUrl: string;
+  effectivePosition: [number, number, number];
+  scale: number;
+  applyIdlePose: boolean;
+  staticPose: StaticPoseType;
+  animationQuality: 'low' | 'medium' | 'high';
+  onLoaded?: () => void;
+}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, onLoaded }) => {
+  const group = useRef<THREE.Group>(null);
+  const instanceId = useRef(Math.random().toString(36).substr(2, 9));
+  
+  const { scene } = useGLTF(optimizedUrl);
+  
+  // Clone scene and apply static pose ONCE
+  const clone = useMemo(() => {
+    const cloned = SkeletonUtils.clone(scene) as THREE.Group;
+    cloned.userData.instanceId = instanceId.current;
+    
+    if (applyIdlePose) {
+      applyStaticPose(cloned, staticPose);
+    }
+    
+    return cloned;
+  }, [scene, applyIdlePose, staticPose]);
+  
+  // Get animation features based on quality
+  const animFeatures = useMemo(() => 
+    getAnimationFeatures(animationQuality),
+    [animationQuality]
+  );
+  
+  // Use the unified animation hook
+  useAvatarAnimator({
+    clone,
+    instanceId: instanceId.current,
+    enableBreathing: animFeatures.enableBreathing,
+    enableWeightShift: animFeatures.enableWeightShift,
+    enableBlinking: animFeatures.enableBlinking,
+  });
+  
+  // Notify when clone is ready
+  useEffect(() => {
+    if (clone && onLoaded) onLoaded();
+  }, [clone, onLoaded]);
+
+  return (
+    <group ref={group} position={effectivePosition} scale={scale}>
+      <primitive object={clone} />
+    </group>
+  );
+};
+
+/**
  * RPMAvatar - Ready Player Me avatar with modular animation system
+ * Wrapped with error boundary to prevent blank screens on network failure
  */
 export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   modelSrc,
@@ -90,10 +183,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   onLoaded,
   onError,
 }) => {
-  const group = useRef<THREE.Group>(null);
-  
-  // Generate a unique instance ID for this component
-  const instanceId = useRef(Math.random().toString(36).substr(2, 9));
+  const [hasError, setHasError] = useState(false);
   
   // Context-aware default positions
   const getDefaultPosition = (ctx: AvatarContext): [number, number, number] => {
@@ -121,50 +211,30 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
     [modelSrc, qualityContext]
   );
   
-  const { scene } = useGLTF(optimizedUrl);
-  
-  // Determine static pose to apply
   const staticPose = useMemo(() => mapToStaticPose(poseType), [poseType]);
-  
-  // Clone scene and apply static pose ONCE
-  const clone = useMemo(() => {
-    const cloned = SkeletonUtils.clone(scene) as THREE.Group;
-    
-    // Mark with unique instance ID
-    cloned.userData.instanceId = instanceId.current;
-    
-    // Apply static pose if enabled
-    if (applyIdlePose) {
-      applyStaticPose(cloned, staticPose);
-    }
-    
-    return cloned;
-  }, [scene, applyIdlePose, staticPose]);
-  
-  // Get animation features based on quality
-  const animFeatures = useMemo(() => 
-    getAnimationFeatures(animationQuality),
-    [animationQuality]
-  );
-  
-  // Use the unified animation hook - all animation happens here
-  useAvatarAnimator({
-    clone,
-    instanceId: instanceId.current,
-    enableBreathing: animFeatures.enableBreathing,
-    enableWeightShift: animFeatures.enableWeightShift,
-    enableBlinking: animFeatures.enableBlinking,
-  });
-  
-  // Notify when clone is ready
-  useEffect(() => {
-    if (clone && onLoaded) onLoaded();
-  }, [clone, onLoaded]);
+
+  const handleError = (error: Error) => {
+    setHasError(true);
+    onError?.(error);
+  };
+
+  // If error occurred, return null - parent shows fallback
+  if (hasError) {
+    return null;
+  }
 
   return (
-    <group ref={group} position={effectivePosition} scale={scale}>
-      <primitive object={clone} />
-    </group>
+    <AvatarRenderBoundary onError={handleError}>
+      <RPMAvatarInner
+        optimizedUrl={optimizedUrl}
+        effectivePosition={effectivePosition}
+        scale={scale}
+        applyIdlePose={applyIdlePose}
+        staticPose={staticPose}
+        animationQuality={animationQuality}
+        onLoaded={onLoaded}
+      />
+    </AvatarRenderBoundary>
   );
 };
 
