@@ -3,13 +3,13 @@
  * @description Smart avatar loader for Ready Player Me avatars with optimization and fallbacks
  */
 
-import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, Component, ReactNode } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, useProgress } from '@react-three/drei';
 import { Avatar3DConfig } from '@/models/avatar-config';
 import { MoodType } from '@/models/houseguest';
 import { cn } from '@/lib/utils';
-import { Loader2, User } from 'lucide-react';
+import { Loader2, User, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
 import { AvatarThumbnail } from './AvatarThumbnail';
@@ -41,6 +41,42 @@ interface AvatarLoaderProps {
   enableOrbitControls?: boolean;
 }
 
+/**
+ * Error boundary specifically for Canvas/3D loading errors
+ */
+interface CanvasErrorBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+  onError?: () => void;
+}
+
+interface CanvasErrorBoundaryState {
+  hasError: boolean;
+}
+
+class CanvasErrorBoundary extends Component<CanvasErrorBoundaryProps, CanvasErrorBoundaryState> {
+  constructor(props: CanvasErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): CanvasErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error): void {
+    console.warn('[CanvasErrorBoundary] Caught error:', error.message);
+    this.props.onError?.();
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 // Size configurations with context-aware camera settings
 const SIZE_CONFIG: Record<AvatarSize, { 
   width: string; 
@@ -52,27 +88,27 @@ const SIZE_CONFIG: Record<AvatarSize, {
   sm: { 
     width: 'w-12', height: 'h-12', scale: 0.8, 
     context: 'thumbnail',
-    camera: { y: 1.05, z: 1.2, fov: 25, lookAtY: 1.05 }  // Face level
+    camera: { y: 1.05, z: 1.2, fov: 25, lookAtY: 1.05 }
   },
   md: { 
     width: 'w-20', height: 'h-20', scale: 1, 
     context: 'profile',
-    camera: { y: 1.0, z: 1.4, fov: 28, lookAtY: 1.0 }  // Face level
+    camera: { y: 1.0, z: 1.4, fov: 28, lookAtY: 1.0 }
   },
   lg: { 
     width: 'w-32', height: 'h-32', scale: 1.2, 
     context: 'profile',
-    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
+    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }
   },
   xl: { 
     width: 'w-48', height: 'h-48', scale: 1.5, 
     context: 'profile',
-    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
+    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }
   },
   full: { 
     width: 'w-full', height: 'h-full', scale: 1, 
     context: 'customizer',
-    camera: { y: 0, z: 2.5, fov: 35, lookAtY: 0.8 }   // Body center
+    camera: { y: 0, z: 2.5, fov: 35, lookAtY: 0.8 }
   },
 };
 
@@ -132,6 +168,38 @@ const CameraController: React.FC<{
 };
 
 /**
+ * Network error fallback component
+ */
+const NetworkErrorFallback: React.FC<{ 
+  size: AvatarSize; 
+  onRetry?: () => void;
+  className?: string;
+}> = ({ size, onRetry, className }) => {
+  const sizeConfig = SIZE_CONFIG[size];
+  return (
+    <div className={cn(
+      sizeConfig.width,
+      sizeConfig.height,
+      'rounded-lg bg-muted/30 flex flex-col items-center justify-center gap-2',
+      className
+    )}>
+      <AlertCircle className="w-6 h-6 text-muted-foreground" />
+      <p className="text-xs text-muted-foreground text-center px-2">
+        Network error
+      </p>
+      {onRetry && (
+        <button 
+          onClick={onRetry}
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" /> Retry
+        </button>
+      )}
+    </div>
+  );
+};
+
+/**
  * RPM Avatar Canvas - Primary renderer for Ready Player Me avatars
  */
 const RPMAvatarCanvas: React.FC<{
@@ -144,15 +212,17 @@ const RPMAvatarCanvas: React.FC<{
     height: string;
     camera: { y: number; z: number; fov: number; lookAtY: number }
   };
+  size: AvatarSize;
   className?: string;
   onLoaded?: () => void;
   onError?: () => void;
   zoom?: number;
   enableOrbitControls?: boolean;
-}> = ({ avatarUrl, mood, scale, context, sizeConfig, className, onLoaded, onError, zoom = 1.0, enableOrbitControls = true }) => {
+}> = ({ avatarUrl, mood, scale, context, sizeConfig, size, className, onLoaded, onError, zoom = 1.0, enableOrbitControls = true }) => {
   const [rpmLoadError, setRpmLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
+  const [retryKey, setRetryKey] = useState(0);
 
   // Get optimized URL based on context
   const optimizedUrl = getOptimizedUrl(avatarUrl, context === 'customizer' ? 'profile' : context);
@@ -165,11 +235,19 @@ const RPMAvatarCanvas: React.FC<{
 
   const handleError = useCallback(() => {
     setRpmLoadError(true);
+    setIsLoading(false);
     onError?.();
   }, [onError]);
 
+  const handleRetry = useCallback(() => {
+    setRpmLoadError(false);
+    setIsLoading(true);
+    setLoadProgress(0);
+    setRetryKey(k => k + 1);
+  }, []);
+
   if (rpmLoadError) {
-    return null;
+    return <NetworkErrorFallback size={size} onRetry={handleRetry} className={className} />;
   }
 
   return (
@@ -179,45 +257,51 @@ const RPMAvatarCanvas: React.FC<{
       'relative overflow-hidden rounded-lg',
       className
     )}>
-      <Canvas
-        camera={{ 
-          position: [0, sizeConfig.camera.y, sizeConfig.camera.z], 
-          fov: sizeConfig.camera.fov 
-        }}
-        gl={{ preserveDrawingBuffer: true, antialias: true }}
+      <CanvasErrorBoundary 
+        fallback={<NetworkErrorFallback size={size} onRetry={handleRetry} className={className} />}
         onError={handleError}
       >
-        {/* Dynamic camera controller for zoom */}
-        <CameraController 
-          baseY={sizeConfig.camera.y} 
-          baseZ={sizeConfig.camera.z} 
-          zoom={zoom}
-          lookAtY={sizeConfig.camera.lookAtY}
-        />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[2, 3, 4]} intensity={0.8} />
-        <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
-        
-        <Suspense fallback={null}>
-          <ProgressTracker onProgress={setLoadProgress} />
-          <LazyRPMAvatar
-            modelSrc={optimizedUrl}
-            mood={mood}
-            scale={scale}
-            context={context}
-            onLoaded={handleLoaded}
-            onError={handleError}
+        <Canvas
+          key={retryKey}
+          camera={{ 
+            position: [0, sizeConfig.camera.y, sizeConfig.camera.z], 
+            fov: sizeConfig.camera.fov 
+          }}
+          gl={{ preserveDrawingBuffer: true, antialias: true }}
+          onError={handleError}
+        >
+          {/* Dynamic camera controller for zoom */}
+          <CameraController 
+            baseY={sizeConfig.camera.y} 
+            baseZ={sizeConfig.camera.z} 
+            zoom={zoom}
+            lookAtY={sizeConfig.camera.lookAtY}
           />
-        </Suspense>
-        
-        <OrbitControls 
-          enabled={enableOrbitControls}
-          enableZoom={false} 
-          enablePan={false}
-          minPolarAngle={Math.PI / 2.5}
-          maxPolarAngle={Math.PI / 1.8}
-        />
-      </Canvas>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[2, 3, 4]} intensity={0.8} />
+          <directionalLight position={[-2, 2, -3]} intensity={0.3} color="#e0f0ff" />
+          
+          <Suspense fallback={null}>
+            <ProgressTracker onProgress={setLoadProgress} />
+            <LazyRPMAvatar
+              modelSrc={optimizedUrl}
+              mood={mood}
+              scale={scale}
+              context={context}
+              onLoaded={handleLoaded}
+              onError={handleError}
+            />
+          </Suspense>
+          
+          <OrbitControls 
+            enabled={enableOrbitControls}
+            enableZoom={false} 
+            enablePan={false}
+            minPolarAngle={Math.PI / 2.5}
+            maxPolarAngle={Math.PI / 1.8}
+          />
+        </Canvas>
+      </CanvasErrorBoundary>
       
       {/* Loading overlay with progress */}
       {isLoading && <RPMLoadingState progress={loadProgress} />}
@@ -327,6 +411,7 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
           scale={sizeConfig.scale}
           context={sizeConfig.context}
           sizeConfig={sizeConfig}
+          size={size}
           className={className}
           onLoaded={() => setModelReady(true)}
           onError={() => setTimedOut(true)}
