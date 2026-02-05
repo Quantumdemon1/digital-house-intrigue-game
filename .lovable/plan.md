@@ -1,137 +1,251 @@
 
-# Fix Avatar Glitching & Add CSS-Based Visual Effects
+# Avatar T-Pose Glitch Analysis & Fix Plan
 
 ## Problem Summary
 
-1. **Avatars stuck in T-pose**: The 3D avatars are displaying with arms extended horizontally (T-pose) instead of the intended "relaxed" pose with arms down at their sides.
-
-2. **Missing visual effects**: Bloom and vignette post-processing effects were removed due to a `@react-three/postprocessing` version incompatibility, leaving the scene looking flat.
+The avatars are displaying in a T-pose (arms extended horizontally) instead of the intended "relaxed" pose (arms naturally at sides). This is happening despite having a complete animation system in place.
 
 ---
 
 ## Root Cause Analysis
 
-### T-Pose Issue
+After deep analysis of the animation pipeline, I've identified **multiple issues** working together:
 
-The T-pose problem is caused by multiple potential issues working together:
+### Issue 1: Animation Controller Only Runs When `enabled` = true
 
-1. **Missing `three-stdlib` explicit dependency**: The `SkeletonUtils` import comes from `three-stdlib`, which is only a transitive dependency of `@react-three/drei`. Without it as a direct dependency, Vite might be bundling duplicate instances.
+In `RPMAvatar.tsx` line 173:
+```typescript
+enabled: isAnimated && applyIdlePose,
+```
 
-2. **Animation controller initialization race condition**: The `useAnimationController` hook depends on the scene being ready, but the `initialized` flag may not be setting correctly when bones are found.
+The animation controller won't run unless BOTH conditions are true. However, the controller initialization on lines 158-175 has a critical flaw:
 
-3. **Vite cache not cleared**: After updating `vite.config.ts`, the old cached bundles may still contain the duplicate library instances.
+**The initial pose is only applied inside a `useEffect` that depends on `[scene, enabled, basePose]`**, but if `enabled` starts as `false` or the effect runs before bones are found, the avatar remains in T-pose.
 
-### Missing Visual Effects
+### Issue 2: Bones Not Found on First Render
 
-The bloom and vignette effects were provided by `@react-three/postprocessing`, which caused runtime crashes due to version conflicts with the Three.js rendering pipeline.
+The `findBones()` function in `boneUtils.ts` traverses the scene to find bones by name. However:
+- Ready Player Me (RPM) models use a bone hierarchy that may not be immediately available after `SkeletonUtils.clone()`
+- The bone cache may be empty when `useEffect` runs initially
+
+### Issue 3: POSE_CONFIGS Z-Rotation is Correct but May Not Apply
+
+Looking at `BasePoseLayer.ts`:
+```typescript
+relaxed: {
+  LeftArm: { rotation: { x: 0.05, y: 0.1, z: 1.45 } },  // z: 1.45 radians ≈ 83°
+  RightArm: { rotation: { x: 0.05, y: -0.1, z: -1.45 } },
+  ...
+}
+```
+
+The pose values are correct (Z rotation of ~83° puts arms at sides), but they may never be applied if:
+1. The bone cache is empty
+2. The controller is disabled
+3. The effect runs before the scene is fully loaded
+
+### Issue 4: Race Condition in useFrame
+
+The `useFrame` callback (line 203) returns early if:
+```typescript
+if (!enabled || !stateRef.current.initialized || skinnedMeshes.length === 0) return;
+```
+
+If `initialized` is `false` (bones not found), animation never runs.
 
 ---
 
-## Solution
-
-### Part 1: Fix Avatar T-Pose
-
-#### A. Add explicit `three-stdlib` dependency
-
-Add `three-stdlib` as a direct dependency to ensure proper deduplication.
-
-#### B. Update Vite configuration
-
-Ensure `three-stdlib` is properly included in both `dedupe` and `optimizeDeps.include`, and add a force flag to rebuild the optimization cache.
+## Proposed Solution Architecture
 
 ```text
-vite.config.ts changes:
-┌────────────────────────────────────────────────────────────┐
-│ optimizeDeps: {                                            │
-│   include: [...existing, "three-stdlib"],                  │
-│   force: true  // Force rebuild of deps cache              │
-│ }                                                          │
-└────────────────────────────────────────────────────────────┘
-```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Current Flow (Broken)                        │
+├─────────────────────────────────────────────────────────────────┤
+│ 1. Scene loads → clone created                                  │
+│ 2. useEffect runs → findBones() called                          │
+│ 3. Bones may not exist yet → boneCache empty                    │
+│ 4. initialized = false → useFrame skips animation               │
+│ 5. Avatar shows T-pose (model's default)                        │
+└─────────────────────────────────────────────────────────────────┘
 
-#### C. Fix animation initialization
-
-Add a safety check and force initial pose application even before the animation loop starts. This ensures avatars are positioned correctly immediately after loading.
-
-```text
-AnimationController.ts changes:
-┌────────────────────────────────────────────────────────────┐
-│ // Apply initial pose immediately when bones are found    │
-│ useEffect(() => {                                          │
-│   if (scene && boneCache.size > 0) {                       │
-│     const initialBones = POSE_CONFIGS[basePose];           │
-│     applyBoneMap(boneCache, initialBones, 1);              │
-│   }                                                        │
-│ }, [scene, basePose]);                                     │
-└────────────────────────────────────────────────────────────┘
-```
-
-### Part 2: Add CSS-Based Visual Effects
-
-Since `@react-three/postprocessing` is incompatible, we'll implement bloom and vignette using CSS effects that layer on top of the Canvas.
-
-#### A. Create a reusable CSS effects overlay component
-
-```text
-New file: src/components/avatar-3d/SceneEffectsOverlay.tsx
-┌────────────────────────────────────────────────────────────┐
-│ <div className="scene-effects-overlay">                    │
-│   <div className="vignette-effect" />                      │
-│   <div className="bloom-glow" />                           │
-│ </div>                                                     │
-│                                                            │
-│ CSS (pointer-events: none to allow interaction):           │
-│ - Vignette: radial-gradient transparent → black at edges   │
-│ - Bloom: subtle brightness/contrast filter                 │
-│ - Backdrop blur for soft glow effect on highlights         │
-└────────────────────────────────────────────────────────────┘
-```
-
-#### B. Apply effects overlay to CircularHouseScene and HouseScene
-
-Wrap the Canvas with the new overlay component:
-
-```text
-CircularHouseScene.tsx / HouseScene.tsx:
-┌────────────────────────────────────────────────────────────┐
-│ <div className="relative w-full h-full">                   │
-│   <Canvas ... />                                           │
-│   <SceneEffectsOverlay enableBloom={!isMobile} />          │
-│ </div>                                                     │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    Fixed Flow (Proposed)                        │
+├─────────────────────────────────────────────────────────────────┤
+│ 1. Scene loads → clone created                                  │
+│ 2. useLayoutEffect runs BEFORE paint → findBones() with retry   │
+│ 3. If bones found → apply pose IMMEDIATELY (sync)               │
+│ 4. useFrame continues with animation updates                    │
+│ 5. Avatar shows relaxed pose from first frame                   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Technical Details
+## Implementation Plan
 
-### File Changes
+### Part 1: Fix Immediate Pose Application
 
-| File | Change |
-|------|--------|
-| `package.json` | Add `three-stdlib` as direct dependency |
-| `vite.config.ts` | Add `force: true` to optimizeDeps |
-| `src/components/avatar-3d/animation/AnimationController.ts` | Apply initial pose immediately on bone discovery |
-| `src/components/avatar-3d/SceneEffectsOverlay.tsx` | New component for CSS bloom/vignette |
-| `src/components/avatar-3d/CircularHouseScene.tsx` | Add SceneEffectsOverlay |
-| `src/components/avatar-3d/HouseScene.tsx` | Add SceneEffectsOverlay |
+**File: `src/components/avatar-3d/RPMAvatar.tsx`**
 
-### CSS Effects Specification
+Apply the base pose directly on the cloned scene before passing to animation controller:
 
-**Vignette Effect:**
-- Uses `radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%)`
-- Positioned absolutely over the canvas
-- `pointer-events: none` to allow interactions through
+```typescript
+// After cloning scene, immediately apply base pose to prevent T-pose
+useLayoutEffect(() => {
+  if (!clone || !applyIdlePose) return;
+  
+  // Find and cache bones immediately
+  const bones = findBones(clone, ALL_BONE_NAMES);
+  
+  // Apply base pose synchronously before first render
+  if (bones.size > 0) {
+    const baseBoneConfig = POSE_CONFIGS[poseType];
+    applyBoneMap(bones, baseBoneConfig, 1);
+  }
+}, [clone, applyIdlePose, poseType]);
+```
 
-**Bloom Simulation:**
-- Uses CSS `filter: brightness(1.05) contrast(1.02)`
-- Optional subtle `backdrop-filter: blur(0.5px)` for glow on bright areas
-- Disabled on mobile for performance
+### Part 2: Add Bone Discovery Retry Logic
 
-### Expected Result
+**File: `src/components/avatar-3d/animation/AnimationController.ts`**
+
+Add a retry mechanism for bone discovery:
+
+```typescript
+// Add retry counter to ensure bones are found
+const retryCount = useRef(0);
+const MAX_RETRIES = 10;
+
+useEffect(() => {
+  if (!scene || !enabled) {
+    stateRef.current.initialized = false;
+    return;
+  }
+  
+  const attemptBoneDiscovery = () => {
+    stateRef.current.boneCache = findBones(scene, ALL_BONE_NAMES);
+    
+    if (stateRef.current.boneCache.size === 0 && retryCount.current < MAX_RETRIES) {
+      retryCount.current++;
+      requestAnimationFrame(attemptBoneDiscovery);
+      return;
+    }
+    
+    stateRef.current.initialized = stateRef.current.boneCache.size > 0;
+    
+    // Apply initial pose immediately
+    if (stateRef.current.initialized) {
+      const initialBones = POSE_CONFIGS[basePose];
+      if (initialBones) {
+        applyBoneMapDirect(stateRef.current.boneCache, initialBones, 1);
+      }
+    }
+  };
+  
+  attemptBoneDiscovery();
+}, [scene, enabled, basePose]);
+```
+
+### Part 3: Verify Bone Names Match RPM Models
+
+**File: `src/components/avatar-3d/animation/AnimationController.ts`**
+
+RPM models may use slightly different bone naming. Update the bone name list to include variants:
+
+```typescript
+const ALL_BONE_NAMES = [
+  // Standard names
+  'Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
+  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+  // RPM variant names (some models use mixamo naming)
+  'mixamorigHips', 'mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2',
+  'mixamorigNeck', 'mixamorigHead',
+  'mixamorigLeftShoulder', 'mixamorigLeftArm', 'mixamorigLeftForeArm', 'mixamorigLeftHand',
+  'mixamorigRightShoulder', 'mixamorigRightArm', 'mixamorigRightForeArm', 'mixamorigRightHand',
+];
+```
+
+And update `findBones` to normalize bone names.
+
+### Part 4: Force Immediate Bone Rotation on Clone
+
+**File: `src/components/avatar-3d/RPMAvatar.tsx`**
+
+The most robust fix - apply pose directly to the cloned skeleton before render:
+
+```typescript
+const clone = useMemo(() => {
+  const cloned = SkeletonUtils.clone(scene);
+  
+  // Immediately apply base pose to prevent any T-pose flash
+  if (applyIdlePose) {
+    cloned.traverse((child) => {
+      if (child instanceof THREE.Bone) {
+        const poseConfig = POSE_CONFIGS[poseType];
+        const boneState = poseConfig?.[child.name];
+        if (boneState) {
+          child.rotation.set(
+            boneState.rotation.x,
+            boneState.rotation.y,
+            boneState.rotation.z
+          );
+        }
+      }
+    });
+  }
+  
+  return cloned;
+}, [scene, applyIdlePose, poseType]);
+```
+
+---
+
+## Additional Improvements (Optional Enhancements)
+
+### Improvement A: Debug Logging for Bone Discovery
+
+Add temporary console logging to diagnose bone finding issues:
+
+```typescript
+const discoveredBones: string[] = [];
+scene.traverse((child) => {
+  if (child instanceof THREE.Bone) {
+    discoveredBones.push(child.name);
+  }
+});
+console.log('[Avatar Debug] Found bones:', discoveredBones);
+```
+
+### Improvement B: Fallback Pose Application in useFrame
+
+As a safety net, apply the base pose in the first frame if not already applied:
+
+```typescript
+// In useFrame callback
+const firstFrameApplied = useRef(false);
+if (!firstFrameApplied.current && state.boneCache.size > 0) {
+  applyBoneMap(state.boneCache, POSE_CONFIGS[basePose], 1);
+  firstFrameApplied.current = true;
+}
+```
+
+---
+
+## Technical Summary
+
+| File | Change Description |
+|------|-------------------|
+| `src/components/avatar-3d/RPMAvatar.tsx` | Apply base pose directly on clone creation |
+| `src/components/avatar-3d/animation/AnimationController.ts` | Add bone discovery retry logic and first-frame pose application |
+| `src/components/avatar-3d/animation/utils/boneUtils.ts` | (Optional) Add bone name normalization for RPM variants |
+
+---
+
+## Expected Outcome
 
 After implementation:
-1. **Avatars will display in relaxed pose** with arms naturally at their sides, not T-pose
-2. **Subtle vignette** darkening around edges gives cinematic feel
-3. **Soft bloom glow** enhances lighting without the runtime errors
-4. **Mobile-friendly** - effects are disabled or reduced on mobile devices
+1. Avatars will display in the correct "relaxed" pose from the very first rendered frame
+2. No T-pose flicker even on slow network/device
+3. Animation system continues to work for breathing, weight shift, and micro-movements
+4. Robust fallback ensures pose is always applied
