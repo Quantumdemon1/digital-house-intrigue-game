@@ -101,8 +101,10 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
     onPoseChange(pose);
     const basePose = STATIC_POSES[pose];
     const overrides = getPoseOverrides()[pose];
-    setBoneAdjustments(overrides || basePose.bones);
-  }, [onPoseChange]);
+    const newBones = overrides ? { ...overrides } : { ...basePose.bones };
+    setBoneAdjustments(() => newBones);
+    onBoneAdjust?.(newBones); // Notify animator to update avatar
+  }, [onPoseChange, onBoneAdjust]);
   
   // Handle bone rotation change
   const handleBoneRotation = useCallback((
@@ -130,8 +132,9 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
   // Reset to base pose
   const handleReset = useCallback(() => {
     const basePose = STATIC_POSES[currentPose];
-    setBoneAdjustments(basePose.bones);
-    onBoneAdjust?.(basePose.bones);
+    const newBones = { ...basePose.bones };
+    setBoneAdjustments(() => newBones);
+    onBoneAdjust?.(newBones);
     toast.info('Reset to default pose');
   }, [currentPose, onBoneAdjust]);
   

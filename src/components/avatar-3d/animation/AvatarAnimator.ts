@@ -236,11 +236,18 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
       }
       
       // 5. Apply live bone overrides from pose editor (highest priority)
+      // These are OFFSETS that should be added to base rotations, not absolute values
       if (liveBoneOverrides) {
         for (const [boneName, rotation] of Object.entries(liveBoneOverrides)) {
           const bone = state.boneMap.get(boneName);
-          if (bone && rotation) {
-            bone.rotation.set(rotation.x, rotation.y, rotation.z);
+          const base = state.baseRotations.get(boneName);
+          if (bone && rotation && base) {
+            // Apply as offset from base pose (same as static pose system)
+            bone.rotation.set(
+              base.x + rotation.x,
+              base.y + rotation.y,
+              base.z + rotation.z
+            );
           }
         }
       }
