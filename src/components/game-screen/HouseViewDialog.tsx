@@ -1,4 +1,5 @@
  import React, { useMemo } from 'react';
+ import { useState } from 'react';
  import { motion, AnimatePresence } from 'framer-motion';
  import { X } from 'lucide-react';
  import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@
  const HouseViewDialog: React.FC<HouseViewDialogProps> = ({ open, onOpenChange }) => {
    const { gameState } = useGame();
    const [selectedId, setSelectedId] = React.useState<string | null>(null);
+   const [showRoomNav, setShowRoomNav] = useState(true);
    
    // Convert active houseguests to CharacterTemplate format
    const activeCharacters = useMemo(() => {
@@ -99,6 +101,8 @@
                onSelect={setSelectedId}
                playerId={playerId}
                relationships={relationships}
+             gamePhase={gameState.phase}
+             showRoomNav={showRoomNav}
              />
            </div>
            

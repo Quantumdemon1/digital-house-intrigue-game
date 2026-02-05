@@ -4,6 +4,7 @@
  */
 
 import React, { Suspense, useRef, useState, useCallback, useEffect } from 'react';
+ import { useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
@@ -14,6 +15,10 @@ import { CharacterTemplate } from '@/data/character-templates';
  import { Archetype } from '@/data/character-templates';
 import { LivingRoom, HOHSuite, Bedroom, BathroomArea, KitchenExpanded, NominationLounge, GameRoom, DiaryRoomInterior, Hallway } from './HouseRooms';
 import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
+ import { Backyard } from './BackyardArea';
+ import DynamicRoomLighting from './DynamicRoomLighting';
+ import { RoomNavigator, ROOM_CAMERA_POSITIONS } from './RoomNavigator';
+ import { useEventLighting } from './hooks/useEventLighting';
 
 // Easing function for smooth camera transitions
 const easeInOutCubic = (t: number): number => {
@@ -29,6 +34,10 @@ interface HouseSceneProps {
   onGestureComplete?: () => void;
   /** Relationship data for reactive expressions: characterId -> score */
   relationships?: Record<string, number>;
+   /** Current game phase for event-based lighting */
+   gamePhase?: string;
+   /** Show room navigation UI */
+   showRoomNav?: boolean;
 }
 
 // Living room conversation cluster positions for natural groupings
@@ -561,9 +570,10 @@ const SceneLoader: React.FC = () => {
 // Camera fly-to animation controller
 const CameraController: React.FC<{ 
   focusPosition: [number, number, number] | null;
+   roomTarget: { camera: [number, number, number]; target: [number, number, number] } | null;
   defaultPosition: [number, number, number];
   controlsRef: React.RefObject<any>;
-}> = ({ focusPosition, defaultPosition, controlsRef }) => {
+ }> = ({ focusPosition, roomTarget, defaultPosition, controlsRef }) => {
   const { camera } = useThree();
   
   // Animation state
@@ -577,6 +587,19 @@ const CameraController: React.FC<{
   
   // Detect focus changes and start animation
   useEffect(() => {
+     // Room navigation takes priority
+     if (roomTarget) {
+       startCameraPos.current.copy(camera.position);
+       if (controlsRef.current) {
+         startLookAt.current.copy(controlsRef.current.target);
+       }
+       targetCameraPos.current.set(...roomTarget.camera);
+       targetLookAt.current.set(...roomTarget.target);
+       progress.current = 0;
+       animating.current = true;
+       return;
+     }
+     
     const focusChanged = 
       (focusPosition === null && lastFocusPosition.current !== null) ||
       (focusPosition !== null && lastFocusPosition.current === null) ||
@@ -620,7 +643,7 @@ const CameraController: React.FC<{
       animating.current = true;
       lastFocusPosition.current = focusPosition;
     }
-  }, [focusPosition, camera, defaultPosition, controlsRef]);
+  }, [focusPosition, roomTarget, camera, defaultPosition, controlsRef]);
   
   useFrame((_, delta) => {
     if (!animating.current) return;
@@ -651,6 +674,8 @@ const CameraController: React.FC<{
 const SceneContent: React.FC<HouseSceneProps & { 
   hoveredId: string | null; 
   onHover: (id: string | null) => void;
+   roomTarget: { camera: [number, number, number]; target: [number, number, number] } | null;
+   lightingState: ReturnType<typeof useEventLighting>;
 }> = ({
   characters,
   selectedId,
@@ -660,7 +685,9 @@ const SceneContent: React.FC<HouseSceneProps & {
   onGestureComplete,
   relationships = {},
   hoveredId,
-  onHover
+   onHover,
+   roomTarget,
+   lightingState,
 }) => {
   const positions = getCharacterPositions(characters.length);
   const selectedPosition = selectedId 
@@ -726,6 +753,17 @@ const SceneContent: React.FC<HouseSceneProps & {
       
       {/* Nomination/Lounge - Front Center */}
       <NominationLounge position={[0, 0, 11]} />
+       
+       {/* Backyard Area - extends from back of house */}
+       <Backyard position={[0, 0, -22]} eventColor={lightingState.colors.primary} />
+       
+       {/* Dynamic room lighting based on game phase */}
+       <DynamicRoomLighting
+         event={lightingState.event}
+         colors={lightingState.colors}
+         pulseSpeed={lightingState.pulseSpeed}
+         transitionProgress={lightingState.transitionProgress}
+       />
       
       {/* Game Room - Front Right */}
       <GameRoom position={[12, 0, 9]} />
@@ -770,6 +808,7 @@ const SceneContent: React.FC<HouseSceneProps & {
       {/* Camera fly-to animation */}
       <CameraController 
         focusPosition={selectedPosition || null} 
+         roomTarget={roomTarget}
         defaultPosition={[0, 18, 25]}
         controlsRef={controlsRef}
       />
@@ -798,8 +837,20 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
   playerGesture,
   onGestureComplete,
   relationships,
+   gamePhase,
+   showRoomNav = true,
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+   
+   // Event-based lighting
+   const lightingState = useEventLighting(gamePhase);
+   
+   // Get room camera target
+   const roomTarget = useMemo(() => {
+     if (!selectedRoom || !ROOM_CAMERA_POSITIONS[selectedRoom]) return null;
+     return ROOM_CAMERA_POSITIONS[selectedRoom];
+   }, [selectedRoom]);
   
   return (
     <div className="w-full h-full relative">
@@ -825,9 +876,25 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
             relationships={relationships}
             hoveredId={hoveredId}
             onHover={setHoveredId}
+           roomTarget={roomTarget}
+           lightingState={lightingState}
           />
         </Suspense>
       </Canvas>
+     
+     {/* Room Navigator UI */}
+     {showRoomNav && (
+       <div className="absolute top-16 left-4 z-10">
+         <RoomNavigator
+           currentRoom={selectedRoom}
+           onNavigate={(roomId) => {
+             setSelectedRoom(roomId);
+             // Clear room selection after animation completes
+             setTimeout(() => setSelectedRoom(null), 2500);
+           }}
+         />
+       </div>
+     )}
       
       {/* Scene title overlay */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none">
