@@ -12,7 +12,7 @@ import type { StaticPoseType } from './PoseLibrary';
  * Uses lowercase name matching (first name or full slug).
  */
 export const FEMALE_CHARACTER_NAMES = [
-  'quinn', 'jamie', 'morgan', 'taylor', 'casey', 'maya',
+  'quinn', 'jamie', 'emma', 'taylor', 'casey', 'maya',
 ] as const;
 
 /**

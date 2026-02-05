@@ -16,7 +16,7 @@ export const CHARACTER_POSE_OVERRIDES: Record<
   string,
   Partial<Record<StaticPoseType, Record<string, BoneRotation>>>
 > = {
-  morgan: {
+  emma: {
     relaxed: {
       Spine: { x: 0.02, y: 0, z: 0 },
       Spine1: { x: 0.01, y: 0, z: 0 },

@@ -2,7 +2,7 @@
 import { PersonalityTrait } from '@/models/houseguest';
 
 import alexChenAvatar from '@/assets/avatars/alex-chen.jpg';
-import morganLeeAvatar from '@/assets/avatars/morgan-lee.jpg';
+import emmaBrownAvatar from '@/assets/avatars/emma-brown.png';
 import jordanTaylorAvatar from '@/assets/avatars/jordan-taylor.jpg';
 import caseyWilsonAvatar from '@/assets/avatars/casey-wilson.jpg';
 import rileyJohnsonAvatar from '@/assets/avatars/riley-johnson.jpg';
@@ -36,13 +36,13 @@ export const defaultHouseguests: DefaultHouseguest[] = [
     traits: ['Strategic', 'Social'],
   },
   {
-    name: 'Morgan Lee',
-    age: 26,
-    occupation: 'Personal Trainer',
-    hometown: 'Miami, FL',
-    bio: 'Physical powerhouse who dominates competitions. Forms genuine alliances based on loyalty.',
-    imageUrl: morganLeeAvatar,
-    traits: ['Competitive', 'Loyal'],
+    name: 'Emma Brown',
+    age: 29,
+    occupation: 'Scientist',
+    hometown: 'Newark, NJ',
+    bio: 'Brilliant mind with a flair for the dramatic. Uses her analytical skills to outthink the competition while keeping everyone guessing.',
+    imageUrl: emmaBrownAvatar,
+    traits: ['Analytical', 'Strategic'],
   },
   {
     name: 'Jordan Taylor',
