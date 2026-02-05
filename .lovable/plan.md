@@ -1,216 +1,387 @@
 
-# Fix Avatar Rigging Glitches - Heads and Arms Going Wrong Directions
+# Walking Animation for Avatar Movement Between Floor Spots
 
-## Problem Analysis
+## Overview
 
-Based on the screenshot and code analysis, the avatars are "glitching out" with heads and arms going in every direction. This is caused by **three main issues**:
+This plan adds a walking animation system that plays when the player avatar moves between floor spots in the 3D house view. Currently, when a player taps a floor spot, the avatar position changes instantly. This plan adds:
 
-### Root Cause 1: Spring Physics Instability
-The spring physics system has a **critical bug** in delta time normalization that causes exponential oscillation:
-
-```typescript
-// SecondaryMotionSystem.ts line 125
-const dt = Math.min(deltaTime, 0.05) * 60; // This can create dt values up to 3.0!
-```
-
-When `deltaTime` is 0.05s (50ms), `dt` becomes `3.0`, which causes the spring physics to become unstable - the springs overshoot their targets massively, creating wild oscillations in head/arm rotations.
-
-### Root Cause 2: Uninitialized Spring States
-When springs aren't initialized with the current bone values, they start at `{x: 0, y: 0, z: 0}` and try to "catch up" to the target poses. This creates a violent snap/oscillation as the spring tries to move from 0 to ~1.45 radians (arm positions).
-
-### Root Cause 3: Missing Rotation Clamping
-There's no safety clamping on the final bone rotations being applied. If a spring goes unstable, rotations can go to infinity or NaN, causing the visual glitches seen in the screenshot.
+1. A new "walk" gesture animation with natural stepping motion
+2. Smooth position interpolation from start to destination
+3. Automatic rotation to face walking direction
+4. Integration with the existing movement system in HouseScene
 
 ---
 
-## Technical Fix Plan
+## Current Architecture
 
-### Fix 1: Stabilize Spring Delta Time Calculation
+### How Movement Works Now
 
-The current formula `deltaTime * 60` can produce values much greater than 1.0, which destabilizes the spring simulation.
+1. Player enters "move mode" via long-press
+2. Floor spot markers appear (`FloorSpotMarker.tsx`)
+3. Player taps a spot → `handleSpotSelect` is called
+4. `playerSpotId` state updates immediately
+5. A ripple effect appears at the destination
+6. **Missing**: No position animation or walking gesture
 
-**Current (broken):**
+### Animation System
+
+The existing animation system uses a 5-layer priority architecture:
+- **Layer 1**: Base Pose (relaxed, crossed-arms, etc.)
+- **Layer 2**: Idle Procedural (breathing, weight shift)
+- **Layer 3**: Look-At (head tracking)
+- **Layer 4**: Reactive Expressions
+- **Layer 5**: Gestures (wave, nod, clap, etc.)
+
+The gesture system (`GestureLayer.ts`) already supports keyframe-based animations that play once and blend back to base pose.
+
+---
+
+## Implementation Approach
+
+### Part 1: Create Walk Cycle Gesture
+
+Add a new "walk" gesture to the gesture library with a basic walk cycle animation:
+
+**File**: `src/components/avatar-3d/animation/layers/GestureLayer.ts`
+
 ```typescript
-const dt = Math.min(deltaTime, 0.05) * 60; // Can be up to 3.0!
+walk: {
+  duration: 1.2,  // One full step cycle
+  interruptible: false,
+  blendOutDuration: 0.3,
+  loop: true,  // NEW: Allow looping for continuous walking
+  keyframes: [
+    // Start pose (neutral stance)
+    { time: 0, bones: { 
+      LeftArm: { x: 0.1, y: -0.2, z: 1.3 },   // Arm back
+      RightArm: { x: 0.1, y: 0.2, z: -1.3 },  // Arm forward
+      Spine: { x: -0.05, y: 0, z: 0 },
+      Head: { x: 0, y: 0, z: 0 },
+    }},
+    // Mid-stride
+    { time: 0.5, bones: { 
+      LeftArm: { x: 0.1, y: 0.2, z: 1.1 },    // Arm forward
+      RightArm: { x: 0.1, y: -0.2, z: -1.1 }, // Arm back
+      Spine: { x: -0.05, y: 0.02, z: 0 },
+    }},
+    // Back to start (for seamless loop)
+    { time: 1.0, bones: { 
+      LeftArm: { x: 0.1, y: -0.2, z: 1.3 },
+      RightArm: { x: 0.1, y: 0.2, z: -1.3 },
+      Spine: { x: -0.05, y: 0, z: 0 },
+    }},
+  ],
+}
 ```
 
-**Fixed:**
+### Part 2: Add Walk Gesture Type
+
+**File**: `src/components/avatar-3d/animation/types.ts`
+
 ```typescript
-// Normalize to 60fps baseline but clamp to reasonable range
-const dt = Math.min(Math.max(deltaTime * 60, 0.1), 1.5);
+export type GestureType =
+  // Original gestures
+  | 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp'
+  // Social gestures
+  | 'headShake' | 'celebrate' | 'thinkingPose'
+  // Added gestures
+  | 'facepalm' | 'crossArms' | 'handOnHip' | 'nervousFidget' | 'emphasize'
+  // Conversational
+  | 'listenNod' | 'dismiss' | 'welcome'
+  // NEW: Movement
+  | 'walk';
 ```
 
-**Files to modify:**
-- `src/components/avatar-3d/animation/physics/SecondaryMotionSystem.ts`
-- `src/components/avatar-3d/animation/layers/LookAtLayer.ts` (same issue on lines 161-162)
+### Part 3: Create Movement Animation Hook
 
-### Fix 2: Add Velocity Damping and Value Clamping
+Create a new hook to manage the walking animation and position interpolation:
 
-Add safety limits to prevent springs from going unstable:
+**File**: `src/components/avatar-3d/hooks/useAvatarMovement.ts` (new)
 
-**In springPhysics.ts:**
 ```typescript
-export const updateSpring = (
-  state: SpringState,
-  config: SpringConfig,
-  deltaTime: number
-): SpringState => {
-  // ...existing physics calculation...
+interface AvatarMovementState {
+  isMoving: boolean;
+  startPosition: [number, number, number];
+  targetPosition: [number, number, number];
+  currentPosition: [number, number, number];
+  targetRotation: number;
+  progress: number;
+  startTime: number;
+}
+
+interface UseAvatarMovementConfig {
+  enabled: boolean;
+  movementSpeed?: number;  // Units per second (default: 2)
+  onMoveComplete?: () => void;
+}
+
+export const useAvatarMovement = (config: UseAvatarMovementConfig) => {
+  // Tracks movement state
+  // Returns: { position, rotation, isMoving, walkGesture }
   
-  // CLAMP: Prevent runaway velocity
-  const maxVelocity = 5.0; // Radians per normalized frame
-  const clampedVelocity = Math.max(-maxVelocity, Math.min(maxVelocity, newVelocity));
-  
-  // CLAMP: Prevent extreme positions
-  const maxPosition = Math.PI * 2; // Full rotation limit
-  const clampedPosition = Math.max(-maxPosition, Math.min(maxPosition, newPosition));
-  
-  // NaN safety check
-  if (isNaN(clampedPosition) || isNaN(clampedVelocity)) {
-    return { position: state.target, velocity: 0, target: state.target };
-  }
-  
-  return {
-    position: clampedPosition,
-    velocity: clampedVelocity,
-    target: state.target,
-  };
-};
+  // Calculate movement duration based on distance
+  // Animate position over time
+  // Return 'walk' gesture while moving
+  // Smoothly rotate to face direction
+}
 ```
 
-### Fix 3: Initialize Springs from Current Bone State
+### Part 4: Update HouseScene for Animated Movement
 
-Ensure springs are properly initialized with the base pose values, not zeros:
+Modify HouseScene to track player position with animation:
 
-**In SecondaryMotionSystem.ts:**
+**File**: `src/components/avatar-3d/HouseScene.tsx`
+
+Key changes:
+1. Add `playerPosition` state for animated position
+2. Add `isPlayerMoving` state
+3. Add `playerTargetPosition` for destination
+4. Create movement animation in `useFrame`
+5. Pass `walk` gesture to player's RPMAvatar while moving
+6. Update character position to use animated position
+
 ```typescript
-export const initializeSecondaryMotion = (
-  state: SecondaryMotionState,
-  currentBones: BoneMap
-): SecondaryMotionState => {
-  const springs: Record<string, Spring3DState> = {};
+// New state in HouseScene
+const [playerPosition, setPlayerPosition] = useState<[number, number, number] | null>(null);
+const [playerTargetPosition, setPlayerTargetPosition] = useState<[number, number, number] | null>(null);
+const [isPlayerMoving, setIsPlayerMoving] = useState(false);
+const playerRotationRef = useRef<number>(0);
+
+// Handle floor spot selection
+const handleSpotSelect = useCallback((spotId: string, position: [number, number, number]) => {
+  // Get current player position
+  const currentPos = playerPosition ?? getDefaultPlayerPosition();
   
-  TRACKED_BONES.forEach(boneName => {
-    const bone = currentBones[boneName];
-    if (bone) {
-      // Initialize with BOTH position and target set to current value
-      const initialPos = {
-        x: bone.rotation.x,
-        y: bone.rotation.y,
-        z: bone.rotation.z,
-      };
-      springs[boneName] = createSpring3D(initialPos);
-      // Also set the target to the same value to prevent initial oscillation
-      springs[boneName] = setSpring3DTarget(springs[boneName], initialPos);
-    } else {
-      springs[boneName] = createSpring3D({ x: 0, y: 0, z: 0 });
+  // Start movement animation
+  setPlayerTargetPosition(position);
+  setIsPlayerMoving(true);
+  setPlayerSpotId(spotId);
+  setMoveMode(false);
+  
+  // Calculate rotation to face target
+  const angle = Math.atan2(
+    position[2] - currentPos[2],
+    position[0] - currentPos[0]
+  ) + Math.PI / 2;
+  playerRotationRef.current = angle;
+}, [playerPosition]);
+```
+
+### Part 5: Create Movement Animation Component
+
+Create a component inside the Canvas that handles the frame-by-frame position interpolation:
+
+**File**: `src/components/avatar-3d/PlayerMovementController.tsx` (new)
+
+```typescript
+interface PlayerMovementControllerProps {
+  startPosition: [number, number, number];
+  targetPosition: [number, number, number];
+  isMoving: boolean;
+  onPositionUpdate: (position: [number, number, number]) => void;
+  onMoveComplete: () => void;
+  speed?: number; // units per second
+}
+
+const PlayerMovementController: React.FC<PlayerMovementControllerProps> = ({
+  startPosition,
+  targetPosition,
+  isMoving,
+  onPositionUpdate,
+  onMoveComplete,
+  speed = 2,
+}) => {
+  const progress = useRef(0);
+  const startPos = useRef(startPosition);
+  
+  useEffect(() => {
+    if (isMoving) {
+      startPos.current = startPosition;
+      progress.current = 0;
+    }
+  }, [isMoving, startPosition]);
+  
+  useFrame((_, delta) => {
+    if (!isMoving) return;
+    
+    // Calculate total distance
+    const dx = targetPosition[0] - startPos.current[0];
+    const dz = targetPosition[2] - startPos.current[2];
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    
+    // Calculate duration based on distance and speed
+    const duration = distance / speed;
+    
+    // Advance progress
+    progress.current = Math.min(progress.current + delta / duration, 1);
+    
+    // Ease the movement
+    const eased = easeInOutQuad(progress.current);
+    
+    // Interpolate position
+    const newPos: [number, number, number] = [
+      startPos.current[0] + dx * eased,
+      startPos.current[1],  // Keep Y constant
+      startPos.current[2] + dz * eased,
+    ];
+    
+    onPositionUpdate(newPos);
+    
+    // Check completion
+    if (progress.current >= 1) {
+      onMoveComplete();
     }
   });
   
-  return { springs, initialized: true };
+  return null;
 };
 ```
 
-### Fix 4: Add Final Rotation Clamping in boneUtils
+### Part 6: Update CharacterSpot for Dynamic Position
 
-Add a safety clamp when applying rotations to bones:
+Modify CharacterSpot to accept an override position for the player:
 
-**In boneUtils.ts - applyBoneMap:**
+**File**: `src/components/avatar-3d/HouseScene.tsx` (CharacterSpot component)
+
 ```typescript
-export const applyBoneMap = (
-  boneCache: Map<string, THREE.Bone>,
-  boneMap: BoneMap,
-  blend: number = 1
-): void => {
-  // Define per-bone rotation limits
-  const BONE_LIMITS: Record<string, { min: number; max: number }> = {
-    Head: { min: -0.8, max: 0.8 },
-    Neck: { min: -0.5, max: 0.5 },
-    Spine: { min: -0.3, max: 0.3 },
-    Spine1: { min: -0.3, max: 0.3 },
-    Spine2: { min: -0.3, max: 0.3 },
-    LeftArm: { min: -2.0, max: 2.0 },
-    RightArm: { min: -2.0, max: 2.0 },
-    LeftForeArm: { min: -2.5, max: 2.5 },
-    RightForeArm: { min: -2.5, max: 2.5 },
-    LeftHand: { min: -1.0, max: 1.0 },
-    RightHand: { min: -1.0, max: 1.0 },
-  };
+interface CharacterSpotProps {
+  // ...existing props
+  overridePosition?: [number, number, number];  // NEW
+  overrideRotation?: [number, number, number];  // NEW
+  movementGesture?: GestureType | null;         // NEW
+}
+
+const CharacterSpot: React.FC<CharacterSpotProps> = ({
+  // ...existing
+  overridePosition,
+  overrideRotation,
+  movementGesture,
+}) => {
+  // Use override position if provided, otherwise use prop
+  const effectivePosition = overridePosition ?? position;
+  const effectiveRotation = overrideRotation ?? rotation;
   
-  Object.entries(boneMap).forEach(([boneName, state]) => {
-    const bone = boneCache.get(boneName);
-    if (!bone) return;
-    
-    // Get limits for this bone
-    const limits = BONE_LIMITS[boneName] || { min: -Math.PI, max: Math.PI };
-    
-    // Clamp rotations to safe ranges
-    const safeX = clampAndValidate(state.rotation.x, limits.min, limits.max);
-    const safeY = clampAndValidate(state.rotation.y, limits.min, limits.max);
-    const safeZ = clampAndValidate(state.rotation.z, limits.min, limits.max);
-    
-    if (blend >= 1) {
-      bone.rotation.set(safeX, safeY, safeZ);
-    } else {
-      bone.rotation.x = THREE.MathUtils.lerp(bone.rotation.x, safeX, blend);
-      bone.rotation.y = THREE.MathUtils.lerp(bone.rotation.y, safeY, blend);
-      bone.rotation.z = THREE.MathUtils.lerp(bone.rotation.z, safeZ, blend);
-    }
-  });
+  // Combine movement gesture with player gesture
+  const activeGesture = movementGesture ?? playerGesture;
+  
+  return (
+    <group position={effectivePosition}>
+      {/* ...rest of component */}
+    </group>
+  );
 };
-
-// Helper to clamp and handle NaN
-const clampAndValidate = (value: number, min: number, max: number): number => {
-  if (isNaN(value) || !isFinite(value)) return 0;
-  return Math.max(min, Math.min(max, value));
-};
-```
-
-### Fix 5: Disable Physics on Mobile/Low Quality
-
-The physics system is too aggressive for mobile devices. Disable it more thoroughly:
-
-**In AnimationController.ts:**
-```typescript
-// Use physics only on high quality AND non-mobile
-const enablePhysics = qualityConfig.enablePhysics && !window.matchMedia('(max-width: 768px)').matches;
 ```
 
 ---
 
-## Files to Modify
+## Integration Flow
+
+```text
+User taps floor spot
+      │
+      ▼
+handleSpotSelect(spotId, targetPosition)
+      │
+      ├── setPlayerTargetPosition(targetPosition)
+      ├── setIsPlayerMoving(true)
+      ├── Calculate facing direction
+      └── Add ripple effect
+      │
+      ▼
+PlayerMovementController (in Canvas)
+      │
+      ├── useFrame: Interpolate position each frame
+      ├── Call onPositionUpdate with new position
+      └── When complete: onMoveComplete()
+      │
+      ▼
+CharacterSpot (for player)
+      │
+      ├── Uses overridePosition for animated position
+      ├── Uses overrideRotation to face direction
+      └── Passes 'walk' gesture to RPMAvatar while moving
+      │
+      ▼
+RPMAvatar
+      │
+      └── AnimationController plays walk gesture
+          └── Arms swing, body sways during walk
+```
+
+---
+
+## Files Summary
+
+### Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/avatar-3d/hooks/useAvatarMovement.ts` | Movement state management hook |
+| `src/components/avatar-3d/PlayerMovementController.tsx` | Frame-by-frame position animation |
+
+### Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/avatar-3d/animation/utils/springPhysics.ts` | Add velocity/position clamping, NaN checks |
-| `src/components/avatar-3d/animation/utils/boneUtils.ts` | Add per-bone rotation limits, NaN safety |
-| `src/components/avatar-3d/animation/physics/SecondaryMotionSystem.ts` | Fix delta time calculation, improve initialization |
-| `src/components/avatar-3d/animation/layers/LookAtLayer.ts` | Fix delta time scaling |
-| `src/components/avatar-3d/animation/AnimationController.ts` | Add mobile detection for physics disable |
+| `src/components/avatar-3d/animation/types.ts` | Add 'walk' to GestureType |
+| `src/components/avatar-3d/animation/layers/GestureLayer.ts` | Add walk cycle animation keyframes |
+| `src/components/avatar-3d/HouseScene.tsx` | Add movement state, integrate controller, pass to CharacterSpot |
 
 ---
 
-## Testing Approach
+## Walk Cycle Animation Details
 
-After implementing fixes:
-1. Verify arms stay in relaxed position (Z ≈ 1.45 radians)
-2. Verify head stays centered (X/Y/Z near 0)
-3. Verify subtle idle breathing animation works
-4. Verify no jerky movements on mobile
-5. Verify characters don't glitch when switching between them quickly
+The walk animation uses arm swing and subtle spine rotation to simulate walking:
+
+| Keyframe | Time | Description |
+|----------|------|-------------|
+| 0 | 0.0 | Left arm back, right arm forward, neutral spine |
+| 1 | 0.25 | Arms crossing, slight spine twist right |
+| 2 | 0.5 | Left arm forward, right arm back |
+| 3 | 0.75 | Arms crossing, slight spine twist left |
+| 4 | 1.0 | Back to start (loops seamlessly) |
+
+Since Ready Player Me avatars don't have leg bones exposed in the standard configuration, the walk uses upper body animation (arm swing) which is the most visible and natural cue for walking motion.
 
 ---
 
-## Why This Happens
+## Technical Considerations
 
-The core issue is that the spring physics simulation becomes numerically unstable when:
-1. Frame times are long (low FPS on mobile)
-2. The delta time multiplier creates values > 1.0
-3. Springs "overshoot" their targets and the next frame overshoots even more
-4. This creates an exponential oscillation that makes arms/heads spin wildly
+### Gesture Looping
 
-The fix ensures:
-- Delta time stays in a stable range
-- Velocities and positions have hard limits
-- NaN values are caught and reset
-- Per-bone rotation limits prevent physically impossible poses
+The current gesture system plays once and stops. For walking, we need continuous animation. Options:
+
+1. **Loop flag**: Add `loop: true` to gesture definition, check in `updateGesture`
+2. **Retrigger**: Re-trigger the walk gesture when it completes while still moving
+3. **Duration scaling**: Match gesture duration to movement duration
+
+Recommended: Option 2 (retrigger) - simplest, works with existing system.
+
+### Smooth Rotation
+
+When facing the walking direction:
+- Calculate angle from start to target
+- Smoothly interpolate current rotation to target rotation
+- Apply as Y rotation on the character group
+
+### Movement Speed
+
+Default: 2 units/second
+- Short distances (< 3 units): ~1.5 seconds
+- Medium distances (3-8 units): ~3 seconds
+- Long distances (> 8 units): ~4 seconds max
+
+---
+
+## Testing Checklist
+
+- [ ] Tap floor spot triggers walk animation
+- [ ] Avatar moves smoothly from start to destination
+- [ ] Avatar rotates to face walking direction
+- [ ] Walk animation loops during movement
+- [ ] Walk animation stops when destination reached
+- [ ] Returns to relaxed pose after walking
+- [ ] Works on mobile (long press → tap spot)
+- [ ] Works on desktop (click to move when in move mode)
+- [ ] No jittering or physics instability during walk
+- [ ] Camera follows player during movement (optional)
