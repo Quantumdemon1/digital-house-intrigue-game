@@ -28,6 +28,7 @@ import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
  import { TouchFeedbackManager } from './TouchFeedback';
  import { PlayerMovementController } from './PlayerMovementController';
  import { useAvatarMovement } from './hooks/useAvatarMovement';
+import { SceneEffectsOverlay } from './SceneEffectsOverlay';
 
 // Easing function for smooth camera transitions
 const easeInOutCubic = (t: number): number => {
@@ -1095,6 +1096,14 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
             {/* Post-processing disabled due to @react-three/postprocessing version incompatibility */}
         </Suspense>
       </Canvas>
+      
+      {/* CSS-based visual effects overlay */}
+      <SceneEffectsOverlay 
+        enableBloom={!isMobile} 
+        enableVignette={true}
+        bloomIntensity={0.35}
+        vignetteIntensity={0.35}
+      />
      
  {/* Room Navigator UI - responsive: full on desktop, compact on mobile */}
  {showRoomNav && (

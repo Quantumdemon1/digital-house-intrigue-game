@@ -60,6 +60,8 @@
    createSecondaryMotionState,
    updateSecondaryMotion,
  } from './physics/SecondaryMotionSystem';
+import { POSE_CONFIGS } from './layers/BasePoseLayer';
+import { applyBoneMap as applyBoneMapDirect } from './utils/boneUtils';
  
 // Mobile detection for physics disable
 const isMobileDevice = (): boolean => {
@@ -162,6 +164,14 @@ const isMobileDevice = (): boolean => {
      stateRef.current.boneCache = findBones(scene, ALL_BONE_NAMES);
      stateRef.current.initialized = stateRef.current.boneCache.size > 0;
      stateRef.current.poseTransition = createPoseTransition(basePose);
+      
+      // CRITICAL: Apply initial pose immediately to prevent T-pose flash
+      if (stateRef.current.initialized && stateRef.current.boneCache.size > 0) {
+        const initialBones = POSE_CONFIGS[basePose];
+        if (initialBones) {
+          applyBoneMapDirect(stateRef.current.boneCache, initialBones, 1);
+        }
+      }
    }, [scene, enabled, basePose]);
    
    // Handle gesture trigger
