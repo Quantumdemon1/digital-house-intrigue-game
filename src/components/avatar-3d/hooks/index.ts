@@ -10,3 +10,4 @@ export { useLookAt, type LookAtConfig, default as lookAtHook } from './useLookAt
  export { useReactiveExpressions, type ReactiveExpressionType, type ReactiveExpressionsConfig } from './useReactiveExpressions';
  export { useEyeTracking, type EyeTrackingConfig } from './useEyeTracking';
  export { useEventLighting, usePulsingIntensity, interpolateColor, type LightingEvent, type EventLightingState, type LightingColors } from './useEventLighting';
+ export { useTouchGestures, type TouchGestureCallbacks, type UseTouchGesturesReturn } from './useTouchGestures';

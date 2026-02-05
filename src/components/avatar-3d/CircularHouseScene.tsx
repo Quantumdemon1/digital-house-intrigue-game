@@ -11,6 +11,8 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing';
  import { CharacterTemplate, Archetype } from '@/data/character-templates';
  import { RPMAvatar, PoseType } from './RPMAvatar';
  import { HouseFloor, Couch, CoffeeTable, Plant, LightFixture, TVStand, KitchenArea, DiaryRoomDoor } from './HouseFurniture';
+ import { useIsMobile } from '@/hooks/use-mobile';
+ import { useTouchGestures } from './hooks/useTouchGestures';
  
  // Easing function for smooth camera transitions
  const easeInOutCubic = (t: number): number => {
@@ -372,6 +374,9 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
          target={[0, 0.5, 0]}
          enableDamping
          dampingFactor={0.05}
+        // Touch settings
+        rotateSpeed={0.5}
+        zoomSpeed={0.8}
        />
      </>
    );
@@ -383,9 +388,22 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
    onSelect,
  }) => {
    const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+   
+  // Touch gesture callbacks
+  const touchCallbacks = React.useMemo(() => ({
+    onDoubleTap: () => {
+      // Deselect on double-tap
+      if (selectedId) {
+        onSelect(selectedId);
+      }
+    },
+  }), [selectedId, onSelect]);
+   
+  const { handlers: touchHandlers } = useTouchGestures(touchCallbacks, isMobile);
    
    return (
-     <div className="w-full h-full relative">
+    <div className="w-full h-full relative" {...touchHandlers}>
        <Canvas
          camera={{ 
            position: [0, 12, 16], 
@@ -427,9 +445,16 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
          </div>
        </div>
        
-       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none">
-         <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-sm">
-           Drag to rotate • Scroll to zoom • Click to select
+      {/* Mobile hint */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none sm:hidden">
+        <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-xs">
+          Drag to rotate • Pinch to zoom • Tap to select
+        </div>
+      </div>
+      {/* Desktop hint */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none hidden sm:block">
+        <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-sm">
+          Drag to rotate • Scroll to zoom • Click to select
          </div>
        </div>
      </div>
