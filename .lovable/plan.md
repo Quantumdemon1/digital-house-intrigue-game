@@ -1,98 +1,96 @@
 
-# Plan: Fix Avatar Thumbnail Camera Framing in Grid Selection
+# Plan: Fix Avatar Arm Poses in House View to Be Relaxed at Sides
 
 ## Problem Analysis
 
-The avatar thumbnails in the character selection grid are still showing knees instead of faces. Looking at the screenshot, the detail panel on the right (circled in red) shows the correct framing, while the grid shows the wrong framing.
+The avatars in the house view have their arms stuck in a T-pose or semi-T-pose position instead of being relaxed at their sides. Looking at the screenshot, all characters have their arms extended outward.
 
-After investigating the code:
+## Root Cause
 
-1. **Camera settings in `AvatarLoader.tsx`**:
-   - Camera positioned at `y: 1.1`
-   - Looking at `y: 1.5`
+The `usePoseVariety` hook in `src/components/avatar-3d/hooks/usePoseVariety.ts` applies poses to avatar skeletons, but the Z rotation values for arms are too low to bring them down to the sides:
 
-2. **Avatar model position in `RPMAvatar.tsx`**:
-   - For `profile` context: avatar is at `[0, -0.55, 0]`
-   - For `thumbnail` context: avatar is at `[0, -0.5, 0]`
+**Current values for `relaxed` pose:**
+```typescript
+LeftArm: { x: 0.1, y: 0, z: 1.2 },      // Arms still partially horizontal
+RightArm: { x: 0.1, y: 0, z: -1.2 },
+```
 
-3. **The math problem**:
-   - Ready Player Me models have their feet at Y=0, face at Y~1.6
-   - When we position the model at Y=-0.55, the face is now at Y=1.6-0.55 = **~1.05**
-   - But the camera is looking at Y=1.5 - **above the face!**
-   - This causes the camera to aim higher than the face, showing the lower body/knees
+**Comparison with `useIdlePose` (working correctly in other views):**
+```typescript
+LeftArm: { x: 0.05, y: 0.1, z: 1.45 },   // Arms properly at sides
+RightArm: { x: 0.05, y: -0.1, z: -1.45 },
+```
 
-4. **Why the detail panel works differently**:
-   - Detail panel uses `size="full"` which maps to `customizer` context
-   - `customizer` positions avatar at `[0, -1.5, 0]` (pushed way down)
-   - Camera settings are `y: 0, lookAtY: 0.8` (looking at body center, not above)
+The difference of ~0.25 radians (~14 degrees) is significant - it leaves arms looking more like a T-pose. Ready Player Me avatars need Z rotations of approximately **1.45-1.5 radians** to bring arms fully down to the sides.
 
 ## Solution
 
-Adjust the `lookAtY` values in `SIZE_CONFIG` to match where the face actually is when the model is positioned:
+Update all pose configurations in `usePoseVariety.ts` to use proper arm rotations that bring arms naturally to the sides:
 
-| Size | Model Y Position | Face Y (model ~1.6 - position) | Current lookAtY | Fixed lookAtY |
-|------|------------------|-------------------------------|-----------------|---------------|
-| sm | -0.5 (thumbnail) | ~1.1 | 1.5 | 1.05 |
-| md | -0.55 (profile) | ~1.05 | 1.5 | 1.0 |
-| lg | -0.55 (profile) | ~1.05 | 1.5 | 1.0 |
-| xl | -0.55 (profile) | ~1.05 | 1.5 | 1.0 |
-| full | -1.5 (customizer) | ~0.1 | 0.8 | 0.8 (unchanged) |
+| Pose | Bone | Current Z | Fixed Z |
+|------|------|-----------|---------|
+| relaxed | LeftArm | 1.2 | 1.45 |
+| relaxed | RightArm | -1.2 | -1.45 |
+| casual-lean | LeftArm | 1.3 | 1.45 |
+| casual-lean | RightArm | -1.1 | -1.35 |
 
-Also adjust camera Y to be at face level, not above it:
+## File Change
 
-| Size | Current Camera Y | Fixed Camera Y |
-|------|------------------|----------------|
-| sm | 1.1 | 1.05 |
-| md | 1.1 | 1.0 |
-| lg | 1.1 | 1.0 |
-| xl | 1.1 | 1.0 |
-| full | 0 | 0 (unchanged) |
+### `src/components/avatar-3d/hooks/usePoseVariety.ts`
 
-## File to Modify
-
-### `src/components/avatar-3d/AvatarLoader.tsx`
-
-Update the `SIZE_CONFIG` to correct the camera and lookAt Y values:
+Update the `POSE_CONFIGS` object with corrected arm rotations:
 
 ```typescript
-const SIZE_CONFIG: Record<AvatarSize, { 
-  width: string; 
-  height: string; 
-  scale: number; 
-  context: AvatarContext;
-  camera: { y: number; z: number; fov: number; lookAtY: number }
-}> = {
-  sm: { 
-    width: 'w-12', height: 'h-12', scale: 0.8, 
-    context: 'thumbnail',
-    camera: { y: 1.05, z: 1.2, fov: 25, lookAtY: 1.05 }  // Face level
+const POSE_CONFIGS: Record<PoseType, Record<string, BoneRotation>> = {
+  relaxed: {
+    LeftArm: { x: 0.05, y: 0.1, z: 1.45 },      // Arms relaxed at sides
+    RightArm: { x: 0.05, y: -0.1, z: -1.45 },   // Arms relaxed at sides
+    LeftForeArm: { x: 0, y: 0, z: 0.08 },       // Slight elbow bend
+    RightForeArm: { x: 0, y: 0, z: -0.08 },     // Slight elbow bend
+    LeftHand: { x: 0, y: 0, z: 0.05 },          // Relaxed wrist
+    RightHand: { x: 0, y: 0, z: -0.05 },        // Relaxed wrist
+    Spine: { x: -0.02, y: 0, z: 0 },
+    Spine1: { x: -0.01, y: 0, z: 0 },
   },
-  md: { 
-    width: 'w-20', height: 'h-20', scale: 1, 
-    context: 'profile',
-    camera: { y: 1.0, z: 1.4, fov: 28, lookAtY: 1.0 }  // Face level
+  'casual-lean': {
+    LeftArm: { x: 0.05, y: 0.1, z: 1.45 },      // Arms relaxed
+    RightArm: { x: 0.05, y: -0.1, z: -1.35 },   // Slightly different for asymmetry
+    LeftForeArm: { x: 0, y: 0, z: 0.1 },
+    RightForeArm: { x: 0, y: 0, z: -0.1 },
+    Hips: { x: 0, y: 0, z: 0.04 },
+    Spine: { x: -0.01, y: 0.02, z: 0.02 },
+    Spine1: { x: 0, y: 0.01, z: 0.01 },
   },
-  lg: { 
-    width: 'w-32', height: 'h-32', scale: 1.2, 
-    context: 'profile',
-    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
-  },
-  xl: { 
-    width: 'w-48', height: 'h-48', scale: 1.5, 
-    context: 'profile',
-    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
-  },
-  full: { 
-    width: 'w-full', height: 'h-full', scale: 1, 
-    context: 'customizer',
-    camera: { y: 0, z: 2.5, fov: 35, lookAtY: 0.8 }   // Body center (unchanged)
-  },
+  // Other poses (crossed-arms, hands-on-hips, thinking) keep their 
+  // specialized configurations as they intentionally position arms differently
 };
 ```
 
+### Changes by Pose Type
+
+| Pose Type | Change Description |
+|-----------|-------------------|
+| `relaxed` | Increase arm Z rotation from 1.2 to 1.45 (matching useIdlePose) |
+| `casual-lean` | Increase arm Z rotation from 1.3/1.1 to 1.45/1.35 |
+| `crossed-arms` | Keep current values (arms are intentionally crossed in front) |
+| `hands-on-hips` | Keep current values (arms bent to rest on hips) |
+| `thinking` | Keep current values (one arm raised to chin) |
+
+## Technical Details
+
+### Ready Player Me Avatar Skeleton
+
+RPM avatars use a standard humanoid skeleton where:
+- Arms in T-pose have Z rotation = 0
+- Arms fully down at sides need Z rotation ≈ 1.5 radians (≈86°)
+- The rotation is relative to the parent bone (shoulder)
+
+### Why 1.45 radians?
+
+- Full 90° rotation = π/2 ≈ 1.57 radians would be arms perfectly straight down
+- 1.45 radians ≈ 83° gives a natural, relaxed position with arms slightly away from body
+- This matches the proven values in `useIdlePose.ts` that work correctly
+
 ## Expected Result
 
-After this fix:
-- The camera will be at the same height as where it's looking (face level ~1.0)
-- The grid selection thumbnails will properly show the houseguests' faces
-- The detail panel (`size="full"`) will continue to show the upper body as designed
+After this fix, avatars in the house view will have their arms naturally hanging at their sides in the relaxed and casual-lean poses, matching the circled reference in the screenshot (the detail panel view).
