@@ -41,6 +41,7 @@ export { CharacterCarousel } from './CharacterCarousel';
  
  // Dynamic lighting system
  export { default as DynamicRoomLighting } from './DynamicRoomLighting';
+ export { DeLorean } from './DeLorean';
  
  // Room navigation
  export { RoomNavigator, RoomNavigatorCompact, ROOM_CAMERA_POSITIONS } from './RoomNavigator';

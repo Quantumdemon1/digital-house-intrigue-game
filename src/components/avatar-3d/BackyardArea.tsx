@@ -6,7 +6,8 @@
  import React, { useMemo, useRef } from 'react';
  import * as THREE from 'three';
  import { useFrame } from '@react-three/fiber';
- import { LEDCoveLighting } from './HouseFurnitureExpanded';
+import { LEDCoveLighting } from './HouseFurnitureExpanded';
+import { DeLorean } from './DeLorean';
  
  interface BackyardProps {
    position: [number, number, number];
@@ -602,8 +603,11 @@
        {/* Outdoor seating - left */}
        <OutdoorSeating position={[-8, 0, -4]} rotation={[0, Math.PI / 4, 0]} />
        
-       {/* BBQ Grill - right */}
-       <BBQGrill position={[10, 0, 0]} />
+        {/* BBQ Grill - right */}
+        <BBQGrill position={[10, 0, 0]} />
+        
+        {/* DeLorean Time Machine - near BBQ */}
+        <DeLorean position={[10, 0, -6]} rotation={[0, -Math.PI / 6, 0]} />
        
        {/* Sliding glass doors - connecting to house */}
        <SlidingGlassDoor position={[0, 0, 9]} />
