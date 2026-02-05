@@ -12,14 +12,14 @@ import {
   X, 
   ChevronDown, 
   ChevronUp,
-  Eye,
-  EyeOff,
   Trash2,
   Copy,
-  Info
+  Info,
+  ClipboardPaste
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Select,
   SelectContent,
@@ -33,7 +33,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import {
   STATIC_POSES,
   ADJUSTABLE_BONES,
@@ -44,6 +52,15 @@ import {
   clearPoseOverride,
 } from '../animation/poses/PoseLibrary';
 import type { BoneRotation } from '../animation/types';
+
+// Validation schema for imported pose data
+const boneRotationSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  z: z.number(),
+});
+
+const poseDataSchema = z.record(z.string(), boneRotationSchema);
 
 interface PoseEditorProps {
   isVisible: boolean;
@@ -159,6 +176,46 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
     toast.success('Copied bone rotations to clipboard');
   }, [boneAdjustments]);
   
+  // Paste/Import state
+  const [showPasteDialog, setShowPasteDialog] = useState(false);
+  const [pasteValue, setPasteValue] = useState('');
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  
+  // Handle paste import
+  const handlePasteImport = useCallback(() => {
+    setPasteError(null);
+    
+    try {
+      const parsed = JSON.parse(pasteValue.trim());
+      const validated = poseDataSchema.parse(parsed) as Record<string, BoneRotation>;
+      
+      // Merge with existing adjustments (only overwrite provided bones)
+      setBoneAdjustments(prev => {
+        const merged: Record<string, BoneRotation> = { ...prev, ...validated };
+        onBoneAdjust?.(merged);
+        return merged;
+      });
+      
+      setShowPasteDialog(false);
+      setPasteValue('');
+      toast.success('Pose data imported successfully');
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setPasteError('Invalid JSON format. Please check your input.');
+      } else if (err instanceof z.ZodError) {
+        setPasteError('Invalid pose data. Each bone must have x, y, z number values.');
+      } else {
+        setPasteError('Failed to parse pose data.');
+      }
+    }
+  }, [pasteValue, onBoneAdjust]);
+  
+  const handleOpenPasteDialog = useCallback(() => {
+    setPasteValue('');
+    setPasteError(null);
+    setShowPasteDialog(true);
+  }, []);
+  
   // Toggle group expansion
   const toggleGroup = useCallback((group: string) => {
     setExpandedGroups(prev => {
@@ -268,7 +325,46 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
           >
             <Copy className="w-3 h-3" />
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={handleOpenPasteDialog}
+          >
+            <ClipboardPaste className="w-3 h-3" />
+          </Button>
         </div>
+        
+        {/* Paste Import Dialog */}
+        <Dialog open={showPasteDialog} onOpenChange={setShowPasteDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Import Pose Data</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Paste JSON bone rotation data to apply to the current pose.
+              </p>
+              <Textarea
+                value={pasteValue}
+                onChange={(e) => setPasteValue(e.target.value)}
+                placeholder='{"LeftArm": {"x": 0.12, "y": 0.05, "z": 0.27}, ...}'
+                className="min-h-[200px] font-mono text-xs"
+              />
+              {pasteError && (
+                <p className="text-sm text-destructive">{pasteError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPasteDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handlePasteImport} disabled={!pasteValue.trim()}>
+                Import
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
         {/* Bone Groups */}
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
