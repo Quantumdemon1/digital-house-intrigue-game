@@ -1,415 +1,282 @@
 
-# Complete Avatar Animation System Overhaul
+# 3D House & Avatar System: Improvements and Refinements
 
-## Overview
-
-This plan redesigns the avatar physics, controls, poses, and animation system from the ground up to create more lifelike, expressive, and interactive 3D characters. The overhaul introduces physics-based secondary motion, a layered animation architecture, enhanced expressiveness, and intuitive player controls.
+Based on extensive analysis of the codebase, here's a comprehensive outline of potential improvements organized by category.
 
 ---
 
-## Current System Analysis
+## 1. Avatar Animation Enhancements
 
-The existing implementation consists of 10+ animation hooks with overlapping responsibilities:
+### 1.1 Physics System (Not Yet Implemented)
+The animation types define spring physics, but the physics system isn't wired up yet.
 
-| Hook | Purpose | Issues |
-|------|---------|--------|
-| `useIdlePose` | Basic arm/spine positioning | Duplicates `usePoseVariety` |
-| `usePoseVariety` | Archetype-based poses | Only one pose type used |
-| `useIdleAnimation` | Breathing/sway on group | Conflicts with bone-level animation |
-| `useLookAt` | Head tracking | Limited smoothing, snappy transitions |
-| `useEyeTracking` | Eye blendshapes | Works independently, could be unified |
-| `useGestureAnimation` | Keyframe gestures | Rigid keyframes, no physics |
-| `useReactiveExpressions` | Social context expressions | Limited expression variety |
-| `useStatusAnimation` | Game status effects | Conflicts with other animations |
-| `useMoodAnimation` | Mood-based body movement | Not integrated with main system |
+| Component | Current State | Improvement |
+|-----------|--------------|-------------|
+| `SpringConfig` | Defined in types.ts | Implement actual spring physics in animation loop |
+| Secondary Motion | Not implemented | Add spring-based follow-through for head, hands, spine |
+| Hair/Clothing Physics | Missing | Add soft-body simulation for hair strands and loose clothing |
 
-**Problems:**
-1. Animation hooks fight each other for control
-2. No blending between animation layers
-3. Rigid keyframe animations feel robotic
-4. No physics-based secondary motion (hair, clothing, momentum)
-5. Instantaneous pose switches instead of smooth transitions
-6. No support for procedural animation variety
+**Implementation:**
+- Create `physics/SecondaryMotion.ts` that applies spring dynamics to bone rotations
+- Add momentum/inertia to gesture endings for natural deceleration
 
----
+### 1.2 Expanded Gesture Library
+Current gestures: `wave`, `nod`, `shrug`, `clap`, `point`, `thumbsUp`, `headShake`, `celebrate`, `thinkingPose`, `welcome`, `dismiss`, `listenNod`
 
-## New Architecture
+**Missing Gestures to Add:**
+- `facepalm` - Frustration gesture
+- `crossArms` - Defensive/skeptical pose
+- `handOnHip` - Assertive stance
+- `nervousFidget` - Anxiety animation
+- `emphasize` - Talking with hands
+- `sad` - Shoulders slump, head down
+- `angry` - Clenched fists, rigid posture
 
-### Layered Animation System
+### 1.3 Facial Expression Depth
+Current reactive expressions are limited to 8 types with basic morph targets.
 
+**Improvements:**
+- Add micro-expressions (subtle, quick flashes of emotion)
+- Implement emotion blending (e.g., 60% happy + 40% surprised)
+- Add procedural lip movement for "talking" simulation
+- Enhance blink patterns with personality variance (nervous = faster blinks)
+
+### 1.4 Eye Tracking Refinements
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                     Animation Controller                         │
-│         (Orchestrates all layers, handles priorities)            │
-├─────────────────────────────────────────────────────────────────┤
-│ Layer 5: Gesture Overrides (wave, clap, point)                   │
-│          Priority: Highest - Temporarily takes full control      │
-├─────────────────────────────────────────────────────────────────┤
-│ Layer 4: Reactive/Status (HoH glow, nominee fidget)              │
-│          Priority: High - Additive modifiers                     │
-├─────────────────────────────────────────────────────────────────┤
-│ Layer 3: Look-At (head, neck, eyes toward target)                │
-│          Priority: Medium - Blends with base pose                │
-├─────────────────────────────────────────────────────────────────┤
-│ Layer 2: Idle Procedural (breathing, weight shift, micro-moves)  │
-│          Priority: Low - Continuous background animation         │
-├─────────────────────────────────────────────────────────────────┤
-│ Layer 1: Base Pose (relaxed standing, arms at sides)             │
-│          Priority: Lowest - Foundation layer                     │
-└─────────────────────────────────────────────────────────────────┘
+Current: Head turns toward target
+Missing: Eye-lead behavior, break-away glances
 ```
 
-### File Structure
-
-```text
-src/components/avatar-3d/animation/
-├── AnimationController.ts          # Master orchestrator
-├── layers/
-│   ├── BasePoseLayer.ts            # Foundation pose
-│   ├── IdleProceduralLayer.ts      # Breathing, sway, micro-movements
-│   ├── LookAtLayer.ts              # Head/eye tracking
-│   ├── ReactiveLayer.ts            # Social/status reactions
-│   └── GestureLayer.ts             # Triggered gestures
-├── physics/
-│   ├── SecondaryMotion.ts          # Spring physics for soft body parts
-│   ├── MomentumSystem.ts           # Inertia and follow-through
-│   └── CollisionAvoidance.ts       # Hands don't clip through body
-├── expressions/
-│   ├── FacialBlendSystem.ts        # Unified face control
-│   ├── BlinkController.ts          # Natural blink patterns
-│   └── EmotionMixer.ts             # Blend multiple emotions
-├── procedural/
-│   ├── BreathingCycle.ts           # Chest/shoulder breathing
-│   ├── WeightShift.ts              # Hip sway, center of gravity
-│   ├── MicroMovements.ts           # Subtle fidgeting, adjustments
-│   └── NaturalVariation.ts         # Randomized timing offsets
-└── gestures/
-    ├── GestureLibrary.ts           # Expanded gesture definitions
-    ├── ProceduralGestures.ts       # Physics-enhanced gestures
-    └── InterruptibleGestures.ts    # Can be cancelled mid-animation
-```
+**Improvements:**
+- Eyes should target 150-200ms before head follows
+- Add procedural "break-away" glances (look away briefly for realism)
+- Implement micro-saccades (tiny rapid eye movements)
+- Add pupil dilation based on emotional state
 
 ---
 
-## Technical Implementation
+## 2. House Environment Improvements
 
-### 1. Animation Controller Hook
+### 2.1 Room Detail Enhancements
 
-**File: `src/components/avatar-3d/animation/useAnimationController.ts`**
+| Room | Current State | Suggested Improvements |
+|------|--------------|----------------------|
+| Living Room | Sofa, coffee table, memory wall | Add TV screen with animated content, more seating variety |
+| HOH Suite | Bed, throne, mini fridge | Add letter display, photos on walls, door with "HOH" signage |
+| Kitchen | Island, appliances | Add animated cooking effects, dishes, food items |
+| Backyard | Pool, hot tub, BBQ | Add vegetation, string lights, outdoor furniture variety |
+| Diary Room | Chair, cameras | Add iconic red curtain, BB logo screen, mood lighting |
+| Game Room | Pool table, arcade | Add more games, trophy shelf, party decorations |
 
-A single hook that orchestrates all animation layers:
+### 2.2 Dynamic Environment Features
 
-```typescript
-interface AnimationControllerConfig {
-  scene: THREE.Object3D;
-  skinnedMeshes: THREE.SkinnedMesh[];
-  
-  // Layer configs
-  basePose: PoseType;
-  lookAtTarget: THREE.Vector3 | null;
-  characterPosition: [number, number, number];
-  characterRotationY: number;
-  
-  // State
-  mood: MoodType;
-  gameStatus: AvatarStatus;
-  relationshipContext: RelationshipContext;
-  
-  // Gestures
-  activeGesture: GestureType | null;
-  onGestureComplete?: () => void;
-  
-  // Options
-  enablePhysics: boolean;
-  enableExpressions: boolean;
-  qualityLevel: 'low' | 'medium' | 'high';
-}
+**Time-of-Day Lighting:**
+- Morning: Warm golden light from windows
+- Afternoon: Bright neutral lighting
+- Evening: Dimmer amber/orange tones
+- Night: Blue-tinted ambient with practical lights on
 
-function useAnimationController(config: AnimationControllerConfig): AnimationState;
+**Weather Effects (Backyard):**
+- Sunny: Bright shadows, heat shimmer
+- Overcast: Soft diffuse lighting
+- Night: Stars, moon reflection in pool
+
+### 2.3 Interactive Elements
+
+**Clickable Props:**
+- Memory Wall photos (show houseguest details)
+- Nomination box (highlight during ceremony)
+- Diary Room chair (trigger confessional UI)
+- Kitchen items (social interaction opportunities)
+
+**Animated Props:**
+- TV screens with BB content
+- Pool water with realistic ripples
+- Fireplace flames (if added)
+- Ceiling fans spinning
+
+---
+
+## 3. Character Interaction Improvements
+
+### 3.1 Social Positioning
+Currently characters stand in fixed positions.
+
+**Improvements:**
+- Dynamic grouping based on alliances (allied characters cluster)
+- Conversation circles (2-4 characters face each other)
+- Personal space awareness (characters don't overlap)
+- Room-appropriate activities (kitchen = eating poses, bedroom = sitting)
+
+### 3.2 NPC Autonomous Behavior
+```text
+Current: All characters stand idle
+Goal: Characters naturally move and interact
 ```
 
-**Key Features:**
-- Single entry point replaces 10+ hooks
-- Properly layers and blends animations
-- Respects priority system (gestures override idle, etc.)
-- Performance-aware (can disable physics on low-end devices)
+**Features to Add:**
+- Random room wandering with path-finding
+- Spontaneous NPC-to-NPC conversations (animated talking)
+- Activity simulation (reading, eating, exercising)
+- Reactive movement (gather around events)
 
-### 2. Physics-Based Secondary Motion
+### 3.3 Player Interaction Feedback
+When player approaches/selects a character:
+- Character turns to face player (already implemented)
+- Add greeting gesture (wave, nod)
+- Relationship-appropriate expression (smile for ally, scowl for enemy)
+- Speech bubble with contextual line
 
-**File: `src/components/avatar-3d/animation/physics/SecondaryMotion.ts`**
+---
 
-Adds spring-based physics for natural follow-through:
+## 4. Performance Optimizations
 
-```typescript
-interface SpringConfig {
-  stiffness: number;    // How fast it returns to rest (0.1-1.0)
-  damping: number;      // How quickly oscillations decay (0.1-1.0)
-  mass: number;         // Weight of the bone (affects momentum)
-}
-
-// Apply to bones that should have secondary motion
-const SECONDARY_MOTION_BONES: Record<string, SpringConfig> = {
-  'Head': { stiffness: 0.3, damping: 0.8, mass: 0.5 },
-  'Spine2': { stiffness: 0.5, damping: 0.7, mass: 0.8 },
-  'LeftHand': { stiffness: 0.2, damping: 0.6, mass: 0.3 },
-  'RightHand': { stiffness: 0.2, damping: 0.6, mass: 0.3 },
-};
+### 4.1 Level of Detail (LOD)
+```text
+Distance-Based Quality:
+- Close (< 5m): Full animation, high-res textures
+- Medium (5-15m): Reduced animation, normal textures  
+- Far (> 15m): Minimal animation, lower textures
 ```
 
-**Effects:**
-- Head continues moving slightly after look-at reaches target
-- Arms swing with momentum during gestures
-- Body sways follow through on weight shifts
-- Natural overshoot and settle behavior
+### 4.2 Frustum Culling
+- Pause animation updates for off-screen characters
+- Only render visible room contents
+- Defer lighting calculations for distant areas
 
-### 3. Enhanced Procedural Idle System
+### 4.3 Instance Optimization
+- Instance repeated furniture (chairs, lights)
+- Batch similar materials
+- Use texture atlases for furniture
 
-**File: `src/components/avatar-3d/animation/procedural/ProceduralIdleSystem.ts`**
+### 4.4 Animation Batching
+Currently each avatar runs independent animation loops.
 
-Replace rigid sine-wave animations with organic, layered movement:
+**Improvement:**
+- Group characters by animation state
+- Batch bone transformations
+- Share morph target updates across similar expressions
 
-```typescript
-interface IdleSystemConfig {
-  // Breathing
-  breathRate: number;           // Breaths per minute (12-20)
-  breathDepth: number;          // How visible (0.5-1.0)
-  breathVariation: number;      // Randomness (0-0.3)
-  
-  // Weight shifting
-  shiftFrequency: number;       // How often (every 3-8 seconds)
-  shiftMagnitude: number;       // How much (0.5-1.0)
-  
-  // Micro-movements
-  microMovementScale: number;   // Subtle adjustments (0-1)
-  blinkRate: number;            // Blinks per minute (15-20)
-  
-  // Character personality
-  energyLevel: number;          // Affects all movement (0.5-1.5)
-  nervousness: number;          // Adds fidgeting (0-1)
-}
-```
+---
 
-**Features:**
-- **Breathing**: Chest expansion, shoulder rise, subtle head movement
-- **Weight Shifting**: Periodic hip sway with follow-through
-- **Micro-movements**: Finger twitches, small head adjustments, eye glances
-- **Personality Variance**: Different characters have different idle styles
+## 5. Camera & Navigation Improvements
 
-### 4. Smooth Pose Transitions
+### 5.1 Cinematic Camera Modes
+- **Follow Mode**: Camera smoothly follows selected character
+- **Conversation Mode**: Frames 2-3 characters in dialogue
+- **Event Mode**: Dramatic angles for ceremonies
+- **Free Roam**: Full player control
 
-**File: `src/components/avatar-3d/animation/layers/BasePoseLayer.ts`**
+### 5.2 Room Transition Polish
+Current room navigation uses instant fly-to.
 
-Implement proper animation blending between poses:
-
-```typescript
-interface PoseTransition {
-  fromPose: PoseConfig;
-  toPose: PoseConfig;
-  duration: number;           // Seconds (typically 0.5-1.5)
-  easing: EasingFunction;     // cubic-bezier, spring, etc.
-  startTime: number;
-}
-
-// Transition between any two poses smoothly
-function transitionPose(
-  from: PoseType,
-  to: PoseType,
-  duration: number = 0.8
-): void;
-```
-
-### 5. Enhanced Look-At System
-
-**File: `src/components/avatar-3d/animation/layers/LookAtLayer.ts`**
-
-Improve the current look-at with:
-
-```typescript
-interface EnhancedLookAtConfig {
-  target: THREE.Vector3 | null;
-  
-  // Speed control
-  headTurnSpeed: number;        // Degrees per second (30-120)
-  eyeLeadTime: number;          // Eyes arrive before head (0.1-0.3s)
-  
-  // Natural behavior
-  breakAwayChance: number;      // Probability to look away briefly (0-0.1)
-  breakAwayDuration: number;    // How long (0.3-1.0s)
-  
-  // Limits
-  maxHeadYaw: number;           // Side-to-side limit (60-80 degrees)
-  maxHeadPitch: number;         // Up-down limit (30-45 degrees)
-  bodyTurnThreshold: number;    // When to rotate body (90+ degrees)
-}
-```
-
-**Features:**
-- Eyes lead head rotation (arrive 100-200ms earlier)
-- Occasional "break away" glances for realism
+**Improvements:**
+- Add door/threshold transitions
 - Smooth acceleration/deceleration curves
-- Body rotation for extreme angles
+- Optional first-person walkthrough mode
+- Mini-map overlay for orientation
 
-### 6. Expanded Gesture Library
-
-**File: `src/components/avatar-3d/animation/gestures/GestureLibrary.ts`**
-
-Add more gestures with physics-based enhancements:
-
-```typescript
-type GestureType = 
-  // Existing
-  | 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp'
-  // New social gestures
-  | 'headShake' | 'facepalm' | 'crossArms' | 'handOnHip'
-  | 'celebrate' | 'thinkingPose' | 'nervousFidget'
-  // Conversational
-  | 'listenNod' | 'emphasize' | 'dismiss' | 'welcome'
-  // Emotional
-  | 'happy' | 'sad' | 'angry' | 'surprised' | 'confused';
-```
-
-**Gesture Features:**
-- Interruptible (can cancel mid-gesture)
-- Blendable (can layer multiple)
-- Physics-enhanced (momentum, follow-through)
-- Contextual (different intensities based on mood)
-
-### 7. Unified Facial Expression System
-
-**File: `src/components/avatar-3d/animation/expressions/FacialBlendSystem.ts`**
-
-Consolidate all facial animation:
-
-```typescript
-interface FacialState {
-  // Base emotion (0-1 intensity)
-  emotions: {
-    happy: number;
-    sad: number;
-    angry: number;
-    surprised: number;
-    disgusted: number;
-    fearful: number;
-    neutral: number;
-  };
-  
-  // Modifiers
-  blinkState: number;           // 0=open, 1=closed
-  eyeTarget: { x: number, y: number };
-  mouthOpen: number;            // For speech/reactions
-  
-  // Micro-expressions
-  browQuirk: number;            // Raised eyebrow
-  lipPress: number;             // Tight lips
-  noseScrunch: number;
-}
-```
-
-**Features:**
-- Blend multiple emotions simultaneously
-- Smooth transitions between expressions
-- Micro-expressions for subtle reactions
-- Synchronized with gestures
+### 5.3 Mobile/Touch Controls
+- Pinch-to-zoom support
+- Swipe for room navigation
+- Tap-to-select characters
+- Double-tap for quick actions
 
 ---
 
-## Implementation Phases
+## 6. Visual Polish
 
-### Phase 1: Core Architecture (Foundation)
-1. Create `AnimationController` hook
-2. Implement animation layer system with priority blending
-3. Refactor `BasePoseLayer` with smooth transitions
-4. Consolidate bone manipulation into single system
+### 6.1 Post-Processing Effects
+Currently minimal visual effects.
 
-### Phase 2: Procedural Idle System
-1. Implement `ProceduralIdleSystem` with breathing, weight shift
-2. Add micro-movement layer
-3. Create personality-based variation system
-4. Optimize for performance
+**Add:**
+- Bloom for emissive lights (LED strips, chandeliers)
+- Subtle vignette for atmosphere
+- Depth of field when focusing on character
+- Color grading for mood (warm/cool shifts)
 
-### Phase 3: Physics Integration
-1. Add `SecondaryMotion` spring physics
-2. Implement momentum/follow-through for gestures
-3. Add subtle physics to idle animations
-4. Create collision avoidance for hands
+### 6.2 Material Upgrades
+- PBR materials for realistic surfaces
+- Reflective surfaces (glass, metal, water)
+- Subsurface scattering for skin
+- Fabric shader for clothing realism
 
-### Phase 4: Enhanced Look-At
-1. Upgrade look-at with eye-lead behavior
-2. Add break-away glances
-3. Implement body rotation for extreme angles
-4. Smooth acceleration curves
+### 6.3 Shadow Quality
+Current shadows use ContactShadows.
 
-### Phase 5: Gesture System Upgrade
-1. Expand gesture library (12+ new gestures)
-2. Make gestures interruptible
-3. Add physics enhancement to gestures
-4. Implement gesture blending
-
-### Phase 6: Expression Unification
-1. Create `FacialBlendSystem`
-2. Merge reactive expressions and mood animations
-3. Add micro-expression support
-4. Synchronize with gesture system
+**Improvements:**
+- Soft shadow cascades for outdoor areas
+- Ambient occlusion for depth
+- Character self-shadowing
+- Dynamic shadow resolution
 
 ---
 
-## Performance Considerations
+## 7. Audio Integration (Future)
 
-| Feature | CPU Cost | Can Disable |
-|---------|----------|-------------|
-| Base pose | Minimal | No |
-| Breathing cycle | Low | No |
-| Weight shifting | Low | Yes |
-| Micro-movements | Medium | Yes |
-| Physics springs | Medium-High | Yes |
-| Eye tracking | Low | Yes |
-| Head look-at | Low | No |
-| Expressions | Medium | Yes |
-| Gestures | High (when active) | N/A |
+### 7.1 Spatial Audio
+- 3D positioned sounds (pool splashing, kitchen sizzling)
+- Distance-based volume falloff
+- Room reverb differences (bathroom echo vs bedroom dampening)
 
-**Quality Presets:**
-- **Low**: Base pose + breathing + look-at only
-- **Medium**: + weight shift + expressions
-- **High**: Full system with physics
+### 7.2 Character Audio
+- Footstep sounds when characters move
+- Ambient conversation murmurs
+- Gesture sound effects (clap, high-five)
+- Mood-appropriate background music per room
 
 ---
 
-## Files to Create
+## 8. Accessibility Improvements
 
-1. `src/components/avatar-3d/animation/AnimationController.ts`
-2. `src/components/avatar-3d/animation/layers/BasePoseLayer.ts`
-3. `src/components/avatar-3d/animation/layers/IdleProceduralLayer.ts`
-4. `src/components/avatar-3d/animation/layers/LookAtLayer.ts`
-5. `src/components/avatar-3d/animation/layers/ReactiveLayer.ts`
-6. `src/components/avatar-3d/animation/layers/GestureLayer.ts`
-7. `src/components/avatar-3d/animation/physics/SecondaryMotion.ts`
-8. `src/components/avatar-3d/animation/procedural/ProceduralIdleSystem.ts`
-9. `src/components/avatar-3d/animation/expressions/FacialBlendSystem.ts`
-10. `src/components/avatar-3d/animation/gestures/GestureLibrary.ts`
+### 8.1 Visual Accessibility
+- High contrast mode for character highlighting
+- Larger name labels option
+- Color-blind friendly selection indicators
+- Reduced motion mode (disable camera fly-to)
 
-## Files to Modify
-
-1. `src/components/avatar-3d/RPMAvatar.tsx` - Use new AnimationController
-2. `src/components/avatar-3d/CircularHouseScene.tsx` - Update character props
-3. `src/components/avatar-3d/HouseScene.tsx` - Update character props
-
-## Files to Deprecate (Keep for Reference)
-
-1. `src/components/avatar-3d/hooks/useIdlePose.ts`
-2. `src/components/avatar-3d/hooks/useIdleAnimation.ts`
-3. `src/components/avatar-3d/hooks/useMoodAnimation.ts`
-4. `src/components/avatar-3d/hooks/useStatusAnimation.ts`
+### 8.2 Input Accessibility
+- Keyboard navigation through rooms/characters
+- Screen reader support for character info
+- Customizable control sensitivity
+- One-handed control scheme
 
 ---
 
-## Expected Results
+## Priority Implementation Order
 
-After implementation:
-- Avatars feel alive with organic, physics-based movement
-- Smooth transitions between all animation states
-- No more animation conflicts or fighting
-- 20+ available gestures with natural motion
-- Expressive faces that react to social context
-- Configurable quality for performance optimization
-- Single unified API for all avatar animation
+### Phase 1: Quick Wins
+1. Add 5 missing gestures (facepalm, crossArms, etc.)
+2. Implement eye-lead behavior in look-at
+3. Add basic room props (TV content, more furniture)
+4. Enable post-processing bloom
 
+### Phase 2: Core Improvements
+5. Implement spring physics for secondary motion
+6. Add NPC conversation grouping
+7. Create time-of-day lighting system
+8. Add interactive memory wall
+
+### Phase 3: Polish
+9. Full LOD system implementation
+10. Mobile touch controls
+11. Cinematic camera modes
+12. Audio integration groundwork
+
+### Phase 4: Advanced Features
+13. NPC autonomous wandering
+14. Weather effects
+15. Full accessibility suite
+16. Performance profiling and optimization
+
+---
+
+## Technical Debt to Address
+
+| Issue | Location | Fix |
+|-------|----------|-----|
+| Duplicate idle animation | CharacterSpot + IdleProceduralLayer | Remove redundant group-level sway |
+| Unused pose types | ARCHETYPE_POSES always returns 'relaxed' | Enable pose variety or remove mapping |
+| Missing physics layer | SpringConfig defined but not used | Wire up or remove dead code |
+| Hard-coded magic numbers | Camera positions, animation timing | Extract to configuration constants |
+| Memory leaks | No cleanup in useAnimationController | Add proper ref cleanup on unmount |
