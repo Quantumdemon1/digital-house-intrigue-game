@@ -8,7 +8,9 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { CharacterTemplate } from '@/data/character-templates';
-import { RPMAvatar } from './RPMAvatar';
+ import { RPMAvatar, preloadRPMAvatar } from './RPMAvatar';
+ import { PoseType } from './hooks/usePoseVariety';
+ import { Archetype } from '@/data/character-templates';
 import { 
   HouseFloor, Couch, CoffeeTable, Plant, LightFixture,
   TVStand, KitchenArea, DiaryRoomDoor, WallPanel 
@@ -41,6 +43,21 @@ const getCharacterPositions = (count: number, radius: number = 5) => {
   });
 };
 
+ // Map archetype to pose types for variety
+ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
+   strategist: ['crossed-arms', 'thinking'],
+   competitor: ['hands-on-hips', 'crossed-arms'],
+   socialite: ['relaxed', 'casual-lean'],
+   wildcard: ['hands-on-hips', 'relaxed'],
+   underdog: ['relaxed', 'thinking'],
+ };
+ 
+ // Get pose for a character based on their archetype and index
+ const getPoseForCharacter = (archetype: Archetype, index: number): PoseType => {
+   const poses = ARCHETYPE_POSES[archetype];
+   return poses[index % poses.length];
+ };
+ 
 // Selection ring effect
 const SelectionRing: React.FC<{ active: boolean }> = ({ active }) => {
   const ringRef = useRef<THREE.Mesh>(null);
@@ -70,12 +87,30 @@ const CharacterSpot: React.FC<{
   isSelected: boolean;
   isHovered: boolean;
   index: number;
+   selectedPosition: [number, number, number] | null;
+   selectedId: string | null;
   onSelect: () => void;
   onHover: (hovered: boolean) => void;
-}> = ({ template, position, rotation, isSelected, isHovered, index, onSelect, onHover }) => {
+ }> = ({ template, position, rotation, isSelected, isHovered, index, selectedPosition, selectedId, onSelect, onHover }) => {
   const groupRef = useRef<THREE.Group>(null);
   const idleGroupRef = useRef<THREE.Group>(null);
   const modelUrl = template.avatar3DConfig?.modelUrl;
+   
+   // Get pose type based on archetype
+   const poseType = getPoseForCharacter(template.archetype, index);
+   
+   // Calculate look-at target
+   const lookAtTarget = React.useMemo(() => {
+     if (isSelected) {
+       // Selected character looks straight ahead (no special target)
+       return null;
+     } else if (selectedId && selectedPosition) {
+       // Other characters look at selected character
+       return new THREE.Vector3(selectedPosition[0], 1.5, selectedPosition[2]);
+     }
+     // Default: no specific target (look forward)
+     return null;
+   }, [isSelected, selectedId, selectedPosition]);
   
   useFrame(({ clock }) => {
     if (groupRef.current) {
@@ -150,6 +185,10 @@ const CharacterSpot: React.FC<{
                 position={[0, 0, 0]}
                 applyIdlePose={true}
                 phaseOffset={index * 0.7}
+                poseType={poseType}
+                lookAtTarget={lookAtTarget}
+                worldPosition={position}
+                worldRotationY={rotation[1]}
               />
             </Suspense>
           ) : (
@@ -389,6 +428,8 @@ const SceneContent: React.FC<HouseSceneProps & { hoveredId: string | null; onHov
             isSelected={selectedId === char.id}
             isHovered={hoveredId === char.id}
             index={i}
+            selectedPosition={selectedPosition || null}
+            selectedId={selectedId}
             onSelect={() => onSelect(char.id)}
             onHover={(hovered) => onHover(hovered ? char.id : null)}
           />

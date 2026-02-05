@@ -10,7 +10,8 @@ import * as THREE from 'three';
 import { SkeletonUtils } from 'three-stdlib';
 import { MoodType } from '@/models/houseguest';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
-import { useIdlePose } from './hooks/useIdlePose';
+ import { usePoseVariety, type PoseType } from './hooks/usePoseVariety';
+ import { useLookAt } from './hooks/useLookAt';
 
 // ARKit blendshape names for expressions (52 blendshapes available)
 const EXPRESSION_MORPHS: Record<string, Record<string, number>> = {
@@ -91,6 +92,14 @@ interface RPMAvatarProps {
   applyIdlePose?: boolean;
   /** Phase offset for staggered idle animations */
   phaseOffset?: number;
+   /** Pose type for varied character stances */
+   poseType?: PoseType;
+   /** Target position for head look-at (world space) */
+   lookAtTarget?: THREE.Vector3 | null;
+   /** Character's world position for look-at calculations */
+   worldPosition?: [number, number, number];
+   /** Character's Y rotation for look-at calculations */
+   worldRotationY?: number;
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
@@ -107,6 +116,10 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   context = 'game',
   applyIdlePose = false,
   phaseOffset = 0,
+   poseType = 'relaxed',
+   lookAtTarget = null,
+   worldPosition = [0, 0, 0],
+   worldRotationY = 0,
   onLoaded,
   onError
 }) => {
@@ -145,8 +158,16 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes } = useGraph(clone);
   
-  // Apply natural idle pose to skeleton bones (arms down, subtle animation)
-  useIdlePose(clone, applyIdlePose, phaseOffset);
+   // Apply varied pose to skeleton bones based on pose type
+   usePoseVariety(clone, poseType, applyIdlePose, phaseOffset);
+   
+   // Apply look-at behavior for head tracking
+   useLookAt(clone, {
+     targetPosition: lookAtTarget,
+     characterPosition: worldPosition,
+     characterRotationY: worldRotationY,
+     enabled: applyIdlePose && lookAtTarget !== null,
+   });
   
   // Get all skinned meshes for morph target manipulation
   const skinnedMeshes = useMemo(() => {
