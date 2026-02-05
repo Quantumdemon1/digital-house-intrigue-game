@@ -3,7 +3,7 @@
   * @description Quick-jump room navigation UI for 3D house exploration
   */
  
- import React from 'react';
+ import React, { useMemo } from 'react';
  import { Button } from '@/components/ui/button';
  import { motion } from 'framer-motion';
  import { 
@@ -79,18 +79,29 @@
    currentRoom: string | null;
    onNavigate: (roomId: string) => void;
    isOpen?: boolean;
-   onClose?: () => void;
+ onClose?: () => void;
+ /** Character positions for mini-map display */
+ characterPositions?: Array<{ id: string; position: [number, number, number]; name: string }>;
+ /** Currently selected character ID */
+ selectedCharacterId?: string;
  }
  
  export const RoomNavigator: React.FC<RoomNavigatorProps> = ({ 
    currentRoom, 
    onNavigate,
    isOpen = true,
-   onClose
+   onClose,
+   characterPositions = [],
+   selectedCharacterId
  }) => {
    if (!isOpen) return null;
    
    const rooms = Object.entries(ROOM_CAMERA_POSITIONS);
+   
+   // Mini-map scaling constants
+   const MAP_SCALE = 3; // pixels per unit
+   const MAP_OFFSET_X = 55; // center offset
+   const MAP_OFFSET_Z = 45; // center offset
    
    return (
      <motion.div
@@ -112,8 +123,45 @@
          )}
        </div>
        
-       {/* Room buttons grid */}
-       <div className="grid grid-cols-2 gap-1.5">
+ {/* Mini-map (if characters provided) */}
+ {characterPositions.length > 0 && (
+   <div className="mb-2 p-2 rounded bg-muted/50 border border-border">
+     <div className="relative w-full h-20 bg-background/80 rounded overflow-hidden">
+       {/* House outline */}
+       <div className="absolute inset-1 border border-border/50 rounded" />
+       
+       {/* Room zones */}
+       <div className="absolute left-1/2 top-1/2 w-4 h-3 -translate-x-1/2 -translate-y-1/2 border border-primary/30 rounded-sm" />
+       
+       {/* Character dots */}
+       {characterPositions.map((char) => {
+         const x = (char.position[0] * MAP_SCALE) + MAP_OFFSET_X;
+         const z = (char.position[2] * MAP_SCALE) + MAP_OFFSET_Z;
+         const isSelected = char.id === selectedCharacterId;
+         
+         return (
+           <div
+             key={char.id}
+             className={`absolute w-2 h-2 rounded-full transition-all duration-300 ${
+               isSelected 
+                 ? 'bg-primary ring-2 ring-primary/50 scale-125' 
+                 : 'bg-muted-foreground/60'
+             }`}
+             style={{
+               left: `${Math.min(Math.max(x, 4), 106)}px`,
+               top: `${Math.min(Math.max(z, 4), 76)}px`,
+               transform: 'translate(-50%, -50%)'
+             }}
+             title={char.name}
+           />
+         );
+       })}
+     </div>
+   </div>
+ )}
+ 
+ {/* Room buttons grid */}
+ <div className="grid grid-cols-2 gap-1.5">
          {rooms.map(([roomId, room]) => (
            <Button
              key={roomId}

@@ -3,8 +3,7 @@
  * @description Big Brother House 3D environment with characters arranged in a circle
  */
 
-import React, { Suspense, useRef, useState, useCallback, useEffect } from 'react';
- import { useMemo } from 'react';
+ import React, { Suspense, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
  import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
@@ -16,7 +15,7 @@ import { LivingRoom, HOHSuite, Bedroom, BathroomArea, KitchenExpanded, Nominatio
 import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
  import { Backyard } from './BackyardArea';
  import DynamicRoomLighting from './DynamicRoomLighting';
- import { RoomNavigator, ROOM_CAMERA_POSITIONS } from './RoomNavigator';
+ import { RoomNavigator, RoomNavigatorCompact, ROOM_CAMERA_POSITIONS } from './RoomNavigator';
  import { useEventLighting } from './hooks/useEventLighting';
  import { 
    Alliance, 
@@ -422,35 +421,17 @@ const CharacterSpot: React.FC<{
      return null;
    }, [isSelected, selectedId, selectedPosition]);
   
-  useFrame(({ clock }) => {
-    if (groupRef.current) {
-      // Subtle elevation for selected/hovered
-      const targetY = isSelected ? 0.1 : isHovered ? 0.05 : 0;
-      groupRef.current.position.y = THREE.MathUtils.lerp(
-        groupRef.current.position.y,
-        targetY,
-        0.1
-      );
-    }
-    
-    // Idle animation - staggered per character
-    if (idleGroupRef.current) {
-      const time = clock.getElapsedTime();
-      const phase = index * 0.5; // Offset per character for variety
-      
-      // Breathing animation (subtle scale)
-      const breath = Math.sin(time * 1.5 + phase) * 0.008;
-      idleGroupRef.current.scale.set(1 + breath, 1, 1 + breath * 0.5);
-      
-      // Weight shift sway (subtle rotation)
-      const sway = Math.sin(time * 0.5 + phase) * 0.012;
-      idleGroupRef.current.rotation.z = sway;
-      
-      // Very subtle forward/back lean
-      const lean = Math.sin(time * 0.3 + phase * 1.5) * 0.005;
-      idleGroupRef.current.rotation.x = lean;
-    }
-  });
+ // Subtle elevation animation only - idle animations handled by AnimationController
+ useFrame(() => {
+   if (groupRef.current) {
+     const targetY = isSelected ? 0.1 : isHovered ? 0.05 : 0;
+     groupRef.current.position.y = THREE.MathUtils.lerp(
+       groupRef.current.position.y,
+       targetY,
+       0.1
+     );
+   }
+ });
   
   return (
     <group position={position}>
@@ -484,8 +465,9 @@ const CharacterSpot: React.FC<{
         {/* Selection ring */}
         <SelectionRing active={isSelected} />
         
-        {/* Avatar with idle animation wrapper */}
-        <group ref={idleGroupRef}>
+ // idleGroupRef no longer needed - animations handled by AnimationController bone-level system
+         {/* Avatar */}
+         <group>
           {modelUrl ? (
             <Suspense fallback={<AvatarPlaceholder />}>
               <RPMAvatar
@@ -923,19 +905,31 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
         </Suspense>
       </Canvas>
      
-     {/* Room Navigator UI */}
-     {showRoomNav && (
-       <div className="absolute top-16 left-4 z-10">
-         <RoomNavigator
-           currentRoom={selectedRoom}
-           onNavigate={(roomId) => {
-             setSelectedRoom(roomId);
-             // Clear room selection after animation completes
-             setTimeout(() => setSelectedRoom(null), 2500);
-           }}
-         />
-       </div>
-     )}
+ {/* Room Navigator UI - responsive: full on desktop, compact on mobile */}
+ {showRoomNav && (
+   <>
+     {/* Desktop navigator */}
+     <div className="absolute top-16 left-4 z-10 hidden sm:block">
+       <RoomNavigator
+         currentRoom={selectedRoom}
+         onNavigate={(roomId) => {
+           setSelectedRoom(roomId);
+           setTimeout(() => setSelectedRoom(null), 2500);
+         }}
+       />
+     </div>
+     {/* Mobile navigator - compact strip at top */}
+     <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 sm:hidden">
+       <RoomNavigatorCompact
+         currentRoom={selectedRoom}
+         onNavigate={(roomId) => {
+           setSelectedRoom(roomId);
+           setTimeout(() => setSelectedRoom(null), 2500);
+         }}
+       />
+     </div>
+   </>
+ )}
       
       {/* Scene title overlay */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none">
