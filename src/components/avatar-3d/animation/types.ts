@@ -75,10 +75,11 @@
    // Original
    | 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp'
    // New social gestures
-   | 'headShake' | 'facepalm' | 'crossArms' | 'handOnHip'
-   | 'celebrate' | 'thinkingPose' | 'nervousFidget'
+  | 'headShake' | 'celebrate' | 'thinkingPose'
+  // Added gestures (Phase 1)
+  | 'facepalm' | 'crossArms' | 'handOnHip' | 'nervousFidget' | 'emphasize'
    // Conversational
-   | 'listenNod' | 'emphasize' | 'dismiss' | 'welcome';
+  | 'listenNod' | 'dismiss' | 'welcome';
  
  // ============ Expression Types ============
  

@@ -8,7 +8,10 @@
  import * as THREE from 'three';
  
  // Gesture types
- export type GestureType = 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp';
+ export type GestureType = 
+   | 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp'
+   // New social gestures
+   | 'facepalm' | 'crossArms' | 'handOnHip' | 'nervousFidget' | 'emphasize';
  
  // Bone rotation configuration
  interface BoneRotation {
@@ -31,6 +34,12 @@
    clap: 2.0,
    point: 1.0,
    thumbsUp: 1.2,
+   // New gestures
+   facepalm: 2.0,
+   crossArms: 1.8,
+   handOnHip: 1.5,
+   nervousFidget: 2.5,
+   emphasize: 1.8,
  };
  
  // Gesture keyframe definitions
@@ -123,6 +132,163 @@
      { time: 0.25, bones: { RightArm: { x: -0.5, y: 0.4, z: -0.4 }, RightForeArm: { x: 0.5, y: 0.3, z: -1.8 }, RightHand: { x: -0.3, y: 0, z: 0.2 } } },
      { time: 0.75, bones: { RightArm: { x: -0.5, y: 0.4, z: -0.4 }, RightForeArm: { x: 0.5, y: 0.3, z: -1.8 }, RightHand: { x: -0.3, y: 0, z: 0.2 } } },
      { time: 1.0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 } } },
+   ],
+   
+   // Facepalm - hand to forehead in frustration
+   facepalm: [
+     { time: 0, bones: { 
+       RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 },
+       Head: { x: 0, y: 0, z: 0 }, Spine: { x: 0, y: 0, z: 0 }
+     }},
+     { time: 0.3, bones: { 
+       RightArm: { x: -1.0, y: 0.5, z: -0.2 }, RightForeArm: { x: 0.8, y: 0.3, z: -1.8 }, RightHand: { x: -0.4, y: 0, z: 0 },
+       Head: { x: 0.15, y: 0, z: 0 }, Spine: { x: 0.05, y: 0, z: 0 }
+     }},
+     { time: 0.5, bones: { 
+       RightArm: { x: -1.2, y: 0.4, z: 0 }, RightForeArm: { x: 1.2, y: 0.2, z: -1.5 }, RightHand: { x: -0.5, y: -0.2, z: 0 },
+       Head: { x: 0.25, y: 0, z: 0 }, Spine: { x: 0.08, y: 0, z: 0 }
+     }},
+     { time: 0.8, bones: { 
+       RightArm: { x: -1.2, y: 0.4, z: 0 }, RightForeArm: { x: 1.2, y: 0.2, z: -1.5 }, RightHand: { x: -0.5, y: -0.2, z: 0 },
+       Head: { x: 0.2, y: 0.1, z: 0 }, Spine: { x: 0.06, y: 0, z: 0 }
+     }},
+     { time: 1.0, bones: { 
+       RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 },
+       Head: { x: 0, y: 0, z: 0 }, Spine: { x: 0, y: 0, z: 0 }
+     }},
+   ],
+   
+   // Cross arms - defensive/skeptical pose
+   crossArms: [
+     { time: 0, bones: { 
+       LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+       LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       Spine: { x: 0, y: 0, z: 0 }
+     }},
+     { time: 0.35, bones: { 
+       LeftArm: { x: 0.4, y: 0.3, z: 0.6 }, RightArm: { x: 0.4, y: -0.3, z: -0.6 },
+       LeftForeArm: { x: 0.3, y: 1.0, z: 1.4 }, RightForeArm: { x: 0.3, y: -1.0, z: -1.4 },
+       Spine: { x: 0.03, y: 0, z: 0 }
+     }},
+     { time: 0.5, bones: { 
+       LeftArm: { x: 0.5, y: 0.4, z: 0.4 }, RightArm: { x: 0.5, y: -0.4, z: -0.4 },
+       LeftForeArm: { x: 0.4, y: 1.3, z: 1.6 }, RightForeArm: { x: 0.4, y: -1.3, z: -1.6 },
+       Spine: { x: 0.04, y: 0, z: 0 }
+     }},
+     { time: 0.85, bones: { 
+       LeftArm: { x: 0.5, y: 0.4, z: 0.4 }, RightArm: { x: 0.5, y: -0.4, z: -0.4 },
+       LeftForeArm: { x: 0.4, y: 1.3, z: 1.6 }, RightForeArm: { x: 0.4, y: -1.3, z: -1.6 },
+       Spine: { x: 0.04, y: 0, z: 0 }
+     }},
+     { time: 1.0, bones: { 
+       LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+       LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       Spine: { x: 0, y: 0, z: 0 }
+     }},
+   ],
+   
+   // Hand on hip - assertive stance
+   handOnHip: [
+     { time: 0, bones: { 
+       RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       Spine: { x: 0, y: 0, z: 0 }, Hips: { x: 0, y: 0, z: 0 }
+     }},
+     { time: 0.35, bones: { 
+       RightArm: { x: 0.3, y: -0.3, z: -0.8 }, RightForeArm: { x: 0.2, y: -0.8, z: -1.2 },
+       Spine: { x: 0, y: 0.03, z: 0.02 }, Hips: { x: 0, y: 0, z: 0.02 }
+     }},
+     { time: 0.5, bones: { 
+       RightArm: { x: 0.4, y: -0.4, z: -0.6 }, RightForeArm: { x: 0.3, y: -1.0, z: -1.4 },
+       Spine: { x: 0, y: 0.05, z: 0.03 }, Hips: { x: 0, y: 0, z: 0.03 }
+     }},
+     { time: 0.85, bones: { 
+       RightArm: { x: 0.4, y: -0.4, z: -0.6 }, RightForeArm: { x: 0.3, y: -1.0, z: -1.4 },
+       Spine: { x: 0, y: 0.05, z: 0.03 }, Hips: { x: 0, y: 0, z: 0.03 }
+     }},
+     { time: 1.0, bones: { 
+       RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       Spine: { x: 0, y: 0, z: 0 }, Hips: { x: 0, y: 0, z: 0 }
+     }},
+   ],
+   
+   // Nervous fidget - anxious hand wringing
+   nervousFidget: [
+     { time: 0, bones: { 
+       LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+       LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       LeftHand: { x: 0, y: 0, z: 0 }, RightHand: { x: 0, y: 0, z: 0 },
+       Spine: { x: 0, y: 0, z: 0 }
+     }},
+     { time: 0.15, bones: { 
+       LeftArm: { x: 0.4, y: 0.2, z: 0.7 }, RightArm: { x: 0.4, y: -0.2, z: -0.7 },
+       LeftForeArm: { x: 0.3, y: 0.5, z: 1.2 }, RightForeArm: { x: 0.3, y: -0.5, z: -1.2 },
+       LeftHand: { x: 0.1, y: 0.2, z: 0 }, RightHand: { x: 0.1, y: -0.2, z: 0 },
+       Spine: { x: 0.02, y: 0, z: 0 }
+     }},
+     { time: 0.3, bones: { 
+       LeftArm: { x: 0.5, y: 0.15, z: 0.65 }, RightArm: { x: 0.5, y: -0.15, z: -0.65 },
+       LeftForeArm: { x: 0.4, y: 0.6, z: 1.3 }, RightForeArm: { x: 0.4, y: -0.6, z: -1.3 },
+       LeftHand: { x: 0.15, y: 0.3, z: 0.1 }, RightHand: { x: 0.15, y: -0.3, z: -0.1 },
+       Spine: { x: 0.03, y: 0.02, z: 0 }
+     }},
+     { time: 0.45, bones: { 
+       LeftArm: { x: 0.4, y: 0.2, z: 0.7 }, RightArm: { x: 0.4, y: -0.2, z: -0.7 },
+       LeftForeArm: { x: 0.3, y: 0.5, z: 1.2 }, RightForeArm: { x: 0.3, y: -0.5, z: -1.2 },
+       LeftHand: { x: 0.1, y: -0.1, z: -0.1 }, RightHand: { x: 0.1, y: 0.1, z: 0.1 },
+       Spine: { x: 0.02, y: -0.02, z: 0 }
+     }},
+     { time: 0.6, bones: { 
+       LeftArm: { x: 0.5, y: 0.15, z: 0.65 }, RightArm: { x: 0.5, y: -0.15, z: -0.65 },
+       LeftForeArm: { x: 0.4, y: 0.6, z: 1.3 }, RightForeArm: { x: 0.4, y: -0.6, z: -1.3 },
+       LeftHand: { x: 0.2, y: 0.25, z: 0.05 }, RightHand: { x: 0.2, y: -0.25, z: -0.05 },
+       Spine: { x: 0.03, y: 0.01, z: 0 }
+     }},
+     { time: 0.75, bones: { 
+       LeftArm: { x: 0.4, y: 0.2, z: 0.7 }, RightArm: { x: 0.4, y: -0.2, z: -0.7 },
+       LeftForeArm: { x: 0.3, y: 0.5, z: 1.2 }, RightForeArm: { x: 0.3, y: -0.5, z: -1.2 },
+       LeftHand: { x: 0.1, y: 0.15, z: 0 }, RightHand: { x: 0.1, y: -0.15, z: 0 },
+       Spine: { x: 0.02, y: 0, z: 0 }
+     }},
+     { time: 1.0, bones: { 
+       LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+       LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       LeftHand: { x: 0, y: 0, z: 0 }, RightHand: { x: 0, y: 0, z: 0 },
+       Spine: { x: 0, y: 0, z: 0 }
+     }},
+   ],
+   
+   // Emphasize - talking with hands gesture
+   emphasize: [
+     { time: 0, bones: { 
+       LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+       LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       LeftHand: { x: 0, y: 0, z: 0 }, RightHand: { x: 0, y: 0, z: 0 }
+     }},
+     { time: 0.15, bones: { 
+       LeftArm: { x: -0.3, y: 0.2, z: 0.7 }, RightArm: { x: -0.3, y: -0.2, z: -0.7 },
+       LeftForeArm: { x: 0.2, y: 0.3, z: 0.9 }, RightForeArm: { x: 0.2, y: -0.3, z: -0.9 },
+       LeftHand: { x: -0.2, y: 0.3, z: 0 }, RightHand: { x: -0.2, y: -0.3, z: 0 }
+     }},
+     { time: 0.35, bones: { 
+       LeftArm: { x: -0.5, y: 0.3, z: 0.5 }, RightArm: { x: -0.5, y: -0.3, z: -0.5 },
+       LeftForeArm: { x: 0.3, y: 0.4, z: 1.1 }, RightForeArm: { x: 0.3, y: -0.4, z: -1.1 },
+       LeftHand: { x: -0.3, y: 0.4, z: 0.1 }, RightHand: { x: -0.3, y: -0.4, z: -0.1 }
+     }},
+     { time: 0.55, bones: { 
+       LeftArm: { x: -0.3, y: 0.15, z: 0.8 }, RightArm: { x: -0.3, y: -0.15, z: -0.8 },
+       LeftForeArm: { x: 0.2, y: 0.25, z: 0.8 }, RightForeArm: { x: 0.2, y: -0.25, z: -0.8 },
+       LeftHand: { x: -0.15, y: 0.2, z: 0 }, RightHand: { x: -0.15, y: -0.2, z: 0 }
+     }},
+     { time: 0.75, bones: { 
+       LeftArm: { x: -0.4, y: 0.25, z: 0.6 }, RightArm: { x: -0.4, y: -0.25, z: -0.6 },
+       LeftForeArm: { x: 0.25, y: 0.35, z: 1.0 }, RightForeArm: { x: 0.25, y: -0.35, z: -1.0 },
+       LeftHand: { x: -0.25, y: 0.35, z: 0.05 }, RightHand: { x: -0.25, y: -0.35, z: -0.05 }
+     }},
+     { time: 1.0, bones: { 
+       LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+       LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+       LeftHand: { x: 0, y: 0, z: 0 }, RightHand: { x: 0, y: 0, z: 0 }
+     }},
    ],
  };
  

@@ -246,10 +246,10 @@ Current shadows use ContactShadows.
 ## Priority Implementation Order
 
 ### Phase 1: Quick Wins
-1. Add 5 missing gestures (facepalm, crossArms, etc.)
-2. Implement eye-lead behavior in look-at
-3. Add basic room props (TV content, more furniture)
-4. Enable post-processing bloom
+1. ~~Add 5 missing gestures (facepalm, crossArms, etc.)~~ ✅ DONE
+2. ~~Implement eye-lead behavior in look-at~~ ✅ DONE
+3. Add basic room props (TV content, more furniture) - TODO
+4. ~~Enable post-processing bloom~~ ✅ DONE
 
 ### Phase 2: Core Improvements
 5. Implement spring physics for secondary motion
