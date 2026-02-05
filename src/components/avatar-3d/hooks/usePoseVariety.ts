@@ -20,12 +20,12 @@
  // Pose bone configurations - all values in radians
  const POSE_CONFIGS: Record<PoseType, Record<string, BoneRotation>> = {
    relaxed: {
-     LeftArm: { x: 0.1, y: 0, z: 1.2 },
-     RightArm: { x: 0.1, y: 0, z: -1.2 },
-     LeftForeArm: { x: 0, y: 0, z: 0.3 },
-     RightForeArm: { x: 0, y: 0, z: -0.3 },
-     LeftHand: { x: 0, y: 0, z: 0.1 },
-     RightHand: { x: 0, y: 0, z: -0.1 },
+    LeftArm: { x: 0.05, y: 0.1, z: 1.45 },      // Arms relaxed at sides
+    RightArm: { x: 0.05, y: -0.1, z: -1.45 },   // Arms relaxed at sides
+    LeftForeArm: { x: 0, y: 0, z: 0.08 },       // Slight elbow bend
+    RightForeArm: { x: 0, y: 0, z: -0.08 },     // Slight elbow bend
+    LeftHand: { x: 0, y: 0, z: 0.05 },          // Relaxed wrist
+    RightHand: { x: 0, y: 0, z: -0.05 },        // Relaxed wrist
      Spine: { x: -0.02, y: 0, z: 0 },
      Spine1: { x: -0.01, y: 0, z: 0 },
    },
@@ -59,10 +59,10 @@
      Spine: { x: -0.02, y: 0.02, z: 0 },
    },
    'casual-lean': {
-     LeftArm: { x: 0.1, y: 0, z: 1.3 },
-     RightArm: { x: 0.1, y: 0, z: -1.1 },
-     LeftForeArm: { x: 0, y: 0, z: 0.35 },
-     RightForeArm: { x: 0, y: 0, z: -0.25 },
+    LeftArm: { x: 0.05, y: 0.1, z: 1.45 },      // Arms relaxed
+    RightArm: { x: 0.05, y: -0.1, z: -1.35 },   // Slightly different for asymmetry
+    LeftForeArm: { x: 0, y: 0, z: 0.1 },
+    RightForeArm: { x: 0, y: 0, z: -0.1 },
      Hips: { x: 0, y: 0, z: 0.04 },
      Spine: { x: -0.01, y: 0.02, z: 0.02 },
      Spine1: { x: 0, y: 0.01, z: 0.01 },
