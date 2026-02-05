@@ -24,6 +24,7 @@ import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
    getCharacterPosition 
  } from './utils/conversationGrouping';
  import { useTouchGestures } from './hooks/useTouchGestures';
+ import { useIdleGestures } from './hooks/useIdleGestures';
  import { FloorSpotMarkers, getFloorSpotById, FLOOR_SPOTS } from './FloorSpotMarker';
  import { TouchFeedbackManager } from './TouchFeedback';
  import { PlayerMovementController } from './PlayerMovementController';
@@ -428,13 +429,24 @@ const CharacterSpot: React.FC<{
   const idleGroupRef = useRef<THREE.Group>(null);
   const modelUrl = template.avatar3DConfig?.modelUrl;
   
+  // Use idle gestures for NPCs (not player)
+  const { idleGesture, onIdleGestureComplete } = useIdleGestures({
+    characterId: template.id,
+    isPlayer: !!isPlayer,
+    isSelected,
+    traits: template.traits || [],
+    enabled: !isPlayer, // Only enable for NPCs
+  });
+  
   // Use override position for player movement, otherwise static position
   const effectivePosition = overridePosition ?? position;
   const effectiveRotationY = overrideRotationY ?? rotation[1];
   const effectiveRotation: [number, number, number] = [rotation[0], effectiveRotationY, rotation[2]];
   
-  // Combine movement gesture with player gesture (movement takes priority)
-  const activeGesture = movementGesture ?? playerGesture;
+  // Combine gestures: movement > player > idle (for NPCs)
+  const activeGesture = isPlayer 
+    ? (movementGesture ?? playerGesture) 
+    : (idleGesture ?? null);
    
    // Get pose type based on archetype
    const poseType = getPoseForCharacter(template.archetype, index);
@@ -513,9 +525,9 @@ const CharacterSpot: React.FC<{
                 worldPosition={effectivePosition}
                 worldRotationY={effectiveRotationY}
                 isPlayer={isPlayer}
-                enableGestures={isPlayer}
-                gestureToPlay={isPlayer ? activeGesture : null}
-                onGestureComplete={isPlayer ? onGestureComplete : undefined}
+                enableGestures={true}
+                gestureToPlay={activeGesture}
+                onGestureComplete={isPlayer ? onGestureComplete : onIdleGestureComplete}
                 relationshipToSelected={relationshipToSelected ?? 0}
                 selectedIsNominee={false}
                 selectedIsHoH={false}

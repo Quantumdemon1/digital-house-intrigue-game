@@ -1,13 +1,14 @@
- /**
-  * @file hooks/index.ts
-  * @description Export all avatar-related hooks
-  */
- 
- export { useIdlePose } from './useIdlePose';
- export { usePoseVariety, type PoseType } from './usePoseVariety';
+/**
+ * @file hooks/index.ts
+ * @description Export all avatar-related hooks
+ */
+
+export { useIdlePose } from './useIdlePose';
+export { usePoseVariety, type PoseType } from './usePoseVariety';
 export { useLookAt, type LookAtConfig, default as lookAtHook } from './useLookAt';
- export { useGestureAnimation, type GestureType, type UseGestureAnimationReturn } from './useGestureAnimation';
- export { useReactiveExpressions, type ReactiveExpressionType, type ReactiveExpressionsConfig } from './useReactiveExpressions';
- export { useEyeTracking, type EyeTrackingConfig } from './useEyeTracking';
- export { useEventLighting, usePulsingIntensity, interpolateColor, type LightingEvent, type EventLightingState, type LightingColors } from './useEventLighting';
- export { useTouchGestures, type TouchGestureCallbacks, type UseTouchGesturesReturn } from './useTouchGestures';
+export { useGestureAnimation, type GestureType, type UseGestureAnimationReturn } from './useGestureAnimation';
+export { useReactiveExpressions, type ReactiveExpressionType, type ReactiveExpressionsConfig } from './useReactiveExpressions';
+export { useEyeTracking, type EyeTrackingConfig } from './useEyeTracking';
+export { useEventLighting, usePulsingIntensity, interpolateColor, type LightingEvent, type EventLightingState, type LightingColors } from './useEventLighting';
+export { useTouchGestures, type TouchGestureCallbacks, type UseTouchGesturesReturn } from './useTouchGestures';
+export { useIdleGestures, type UseIdleGesturesOptions, type UseIdleGesturesReturn } from './useIdleGestures';

@@ -332,7 +332,108 @@
       }},
     ],
   },
- };
+  // ===== IDLE ARM GESTURES (for NPC autonomous animation) =====
+  armFold: {
+    duration: 1.0,
+    interruptible: true,
+    blendOutDuration: 0.3,
+    keyframes: [
+      { time: 0, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 }
+      }},
+      { time: 0.3, bones: { 
+        LeftArm: { x: 0.5, y: 0.2, z: 0.6 }, RightArm: { x: 0.5, y: -0.2, z: -0.6 },
+        LeftForeArm: { x: 0, y: 0.4, z: 1.2 }, RightForeArm: { x: 0, y: -0.4, z: -1.2 }
+      }},
+      { time: 0.6, bones: { 
+        LeftArm: { x: 0.5, y: 0.2, z: 0.6 }, RightArm: { x: 0.5, y: -0.2, z: -0.6 },
+        LeftForeArm: { x: 0, y: 0.4, z: 1.2 }, RightForeArm: { x: 0, y: -0.4, z: -1.2 }
+      }},
+      { time: 1.0, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 }
+      }},
+    ],
+  },
+  shoulderRoll: {
+    duration: 0.9,
+    interruptible: true,
+    blendOutDuration: 0.2,
+    keyframes: [
+      { time: 0, bones: { 
+        LeftShoulder: { x: 0, y: 0, z: 0 }, RightShoulder: { x: 0, y: 0, z: 0 },
+        Spine1: { x: 0, y: 0, z: 0 }
+      }},
+      { time: 0.25, bones: { 
+        LeftShoulder: { x: 0.1, y: -0.1, z: 0 }, RightShoulder: { x: 0.1, y: 0.1, z: 0 },
+        Spine1: { x: 0.02, y: 0, z: 0 }
+      }},
+      { time: 0.5, bones: { 
+        LeftShoulder: { x: -0.1, y: 0, z: 0.05 }, RightShoulder: { x: -0.1, y: 0, z: -0.05 },
+        Spine1: { x: -0.02, y: 0, z: 0 }
+      }},
+      { time: 0.75, bones: { 
+        LeftShoulder: { x: 0.05, y: 0.05, z: 0 }, RightShoulder: { x: 0.05, y: -0.05, z: 0 },
+        Spine1: { x: 0.01, y: 0, z: 0 }
+      }},
+      { time: 1.0, bones: { 
+        LeftShoulder: { x: 0, y: 0, z: 0 }, RightShoulder: { x: 0, y: 0, z: 0 },
+        Spine1: { x: 0, y: 0, z: 0 }
+      }},
+    ],
+  },
+  armStretch: {
+    duration: 1.2,
+    interruptible: true,
+    blendOutDuration: 0.3,
+    keyframes: [
+      { time: 0, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+        Spine: { x: 0, y: 0, z: 0 }
+      }},
+      { time: 0.3, bones: { 
+        LeftArm: { x: -0.3, y: 0.2, z: 0.8 }, RightArm: { x: -0.3, y: -0.2, z: -0.8 },
+        LeftForeArm: { x: 0, y: 0, z: 0.1 }, RightForeArm: { x: 0, y: 0, z: -0.1 },
+        Spine: { x: -0.05, y: 0, z: 0 }
+      }},
+      { time: 0.6, bones: { 
+        LeftArm: { x: -0.4, y: 0.3, z: 0.7 }, RightArm: { x: -0.4, y: -0.3, z: -0.7 },
+        LeftForeArm: { x: 0, y: 0, z: 0 }, RightForeArm: { x: 0, y: 0, z: 0 },
+        Spine: { x: -0.08, y: 0, z: 0 }
+      }},
+      { time: 1.0, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+        Spine: { x: 0, y: 0, z: 0 }
+      }},
+    ],
+  },
+  handCheck: {
+    duration: 1.0,
+    interruptible: true,
+    blendOutDuration: 0.25,
+    keyframes: [
+      { time: 0, bones: { 
+        RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+        RightHand: { x: 0, y: 0, z: 0 }, Head: { x: 0, y: 0, z: 0 }
+      }},
+      { time: 0.25, bones: { 
+        RightArm: { x: 0.6, y: 0.3, z: -0.4 }, RightForeArm: { x: 0.3, y: 0.2, z: -1.8 },
+        RightHand: { x: -0.4, y: 0.2, z: 0 }, Head: { x: 0.1, y: -0.1, z: 0 }
+      }},
+      { time: 0.6, bones: { 
+        RightArm: { x: 0.6, y: 0.3, z: -0.4 }, RightForeArm: { x: 0.3, y: 0.2, z: -1.8 },
+        RightHand: { x: -0.3, y: 0.3, z: 0.1 }, Head: { x: 0.1, y: -0.1, z: 0 }
+      }},
+      { time: 1.0, bones: { 
+        RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+        RightHand: { x: 0, y: 0, z: 0 }, Head: { x: 0, y: 0, z: 0 }
+      }},
+    ],
+  },
+};
  
  export interface GestureState {
    isPlaying: boolean;

@@ -71,17 +71,19 @@
  
  // ============ Gesture Types ============
  
- export type GestureType =
-   // Original
-   | 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp'
-   // New social gestures
+export type GestureType =
+  // Original
+  | 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp'
+  // New social gestures
   | 'headShake' | 'celebrate' | 'thinkingPose'
   // Added gestures (Phase 1)
   | 'facepalm' | 'crossArms' | 'handOnHip' | 'nervousFidget' | 'emphasize'
-   // Conversational
+  // Conversational
   | 'listenNod' | 'dismiss' | 'welcome'
   // Movement
-  | 'walk';
+  | 'walk'
+  // Idle arm gestures (for NPC autonomous animation)
+  | 'armFold' | 'shoulderRoll' | 'armStretch' | 'handCheck';
  
  // ============ Expression Types ============
  
