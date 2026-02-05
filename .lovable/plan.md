@@ -1,72 +1,103 @@
 
-# Visual Enhancement: Add Profile Photos to Ceremony Screens
+# Add Basic Arm Movements for Avatars
 
-## Problem Analysis
+## Overview
 
-Three ceremony/competition screens currently display text placeholders (initials like "MH") instead of profile photos:
+Add simple, random arm gestures that NPCs perform autonomously during idle time in the House View. This creates more visual interest and makes characters feel alive without requiring complex AI behavior.
 
-1. **Pre-ceremony HOH display** (`NominationContent.tsx`) - Shows HOH name but no avatar
-2. **Nominations Complete** (`NominationPhase/index.tsx`) - Nominees cards show icons but no photos
-3. **PoV Competition Results** (`POVCompetition/CompetitionResults.tsx`) - Shows "MH" initials instead of winner's photo
+## Current State
 
-The root cause is that `StatusAvatar` is being called without the `avatarUrl` prop in some components, causing it to fall back to initials.
+- Avatars have static poses with subtle breathing/idle micro-movements
+- Gestures (wave, thumbs up, shrug, etc.) exist but only trigger on player action
+- No autonomous NPC movement or gestures
+
+## Solution: Autonomous Idle Gestures
+
+Add a lightweight system that randomly triggers small arm gestures on NPCs during idle time.
 
 ---
 
-## Changes Required
+## Implementation Plan
 
-### 1. Add HOH Avatar to Pre-Ceremony Screen
+### 1. Create Idle Gesture Trigger Hook
 
-**File**: `src/components/game-phases/NominationPhase/components/NominationContent.tsx`
+**New file**: `src/components/avatar-3d/hooks/useIdleGestures.ts`
 
-Add a `StatusAvatar` showing the HOH with their profile photo above the ceremony title:
+A hook that:
+- Takes character ID and whether they're the player
+- Randomly selects from a subset of subtle gestures
+- Triggers gestures at random intervals (every 5-15 seconds)
+- Returns the current gesture to play
 
-- Import `StatusAvatar` component
-- Add HOH avatar with `status="hoh"` and `avatarUrl={hoh.avatarUrl}`
-- Position it prominently at the top
+```typescript
+const IDLE_GESTURES: GestureType[] = ['nod', 'shrug', 'thinkingPose', 'listenNod'];
+const MIN_INTERVAL = 8000; // 8 seconds
+const MAX_INTERVAL = 20000; // 20 seconds
 
-### 2. Add Profile Photos to PoV Competition Results
-
-**File**: `src/components/game-phases/POVCompetition/CompetitionResults.tsx`
-
-The `StatusAvatar` is already being used but missing the `avatarUrl` prop:
-
-```tsx
-// Current (line 31-36):
-<StatusAvatar 
-  name={winner.name}
-  status="pov"
-  size="xl"
-  ...
-/>
-
-// Fixed:
-<StatusAvatar 
-  name={winner.name}
-  avatarUrl={winner.avatarUrl}  // ADD THIS
-  status="pov"
-  size="xl"
-  ...
-/>
+export function useIdleGestures(characterId: string, isPlayer: boolean): GestureType | null
 ```
 
-### 3. Enhance Nominee Cards in Complete Stage
+### 2. Add New Subtle Arm Gestures
 
-**File**: `src/components/game-phases/NominationPhase/index.tsx`
+**Modify**: `src/components/avatar-3d/animation/layers/GestureLayer.ts`
 
-The `StatusAvatar` is already being used correctly (lines 264-269), but could use larger size. This was already fixed in the previous update.
+Add new subtle gestures designed for idle animation:
+- `armFold`: Briefly crosses arms then returns
+- `handCheck`: Looks at hand/nails briefly
+- `shoulderRoll`: Subtle shoulder adjustment
+- `armStretch`: Light arm stretch
+
+These will be shorter (0.8-1.2s) and blend naturally with the idle pose.
+
+### 3. Integrate into HouseCharacter
+
+**Modify**: `src/components/avatar-3d/HouseCharacter.tsx`
+
+- Import and use the `useIdleGestures` hook for non-player characters
+- Pass the idle gesture to the animation controller alongside any player gesture
 
 ---
 
-## Summary of Changes
+## Technical Details
+
+### Gesture Selection Logic
+
+```typescript
+// Personality influences gesture frequency
+const getGestureInterval = (traits: string[]) => {
+  const isExtrovert = traits.includes('Social') || traits.includes('Charismatic');
+  const baseMin = isExtrovert ? 6000 : 10000;
+  const baseMax = isExtrovert ? 15000 : 25000;
+  return baseMin + Math.random() * (baseMax - baseMin);
+};
+```
+
+### Gesture Conflict Prevention
+
+- If player triggers a gesture while NPC idle gesture is playing, player gesture takes priority
+- NPCs don't start new gestures if they're in conversation (selected by player)
+
+---
+
+## New Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/avatar-3d/hooks/useIdleGestures.ts` | Hook for autonomous gesture triggering |
+
+## Modified Files
 
 | File | Change |
 |------|--------|
-| `NominationContent.tsx` | Add HOH avatar display with crown status |
-| `POVCompetition/CompetitionResults.tsx` | Add `avatarUrl={winner.avatarUrl}` prop |
+| `GestureLayer.ts` | Add 3-4 new subtle arm gestures |
+| `HouseCharacter.tsx` | Integrate idle gestures for NPCs |
+| `types.ts` | Add new gesture types |
 
 ---
 
-## Technical Notes
+## Expected Result
 
-The `StatusAvatar` component properly handles the `avatarUrl` prop (line 149 combines `imageUrl || avatarUrl`), so simply passing the correct prop will display the profile photo.
+- NPCs will occasionally perform subtle gestures while standing idle
+- Creates more lively, dynamic feel in the House View
+- Player gestures still work and take priority
+- Performance impact minimal (one timer per character)
