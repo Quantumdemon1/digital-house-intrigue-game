@@ -3,7 +3,7 @@ import { Avatar3DConfig } from '@/models/avatar-config';
 
 // Import generated avatars (2D fallback)
 import alexChenAvatar from '@/assets/avatars/alex-chen.jpg';
-import emmaBrownAvatar from '@/assets/avatars/emma-brown.png';
+import emmaBrownAvatar from '@/assets/avatars/emma-brown.jpg';
 import jordanTaylorAvatar from '@/assets/avatars/jordan-taylor.jpg';
 import caseyWilsonAvatar from '@/assets/avatars/casey-wilson.jpg';
 import rileyJohnsonAvatar from '@/assets/avatars/riley-johnson.jpg';
