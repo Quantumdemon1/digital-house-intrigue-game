@@ -5,8 +5,9 @@
  */
 
 import type { BoneRotation } from '../types';
+import { isFemaleCharacter, FEMALE_POSE_BONES } from './femalePoseDefaults';
 
-export type StaticPoseType = 'neutral' | 'relaxed' | 'confident' | 'defensive' | 'open';
+export type StaticPoseType = 'neutral' | 'relaxed' | 'confident' | 'defensive' | 'open' | 'wave';
 
 export interface PoseDefinition {
   name: StaticPoseType;
@@ -157,7 +158,6 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
       Spine2: { x: 0, y: 0, z: 0 },
       Neck: { x: 0, y: 0, z: 0 },
       Head: { x: 0.02, y: 0, z: 0 },
-      // Open welcoming pose with arms spread
       LeftShoulder: { x: 0.02, y: 0.08, z: 0.12 },
       LeftArm: { x: 0.18, y: 0.32, z: 0.55 },
       LeftForeArm: { x: 0.28, y: 0.45, z: 0.08 },
@@ -168,33 +168,67 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
       RightHand: { x: 0.05, y: -0.1, z: 0.4 },
     },
   },
+
+  wave: {
+    name: 'wave',
+    description: 'Waving gesture pose',
+    bones: {
+      Spine: { x: 0.02, y: 0, z: 0 },
+      Spine1: { x: 0.01, y: 0, z: 0 },
+      Spine2: { x: 0.01, y: 0, z: 0 },
+      Neck: { x: 0, y: 0, z: 0 },
+      Head: { x: 0, y: 0, z: 0 },
+      LeftShoulder: { x: -2.41, y: 0.18, z: -0.02 },
+      LeftArm: { x: 0.12, y: 0.05, z: 0.27 },
+      LeftForeArm: { x: 0.21, y: 0.02, z: 0.05 },
+      LeftHand: { x: -0.13, y: 0.66, z: 0.08 },
+      RightShoulder: { x: -0.42, y: 0.15, z: -0.05 },
+      RightArm: { x: 0.12, y: 0.21, z: -0.35 },
+      RightForeArm: { x: 0.12, y: -0.33, z: 0.44 },
+      RightHand: { x: 0.41, y: 0, z: 0.18 },
+    },
+  },
 };
 
 /**
- * Get effective pose with admin overrides applied
+ * Get effective pose with character-aware defaults and admin overrides
+ * Resolution chain:
+ * 1. Character-specific localStorage override (poseName:characterId)
+ * 2. Global localStorage override (poseName)
+ * 3. Female template defaults (if character is female)
+ * 4. Base static pose definition
  */
-export function getEffectivePose(poseType: StaticPoseType): PoseDefinition {
+export function getEffectivePose(poseType: StaticPoseType, characterName?: string): PoseDefinition {
   const basePose = STATIC_POSES[poseType];
   const overrides = getPoseOverrides();
-  const poseOverride = overrides[poseType];
   
-  if (!poseOverride) return basePose;
+  // 1. Check character-specific override
+  if (characterName) {
+    const charKey = `${poseType}:${characterName.toLowerCase().replace(/\s+/g, '-')}`;
+    if (overrides[charKey]) {
+      return { ...basePose, bones: { ...basePose.bones, ...overrides[charKey] } };
+    }
+  }
   
-  // Merge base pose with overrides
-  return {
-    ...basePose,
-    bones: {
-      ...basePose.bones,
-      ...poseOverride,
-    },
-  };
+  // 2. Check global override
+  if (overrides[poseType]) {
+    return { ...basePose, bones: { ...basePose.bones, ...overrides[poseType] } };
+  }
+  
+  // 3. Use female template defaults if applicable
+  if (isFemaleCharacter(characterName)) {
+    return { ...basePose, bones: FEMALE_POSE_BONES[poseType] };
+  }
+  
+  // 4. Base pose
+  return basePose;
 }
 
 /**
  * Get a random static pose for variety
  */
 export function getRandomPose(): StaticPoseType {
-  const poses: StaticPoseType[] = ['neutral', 'relaxed', 'confident', 'defensive', 'open'];
+  const poses: StaticPoseType[] = ['neutral', 'relaxed', 'confident', 'defensive', 'open', 'wave'];
   return poses[Math.floor(Math.random() * poses.length)];
 }
 

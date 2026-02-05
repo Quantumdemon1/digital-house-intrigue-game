@@ -140,15 +140,16 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
          <group>
            {modelUrl ? (
              <Suspense fallback={<AvatarPlaceholder />}>
-               <RPMAvatar
-                 modelSrc={modelUrl}
-                 context="game"
-                 scale={1}
-                 position={[0, 0, 0]}
-                 applyIdlePose={true}
-                 phaseOffset={index * 0.7}
-                 poseType={poseType}
-               />
+                <RPMAvatar
+                  modelSrc={modelUrl}
+                  context="game"
+                  scale={1}
+                  position={[0, 0, 0]}
+                  applyIdlePose={true}
+                  phaseOffset={index * 0.7}
+                  poseType={poseType}
+                  characterName={template.name}
+                />
              </Suspense>
            ) : (
              <AvatarPlaceholder />

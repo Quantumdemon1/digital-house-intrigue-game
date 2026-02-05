@@ -24,3 +24,9 @@ export {
   resetToTPose,
   getBoneMap,
 } from './applyPose';
+
+export {
+  isFemaleCharacter,
+  FEMALE_POSE_BONES,
+  FEMALE_CHARACTER_NAMES,
+} from './femalePoseDefaults';
