@@ -27,77 +27,82 @@
    easing?: (t: number) => number;
  }
  
- interface GestureDefinition {
-   duration: number;      // Seconds
-   keyframes: GestureKeyframe[];
-   interruptible: boolean;
-   blendOutDuration: number;  // Seconds to blend back to base pose
- }
+interface GestureDefinition {
+  duration: number;      // Seconds
+  keyframes: GestureKeyframe[];
+  interruptible: boolean;
+  blendInDuration: number;   // Seconds to blend into gesture (smooth start)
+  blendOutDuration: number;  // Seconds to blend back to base pose
+}
  
- // Expanded gesture library
- export const GESTURE_LIBRARY: Partial<Record<GestureType, GestureDefinition>> = {
-   wave: {
-     duration: 1.5,
-     interruptible: true,
-     blendOutDuration: 0.3,
-     keyframes: [
-       { time: 0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: -0.1 } } },
-       { time: 0.15, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: 0.4, z: 0 } } },
-       { time: 0.3, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: -0.5, z: 0 } } },
-       { time: 0.45, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: 0.5, z: 0 } } },
-       { time: 0.6, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: -0.5, z: 0 } } },
-       { time: 0.75, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: 0.4, z: 0 } } },
-       { time: 1.0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: -0.1 } } },
-     ],
-   },
-   nod: {
-     duration: 0.8,
-     interruptible: true,
-     blendOutDuration: 0.2,
-     keyframes: [
-       { time: 0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
-       { time: 0.25, bones: { Head: { x: 0.2, y: 0, z: 0 }, Neck: { x: 0.08, y: 0, z: 0 } } },
-       { time: 0.5, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
-       { time: 0.75, bones: { Head: { x: 0.15, y: 0, z: 0 }, Neck: { x: 0.05, y: 0, z: 0 } } },
-       { time: 1.0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
-     ],
-   },
-   shrug: {
-     duration: 1.2,
-     interruptible: true,
-     blendOutDuration: 0.3,
-     keyframes: [
-       { time: 0, bones: { 
-         LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
-         LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
-         Spine: { x: 0, y: 0, z: 0 }, Head: { x: 0, y: 0, z: 0 }
-       }},
-       { time: 0.3, bones: { 
-         LeftArm: { x: -0.2, y: 0, z: 0.9 }, RightArm: { x: -0.2, y: 0, z: -0.9 },
-         LeftForeArm: { x: 0, y: 0.3, z: 0.8 }, RightForeArm: { x: 0, y: -0.3, z: -0.8 },
-         Spine: { x: 0, y: 0, z: 0.02 }, Head: { x: 0, y: 0, z: 0.05 }
-       }},
-       { time: 0.5, bones: { 
-         LeftArm: { x: -0.3, y: 0, z: 0.8 }, RightArm: { x: -0.3, y: 0, z: -0.8 },
-         LeftForeArm: { x: 0, y: 0.4, z: 1.0 }, RightForeArm: { x: 0, y: -0.4, z: -1.0 },
-         Spine: { x: 0, y: 0, z: 0.03 }, Head: { x: 0, y: 0, z: 0.08 }
-       }},
-       { time: 0.7, bones: { 
-         LeftArm: { x: -0.2, y: 0, z: 0.9 }, RightArm: { x: -0.2, y: 0, z: -0.9 },
-         LeftForeArm: { x: 0, y: 0.3, z: 0.8 }, RightForeArm: { x: 0, y: -0.3, z: -0.8 },
-         Spine: { x: 0, y: 0, z: 0.02 }, Head: { x: 0, y: 0, z: 0.05 }
-       }},
-       { time: 1.0, bones: { 
-         LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
-         LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
-         Spine: { x: 0, y: 0, z: 0 }, Head: { x: 0, y: 0, z: 0 }
-       }},
-     ],
-   },
-   clap: {
-     duration: 2.0,
-     interruptible: false,
-     blendOutDuration: 0.3,
+// Expanded gesture library
+export const GESTURE_LIBRARY: Partial<Record<GestureType, GestureDefinition>> = {
+  wave: {
+    duration: 1.5,
+    interruptible: true,
+    blendInDuration: 0.15,
+    blendOutDuration: 0.3,
+    keyframes: [
+      { time: 0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: -0.1 } } },
+      { time: 0.15, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: 0.4, z: 0 } } },
+      { time: 0.3, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: -0.5, z: 0 } } },
+      { time: 0.45, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: 0.5, z: 0 } } },
+      { time: 0.6, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: -0.5, z: 0 } } },
+      { time: 0.75, bones: { RightArm: { x: -1.2, y: 0.3, z: -0.3 }, RightForeArm: { x: 0.2, y: 0.5, z: -1.5 }, RightHand: { x: 0, y: 0.4, z: 0 } } },
+      { time: 1.0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: -0.1 } } },
+    ],
+  },
+  nod: {
+    duration: 0.8,
+    interruptible: true,
+    blendInDuration: 0.1,
+    blendOutDuration: 0.2,
+    keyframes: [
+      { time: 0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
+      { time: 0.25, bones: { Head: { x: 0.2, y: 0, z: 0 }, Neck: { x: 0.08, y: 0, z: 0 } } },
+      { time: 0.5, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
+      { time: 0.75, bones: { Head: { x: 0.15, y: 0, z: 0 }, Neck: { x: 0.05, y: 0, z: 0 } } },
+      { time: 1.0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
+    ],
+  },
+  shrug: {
+    duration: 1.2,
+    interruptible: true,
+    blendInDuration: 0.15,
+    blendOutDuration: 0.3,
+    keyframes: [
+      { time: 0, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+        Spine: { x: 0, y: 0, z: 0 }, Head: { x: 0, y: 0, z: 0 }
+      }},
+      { time: 0.3, bones: { 
+        LeftArm: { x: -0.2, y: 0, z: 0.9 }, RightArm: { x: -0.2, y: 0, z: -0.9 },
+        LeftForeArm: { x: 0, y: 0.3, z: 0.8 }, RightForeArm: { x: 0, y: -0.3, z: -0.8 },
+        Spine: { x: 0, y: 0, z: 0.02 }, Head: { x: 0, y: 0, z: 0.05 }
+      }},
+      { time: 0.5, bones: { 
+        LeftArm: { x: -0.3, y: 0, z: 0.8 }, RightArm: { x: -0.3, y: 0, z: -0.8 },
+        LeftForeArm: { x: 0, y: 0.4, z: 1.0 }, RightForeArm: { x: 0, y: -0.4, z: -1.0 },
+        Spine: { x: 0, y: 0, z: 0.03 }, Head: { x: 0, y: 0, z: 0.08 }
+      }},
+      { time: 0.7, bones: { 
+        LeftArm: { x: -0.2, y: 0, z: 0.9 }, RightArm: { x: -0.2, y: 0, z: -0.9 },
+        LeftForeArm: { x: 0, y: 0.3, z: 0.8 }, RightForeArm: { x: 0, y: -0.3, z: -0.8 },
+        Spine: { x: 0, y: 0, z: 0.02 }, Head: { x: 0, y: 0, z: 0.05 }
+      }},
+      { time: 1.0, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
+        Spine: { x: 0, y: 0, z: 0 }, Head: { x: 0, y: 0, z: 0 }
+      }},
+    ],
+  },
+  clap: {
+    duration: 2.0,
+    interruptible: false,
+    blendInDuration: 0.15,
+    blendOutDuration: 0.3,
      keyframes: [
        { time: 0, bones: { 
          LeftArm: { x: 0.6, y: 0.3, z: 0.4 }, RightArm: { x: 0.6, y: -0.3, z: -0.4 },
@@ -133,10 +138,11 @@
        }},
      ],
    },
-   point: {
-     duration: 1.0,
-     interruptible: true,
-     blendOutDuration: 0.25,
+  point: {
+    duration: 1.0,
+    interruptible: true,
+    blendInDuration: 0.12,
+    blendOutDuration: 0.25,
      keyframes: [
        { time: 0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 } } },
        { time: 0.3, bones: { RightArm: { x: -0.8, y: 0.2, z: -0.2 }, RightForeArm: { x: 0.3, y: 0, z: -0.5 }, RightHand: { x: -0.1, y: 0, z: 0 } } },
@@ -144,10 +150,11 @@
        { time: 1.0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 } } },
      ],
    },
-   thumbsUp: {
-     duration: 1.2,
-     interruptible: true,
-     blendOutDuration: 0.25,
+  thumbsUp: {
+    duration: 1.2,
+    interruptible: true,
+    blendInDuration: 0.15,
+    blendOutDuration: 0.25,
      keyframes: [
        { time: 0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 } } },
        { time: 0.25, bones: { RightArm: { x: -0.5, y: 0.4, z: -0.4 }, RightForeArm: { x: 0.5, y: 0.3, z: -1.8 }, RightHand: { x: -0.3, y: 0, z: 0.2 } }, easing: easeOutBack },
@@ -155,10 +162,11 @@
        { time: 1.0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 } } },
      ],
    },
-   headShake: {
-     duration: 0.9,
-     interruptible: true,
-     blendOutDuration: 0.2,
+  headShake: {
+    duration: 0.9,
+    interruptible: true,
+    blendInDuration: 0.1,
+    blendOutDuration: 0.2,
      keyframes: [
        { time: 0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
        { time: 0.15, bones: { Head: { x: 0, y: -0.25, z: 0 }, Neck: { x: 0, y: -0.08, z: 0 } } },
@@ -168,10 +176,11 @@
        { time: 1.0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
      ],
    },
-   celebrate: {
-     duration: 1.8,
-     interruptible: true,
-     blendOutDuration: 0.4,
+  celebrate: {
+    duration: 1.8,
+    interruptible: true,
+    blendInDuration: 0.2,
+    blendOutDuration: 0.4,
      keyframes: [
        { time: 0, bones: { 
          LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
@@ -200,10 +209,11 @@
        }},
      ],
    },
-   thinkingPose: {
-     duration: 1.5,
-     interruptible: true,
-     blendOutDuration: 0.4,
+  thinkingPose: {
+    duration: 1.5,
+    interruptible: true,
+    blendInDuration: 0.2,
+    blendOutDuration: 0.4,
      keyframes: [
        { time: 0, bones: { 
          RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 },
@@ -226,10 +236,11 @@
        }},
      ],
    },
-   welcome: {
-     duration: 1.4,
-     interruptible: true,
-     blendOutDuration: 0.3,
+  welcome: {
+    duration: 1.4,
+    interruptible: true,
+    blendInDuration: 0.2,
+    blendOutDuration: 0.3,
      keyframes: [
        { time: 0, bones: { 
          LeftArm: { x: 0.1, y: 0, z: 1.2 }, RightArm: { x: 0.1, y: 0, z: -1.2 },
@@ -249,10 +260,11 @@
        }},
      ],
    },
-   dismiss: {
-     duration: 0.8,
-     interruptible: true,
-     blendOutDuration: 0.2,
+  dismiss: {
+    duration: 0.8,
+    interruptible: true,
+    blendInDuration: 0.1,
+    blendOutDuration: 0.2,
      keyframes: [
        { time: 0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 } } },
        { time: 0.2, bones: { RightArm: { x: -0.4, y: 0.3, z: -0.5 }, RightForeArm: { x: 0.2, y: 0.2, z: -1.0 }, RightHand: { x: 0, y: 0.3, z: 0 } } },
@@ -261,10 +273,11 @@
        { time: 1.0, bones: { RightArm: { x: 0.1, y: 0, z: -1.2 }, RightForeArm: { x: 0, y: 0, z: -0.3 }, RightHand: { x: 0, y: 0, z: 0 } } },
      ],
    },
-   listenNod: {
-     duration: 1.5,
-     interruptible: true,
-     blendOutDuration: 0.2,
+  listenNod: {
+    duration: 1.5,
+    interruptible: true,
+    blendInDuration: 0.1,
+    blendOutDuration: 0.2,
      keyframes: [
        { time: 0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
        { time: 0.2, bones: { Head: { x: 0.1, y: 0, z: 0 }, Neck: { x: 0.04, y: 0, z: 0 } } },
@@ -275,10 +288,11 @@
        { time: 1.0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
      ],
    },
-  walk: {
-    duration: 0.8, // One step cycle - short for natural loop
-    interruptible: true,
-    blendOutDuration: 0.25,
+ walk: {
+   duration: 0.8, // One step cycle - short for natural loop
+   interruptible: true,
+   blendInDuration: 0.1,
+   blendOutDuration: 0.25,
     keyframes: [
       // Start pose - left arm back, right arm forward
       { time: 0, bones: { 
@@ -336,6 +350,7 @@
   armFold: {
     duration: 1.0,
     interruptible: true,
+    blendInDuration: 0.15,
     blendOutDuration: 0.3,
     keyframes: [
       { time: 0, bones: { 
@@ -359,6 +374,7 @@
   shoulderRoll: {
     duration: 0.9,
     interruptible: true,
+    blendInDuration: 0.1,
     blendOutDuration: 0.2,
     keyframes: [
       { time: 0, bones: { 
@@ -386,6 +402,7 @@
   armStretch: {
     duration: 1.2,
     interruptible: true,
+    blendInDuration: 0.15,
     blendOutDuration: 0.3,
     keyframes: [
       { time: 0, bones: { 
@@ -413,6 +430,7 @@
   handCheck: {
     duration: 1.0,
     interruptible: true,
+    blendInDuration: 0.12,
     blendOutDuration: 0.25,
     keyframes: [
       { time: 0, bones: { 
@@ -544,53 +562,62 @@
  /**
   * Update gesture and get current bones
   */
- export const updateGesture = (
-   state: GestureState,
-   currentTime: number,
-   onComplete?: () => void
- ): { bones: BoneMap | null; weight: number; state: GestureState } => {
-   if (!state.isPlaying || !state.currentGesture) {
-     return { bones: null, weight: 0, state };
-   }
-   
-   const definition = GESTURE_LIBRARY[state.currentGesture];
-   if (!definition) {
-     return { bones: null, weight: 0, state: createGestureState() };
-   }
-   
-   let newState = { ...state };
-   let weight = 1;
-   
-   // Handle blend out
-   if (state.blendingOut) {
-     const blendOutProgress = (currentTime - state.blendOutStartTime) / definition.blendOutDuration;
-     
-     if (blendOutProgress >= 1) {
-       onComplete?.();
-       return { bones: null, weight: 0, state: createGestureState() };
-     }
-     
-     weight = 1 - easeInOutQuad(blendOutProgress);
-   }
-   
-   // Calculate gesture progress
-   const elapsed = currentTime - state.startTime;
-   const progress = Math.min(elapsed / definition.duration, 1);
-   
-   // Check if gesture complete
-   if (progress >= 1 && !state.blendingOut) {
-     newState.blendingOut = true;
-     newState.blendOutStartTime = currentTime;
-   }
-   
-   // Interpolate keyframes
-   const boneRotations = interpolateKeyframes(definition.keyframes, progress);
-   
-   // Convert to BoneMap
-   const bones: BoneMap = {};
-   Object.entries(boneRotations).forEach(([name, rotation]) => {
-     bones[name] = { rotation };
-   });
-   
-   return { bones, weight, state: newState };
- };
+export const updateGesture = (
+  state: GestureState,
+  currentTime: number,
+  onComplete?: () => void
+): { bones: BoneMap | null; weight: number; state: GestureState; isComplete: boolean } => {
+  if (!state.isPlaying || !state.currentGesture) {
+    return { bones: null, weight: 0, state, isComplete: false };
+  }
+  
+  const definition = GESTURE_LIBRARY[state.currentGesture];
+  if (!definition) {
+    return { bones: null, weight: 0, state: createGestureState(), isComplete: true };
+  }
+  
+  let newState = { ...state };
+  let weight = 1;
+  
+  // Calculate elapsed time
+  const elapsed = currentTime - state.startTime;
+  
+  // Handle blend out (takes priority)
+  if (state.blendingOut) {
+    const blendOutProgress = (currentTime - state.blendOutStartTime) / definition.blendOutDuration;
+    
+    if (blendOutProgress >= 1) {
+      // Gesture fully complete - call onComplete here after blend-out finishes
+      onComplete?.();
+      return { bones: null, weight: 0, state: createGestureState(), isComplete: true };
+    }
+    
+    weight = 1 - easeInOutQuad(blendOutProgress);
+  } else {
+    // Handle blend in (smooth start)
+    if (elapsed < definition.blendInDuration) {
+      const blendInProgress = elapsed / definition.blendInDuration;
+      weight = easeInOutQuad(blendInProgress);
+    }
+  }
+  
+  // Calculate gesture progress
+  const progress = Math.min(elapsed / definition.duration, 1);
+  
+  // Check if gesture complete (start blend out)
+  if (progress >= 1 && !state.blendingOut) {
+    newState.blendingOut = true;
+    newState.blendOutStartTime = currentTime;
+  }
+  
+  // Interpolate keyframes
+  const boneRotations = interpolateKeyframes(definition.keyframes, progress);
+  
+  // Convert to BoneMap
+  const bones: BoneMap = {};
+  Object.entries(boneRotations).forEach(([name, rotation]) => {
+    bones[name] = { rotation };
+  });
+  
+  return { bones, weight, state: newState, isComplete: false };
+};

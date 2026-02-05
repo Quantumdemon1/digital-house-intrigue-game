@@ -41,9 +41,7 @@ interface RPMAvatarProps {
   worldRotationY?: number;
   /** Whether this is the player's avatar */
   isPlayer?: boolean;
-  /** Enable gesture animations (Phase 6 - not yet implemented) */
-  enableGestures?: boolean;
-  /** Gesture to play (Phase 6 - not yet implemented) */
+  /** Gesture to play */
   gestureToPlay?: GestureType | null;
   /** Callback when gesture completes */
   onGestureComplete?: () => void;

@@ -526,7 +526,6 @@ const CharacterSpot: React.FC<{
                 worldPosition={effectivePosition}
                 worldRotationY={effectiveRotationY}
                 isPlayer={isPlayer}
-                enableGestures={true}
                 gestureToPlay={activeGesture}
                 onGestureComplete={isPlayer ? onGestureComplete : onIdleGestureComplete}
                 relationshipToSelected={relationshipToSelected ?? 0}
@@ -970,6 +969,7 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    
    // Player emote state (for player-triggered gestures)
    const [playerEmoteGesture, setPlayerEmoteGesture] = useState<GestureType | null>(null);
+   const [isGesturePlaying, setIsGesturePlaying] = useState(false);
    
    // Player movement animation state
    const [playerMovementState, setPlayerMovementState] = useState<{
@@ -1054,11 +1054,13 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    // Handle player emote selection
    const handlePlayerEmote = useCallback((gesture: GestureType) => {
      setPlayerEmoteGesture(gesture);
+     setIsGesturePlaying(true);
    }, []);
    
    // Handle player emote completion
    const handlePlayerEmoteComplete = useCallback(() => {
      setPlayerEmoteGesture(null);
+     setIsGesturePlaying(false);
      onGestureComplete?.();
    }, [onGestureComplete]);
    
@@ -1181,8 +1183,11 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
       {/* Player Emote Menu - shown when player selects their own avatar */}
       <PlayerEmoteMenu
         isVisible={isPlayerSelected && !moveMode}
+        isPlaying={isGesturePlaying}
+        currentGesture={playerEmoteGesture}
         onEmote={handlePlayerEmote}
         onMove={handleMoveButtonClick}
+        onClose={() => onSelect('')}
       />
       
       {/* Hint overlay - hidden when emote menu is shown */}
