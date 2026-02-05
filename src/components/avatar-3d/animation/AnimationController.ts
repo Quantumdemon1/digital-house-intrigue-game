@@ -159,6 +159,9 @@ const isMobileDevice = (): boolean => {
    // Track last gesture to detect changes
    const lastGestureRef = useRef<GestureType | null>(null);
     
+   // Track which scene this controller is bound to (for isolation)
+   const sceneIdRef = useRef<string | null>(null);
+   
     // Track retry attempts for bone discovery
     const retryCountRef = useRef(0);
     const MAX_BONE_RETRIES = 10;
@@ -169,6 +172,26 @@ const isMobileDevice = (): boolean => {
        stateRef.current.initialized = false;
         retryCountRef.current = 0;
        return;
+     }
+     
+     // Get scene identity (from userData or generate one)
+     const sceneId = (scene.userData?.instanceId as string) || scene.uuid;
+     
+     // If scene identity changed, reset ALL state to prevent bone cache contamination
+     if (sceneIdRef.current !== sceneId) {
+       stateRef.current = {
+         poseTransition: createPoseTransition(basePose),
+         lookAt: createLookAtState(),
+         gesture: createGestureState(),
+         reactive: createReactiveState(),
+         blink: createBlinkState(0),
+         secondaryMotion: createSecondaryMotionState(),
+         lastTime: 0,
+         boneCache: new Map(),
+         initialized: false,
+       };
+       sceneIdRef.current = sceneId;
+       retryCountRef.current = 0;
      }
      
       // Bone discovery with retry mechanism
@@ -195,7 +218,7 @@ const isMobileDevice = (): boolean => {
       };
       
       attemptBoneDiscovery();
-   }, [scene, enabled, basePose]);
+   }, [scene, enabled, basePose]); // Note: sceneId check handles identity changes
    
    // Handle gesture trigger
    useEffect(() => {
