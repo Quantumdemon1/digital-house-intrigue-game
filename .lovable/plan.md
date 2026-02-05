@@ -1,91 +1,98 @@
 
-# Plan: Fix Avatar Thumbnail Camera to Look at Face
+# Plan: Fix Avatar Thumbnail Camera Framing in Grid Selection
 
-## Problem
+## Problem Analysis
 
-The camera in the character selection grid is positioned at Y=1.1, but it's still pointing at the avatars' feet/knees because Three.js cameras look at the origin (0, 0, 0) by default. The camera position was raised, but without explicitly telling it where to look, it still aims down at the ground level.
+The avatar thumbnails in the character selection grid are still showing knees instead of faces. Looking at the screenshot, the detail panel on the right (circled in red) shows the correct framing, while the grid shows the wrong framing.
 
-## Root Cause
+After investigating the code:
 
-In `src/components/avatar-3d/AvatarLoader.tsx`, the `CameraController` component sets the camera position but never calls `camera.lookAt()` to direct it at the avatar's face:
+1. **Camera settings in `AvatarLoader.tsx`**:
+   - Camera positioned at `y: 1.1`
+   - Looking at `y: 1.5`
 
-```typescript
-// Current code - only sets position, camera looks at origin (0,0,0)
-camera.position.set(0, zoomedY, zoomedZ);
-camera.updateProjectionMatrix();
-```
+2. **Avatar model position in `RPMAvatar.tsx`**:
+   - For `profile` context: avatar is at `[0, -0.55, 0]`
+   - For `thumbnail` context: avatar is at `[0, -0.5, 0]`
+
+3. **The math problem**:
+   - Ready Player Me models have their feet at Y=0, face at Y~1.6
+   - When we position the model at Y=-0.55, the face is now at Y=1.6-0.55 = **~1.05**
+   - But the camera is looking at Y=1.5 - **above the face!**
+   - This causes the camera to aim higher than the face, showing the lower body/knees
+
+4. **Why the detail panel works differently**:
+   - Detail panel uses `size="full"` which maps to `customizer` context
+   - `customizer` positions avatar at `[0, -1.5, 0]` (pushed way down)
+   - Camera settings are `y: 0, lookAtY: 0.8` (looking at body center, not above)
 
 ## Solution
 
-Update the `CameraController` to also call `camera.lookAt()` pointing at the face height (Y ~1.5-1.6 for Ready Player Me avatars).
+Adjust the `lookAtY` values in `SIZE_CONFIG` to match where the face actually is when the model is positioned:
 
-## File Change
+| Size | Model Y Position | Face Y (model ~1.6 - position) | Current lookAtY | Fixed lookAtY |
+|------|------------------|-------------------------------|-----------------|---------------|
+| sm | -0.5 (thumbnail) | ~1.1 | 1.5 | 1.05 |
+| md | -0.55 (profile) | ~1.05 | 1.5 | 1.0 |
+| lg | -0.55 (profile) | ~1.05 | 1.5 | 1.0 |
+| xl | -0.55 (profile) | ~1.05 | 1.5 | 1.0 |
+| full | -1.5 (customizer) | ~0.1 | 0.8 | 0.8 (unchanged) |
+
+Also adjust camera Y to be at face level, not above it:
+
+| Size | Current Camera Y | Fixed Camera Y |
+|------|------------------|----------------|
+| sm | 1.1 | 1.05 |
+| md | 1.1 | 1.0 |
+| lg | 1.1 | 1.0 |
+| xl | 1.1 | 1.0 |
+| full | 0 | 0 (unchanged) |
+
+## File to Modify
 
 ### `src/components/avatar-3d/AvatarLoader.tsx`
 
-**Update the `CameraController` component** to add a lookAt call:
+Update the `SIZE_CONFIG` to correct the camera and lookAt Y values:
 
 ```typescript
-const CameraController: React.FC<{ 
-  baseY: number; 
-  baseZ: number; 
-  zoom: number;
-  lookAtY?: number;  // NEW: Target Y position to look at
-}> = ({ baseY, baseZ, zoom, lookAtY = 1.5 }) => {
-  const { camera } = useThree();
-  
-  useEffect(() => {
-    const zoomedZ = baseZ / zoom;
-    const zoomedY = baseY * (zoom > 1 ? 1 + (zoom - 1) * 0.3 : 1);
-    
-    camera.position.set(0, zoomedY, zoomedZ);
-    camera.lookAt(0, lookAtY, 0);  // NEW: Look at face height
-    camera.updateProjectionMatrix();
-  }, [camera, baseY, baseZ, zoom, lookAtY]);
-  
-  return null;
+const SIZE_CONFIG: Record<AvatarSize, { 
+  width: string; 
+  height: string; 
+  scale: number; 
+  context: AvatarContext;
+  camera: { y: number; z: number; fov: number; lookAtY: number }
+}> = {
+  sm: { 
+    width: 'w-12', height: 'h-12', scale: 0.8, 
+    context: 'thumbnail',
+    camera: { y: 1.05, z: 1.2, fov: 25, lookAtY: 1.05 }  // Face level
+  },
+  md: { 
+    width: 'w-20', height: 'h-20', scale: 1, 
+    context: 'profile',
+    camera: { y: 1.0, z: 1.4, fov: 28, lookAtY: 1.0 }  // Face level
+  },
+  lg: { 
+    width: 'w-32', height: 'h-32', scale: 1.2, 
+    context: 'profile',
+    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
+  },
+  xl: { 
+    width: 'w-48', height: 'h-48', scale: 1.5, 
+    context: 'profile',
+    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
+  },
+  full: { 
+    width: 'w-full', height: 'h-full', scale: 1, 
+    context: 'customizer',
+    camera: { y: 0, z: 2.5, fov: 35, lookAtY: 0.8 }   // Body center (unchanged)
+  },
 };
 ```
 
-**Update the `SIZE_CONFIG`** to include a `lookAtY` value for each context:
-
-| Size | Camera Y | Look At Y | Purpose |
-|------|----------|-----------|---------|
-| sm | 1.1 | 1.5 | Face center |
-| md | 1.1 | 1.5 | Face center |
-| lg | 1.1 | 1.5 | Face center |
-| xl | 1.1 | 1.5 | Face center |
-| full | 0 | 0.8 | Body center (customizer) |
-
-**Update `RPMAvatarCanvas`** to pass the lookAtY to CameraController:
-
-```typescript
-<CameraController 
-  baseY={sizeConfig.camera.y} 
-  baseZ={sizeConfig.camera.z} 
-  zoom={zoom}
-  lookAtY={sizeConfig.camera.lookAtY}  // NEW
-/>
-```
-
-## Technical Details
-
-### Avatar Model Proportions (RPM Half-Body)
-
-Ready Player Me half-body avatars have approximate heights:
-- Feet: Y = 0
-- Waist: Y = 1.0
-- Chest: Y = 1.3
-- Neck: Y = 1.5
-- Face center: Y = 1.6
-- Top of head: Y = 1.8
-
-### Camera Geometry
-
-For a camera at position (0, 1.1, 1.4) looking at (0, 1.5, 0):
-- The camera looks slightly upward at the face
-- This frames the head/shoulders nicely in the circular thumbnail
-
 ## Expected Result
 
-After this fix, all avatar thumbnails in the character selection grid will properly frame the houseguests' faces instead of showing their knees/lower body.
+After this fix:
+- The camera will be at the same height as where it's looking (face level ~1.0)
+- The grid selection thumbnails will properly show the houseguests' faces
+- The detail panel (`size="full"`) will continue to show the upper body as designed
