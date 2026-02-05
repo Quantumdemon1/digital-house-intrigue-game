@@ -1,103 +1,155 @@
 
-# Add Basic Arm Movements for Avatars
+# Player Avatar Movement and Actions Analysis
 
-## Overview
+## Current Capabilities
 
-Add simple, random arm gestures that NPCs perform autonomously during idle time in the House View. This creates more visual interest and makes characters feel alive without requiring complex AI behavior.
+### What the Player Avatar CAN Do (Technically)
 
-## Current State
+| Feature | Implementation Status | Works? |
+|---------|----------------------|--------|
+| **Walking to spots** | `useAvatarMovement` hook + `PlayerMovementController` | ✅ Yes - but requires "move mode" |
+| **Gestures** | `GestureLayer.ts` with 16+ gestures | ❌ Not exposed to player |
+| **Idle animations** | Breathing, weight shift, blinking via `AvatarAnimator` | ✅ Yes |
+| **Static poses** | 5 pose types (relaxed, confident, defensive, etc.) | ✅ Yes |
 
-- Avatars have static poses with subtle breathing/idle micro-movements
-- Gestures (wave, thumbs up, shrug, etc.) exist but only trigger on player action
-- No autonomous NPC movement or gestures
+### Available Gestures in the System (Not Accessible to Player)
 
-## Solution: Autonomous Idle Gestures
-
-Add a lightweight system that randomly triggers small arm gestures on NPCs during idle time.
+The `GestureLayer.ts` has these defined gestures:
+- `wave` - Wave hand greeting
+- `nod` - Head nod agreement
+- `shrug` - Shoulder shrug
+- `clap` - Applause
+- `point` - Point forward
+- `thumbsUp` - Thumbs up
+- `headShake` - Disagree head shake
+- `celebrate` - Victory celebration
+- `thinkingPose` - Hand on chin thinking
+- `welcome` - Open arms welcome
+- `dismiss` - Dismissive wave
+- `listenNod` - Attentive listening nods
+- `walk` - Walking animation (used for movement)
+- `armFold`, `shoulderRoll`, `armStretch`, `handCheck` - Idle NPC gestures
 
 ---
 
-## Implementation Plan
+## Problems Identified
 
-### 1. Create Idle Gesture Trigger Hook
+### 1. Player Arm Gestures Don't Work
+**Root Cause**: The `RPMAvatar` component receives `gestureToPlay` prop but **does not pass it to the AnimationController**.
 
-**New file**: `src/components/avatar-3d/hooks/useIdleGestures.ts`
+Looking at `RPMAvatar.tsx` (lines 116-143), the `RPMAvatarInner` component:
+- Uses `useAvatarAnimator` which only handles micro-animations (breathing, blinking, weight shift)
+- Does NOT use `useAnimationController` which handles gestures
+- The `gestureToPlay` prop is accepted but never consumed
 
-A hook that:
-- Takes character ID and whether they're the player
-- Randomly selects from a subset of subtle gestures
-- Triggers gestures at random intervals (every 5-15 seconds)
-- Returns the current gesture to play
+The NPC idle gestures work because they use `useIdleGestures` in `HouseScene.tsx`, but this hook was only added for NPCs, not for player gesture input.
 
-```typescript
-const IDLE_GESTURES: GestureType[] = ['nod', 'shrug', 'thinkingPose', 'listenNod'];
-const MIN_INTERVAL = 8000; // 8 seconds
-const MAX_INTERVAL = 20000; // 20 seconds
+### 2. No Action/Emote Menu for Player
+There's a `CharacterQuickActions.tsx` but it's for clicking on OTHER characters (Chat, Ally, Info buttons). There's no equivalent for the PLAYER'S OWN avatar to trigger emotes.
 
-export function useIdleGestures(characterId: string, isPlayer: boolean): GestureType | null
+### 3. Movement Requires Hidden Activation
+- Long-press activates "move mode" 
+- Floor spots only appear when move mode is active
+- Not intuitive - users don't know they can move
+
+---
+
+## Solution: Player Action Menu + Fix Gesture System
+
+### Phase 1: Fix Player Gesture Execution
+
+**Problem**: `RPMAvatarInner` doesn't use the `AnimationController` that handles gestures.
+
+**Fix**: In `HouseScene.tsx`, the `gestureToPlay` is passed to `RPMAvatar`, but `RPMAvatar` doesn't use the `AnimationController`. We need to either:
+
+1. Add `useAnimationController` to `RPMAvatar` when `enableGestures=true`
+2. OR extend `useAvatarAnimator` to support gestures
+
+The second option is cleaner since `useAvatarAnimator` is already the unified hook.
+
+### Phase 2: Create Player Emote Menu
+
+Create a new `PlayerEmoteMenu.tsx` component that appears when the player selects their own avatar:
+
+```text
+┌─────────────────────────────────────┐
+│     [Wave] [Clap] [ThumbsUp]        │
+│     [Shrug] [Point] [Celebrate]     │
+│                                     │
+│     [Move] ← activates move mode    │
+└─────────────────────────────────────┘
 ```
 
-### 2. Add New Subtle Arm Gestures
+### Phase 3: Improve Movement UX
 
-**Modify**: `src/components/avatar-3d/animation/layers/GestureLayer.ts`
-
-Add new subtle gestures designed for idle animation:
-- `armFold`: Briefly crosses arms then returns
-- `handCheck`: Looks at hand/nails briefly
-- `shoulderRoll`: Subtle shoulder adjustment
-- `armStretch`: Light arm stretch
-
-These will be shorter (0.8-1.2s) and blend naturally with the idle pose.
-
-### 3. Integrate into HouseCharacter
-
-**Modify**: `src/components/avatar-3d/HouseCharacter.tsx`
-
-- Import and use the `useIdleGestures` hook for non-player characters
-- Pass the idle gesture to the animation controller alongside any player gesture
+- Show a "Move" button in the player emote menu
+- OR allow clicking floor directly when player is selected
+- Add visible floor indicators for walkable areas
 
 ---
 
-## Technical Details
-
-### Gesture Selection Logic
-
-```typescript
-// Personality influences gesture frequency
-const getGestureInterval = (traits: string[]) => {
-  const isExtrovert = traits.includes('Social') || traits.includes('Charismatic');
-  const baseMin = isExtrovert ? 6000 : 10000;
-  const baseMax = isExtrovert ? 15000 : 25000;
-  return baseMin + Math.random() * (baseMax - baseMin);
-};
-```
-
-### Gesture Conflict Prevention
-
-- If player triggers a gesture while NPC idle gesture is playing, player gesture takes priority
-- NPCs don't start new gestures if they're in conversation (selected by player)
-
----
-
-## New Files
-
-| File | Purpose |
-|------|---------|
-| `src/components/avatar-3d/hooks/useIdleGestures.ts` | Hook for autonomous gesture triggering |
-
-## Modified Files
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `GestureLayer.ts` | Add 3-4 new subtle arm gestures |
-| `HouseCharacter.tsx` | Integrate idle gestures for NPCs |
-| `types.ts` | Add new gesture types |
+| `src/components/avatar-3d/animation/AvatarAnimator.ts` | Add gesture support to unified hook |
+| `src/components/avatar-3d/RPMAvatar.tsx` | Pass gesture props to animator |
+| `src/components/avatar-3d/PlayerEmoteMenu.tsx` | **NEW** - Emote selection UI |
+| `src/components/avatar-3d/HouseScene.tsx` | Show PlayerEmoteMenu when player selected |
+
+---
+
+## Implementation Details
+
+### 1. Add Gesture Support to AvatarAnimator
+
+```typescript
+// In AvatarAnimator.ts
+export interface AvatarAnimatorConfig {
+  // ...existing config
+  gestureToPlay?: GestureType | null;
+  onGestureComplete?: () => void;
+}
+
+// In useAvatarAnimator hook:
+// - Import gesture layer functions
+// - Track gesture state in stateRef
+// - Update gesture in useFrame
+// - Apply gesture bones with blending
+```
+
+### 2. Create PlayerEmoteMenu Component
+
+```typescript
+interface PlayerEmoteMenuProps {
+  isVisible: boolean;
+  onEmote: (gesture: GestureType) => void;
+  onMove: () => void;
+  className?: string;
+}
+
+const PLAYER_EMOTES = [
+  { id: 'wave', icon: Hand, label: 'Wave' },
+  { id: 'clap', icon: Sparkles, label: 'Clap' },
+  { id: 'thumbsUp', icon: ThumbsUp, label: 'Like' },
+  { id: 'shrug', icon: HelpCircle, label: 'Shrug' },
+  { id: 'celebrate', icon: PartyPopper, label: 'Celebrate' },
+  { id: 'point', icon: ArrowRight, label: 'Point' },
+];
+```
+
+### 3. Integrate in HouseScene
+
+When `selectedId === playerId`:
+- Show `PlayerEmoteMenu` instead of `CharacterQuickActions`
+- Handle emote selection by setting `playerGesture` state
+- Show move button that activates `moveMode`
 
 ---
 
 ## Expected Result
 
-- NPCs will occasionally perform subtle gestures while standing idle
-- Creates more lively, dynamic feel in the House View
-- Player gestures still work and take priority
-- Performance impact minimal (one timer per character)
+1. **Player selects their avatar** → Emote menu appears with gesture buttons
+2. **Player clicks emote** → Avatar performs the gesture with arm/body movement
+3. **Player clicks Move** → Floor spots appear, player can tap to relocate
+4. **Gestures complete** → Avatar returns to relaxed idle pose
