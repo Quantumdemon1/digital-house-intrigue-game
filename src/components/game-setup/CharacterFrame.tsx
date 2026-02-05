@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { CharacterTemplate, archetypeInfo } from '@/data/character-templates';
-import { AvatarLoader, AvatarSize } from '@/components/avatar-3d';
 
 interface CharacterFrameProps {
   template: CharacterTemplate;
@@ -14,9 +13,9 @@ interface CharacterFrameProps {
 }
 
 const sizeConfig = {
-  sm: { frame: 'w-20 h-20', image: 'w-16 h-16', text: 'text-xs', ring: 'ring-2', avatarSize: 'md' as const },
-  md: { frame: 'w-28 h-28', image: 'w-24 h-24', text: 'text-sm', ring: 'ring-3', avatarSize: 'lg' as const },
-  lg: { frame: 'w-36 h-36', image: 'w-32 h-32', text: 'text-base', ring: 'ring-4', avatarSize: 'xl' as const }
+  sm: { frame: 'w-20 h-20', image: 'w-16 h-16', text: 'text-xs', ring: 'ring-2' },
+  md: { frame: 'w-28 h-28', image: 'w-24 h-24', text: 'text-sm', ring: 'ring-3' },
+  lg: { frame: 'w-36 h-36', image: 'w-32 h-32', text: 'text-base', ring: 'ring-4' }
 };
 
 export const CharacterFrame: React.FC<CharacterFrameProps> = ({
@@ -29,7 +28,9 @@ export const CharacterFrame: React.FC<CharacterFrameProps> = ({
 }) => {
   const config = sizeConfig[size];
   const archetype = archetypeInfo[template.archetype];
-  const has3DConfig = !!template.avatar3DConfig;
+  
+  // Use the profile photo URL or fall back to imageUrl for grid thumbnails
+  const profileImage = template.avatar3DConfig?.profilePhotoUrl || template.imageUrl;
 
   return (
     <motion.div
@@ -73,25 +74,17 @@ export const CharacterFrame: React.FC<CharacterFrameProps> = ({
             'w-full h-full rounded-full overflow-hidden',
             'ring-2 ring-amber-200/50 ring-offset-1 ring-offset-amber-600/20'
           )}>
-            {/* Character image or 3D avatar */}
-            {has3DConfig ? (
-              <AvatarLoader
-                avatarConfig={template.avatar3DConfig}
-                size={config.avatarSize as AvatarSize}
-                animated={false}
-              />
-            ) : (
-              <img
-                src={template.imageUrl}
-                alt={template.name}
-                className={cn(
-                  'w-full h-full object-cover',
-                  'transition-all duration-300',
-                  'group-hover:scale-110',
-                  isSelected && 'ring-2 ring-bb-green'
-                )}
-              />
-            )}
+            {/* Character headshot image */}
+            <img
+              src={profileImage}
+              alt={template.name}
+              className={cn(
+                'w-full h-full object-cover',
+                'transition-all duration-300',
+                'group-hover:scale-110',
+                isSelected && 'ring-2 ring-bb-green'
+              )}
+            />
 
             {/* Hover overlay */}
             <div className={cn(
