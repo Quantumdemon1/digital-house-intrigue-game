@@ -1,49 +1,21 @@
 /**
  * @file avatar-3d/RPMAvatar.tsx
- * @description Ready Player Me avatar component using unified animation system
+ * @description Ready Player Me avatar component - STRIPPED FOR TROUBLESHOOTING
  */
 
-import React, { Suspense, useRef, useEffect, useMemo, useLayoutEffect, Component, ReactNode, forwardRef, useImperativeHandle } from 'react';
- import { useFrame, useThree } from '@react-three/fiber';
+import React, { Suspense, useRef, useMemo, useEffect, Component, ReactNode } from 'react';
 import { useGLTF, useProgress } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import { MoodType } from '@/models/houseguest';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
-import {
-  useAnimationController,
-  PoseType,
-  GestureType,
-  QualityLevel,
-  RelationshipContext,
-} from './animation';
-import { POSE_CONFIGS } from './animation/layers/BasePoseLayer';
+import { PoseType, GestureType } from './animation';
 
 export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
 
 // Re-export types for backwards compatibility
 export type { PoseType, GestureType };
-
-/** Helper function to apply pose to cloned avatar bones */
-const applyPoseToBones = (object: THREE.Object3D, poseType: PoseType) => {
-  const poseConfig = POSE_CONFIGS[poseType];
-  if (!poseConfig) return;
-  
-  object.traverse((child) => {
-    if (child instanceof THREE.Bone) {
-      // Handle both standard and mixamo bone naming
-      const boneName = child.name.replace('mixamorig', '');
-      const boneState = poseConfig[boneName] || poseConfig[child.name];
-      if (boneState) {
-        child.rotation.set(
-          boneState.rotation.x,
-          boneState.rotation.y,
-          boneState.rotation.z
-        );
-      }
-    }
-  });
-};
 
 interface RPMAvatarProps {
   modelSrc: string;
@@ -53,69 +25,56 @@ interface RPMAvatarProps {
   position?: [number, number, number];
   /** UI context for quality optimization */
   context?: AvatarContext;
-  /** Apply natural idle standing pose (arms down, subtle sway) */
+  /** Apply natural idle standing pose - DISABLED FOR TROUBLESHOOTING */
   applyIdlePose?: boolean;
-  /** Phase offset for staggered idle animations */
+  /** Phase offset - DISABLED FOR TROUBLESHOOTING */
   phaseOffset?: number;
-   /** Pose type for varied character stances */
-   poseType?: PoseType;
-   /** Target position for head look-at (world space) */
-   lookAtTarget?: THREE.Vector3 | null;
-   /** Character's world position for look-at calculations */
-   worldPosition?: [number, number, number];
-   /** Character's Y rotation for look-at calculations */
-   worldRotationY?: number;
-   /** Whether this is the player's avatar */
-   isPlayer?: boolean;
-   /** Enable gesture animations (player only) */
-   enableGestures?: boolean;
-   /** Gesture to play */
-   gestureToPlay?: GestureType | null;
-   /** Callback when gesture completes */
-   onGestureComplete?: () => void;
-   /** Relationship score with selected character (-100 to 100) */
-   relationshipToSelected?: number;
-   /** Whether the selected character is a nominee */
-   selectedIsNominee?: boolean;
-   /** Whether the selected character is HoH */
-   selectedIsHoH?: boolean;
-   /** Whether someone is currently selected */
-   hasSelection?: boolean;
+  /** Pose type - DISABLED FOR TROUBLESHOOTING */
+  poseType?: PoseType;
+  /** Target position for head look-at - DISABLED FOR TROUBLESHOOTING */
+  lookAtTarget?: THREE.Vector3 | null;
+  /** Character's world position - DISABLED FOR TROUBLESHOOTING */
+  worldPosition?: [number, number, number];
+  /** Character's Y rotation - DISABLED FOR TROUBLESHOOTING */
+  worldRotationY?: number;
+  /** Whether this is the player's avatar - DISABLED FOR TROUBLESHOOTING */
+  isPlayer?: boolean;
+  /** Enable gesture animations - DISABLED FOR TROUBLESHOOTING */
+  enableGestures?: boolean;
+  /** Gesture to play - DISABLED FOR TROUBLESHOOTING */
+  gestureToPlay?: GestureType | null;
+  /** Callback when gesture completes - DISABLED FOR TROUBLESHOOTING */
+  onGestureComplete?: () => void;
+  /** Relationship score - DISABLED FOR TROUBLESHOOTING */
+  relationshipToSelected?: number;
+  /** Whether the selected character is a nominee - DISABLED FOR TROUBLESHOOTING */
+  selectedIsNominee?: boolean;
+  /** Whether the selected character is HoH - DISABLED FOR TROUBLESHOOTING */
+  selectedIsHoH?: boolean;
+  /** Whether someone is currently selected - DISABLED FOR TROUBLESHOOTING */
+  hasSelection?: boolean;
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
 
 /**
- * RPMAvatar - Renders a Ready Player Me GLB avatar with expressions
+ * RPMAvatar - STRIPPED FOR TROUBLESHOOTING
+ * Renders avatar in T-pose with NO animations, NO bone manipulation
  */
 export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   modelSrc,
-  animationSrc,
+  // All animation-related props are ignored for troubleshooting
   mood = 'Neutral',
   scale = 1,
   position,
   context = 'game',
-  applyIdlePose = false,
-  phaseOffset = 0,
-   poseType = 'relaxed',
-   lookAtTarget = null,
-   worldPosition = [0, 0, 0],
-   worldRotationY = 0,
-   isPlayer = false,
-   enableGestures = false,
-   gestureToPlay = null,
-   onGestureComplete,
-   relationshipToSelected = 0,
-   selectedIsNominee = false,
-   selectedIsHoH = false,
-   hasSelection = false,
   onLoaded,
-  onError
+  onError,
 }) => {
   const group = useRef<THREE.Group>(null);
-   
-   // Generate a unique instance ID for this component to ensure skeleton isolation
-   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
+  
+  // Generate a unique instance ID for this component
+  const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
   // Context-aware default positions (head-centered for portraits, full-body for customizer)
   const getDefaultPosition = (ctx: AvatarContext): [number, number, number] => {
@@ -137,19 +96,6 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   };
   
   const qualityContext = getQualityContext(context);
-   
-   // Map context to animation quality level
-   const getAnimationQuality = (ctx: 'thumbnail' | 'game' | 'profile'): QualityLevel => {
-     switch (ctx) {
-       case 'thumbnail': return 'low';
-       case 'profile': return 'medium';
-       case 'game': 
-       default: return 'high';
-     }
-   };
-   
-   const animationQuality = getAnimationQuality(qualityContext);
-   const isAnimated = qualityContext !== 'thumbnail';
   
   const optimizedUrl = useMemo(() => 
     getOptimizedUrl(modelSrc, qualityContext),
@@ -158,63 +104,27 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   
   const { scene } = useGLTF(optimizedUrl);
   
-   // Clone the scene with pose applied and unique instance ID
+  // SIMPLIFIED: Clone scene with NO pose application - T-pose only
   const clone = useMemo(() => {
     const cloned = SkeletonUtils.clone(scene) as THREE.Group;
-     
-     // Mark this clone with a unique instance ID for bone cache isolation
-     cloned.userData.instanceId = instanceId.current;
-     
-    if (applyIdlePose) {
-      applyPoseToBones(cloned, poseType);
-    }
+    
+    // Mark with unique instance ID
+    cloned.userData.instanceId = instanceId.current;
+    
+    // NO pose application - render in default T-pose for troubleshooting
     return cloned;
-  }, [scene, applyIdlePose, poseType]);
+  }, [scene]);
   
-   // Notify when clone is ready
-   useEffect(() => {
-     if (clone && onLoaded) onLoaded();
-   }, [clone, onLoaded]);
+  // Notify when clone is ready
+  useEffect(() => {
+    if (clone && onLoaded) onLoaded();
+  }, [clone, onLoaded]);
   
-  // Get all skinned meshes for morph target manipulation (after clone is ready)
-  const skinnedMeshes = useMemo(() => {
-    const meshes: THREE.SkinnedMesh[] = [];
-    clone.traverse((child) => {
-      if (child instanceof THREE.SkinnedMesh && child.morphTargetInfluences) {
-        meshes.push(child);
-      }
-    });
-    return meshes;
-  }, [clone]);
-   
-   // Build relationship context for animation controller
-   const relationshipContext: RelationshipContext = useMemo(() => ({
-     score: relationshipToSelected,
-     isNominee: selectedIsNominee,
-     isHoH: selectedIsHoH,
-     isSelf: false, // Set by parent based on selection
-     hasSelection,
-   }), [relationshipToSelected, selectedIsNominee, selectedIsHoH, hasSelection]);
-   
-   // Unified animation controller - replaces all individual hooks
-   useAnimationController({
-     scene: applyIdlePose ? clone : null,  // Pass clone directly, not ref
-     skinnedMeshes,
-     basePose: poseType,
-     phaseOffset,
-     lookAtTarget: applyIdlePose ? lookAtTarget : null,
-     characterPosition: worldPosition,
-     characterRotationY: worldRotationY,
-     relationshipContext,
-     gestureToPlay: enableGestures && isPlayer ? gestureToPlay : null,
-     onGestureComplete,
-     quality: animationQuality,
-     enabled: isAnimated && applyIdlePose,
-   });
-
-   // Note: Mood-based expressions are now handled by the ReactiveLayer
-   // based on relationship context. The mood prop is preserved for 
-   // backwards compatibility but integrated into the unified system.
+  // ALL ANIMATION LOGIC REMOVED FOR TROUBLESHOOTING
+  // - No useAnimationController
+  // - No bone manipulation
+  // - No morph targets
+  // - No skinned mesh traversal
 
   return (
     <group ref={group} position={effectivePosition} scale={scale}>
