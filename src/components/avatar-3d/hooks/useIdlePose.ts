@@ -14,8 +14,8 @@
    RightArm: { x: 0.05, y: -0.1, z: -1.45 }, // Arm hanging relaxed at side
    LeftForeArm: { x: 0, y: 0, z: 0.08 },    // Very slight natural elbow bend
    RightForeArm: { x: 0, y: 0, z: -0.08 },  // Very slight natural elbow bend
-   LeftHand: { x: 0, y: 0, z: 0.05 },       // Relaxed wrist
-   RightHand: { x: 0, y: 0, z: -0.05 },     // Relaxed wrist
+  LeftHand: { x: -0.3, y: 0, z: 0.05 },    // Hands pointing down
+  RightHand: { x: -0.3, y: 0, z: -0.05 },  // Hands pointing down
    Spine: { x: -0.02, y: 0, z: 0 },         // Very slight chest-out posture
    Spine1: { x: -0.01, y: 0, z: 0 },        // Continue slight posture
  };
