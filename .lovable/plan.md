@@ -1,387 +1,213 @@
 
-# Walking Animation for Avatar Movement Between Floor Spots
+# Fix Social Network Graph Mobile Layout
 
-## Overview
+## Problem Summary
 
-This plan adds a walking animation system that plays when the player avatar moves between floor spots in the 3D house view. Currently, when a player taps a floor spot, the avatar position changes instantly. This plan adds:
+Looking at your screenshot, the social network graph has these issues on mobile:
 
-1. A new "walk" gesture animation with natural stepping motion
-2. Smooth position interpolation from start to destination
-3. Automatic rotation to face walking direction
-4. Integration with the existing movement system in HouseScene
-
----
-
-## Current Architecture
-
-### How Movement Works Now
-
-1. Player enters "move mode" via long-press
-2. Floor spot markers appear (`FloorSpotMarker.tsx`)
-3. Player taps a spot → `handleSpotSelect` is called
-4. `playerSpotId` state updates immediately
-5. A ripple effect appears at the destination
-6. **Missing**: No position animation or walking gesture
-
-### Animation System
-
-The existing animation system uses a 5-layer priority architecture:
-- **Layer 1**: Base Pose (relaxed, crossed-arms, etc.)
-- **Layer 2**: Idle Procedural (breathing, weight shift)
-- **Layer 3**: Look-At (head tracking)
-- **Layer 4**: Reactive Expressions
-- **Layer 5**: Gestures (wave, nod, clap, etc.)
-
-The gesture system (`GestureLayer.ts`) already supports keyframe-based animations that play once and blend back to base pose.
+1. **Avatar nodes are overlapping** - Morgan, Blake, RI, Sam, Quinn, and Juan are all clustered in the center
+2. **Names are overlapping** - Text labels are colliding with each other  
+3. **The circular layout doesn't spread properly** - Not enough space between houseguests
 
 ---
 
-## Implementation Approach
+## Root Causes
 
-### Part 1: Create Walk Cycle Gesture
-
-Add a new "walk" gesture to the gesture library with a basic walk cycle animation:
-
-**File**: `src/components/avatar-3d/animation/layers/GestureLayer.ts`
-
+### 1. Layout Radius Too Small for Mobile
+The current calculation creates a radius that's too tight for mobile screens:
 ```typescript
-walk: {
-  duration: 1.2,  // One full step cycle
-  interruptible: false,
-  blendOutDuration: 0.3,
-  loop: true,  // NEW: Allow looping for continuous walking
-  keyframes: [
-    // Start pose (neutral stance)
-    { time: 0, bones: { 
-      LeftArm: { x: 0.1, y: -0.2, z: 1.3 },   // Arm back
-      RightArm: { x: 0.1, y: 0.2, z: -1.3 },  // Arm forward
-      Spine: { x: -0.05, y: 0, z: 0 },
-      Head: { x: 0, y: 0, z: 0 },
-    }},
-    // Mid-stride
-    { time: 0.5, bones: { 
-      LeftArm: { x: 0.1, y: 0.2, z: 1.1 },    // Arm forward
-      RightArm: { x: 0.1, y: -0.2, z: -1.1 }, // Arm back
-      Spine: { x: -0.05, y: 0.02, z: 0 },
-    }},
-    // Back to start (for seamless loop)
-    { time: 1.0, bones: { 
-      LeftArm: { x: 0.1, y: -0.2, z: 1.3 },
-      RightArm: { x: 0.1, y: 0.2, z: -1.3 },
-      Spine: { x: -0.05, y: 0, z: 0 },
-    }},
-  ],
-}
+const maxRadius = Math.min(usableWidth * 0.38, usableHeight * 0.38);
 ```
+On a 350px wide mobile screen with 90px padding on each side, this gives only ~65px radius - way too small.
 
-### Part 2: Add Walk Gesture Type
+### 2. Arc Spread Doesn't Account for Node Sizes
+The arc calculation doesn't consider that on mobile, even with smaller nodes, there needs to be minimum spacing between them.
 
-**File**: `src/components/avatar-3d/animation/types.ts`
+### 3. Node Sizes Not Reduced for Mobile
+The `SIZE_MAP` uses 56px "medium" nodes which take up too much space on mobile - they should be smaller.
 
-```typescript
-export type GestureType =
-  // Original gestures
-  | 'wave' | 'nod' | 'shrug' | 'clap' | 'point' | 'thumbsUp'
-  // Social gestures
-  | 'headShake' | 'celebrate' | 'thinkingPose'
-  // Added gestures
-  | 'facepalm' | 'crossArms' | 'handOnHip' | 'nervousFidget' | 'emphasize'
-  // Conversational
-  | 'listenNod' | 'dismiss' | 'welcome'
-  // NEW: Movement
-  | 'walk';
-```
+---
 
-### Part 3: Create Movement Animation Hook
+## Solution
 
-Create a new hook to manage the walking animation and position interpolation:
+### Part 1: Mobile-Optimized Layout Algorithm
 
-**File**: `src/components/avatar-3d/hooks/useAvatarMovement.ts` (new)
+Update `graph-layout.ts` to:
+- Use a larger percentage of available space on mobile
+- Reduce padding since nodes will be smaller
+- Ensure minimum angular spacing between nodes
+- Use a full circular layout instead of arc when many houseguests
 
-```typescript
-interface AvatarMovementState {
-  isMoving: boolean;
-  startPosition: [number, number, number];
-  targetPosition: [number, number, number];
-  currentPosition: [number, number, number];
-  targetRotation: number;
-  progress: number;
-  startTime: number;
-}
+### Part 2: Smaller Nodes on Mobile
 
-interface UseAvatarMovementConfig {
-  enabled: boolean;
-  movementSpeed?: number;  // Units per second (default: 2)
-  onMoveComplete?: () => void;
-}
+Update `NetworkNode.tsx` and `SocialNetworkGraph.tsx` to:
+- Pass `isMobile` prop to nodes
+- Use smaller node sizes on mobile (40px instead of 56px)
+- Reduce font sizes for labels
 
-export const useAvatarMovement = (config: UseAvatarMovementConfig) => {
-  // Tracks movement state
-  // Returns: { position, rotation, isMoving, walkGesture }
-  
-  // Calculate movement duration based on distance
-  // Animate position over time
-  // Return 'walk' gesture while moving
-  // Smoothly rotate to face direction
-}
-```
+### Part 3: Responsive Graph Container
 
-### Part 4: Update HouseScene for Animated Movement
+Update `SocialNetworkGraph.tsx` to:
+- Ensure proper minimum height for mobile
+- Use correct container measurement
 
-Modify HouseScene to track player position with animation:
+---
 
-**File**: `src/components/avatar-3d/HouseScene.tsx`
+## Technical Changes
 
-Key changes:
-1. Add `playerPosition` state for animated position
-2. Add `isPlayerMoving` state
-3. Add `playerTargetPosition` for destination
-4. Create movement animation in `useFrame`
-5. Pass `walk` gesture to player's RPMAvatar while moving
-6. Update character position to use animated position
+### File 1: `src/components/social-network/utils/graph-layout.ts`
 
 ```typescript
-// New state in HouseScene
-const [playerPosition, setPlayerPosition] = useState<[number, number, number] | null>(null);
-const [playerTargetPosition, setPlayerTargetPosition] = useState<[number, number, number] | null>(null);
-const [isPlayerMoving, setIsPlayerMoving] = useState(false);
-const playerRotationRef = useRef<number>(0);
-
-// Handle floor spot selection
-const handleSpotSelect = useCallback((spotId: string, position: [number, number, number]) => {
-  // Get current player position
-  const currentPos = playerPosition ?? getDefaultPlayerPosition();
+export function calculateCircularLayout(
+  houseguests: Houseguest[],
+  playerId: string,
+  containerSize: { width: number; height: number },
+  isMobile: boolean = false  // NEW parameter
+): Map<string, Position> {
+  const positions = new Map<string, Position>();
+  const { width, height } = containerSize;
   
-  // Start movement animation
-  setPlayerTargetPosition(position);
-  setIsPlayerMoving(true);
-  setPlayerSpotId(spotId);
-  setMoveMode(false);
+  // Smaller padding on mobile for smaller nodes
+  const padding = isMobile ? 60 : 90;
+  const nodeSize = isMobile ? 40 : 56;
   
-  // Calculate rotation to face target
-  const angle = Math.atan2(
-    position[2] - currentPos[2],
-    position[0] - currentPos[0]
-  ) + Math.PI / 2;
-  playerRotationRef.current = angle;
-}, [playerPosition]);
-```
-
-### Part 5: Create Movement Animation Component
-
-Create a component inside the Canvas that handles the frame-by-frame position interpolation:
-
-**File**: `src/components/avatar-3d/PlayerMovementController.tsx` (new)
-
-```typescript
-interface PlayerMovementControllerProps {
-  startPosition: [number, number, number];
-  targetPosition: [number, number, number];
-  isMoving: boolean;
-  onPositionUpdate: (position: [number, number, number]) => void;
-  onMoveComplete: () => void;
-  speed?: number; // units per second
-}
-
-const PlayerMovementController: React.FC<PlayerMovementControllerProps> = ({
-  startPosition,
-  targetPosition,
-  isMoving,
-  onPositionUpdate,
-  onMoveComplete,
-  speed = 2,
-}) => {
-  const progress = useRef(0);
-  const startPos = useRef(startPosition);
+  const usableWidth = width - padding * 2;
+  const usableHeight = height - padding * 2;
+  const centerX = width / 2;
+  const centerY = height / 2;
   
-  useEffect(() => {
-    if (isMoving) {
-      startPos.current = startPosition;
-      progress.current = 0;
-    }
-  }, [isMoving, startPosition]);
+  const player = houseguests.find(h => h.id === playerId);
+  const others = houseguests.filter(h => h.id !== playerId);
   
-  useFrame((_, delta) => {
-    if (!isMoving) return;
+  // Player position - ensure within bounds
+  if (player) {
+    positions.set(player.id, {
+      x: padding + (isMobile ? 40 : 60),
+      y: centerY
+    });
+  }
+  
+  // Mobile: use larger percentage of available space
+  const radiusMultiplier = isMobile ? 0.42 : 0.38;
+  const maxRadius = Math.min(usableWidth * radiusMultiplier, usableHeight * radiusMultiplier);
+  
+  // Ensure minimum spacing between nodes based on node size
+  const minNodeSpacing = nodeSize * 1.4; // 40% gap between nodes
+  const circumferenceNeeded = others.length * minNodeSpacing;
+  const radiusForSpacing = circumferenceNeeded / (Math.PI * 1.5); // For ~270° arc
+  
+  const radius = Math.max(
+    Math.min(maxRadius, radiusForSpacing),
+    isMobile ? 100 : 120
+  );
+  
+  // Arc center shifted right to balance with player on left
+  const arcCenterX = centerX + (isMobile ? radius * 0.15 : radius * 0.2);
+  
+  // Use wider arc on mobile to prevent clustering
+  const totalAngle = isMobile 
+    ? Math.min(Math.PI * 1.6, Math.PI * 0.9 + others.length * 0.12)
+    : Math.min(Math.PI * 1.4, Math.PI * 0.8 + others.length * 0.08);
+  
+  const angleStart = -totalAngle / 2;
+  const angleStep = others.length > 1 ? totalAngle / (others.length - 1) : 0;
+  
+  others.forEach((houseguest, index) => {
+    const angle = angleStart + angleStep * index;
+    let x = arcCenterX + radius * Math.cos(angle);
+    let y = centerY + radius * Math.sin(angle);
     
-    // Calculate total distance
-    const dx = targetPosition[0] - startPos.current[0];
-    const dz = targetPosition[2] - startPos.current[2];
-    const distance = Math.sqrt(dx * dx + dz * dz);
+    // Clamp with reduced padding for mobile
+    x = Math.max(padding, Math.min(width - padding, x));
+    y = Math.max(padding, Math.min(height - padding, y));
     
-    // Calculate duration based on distance and speed
-    const duration = distance / speed;
-    
-    // Advance progress
-    progress.current = Math.min(progress.current + delta / duration, 1);
-    
-    // Ease the movement
-    const eased = easeInOutQuad(progress.current);
-    
-    // Interpolate position
-    const newPos: [number, number, number] = [
-      startPos.current[0] + dx * eased,
-      startPos.current[1],  // Keep Y constant
-      startPos.current[2] + dz * eased,
-    ];
-    
-    onPositionUpdate(newPos);
-    
-    // Check completion
-    if (progress.current >= 1) {
-      onMoveComplete();
-    }
+    positions.set(houseguest.id, { x, y });
   });
   
-  return null;
-};
+  return positions;
+}
 ```
 
-### Part 6: Update CharacterSpot for Dynamic Position
+### File 2: `src/components/social-network/NetworkNode.tsx`
 
-Modify CharacterSpot to accept an override position for the player:
-
-**File**: `src/components/avatar-3d/HouseScene.tsx` (CharacterSpot component)
+Add mobile-specific sizes:
 
 ```typescript
-interface CharacterSpotProps {
+interface NetworkNodeProps {
   // ...existing props
-  overridePosition?: [number, number, number];  // NEW
-  overrideRotation?: [number, number, number];  // NEW
-  movementGesture?: GestureType | null;         // NEW
+  isMobile?: boolean;  // NEW
 }
 
-const CharacterSpot: React.FC<CharacterSpotProps> = ({
-  // ...existing
-  overridePosition,
-  overrideRotation,
-  movementGesture,
-}) => {
-  // Use override position if provided, otherwise use prop
-  const effectivePosition = overridePosition ?? position;
-  const effectiveRotation = overrideRotation ?? rotation;
-  
-  // Combine movement gesture with player gesture
-  const activeGesture = movementGesture ?? playerGesture;
-  
-  return (
-    <group position={effectivePosition}>
-      {/* ...rest of component */}
-    </group>
-  );
+const SIZE_MAP = {
+  small: { node: 32, ring: 36, fontSize: 9, iconSize: 10 },    // Smaller for mobile
+  medium: { node: 56, ring: 62, fontSize: 12, iconSize: 14 },
+  large: { node: 72, ring: 80, fontSize: 14, iconSize: 16 }
+};
+
+// Mobile-specific size map
+const MOBILE_SIZE_MAP = {
+  small: { node: 28, ring: 32, fontSize: 8, iconSize: 9 },
+  medium: { node: 40, ring: 44, fontSize: 10, iconSize: 12 },  // Reduced from 56 to 40
+  large: { node: 52, ring: 58, fontSize: 11, iconSize: 14 }    // Reduced from 72 to 52
 };
 ```
 
----
+And use the correct map based on `isMobile` prop.
 
-## Integration Flow
+### File 3: `src/components/social-network/SocialNetworkGraph.tsx`
 
-```text
-User taps floor spot
-      │
-      ▼
-handleSpotSelect(spotId, targetPosition)
-      │
-      ├── setPlayerTargetPosition(targetPosition)
-      ├── setIsPlayerMoving(true)
-      ├── Calculate facing direction
-      └── Add ripple effect
-      │
-      ▼
-PlayerMovementController (in Canvas)
-      │
-      ├── useFrame: Interpolate position each frame
-      ├── Call onPositionUpdate with new position
-      └── When complete: onMoveComplete()
-      │
-      ▼
-CharacterSpot (for player)
-      │
-      ├── Uses overridePosition for animated position
-      ├── Uses overrideRotation to face direction
-      └── Passes 'walk' gesture to RPMAvatar while moving
-      │
-      ▼
-RPMAvatar
-      │
-      └── AnimationController plays walk gesture
-          └── Arms swing, body sways during walk
+Pass mobile info to layout function and nodes:
+
+```typescript
+// In positions calculation
+const positions = useMemo(() => 
+  calculateCircularLayout(activeHouseguests, playerId, containerSize, isMobile),
+  [activeHouseguests, playerId, containerSize, isMobile]
+);
+
+// When rendering NetworkNode
+<NetworkNode
+  key={houseguest.id}
+  houseguest={houseguest}
+  position={position}
+  isPlayer={isPlayer}
+  isSelected={selectedId === houseguest.id}
+  perception={perception}
+  size={isPlayer ? 'large' : 'medium'}
+  isMobile={isMobile}  // NEW
+  onClick={() => handleNodeClick(houseguest)}
+/>
 ```
 
 ---
 
-## Files Summary
+## Visual Comparison
 
-### Create
+| Metric | Before (Mobile) | After (Mobile) |
+|--------|-----------------|----------------|
+| Node size | 56px | 40px |
+| Player node | 72px | 52px |
+| Layout radius | ~65px | ~100px+ |
+| Arc spread | ~1.0π | ~1.6π |
+| Min spacing | None | 56px (1.4× node) |
 
-| File | Purpose |
-|------|---------|
-| `src/components/avatar-3d/hooks/useAvatarMovement.ts` | Movement state management hook |
-| `src/components/avatar-3d/PlayerMovementController.tsx` | Frame-by-frame position animation |
+---
 
-### Modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/avatar-3d/animation/types.ts` | Add 'walk' to GestureType |
-| `src/components/avatar-3d/animation/layers/GestureLayer.ts` | Add walk cycle animation keyframes |
-| `src/components/avatar-3d/HouseScene.tsx` | Add movement state, integrate controller, pass to CharacterSpot |
+| `src/components/social-network/utils/graph-layout.ts` | Add `isMobile` param, calculate larger radius, wider arc |
+| `src/components/social-network/NetworkNode.tsx` | Add `isMobile` prop, use smaller size map for mobile |
+| `src/components/social-network/SocialNetworkGraph.tsx` | Pass `isMobile` to layout function and nodes |
 
 ---
 
-## Walk Cycle Animation Details
+## Expected Result
 
-The walk animation uses arm swing and subtle spine rotation to simulate walking:
-
-| Keyframe | Time | Description |
-|----------|------|-------------|
-| 0 | 0.0 | Left arm back, right arm forward, neutral spine |
-| 1 | 0.25 | Arms crossing, slight spine twist right |
-| 2 | 0.5 | Left arm forward, right arm back |
-| 3 | 0.75 | Arms crossing, slight spine twist left |
-| 4 | 1.0 | Back to start (loops seamlessly) |
-
-Since Ready Player Me avatars don't have leg bones exposed in the standard configuration, the walk uses upper body animation (arm swing) which is the most visible and natural cue for walking motion.
-
----
-
-## Technical Considerations
-
-### Gesture Looping
-
-The current gesture system plays once and stops. For walking, we need continuous animation. Options:
-
-1. **Loop flag**: Add `loop: true` to gesture definition, check in `updateGesture`
-2. **Retrigger**: Re-trigger the walk gesture when it completes while still moving
-3. **Duration scaling**: Match gesture duration to movement duration
-
-Recommended: Option 2 (retrigger) - simplest, works with existing system.
-
-### Smooth Rotation
-
-When facing the walking direction:
-- Calculate angle from start to target
-- Smoothly interpolate current rotation to target rotation
-- Apply as Y rotation on the character group
-
-### Movement Speed
-
-Default: 2 units/second
-- Short distances (< 3 units): ~1.5 seconds
-- Medium distances (3-8 units): ~3 seconds
-- Long distances (> 8 units): ~4 seconds max
-
----
-
-## Testing Checklist
-
-- [ ] Tap floor spot triggers walk animation
-- [ ] Avatar moves smoothly from start to destination
-- [ ] Avatar rotates to face walking direction
-- [ ] Walk animation loops during movement
-- [ ] Walk animation stops when destination reached
-- [ ] Returns to relaxed pose after walking
-- [ ] Works on mobile (long press → tap spot)
-- [ ] Works on desktop (click to move when in move mode)
-- [ ] No jittering or physics instability during walk
-- [ ] Camera follows player during movement (optional)
+After these changes, on mobile:
+- Nodes will be smaller (40px vs 56px) giving more room
+- The layout will spread nodes in a wider arc around the graph
+- Names will have enough spacing to not overlap
+- Player (Morgan with "YOU" label) will be clearly visible on the left
+- Other houseguests will be distributed evenly around the right side
