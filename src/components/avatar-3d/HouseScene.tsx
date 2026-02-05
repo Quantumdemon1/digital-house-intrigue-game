@@ -30,6 +30,7 @@ import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
  import { PlayerMovementController } from './PlayerMovementController';
  import { useAvatarMovement } from './hooks/useAvatarMovement';
 import { SceneEffectsOverlay } from './SceneEffectsOverlay';
+import { PlayerEmoteMenu } from './PlayerEmoteMenu';
 
 // Easing function for smooth camera transitions
 const easeInOutCubic = (t: number): number => {
@@ -967,6 +968,9 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    const [playerSpotId, setPlayerSpotId] = useState<string | null>(null);
    const [ripples, setRipples] = useState<Array<{ id: string; position: [number, number, number]; color?: string }>>([]);
    
+   // Player emote state (for player-triggered gestures)
+   const [playerEmoteGesture, setPlayerEmoteGesture] = useState<GestureType | null>(null);
+   
    // Player movement animation state
    const [playerMovementState, setPlayerMovementState] = useState<{
      isMoving: boolean;
@@ -977,6 +981,9 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
      currentRotationY: number;
    } | null>(null);
    const [movementGesture, setMovementGesture] = useState<GestureType | null>(null);
+   
+   // Check if player is selected
+   const isPlayerSelected = selectedId === playerId && playerId !== undefined;
    
    const isMobile = useIsMobile();
    
@@ -1044,6 +1051,25 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
      setRipples(prev => prev.filter(r => r.id !== id));
    }, []);
    
+   // Handle player emote selection
+   const handlePlayerEmote = useCallback((gesture: GestureType) => {
+     setPlayerEmoteGesture(gesture);
+   }, []);
+   
+   // Handle player emote completion
+   const handlePlayerEmoteComplete = useCallback(() => {
+     setPlayerEmoteGesture(null);
+     onGestureComplete?.();
+   }, [onGestureComplete]);
+   
+   // Combine gestures: movement > local emote > prop gesture
+   const effectivePlayerGesture = movementGesture ?? playerEmoteGesture ?? playerGesture;
+   
+   // Handle move button click
+   const handleMoveButtonClick = useCallback(() => {
+     setMoveMode(true);
+   }, []);
+   
    // Touch gesture callbacks
    const touchCallbacks = useMemo(() => ({
      onLongPress: (pos: { x: number; y: number }) => {
@@ -1084,8 +1110,8 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
             selectedId={selectedId}
             onSelect={onSelect}
             playerId={playerId}
-            playerGesture={playerGesture}
-            onGestureComplete={onGestureComplete}
+            playerGesture={effectivePlayerGesture}
+            onGestureComplete={handlePlayerEmoteComplete}
             relationships={relationships}
             hoveredId={hoveredId}
             onHover={setHoveredId}
@@ -1152,24 +1178,35 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
         </div>
       </div>
       
-      {/* Hint overlay */}
-      {/* Mobile hint */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none sm:hidden">
-        <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-xs">
-          Drag to rotate • Pinch to zoom • Tap to select • Hold to move
-        </div>
-      </div>
-      {/* Desktop hint */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none hidden sm:block">
-        <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-sm">
-          Drag to rotate • Scroll to zoom • Click to select
-        </div>
-      </div>
+      {/* Player Emote Menu - shown when player selects their own avatar */}
+      <PlayerEmoteMenu
+        isVisible={isPlayerSelected && !moveMode}
+        onEmote={handlePlayerEmote}
+        onMove={handleMoveButtonClick}
+      />
+      
+      {/* Hint overlay - hidden when emote menu is shown */}
+      {!isPlayerSelected && !moveMode && (
+        <>
+          {/* Mobile hint */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none sm:hidden">
+            <div className="px-4 py-1.5 rounded-full bg-background/40 backdrop-blur-sm text-muted-foreground text-xs">
+              Drag to rotate • Pinch to zoom • Tap to select • Hold to move
+            </div>
+          </div>
+          {/* Desktop hint */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none hidden sm:block">
+            <div className="px-4 py-1.5 rounded-full bg-background/40 backdrop-blur-sm text-muted-foreground text-sm">
+              Drag to rotate • Scroll to zoom • Click to select
+            </div>
+          </div>
+        </>
+      )}
       
       {/* Move mode indicator */}
       {moveMode && (
         <div className="absolute bottom-16 left-1/2 -translate-x-1/2 pointer-events-none animate-pulse">
-          <div className="px-4 py-2 rounded-full bg-green-500/80 backdrop-blur-sm text-white text-sm font-medium">
+          <div className="px-4 py-2 rounded-full bg-accent/80 backdrop-blur-sm text-accent-foreground text-sm font-medium">
             Tap a spot to move your avatar
           </div>
         </div>
