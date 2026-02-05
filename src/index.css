@@ -492,6 +492,17 @@
     animation: pulse-slow 2s ease-in-out infinite;
   }
 
+  /* Mobile customizer scrolling fix */
+  @media (max-width: 768px) {
+    .sims-cas-background {
+      touch-action: pan-y;
+    }
+    
+    .sims-turntable {
+      touch-action: none;
+    }
+  }
+
   /* Safe area utilities for notched devices */
   .safe-area-inset {
     padding-top: env(safe-area-inset-top);

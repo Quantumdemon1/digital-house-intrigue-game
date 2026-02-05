@@ -6,7 +6,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { User, Sparkles, Globe, RotateCcw, ChevronLeft, ChevronRight, Check, Camera, AlertCircle, ZoomIn, ZoomOut } from 'lucide-react';
+import { User, Sparkles, Globe, RotateCcw, ChevronLeft, ChevronRight, Check, Camera, AlertCircle, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 import { Avatar3DConfig, generateDefaultConfig } from '@/models/avatar-config';
 import { RPMAvatarCreator } from './RPMAvatarCreator';
 import { RPMAvatarCreatorPanel } from './RPMAvatarCreatorPanel';
@@ -15,6 +15,7 @@ import { ProfilePortraitPreview, captureHeadPortrait } from './ProfilePortraitCa
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AvatarCustomizerProps {
   initialConfig?: Avatar3DConfig;
@@ -40,6 +41,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [zoom, setZoom] = useState(1.0);
+  const isMobile = useIsMobile();
 
   const updateConfig = useCallback((updates: Partial<Avatar3DConfig>) => {
     const newConfig = { ...config, ...updates };
@@ -141,13 +143,14 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
             {/* Avatar container */}
             <motion.div 
               className={cn(
-                "relative w-56 h-56 lg:w-72 lg:h-72 rounded-2xl overflow-hidden",
-                isDragging ? "cursor-grabbing" : "cursor-grab"
+                "relative rounded-2xl overflow-hidden",
+                isMobile ? "w-40 h-40" : "w-56 h-56 lg:w-72 lg:h-72",
+                !isMobile && (isDragging ? "cursor-grabbing" : "cursor-grab")
               )}
               style={{ 
                 background: 'radial-gradient(ellipse at center 30%, hsl(var(--primary) / 0.2) 0%, hsl(var(--background)) 100%)'
               }}
-              drag="x"
+              drag={isMobile ? false : "x"}
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0}
               onDragStart={() => setIsDragging(true)}
@@ -166,6 +169,7 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                     size="full"
                     animated={true}
                     zoom={zoom}
+                    enableOrbitControls={!isMobile}
                   />
                 ) : (
                   /* Placeholder when no avatar is selected */
@@ -178,7 +182,10 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
               </motion.div>
               
               {/* Drag hint */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-muted-foreground/40 pointer-events-none">
+              <div className={cn(
+                "absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-muted-foreground/40 pointer-events-none",
+                isMobile && "hidden"
+              )}>
                 ← drag to rotate →
               </div>
             </motion.div>
@@ -187,7 +194,10 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
           {/* Zoom Control */}
           {hasValidAvatar && (
             <motion.div 
-              className="flex items-center gap-3 mt-4 px-2 w-full max-w-xs"
+              className={cn(
+                "flex items-center gap-3 px-2 w-full max-w-xs",
+                isMobile ? "mt-2" : "mt-4"
+              )}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
@@ -206,14 +216,20 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
           )}
 
           {/* Rotation controls */}
-          <div className="flex items-center gap-3 mt-2">
+          <div className={cn(
+            "flex items-center gap-2 mt-2",
+            isMobile && "flex-wrap justify-center"
+          )}>
             <motion.button
               onClick={() => setRotation(r => r - 45)}
-              className="w-10 h-10 rounded-full bg-muted/30 border border-border flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all"
+              className={cn(
+                "rounded-full bg-muted/30 border border-border flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all",
+                isMobile ? "w-8 h-8" : "w-10 h-10"
+              )}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className={isMobile ? "w-4 h-4" : "w-5 h-5"} />
             </motion.button>
             
             <motion.button
@@ -221,21 +237,27 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
                 setRotation(0);
                 setZoom(1.0);
               }}
-              className="px-4 py-2 rounded-full bg-muted/30 border border-border flex items-center gap-2 text-muted-foreground text-sm hover:bg-muted/50 hover:text-foreground transition-all"
+              className={cn(
+                "rounded-full bg-muted/30 border border-border flex items-center gap-1.5 text-muted-foreground text-sm hover:bg-muted/50 hover:text-foreground transition-all",
+                isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2"
+              )}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className={isMobile ? "w-3 h-3" : "w-4 h-4"} />
               Reset
             </motion.button>
             
             <motion.button
               onClick={() => setRotation(r => r + 45)}
-              className="w-10 h-10 rounded-full bg-muted/30 border border-border flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all"
+              className={cn(
+                "rounded-full bg-muted/30 border border-border flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all",
+                isMobile ? "w-8 h-8" : "w-10 h-10"
+              )}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className={isMobile ? "w-4 h-4" : "w-5 h-5"} />
             </motion.button>
           </div>
 
@@ -255,7 +277,10 @@ export const AvatarCustomizer: React.FC<AvatarCustomizerProps> = ({
           {/* Profile Photo Capture Section */}
           {hasValidAvatar && (
             <motion.div 
-              className="mt-4 p-4 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm w-full max-w-xs"
+              className={cn(
+                "rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm w-full max-w-xs",
+                isMobile ? "mt-3 p-3" : "mt-4 p-4"
+              )}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}

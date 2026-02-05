@@ -37,6 +37,8 @@ interface AvatarLoaderProps {
   loadTimeout?: number;
   /** Zoom level for camera (1.0 = default, higher = zoomed in) */
   zoom?: number;
+  /** Enable orbit rotation controls (disable on mobile customizer for scrolling) */
+  enableOrbitControls?: boolean;
 }
 
 // Size configurations with context-aware camera settings
@@ -146,7 +148,8 @@ const RPMAvatarCanvas: React.FC<{
   onLoaded?: () => void;
   onError?: () => void;
   zoom?: number;
-}> = ({ avatarUrl, mood, scale, context, sizeConfig, className, onLoaded, onError, zoom = 1.0 }) => {
+  enableOrbitControls?: boolean;
+}> = ({ avatarUrl, mood, scale, context, sizeConfig, className, onLoaded, onError, zoom = 1.0, enableOrbitControls = true }) => {
   const [rpmLoadError, setRpmLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -208,6 +211,7 @@ const RPMAvatarCanvas: React.FC<{
         </Suspense>
         
         <OrbitControls 
+          enabled={enableOrbitControls}
           enableZoom={false} 
           enablePan={false}
           minPolarAngle={Math.PI / 2.5}
@@ -265,7 +269,8 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   animated = true,
   className,
   loadTimeout = 8000,
-  zoom = 1.0
+  zoom = 1.0,
+  enableOrbitControls = true
 }) => {
   const sizeConfig = SIZE_CONFIG[size];
   const modelSource = avatarConfig?.modelSource;
@@ -326,6 +331,7 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
           onLoaded={() => setModelReady(true)}
           onError={() => setTimedOut(true)}
           zoom={zoom}
+          enableOrbitControls={enableOrbitControls}
         />
       </Suspense>
     );
