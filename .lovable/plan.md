@@ -1,453 +1,216 @@
 
-# Mobile Optimization for House Views and Game Features
+# Fix Avatar Rigging Glitches - Heads and Arms Going Wrong Directions
 
-## Overview
+## Problem Analysis
 
-This plan optimizes the 3D House View, game UI, and core features for mobile devices based on thorough codebase analysis. The focus areas include responsive layouts, touch interaction improvements, performance tuning for mobile GPUs, and UI/UX refinements.
+Based on the screenshot and code analysis, the avatars are "glitching out" with heads and arms going in every direction. This is caused by **three main issues**:
+
+### Root Cause 1: Spring Physics Instability
+The spring physics system has a **critical bug** in delta time normalization that causes exponential oscillation:
+
+```typescript
+// SecondaryMotionSystem.ts line 125
+const dt = Math.min(deltaTime, 0.05) * 60; // This can create dt values up to 3.0!
+```
+
+When `deltaTime` is 0.05s (50ms), `dt` becomes `3.0`, which causes the spring physics to become unstable - the springs overshoot their targets massively, creating wild oscillations in head/arm rotations.
+
+### Root Cause 2: Uninitialized Spring States
+When springs aren't initialized with the current bone values, they start at `{x: 0, y: 0, z: 0}` and try to "catch up" to the target poses. This creates a violent snap/oscillation as the spring tries to move from 0 to ~1.45 radians (arm positions).
+
+### Root Cause 3: Missing Rotation Clamping
+There's no safety clamping on the final bone rotations being applied. If a spring goes unstable, rotations can go to infinity or NaN, causing the visual glitches seen in the screenshot.
 
 ---
 
-## Current State Analysis
+## Technical Fix Plan
 
-### Strengths Already in Place
-- `useIsMobile()` hook exists and is used in key components
-- Touch gesture system (`useTouchGestures.ts`) already handles pinch/swipe
-- `RoomNavigatorCompact` provides a mobile-optimized room selector
-- Responsive hints differentiate mobile vs desktop instructions
-- `SocialNetworkDialog` has good mobile adaptations
+### Fix 1: Stabilize Spring Delta Time Calculation
 
-### Areas Needing Improvement
+The current formula `deltaTime * 60` can produce values much greater than 1.0, which destabilizes the spring simulation.
 
-| Component | Issue | Impact |
-|-----------|-------|--------|
-| `HouseViewDialog` | No mobile-specific layout adjustments | 3D scene cramped on small screens |
-| `HouseScene` | Post-processing (Bloom, Vignette) runs on mobile | Performance drain |
-| `CharacterCarousel` | Navigation hints assume keyboard | Confusing on mobile |
-| `HouseViewPanel` | Fixed height doesn't adapt to mobile | Wasted screen space |
-| `GameHeader` | Buttons cluster tightly on mobile | Tap targets too small |
-| `GameSidebar` | Full sidebar shown on mobile in lg:flex-row | Takes 50% width on tablets |
-| `CircularHouseScene` | Duplicate idle animation still runs | Performance waste |
-| Touch controls | No visual touch zone hints | Users don't know gesture areas |
-
----
-
-## Part 1: 3D House View Mobile Optimizations
-
-### 1.1 Disable Post-Processing on Mobile
-
-Post-processing effects (Bloom, Vignette) are GPU-intensive and unnecessary on small screens.
-
-**File**: `src/components/avatar-3d/HouseScene.tsx`
-
+**Current (broken):**
 ```typescript
-// Inside HouseScene component
-const isMobile = useIsMobile();
-
-// In Canvas render:
-{!isMobile && (
-  <EffectComposer>
-    <Bloom intensity={0.4} ... />
-    <Vignette ... />
-  </EffectComposer>
-)}
+const dt = Math.min(deltaTime, 0.05) * 60; // Can be up to 3.0!
 ```
 
-Same change for `CircularHouseScene.tsx`.
-
-### 1.2 Reduce Shadow Map Resolution on Mobile
-
-**File**: `HouseScene.tsx` - SceneContent
-
+**Fixed:**
 ```typescript
-<directionalLight 
-  shadow-mapSize={isMobile ? [1024, 1024] : [2048, 2048]}
-  // ... rest of props
-/>
+// Normalize to 60fps baseline but clamp to reasonable range
+const dt = Math.min(Math.max(deltaTime * 60, 0.1), 1.5);
 ```
 
-### 1.3 Simplify Contact Shadows on Mobile
+**Files to modify:**
+- `src/components/avatar-3d/animation/physics/SecondaryMotionSystem.ts`
+- `src/components/avatar-3d/animation/layers/LookAtLayer.ts` (same issue on lines 161-162)
 
+### Fix 2: Add Velocity Damping and Value Clamping
+
+Add safety limits to prevent springs from going unstable:
+
+**In springPhysics.ts:**
 ```typescript
-<ContactShadows
-  blur={isMobile ? 1.5 : 2}
-  far={isMobile ? 10 : 15}
-  resolution={isMobile ? 256 : 512}
-/>
-```
-
-### 1.4 Hide Mini-Map on Mobile
-
-The mini-map in `RoomNavigator` is too small to be useful on mobile.
-
-**File**: `src/components/avatar-3d/RoomNavigator.tsx`
-
-```typescript
-// Only show mini-map on larger screens
-{characterPositions.length > 0 && !isMobile && (
-  <div className="mb-2 p-2 ...">
-    {/* Mini-map content */}
-  </div>
-)}
-```
-
-### 1.5 Mobile-Optimized House View Dialog
-
-**File**: `src/components/game-screen/HouseViewDialog.tsx`
-
-Add safe area handling and fullscreen optimization:
-
-```typescript
-<motion.div
-  className="fixed inset-0 z-50 bg-background safe-area-inset"
->
-  {/* Close button - larger tap target on mobile */}
-  <Button
-    size={isMobile ? "lg" : "icon"}
-    className={cn(
-      "absolute z-50",
-      isMobile 
-        ? "top-2 right-2 h-12 w-12" 
-        : "top-4 right-4"
-    )}
-  >
-```
-
----
-
-## Part 2: Character Carousel Mobile Improvements
-
-### 2.1 Remove Keyboard Hints on Mobile
-
-**File**: `src/components/avatar-3d/CharacterCarousel.tsx`
-
-```typescript
-{/* Navigation hint - hide keyboard hints on mobile */}
-<div className={cn(
-  "justify-center gap-8 py-2 text-xs text-white/50 border-b border-white/10",
-  "hidden sm:flex"  // Hide entire keyboard hint section on mobile
-)}>
-  {/* keyboard hints */}
-</div>
-
-{/* Mobile swipe hint */}
-<div className="flex sm:hidden justify-center py-1.5 text-xs text-white/40">
-  Swipe to browse • Tap to select
-</div>
-```
-
-### 2.2 Smaller Character Thumbnails on Mobile
-
-```typescript
-<div className={cn(
-  'relative rounded-full overflow-hidden',
-  'ring-2 transition-all duration-200',
-  isMobile ? 'w-12 h-12' : 'w-16 h-16',  // Smaller on mobile
-  // ...ring colors
-)}>
-```
-
-### 2.3 Hide Scroll Buttons on Mobile
-
-Touch scrolling is natural; buttons clutter the interface.
-
-```typescript
-{/* Left scroll button - hide on mobile */}
-<button
-  onClick={scrollLeft}
-  className="absolute left-2 ... hidden sm:flex"
->
-
-{/* Right scroll button - hide on mobile */}
-<button
-  onClick={scrollRight}
-  className="absolute right-2 ... hidden sm:flex"
->
-```
-
----
-
-## Part 3: Game Screen Mobile Layout
-
-### 3.1 Stack Sidebar Below Content on Mobile
-
-**File**: `src/components/game-screen/GameScreen.tsx`
-
-The current layout is `flex-col lg:flex-row` which is correct, but sidebar takes too much space on tablets.
-
-```typescript
-<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-  {/* Main Game Area */}
-  <motion.div className="lg:flex-1 min-w-0">
-    {/* content */}
-  </motion.div>
+export const updateSpring = (
+  state: SpringState,
+  config: SpringConfig,
+  deltaTime: number
+): SpringState => {
+  // ...existing physics calculation...
   
-  {/* Sidebar - full width on mobile, fixed width on desktop */}
-  <motion.div className="w-full lg:w-80 xl:w-96 shrink-0">
-    {/* Make sidebar collapsible on mobile */}
-    <CollapsibleSidebar />
-  </motion.div>
-</div>
-```
-
-### 3.2 Create Collapsible Mobile Sidebar
-
-New component to wrap `GameSidebar` with expand/collapse on mobile:
-
-**File**: `src/components/game-screen/CollapsibleMobileSidebar.tsx`
-
-```typescript
-const CollapsibleMobileSidebar = () => {
-  const isMobile = useIsMobile();
-  const [isExpanded, setIsExpanded] = useState(false);
+  // CLAMP: Prevent runaway velocity
+  const maxVelocity = 5.0; // Radians per normalized frame
+  const clampedVelocity = Math.max(-maxVelocity, Math.min(maxVelocity, newVelocity));
   
-  if (!isMobile) {
-    return <GameSidebar />;
+  // CLAMP: Prevent extreme positions
+  const maxPosition = Math.PI * 2; // Full rotation limit
+  const clampedPosition = Math.max(-maxPosition, Math.min(maxPosition, newPosition));
+  
+  // NaN safety check
+  if (isNaN(clampedPosition) || isNaN(clampedVelocity)) {
+    return { position: state.target, velocity: 0, target: state.target };
   }
   
-  return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <CollapsibleTrigger className="w-full p-3 bg-card rounded-lg border flex items-center justify-between">
-        <span className="font-semibold">Houseguests & Status</span>
-        <ChevronDown className={cn("transition-transform", isExpanded && "rotate-180")} />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <GameSidebar />
-      </CollapsibleContent>
-    </Collapsible>
-  );
+  return {
+    position: clampedPosition,
+    velocity: clampedVelocity,
+    target: state.target,
+  };
 };
 ```
 
-### 3.3 Compact Header on Mobile
+### Fix 3: Initialize Springs from Current Bone State
 
-**File**: `src/components/game-screen/GameHeader.tsx`
+Ensure springs are properly initialized with the base pose values, not zeros:
 
-- Larger tap targets for House/Social buttons
-- Stack elements vertically on very small screens
-
+**In SecondaryMotionSystem.ts:**
 ```typescript
-{/* Action buttons - larger on mobile */}
-<div className="flex items-center gap-1.5 sm:gap-2">
-  {onShowHouseView && (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={cn(
-        "flex items-center gap-1.5",
-        "min-h-[44px] min-w-[44px]"  // iOS minimum tap target
-      )}
-    >
-```
-
----
-
-## Part 4: Social Interaction Phase Mobile Layout
-
-### 4.1 HouseViewPanel Responsive Height
-
-**File**: `src/components/game-phases/social-interaction/SocialInteractionPhase.tsx`
-
-```typescript
-{showHouseView && (
-  <div className={cn(
-    "w-full",
-    "h-[300px] sm:h-[400px] lg:h-[600px]",  // Shorter on mobile
-    "lg:w-1/2 xl:w-3/5"
-  )}>
-    <HouseViewPanel ... />
-  </div>
-)}
-```
-
-### 4.2 Stack Layout on Mobile
-
-```typescript
-<div className={cn(
-  "flex gap-4",
-  showHouseView 
-    ? "flex-col lg:flex-row"  // Always stack on mobile when house view is shown
-    : "flex-col"
-)}>
-```
-
----
-
-## Part 5: Touch Interaction Enhancements
-
-### 5.1 Add Touch Zone Indicator
-
-Visual hint showing where gestures work.
-
-**File**: `src/components/avatar-3d/TouchZoneHint.tsx` (new)
-
-```typescript
-export const TouchZoneHint = ({ visible }: { visible: boolean }) => {
-  if (!visible) return null;
+export const initializeSecondaryMotion = (
+  state: SecondaryMotionState,
+  currentBones: BoneMap
+): SecondaryMotionState => {
+  const springs: Record<string, Spring3DState> = {};
   
-  return (
-    <motion.div 
-      className="absolute inset-0 pointer-events-none"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      {/* Center gesture zone */}
-      <div className="absolute inset-8 border-2 border-dashed border-white/20 rounded-xl">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-white/40 text-xs">Drag to rotate</span>
-        </div>
-      </div>
-    </motion.div>
-  );
+  TRACKED_BONES.forEach(boneName => {
+    const bone = currentBones[boneName];
+    if (bone) {
+      // Initialize with BOTH position and target set to current value
+      const initialPos = {
+        x: bone.rotation.x,
+        y: bone.rotation.y,
+        z: bone.rotation.z,
+      };
+      springs[boneName] = createSpring3D(initialPos);
+      // Also set the target to the same value to prevent initial oscillation
+      springs[boneName] = setSpring3DTarget(springs[boneName], initialPos);
+    } else {
+      springs[boneName] = createSpring3D({ x: 0, y: 0, z: 0 });
+    }
+  });
+  
+  return { springs, initialized: true };
 };
 ```
 
-### 5.2 Improve Long-Press Feedback
+### Fix 4: Add Final Rotation Clamping in boneUtils
 
-Add haptic feedback (where supported) and visual indication.
+Add a safety clamp when applying rotations to bones:
 
+**In boneUtils.ts - applyBoneMap:**
 ```typescript
-const handleLongPress = useCallback((pos) => {
-  // Haptic feedback on supported devices
-  if (navigator.vibrate) {
-    navigator.vibrate(50);
-  }
-  setMoveMode(true);
-}, []);
+export const applyBoneMap = (
+  boneCache: Map<string, THREE.Bone>,
+  boneMap: BoneMap,
+  blend: number = 1
+): void => {
+  // Define per-bone rotation limits
+  const BONE_LIMITS: Record<string, { min: number; max: number }> = {
+    Head: { min: -0.8, max: 0.8 },
+    Neck: { min: -0.5, max: 0.5 },
+    Spine: { min: -0.3, max: 0.3 },
+    Spine1: { min: -0.3, max: 0.3 },
+    Spine2: { min: -0.3, max: 0.3 },
+    LeftArm: { min: -2.0, max: 2.0 },
+    RightArm: { min: -2.0, max: 2.0 },
+    LeftForeArm: { min: -2.5, max: 2.5 },
+    RightForeArm: { min: -2.5, max: 2.5 },
+    LeftHand: { min: -1.0, max: 1.0 },
+    RightHand: { min: -1.0, max: 1.0 },
+  };
+  
+  Object.entries(boneMap).forEach(([boneName, state]) => {
+    const bone = boneCache.get(boneName);
+    if (!bone) return;
+    
+    // Get limits for this bone
+    const limits = BONE_LIMITS[boneName] || { min: -Math.PI, max: Math.PI };
+    
+    // Clamp rotations to safe ranges
+    const safeX = clampAndValidate(state.rotation.x, limits.min, limits.max);
+    const safeY = clampAndValidate(state.rotation.y, limits.min, limits.max);
+    const safeZ = clampAndValidate(state.rotation.z, limits.min, limits.max);
+    
+    if (blend >= 1) {
+      bone.rotation.set(safeX, safeY, safeZ);
+    } else {
+      bone.rotation.x = THREE.MathUtils.lerp(bone.rotation.x, safeX, blend);
+      bone.rotation.y = THREE.MathUtils.lerp(bone.rotation.y, safeY, blend);
+      bone.rotation.z = THREE.MathUtils.lerp(bone.rotation.z, safeZ, blend);
+    }
+  });
+};
+
+// Helper to clamp and handle NaN
+const clampAndValidate = (value: number, min: number, max: number): number => {
+  if (isNaN(value) || !isFinite(value)) return 0;
+  return Math.max(min, Math.min(max, value));
+};
 ```
 
----
+### Fix 5: Disable Physics on Mobile/Low Quality
 
-## Part 6: Performance Optimizations
+The physics system is too aggressive for mobile devices. Disable it more thoroughly:
 
-### 6.1 Reduce Avatar Detail on Mobile
-
-Pass a `quality` prop based on device.
-
-**File**: `src/components/avatar-3d/RPMAvatar.tsx`
-
+**In AnimationController.ts:**
 ```typescript
-// In HouseScene when rendering CharacterSpot
-<RPMAvatar
-  quality={isMobile ? 'low' : 'high'}
-  // Lower quality reduces bone calculations and texture resolution
-/>
+// Use physics only on high quality AND non-mobile
+const enablePhysics = qualityConfig.enablePhysics && !window.matchMedia('(max-width: 768px)').matches;
 ```
-
-### 6.2 Remove Redundant Idle Animation in CircularHouseScene
-
-The `CircularHouseScene` still has the duplicate idle animation that was removed from `HouseScene`.
-
-**File**: `src/components/avatar-3d/CircularHouseScene.tsx` (lines 108-116)
-
-```typescript
-// REMOVE this redundant useFrame animation:
-useFrame(({ clock }) => {
-  // ...duplicate breathing/sway animation
-});
-
-// The AnimationController handles this at bone level
-```
-
-### 6.3 Lazy Load 3D Components on Mobile
-
-Already implemented for `HouseScene` in `HouseViewPanel`, but extend to other 3D uses.
 
 ---
 
-## Part 7: Responsive UI Utilities
+## Files to Modify
 
-### 7.1 Add Safe Area Utilities
-
-**File**: `src/index.css` or Tailwind config
-
-```css
-.safe-area-inset {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
-```
-
-### 7.2 Minimum Tap Target Sizes
-
-Ensure all interactive elements meet 44x44px minimum on mobile.
-
----
-
-## Implementation Order
-
-### Phase 1: Performance Quick Wins
-1. Disable post-processing on mobile (HouseScene, CircularHouseScene)
-2. Reduce shadow/contact shadow quality on mobile
-3. Remove duplicate idle animation in CircularHouseScene
-
-### Phase 2: Layout Adjustments
-4. Responsive HouseViewDialog with safe areas
-5. HouseViewPanel responsive heights
-6. SocialInteractionPhase stacked layout on mobile
-
-### Phase 3: UI/UX Polish
-7. CharacterCarousel mobile optimizations (swipe hints, smaller thumbnails)
-8. Collapsible mobile sidebar
-9. Larger tap targets in GameHeader
-
-### Phase 4: Touch Enhancements
-10. TouchZoneHint component
-11. Haptic feedback for long-press
-12. Visual move mode improvements
-
----
-
-## Files Summary
-
-### Create
-| File | Purpose |
-|------|---------|
-| `src/components/game-screen/CollapsibleMobileSidebar.tsx` | Collapsible sidebar wrapper for mobile |
-| `src/components/avatar-3d/TouchZoneHint.tsx` | Visual gesture zone indicator |
-
-### Modify
 | File | Changes |
 |------|---------|
-| `HouseScene.tsx` | Disable post-processing, reduce shadows on mobile |
-| `CircularHouseScene.tsx` | Remove duplicate idle, disable post-processing |
-| `HouseViewDialog.tsx` | Safe area handling, larger close button |
-| `CharacterCarousel.tsx` | Mobile swipe hints, smaller thumbnails, hide scroll buttons |
-| `RoomNavigator.tsx` | Hide mini-map on mobile |
-| `SocialInteractionPhase.tsx` | Responsive heights and stacked layout |
-| `GameScreen.tsx` | Use collapsible sidebar on mobile |
-| `GameHeader.tsx` | Larger tap targets |
-| `HouseViewPanel.tsx` | Responsive min-heights |
+| `src/components/avatar-3d/animation/utils/springPhysics.ts` | Add velocity/position clamping, NaN checks |
+| `src/components/avatar-3d/animation/utils/boneUtils.ts` | Add per-bone rotation limits, NaN safety |
+| `src/components/avatar-3d/animation/physics/SecondaryMotionSystem.ts` | Fix delta time calculation, improve initialization |
+| `src/components/avatar-3d/animation/layers/LookAtLayer.ts` | Fix delta time scaling |
+| `src/components/avatar-3d/animation/AnimationController.ts` | Add mobile detection for physics disable |
 
 ---
 
-## Testing Checklist
+## Testing Approach
 
-### Performance
-- [ ] 3D scene maintains 30+ fps on mid-range phones
-- [ ] No visible lag when switching rooms
-- [ ] Avatar animations remain smooth
-- [ ] Memory usage stable during extended use
+After implementing fixes:
+1. Verify arms stay in relaxed position (Z ≈ 1.45 radians)
+2. Verify head stays centered (X/Y/Z near 0)
+3. Verify subtle idle breathing animation works
+4. Verify no jerky movements on mobile
+5. Verify characters don't glitch when switching between them quickly
 
-### Touch Interactions
-- [ ] Pinch-to-zoom works smoothly
-- [ ] Single-finger drag rotates camera
-- [ ] Tap to select characters works reliably
-- [ ] Long-press activates move mode
-- [ ] Swipe works on character carousel
+---
 
-### Layout
-- [ ] No horizontal scroll on any screen size
-- [ ] All text remains readable
-- [ ] Buttons have adequate tap targets (44x44px)
-- [ ] Safe areas respected on notched devices
-- [ ] Sidebar collapses properly on mobile
+## Why This Happens
 
-### Devices to Test
-- [ ] iPhone SE (small screen)
-- [ ] iPhone 14 Pro (notch + dynamic island)
-- [ ] Android mid-range (Pixel 6a or similar)
-- [ ] iPad Mini (tablet portrait)
-- [ ] iPad Pro (tablet landscape)
+The core issue is that the spring physics simulation becomes numerically unstable when:
+1. Frame times are long (low FPS on mobile)
+2. The delta time multiplier creates values > 1.0
+3. Springs "overshoot" their targets and the next frame overshoots even more
+4. This creates an exponential oscillation that makes arms/heads spin wildly
+
+The fix ensures:
+- Delta time stays in a stable range
+- Velocities and positions have hard limits
+- NaN values are caught and reset
+- Per-bone rotation limits prevent physically impossible poses
