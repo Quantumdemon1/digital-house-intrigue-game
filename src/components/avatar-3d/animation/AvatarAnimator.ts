@@ -3,7 +3,7 @@
  * @description Unified animation hook - single entry point for all avatar animations
  */
 
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getBoneMap } from './poses/applyPose';
@@ -26,6 +26,14 @@ import {
   applyBlink,
   type BlinkState,
 } from './expressions/BlinkSystem';
+import {
+  GESTURE_LIBRARY,
+  createGestureState,
+  startGesture,
+  updateGesture,
+  type GestureState,
+} from './layers/GestureLayer';
+import type { GestureType, BoneRotation, BoneMap } from './types';
 
 export interface AvatarAnimatorConfig {
   /** The cloned avatar group */
@@ -38,6 +46,10 @@ export interface AvatarAnimatorConfig {
   enableWeightShift?: boolean;
   /** Enable blinking animation */
   enableBlinking?: boolean;
+  /** Gesture to play */
+  gestureToPlay?: GestureType | null;
+  /** Callback when gesture completes */
+  onGestureComplete?: () => void;
   /** Animation update priority (lower = earlier) */
   priority?: number;
 }
@@ -48,8 +60,32 @@ interface AnimatorState {
   breathing: BreathingState | null;
   weightShift: WeightShiftState | null;
   blink: BlinkState | null;
+  gesture: GestureState;
+  /** Accumulated time for gesture system */
+  gestureTime: number;
   /** Store base rotations to reset each frame */
   baseRotations: Map<string, { x: number; y: number; z: number }>;
+  /** Track last gesture to detect changes */
+  lastGestureToPlay: GestureType | null;
+}
+
+/**
+ * Apply gesture bone rotations to the skeleton
+ */
+function applyGestureBones(
+  boneMap: Map<string, THREE.Bone>,
+  gestureBones: BoneMap,
+  weight: number
+): void {
+  for (const [boneName, boneState] of Object.entries(gestureBones)) {
+    const bone = boneMap.get(boneName);
+    if (bone && boneState?.rotation) {
+      // Blend gesture rotation onto current rotation
+      bone.rotation.x += boneState.rotation.x * weight;
+      bone.rotation.y += boneState.rotation.y * weight;
+      bone.rotation.z += boneState.rotation.z * weight;
+    }
+  }
 }
 
 /**
@@ -59,6 +95,7 @@ interface AnimatorState {
  * - Zero shared state between avatars
  * - All calculations validated for NaN/Infinity
  * - Graceful degradation on errors
+ * - Gesture support with blending
  */
 export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
   const {
@@ -67,6 +104,8 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
     enableBreathing = true,
     enableWeightShift = true,
     enableBlinking = true,
+    gestureToPlay = null,
+    onGestureComplete,
     priority = 0,
   } = config;
 
@@ -77,7 +116,10 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
     breathing: null,
     weightShift: null,
     blink: null,
+    gesture: createGestureState(),
+    gestureTime: 0,
     baseRotations: new Map(),
+    lastGestureToPlay: null,
   });
 
   // Initialize state when clone becomes available
@@ -124,6 +166,22 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
     });
   }, []);
 
+  // Handle gesture changes
+  useEffect(() => {
+    const state = stateRef.current;
+    if (!state.initialized) return;
+    
+    // Detect gesture change
+    if (gestureToPlay !== state.lastGestureToPlay) {
+      state.lastGestureToPlay = gestureToPlay;
+      
+      if (gestureToPlay && GESTURE_LIBRARY[gestureToPlay]) {
+        // Start new gesture
+        state.gesture = startGesture(state.gesture, gestureToPlay, state.gestureTime);
+      }
+    }
+  }, [gestureToPlay]);
+
   // Frame update - single apply step
   useFrame((_, delta) => {
     // Initialize on first frame with valid clone
@@ -131,6 +189,9 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
     
     const state = stateRef.current;
     if (!state.initialized || !clone) return;
+    
+    // Accumulate time for gesture system
+    state.gestureTime += delta;
     
     try {
       // Reset to base pose first (prevents accumulation drift)
@@ -155,7 +216,21 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
         applyBlink(clone, blinkValue);
       }
       
-      // Future: Look-at and emotes will be added here
+      // 4. Update and apply gesture
+      if (state.gesture.isPlaying) {
+        const result = updateGesture(state.gesture, state.gestureTime, () => {
+          state.lastGestureToPlay = null;
+          onGestureComplete?.();
+        });
+        
+        // Update gesture state
+        state.gesture = result.state;
+        
+        // Apply gesture bones with weight
+        if (result.bones) {
+          applyGestureBones(state.boneMap, result.bones, result.weight);
+        }
+      }
       
     } catch (error) {
       // Graceful degradation - log but don't throw

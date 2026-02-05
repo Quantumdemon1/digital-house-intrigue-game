@@ -121,8 +121,10 @@ const RPMAvatarInner: React.FC<{
   applyIdlePose: boolean;
   staticPose: StaticPoseType;
   animationQuality: 'low' | 'medium' | 'high';
+  gestureToPlay?: GestureType | null;
+  onGestureComplete?: () => void;
   onLoaded?: () => void;
-}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, onLoaded }) => {
+}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, gestureToPlay, onGestureComplete, onLoaded }) => {
   const group = useRef<THREE.Group>(null);
   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
@@ -146,13 +148,15 @@ const RPMAvatarInner: React.FC<{
     [animationQuality]
   );
   
-  // Use the unified animation hook
+  // Use the unified animation hook with gesture support
   useAvatarAnimator({
     clone,
     instanceId: instanceId.current,
     enableBreathing: animFeatures.enableBreathing,
     enableWeightShift: animFeatures.enableWeightShift,
     enableBlinking: animFeatures.enableBlinking,
+    gestureToPlay,
+    onGestureComplete,
   });
   
   // Notify when clone is ready
@@ -180,6 +184,8 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   applyIdlePose = true,
   poseType,
   animationQuality = 'high',
+  gestureToPlay,
+  onGestureComplete,
   onLoaded,
   onError,
 }) => {
@@ -236,6 +242,8 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
         applyIdlePose={applyIdlePose}
         staticPose={staticPose}
         animationQuality={animationQuality}
+        gestureToPlay={gestureToPlay}
+        onGestureComplete={onGestureComplete}
         onLoaded={onLoaded}
       />
     </AvatarRenderBoundary>
