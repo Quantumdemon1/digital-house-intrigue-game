@@ -50,6 +50,8 @@ export interface AvatarAnimatorConfig {
   gestureToPlay?: GestureType | null;
   /** Callback when gesture completes */
   onGestureComplete?: () => void;
+  /** Live bone overrides from pose editor (highest priority) */
+  liveBoneOverrides?: Record<string, BoneRotation> | null;
   /** Animation update priority (lower = earlier) */
   priority?: number;
 }
@@ -106,6 +108,7 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
     enableBlinking = true,
     gestureToPlay = null,
     onGestureComplete,
+    liveBoneOverrides = null,
     priority = 0,
   } = config;
 
@@ -229,6 +232,16 @@ export function useAvatarAnimator(config: AvatarAnimatorConfig): void {
         // Apply gesture bones with weight
         if (result.bones) {
           applyGestureBones(state.boneMap, result.bones, result.weight);
+        }
+      }
+      
+      // 5. Apply live bone overrides from pose editor (highest priority)
+      if (liveBoneOverrides) {
+        for (const [boneName, rotation] of Object.entries(liveBoneOverrides)) {
+          const bone = state.boneMap.get(boneName);
+          if (bone && rotation) {
+            bone.rotation.set(rotation.x, rotation.y, rotation.z);
+          }
         }
       }
       
