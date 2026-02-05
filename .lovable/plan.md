@@ -1,275 +1,97 @@
 
+# Fix: Avatar Network Failure Shows Wrong Fallback in HouseScene
 
-# New Avatar Animation System Design
+## Problem Analysis
 
-## Lessons Learned from the Glitch
+When Ready Player Me CDN fails to load (network error), the avatars appear as strange geometric objects instead of proper placeholders. This is because:
 
-The previous system failed because:
-1. **Bone cache contamination** - Multiple avatars shared bone references
-2. **Race conditions** - Animation controllers initialized before clones were ready
-3. **Complex layer blending** - Too many systems fighting for bone control
-4. **Unsafe math** - Spring physics could produce NaN or extreme values
+1. `RPMAvatar`'s internal `AvatarRenderBoundary` catches the error and returns `null`
+2. Returning `null` is a valid render - it doesn't trigger the `Suspense` fallback
+3. The character spot becomes "empty" and shows underlying scene geometry (walls, furniture)
+4. The yellow ring around "Jordan Taylor" is the platform, not the avatar
 
----
+## Root Cause
 
-## New Architecture: Simplified & Isolated
-
-### Core Principles
-
-1. **Zero shared state** - Each avatar owns its animation data completely
-2. **Single source of truth** - One system applies bones per frame, no blending conflicts
-3. **Fail-safe math** - All calculations clamped and validated
-4. **Progressive enhancement** - Start simple, add complexity only if stable
-
----
-
-## Phase 1: Static Poses (Foundation)
-
-### Pose Library
-
-| Pose Name | Description | Use Case |
-|-----------|-------------|----------|
-| `neutral` | Arms slightly forward, relaxed | Default fallback |
-| `relaxed` | Arms at sides, natural stance | Idle standing |
-| `confident` | Chest out, hands on hips | HoH, competition winner |
-| `defensive` | Arms crossed | Nominated, threatened |
-| `open` | Palms up, welcoming | Friendly interaction |
-
-### Implementation
+The error handling flow is broken:
 
 ```text
-Apply pose ONCE during clone creation:
-┌─────────────────────────────────────────┐
-│ useMemo(() => {                         │
-│   const clone = SkeletonUtils.clone()   │
-│   applyStaticPose(clone, poseType)      │
-│   return clone                          │
-│ })                                      │
-└─────────────────────────────────────────┘
-No useFrame, no animation loop
+Current Flow (Broken):
+┌─────────────────────────────────────────────────────────┐
+│ Suspense fallback={<AvatarPlaceholder />}               │
+│   └── RPMAvatar                                         │
+│         └── AvatarRenderBoundary catches error → null   │
+│                                                         │
+│ Result: null renders, no fallback shown                 │
+└─────────────────────────────────────────────────────────┘
 ```
 
----
+## Solution
 
-## Phase 2: Breathing Animation (Micro-motion)
+Modify `RPMAvatar` to render its own 3D fallback mesh when an error occurs, rather than returning `null`. This ensures there's always a visible avatar representation.
 
-### Simple Sine-Based Breathing
+## Changes Required
 
-Instead of complex spring physics, use a simple deterministic sine wave:
+### 1. Update `RPMAvatar.tsx`
 
-```text
-Breathing only affects:
-- Spine: subtle forward/back tilt (±0.02 radians)
-- Chest: subtle expansion (±0.01 radians)
+When `hasError` is true, instead of returning `null`, render the `RPMAvatarFallback` component:
 
-Formula:
-breathOffset = sin(time * breathRate + phaseOffset) * amplitude
-
-Each avatar gets unique phaseOffset from their ID
-```
-
-### Safety Features
-
-- Amplitude hard-capped at 0.05 radians
-- Delta time clamped between 0.001 and 0.1
-- NaN check before applying any rotation
-
----
-
-## Phase 3: Weight Shift (Idle Variation)
-
-### Subtle Hip Sway
-
-```text
-Weight shift (slower than breathing):
-- Hips: side-to-side tilt (±0.03 radians)
-- Opposite shoulder compensation
-
-Frequency: ~0.2 Hz (one cycle every 5 seconds)
-```
-
----
-
-## Phase 4: Blink System (Expression)
-
-### Morph Target Animation
-
-```text
-Blink pattern:
-- Random interval: 2-6 seconds
-- Duration: 150ms
-- Curve: Quick close (30%), hold (20%), slow open (50%)
-
-Morphs affected:
-- eyeBlinkLeft
-- eyeBlinkRight
-```
-
----
-
-## Phase 5: Head Look-At (Optional)
-
-### Simplified Look-At
-
-```text
-Instead of complex eye-lead behavior:
-- Head rotates toward target (clamped ±45°)
-- Smooth interpolation (lerp factor: 0.05)
-- No neck/spine chain - head only
-```
-
----
-
-## Phase 6: Emotes (Triggered Animations)
-
-### Emote Library
-
-| Emote | Trigger | Duration | Bones Affected |
-|-------|---------|----------|----------------|
-| `wave` | Greeting | 2s | Right arm |
-| `nod` | Agreement | 1s | Head |
-| `shrug` | Confusion | 1.5s | Shoulders, arms |
-| `celebrate` | Victory | 3s | Both arms |
-| `facepalm` | Frustration | 2s | Right arm, head |
-| `point` | Accusation | 1.5s | Right arm |
-| `clap` | Applause | 2s | Both arms |
-| `thumbsUp` | Approval | 1s | Right arm |
-
-### Emote Implementation
-
-```text
-Emotes are keyframe-based, NOT physics-based:
-┌────────────────────────────────────────────────────┐
-│ Keyframe approach:                                 │
-│ - Define start/peak/end poses                      │
-│ - Interpolate between keyframes                    │
-│ - Blend with base pose using weight (0-1)          │
-│ - Return to base pose when complete                │
-└────────────────────────────────────────────────────┘
-```
-
----
-
-## New File Structure
-
-```text
-src/components/avatar-3d/animation/
-├── poses/
-│   ├── PoseLibrary.ts        # Static pose definitions
-│   └── applyPose.ts          # One-time pose application
-├── micro/
-│   ├── BreathingSystem.ts    # Sine-based breathing
-│   └── WeightShift.ts        # Idle weight shift
-├── expressions/
-│   ├── BlinkSystem.ts        # Morph-based blinking
-│   └── MoodExpressions.ts    # Smile, frown, etc.
-├── emotes/
-│   ├── EmoteLibrary.ts       # Keyframe definitions
-│   ├── EmotePlayer.ts        # Plays emote sequences
-│   └── emotes/
-│       ├── wave.ts
-│       ├── nod.ts
-│       ├── shrug.ts
-│       └── ...
-├── lookAt/
-│   └── SimpleLookAt.ts       # Head-only look-at
-└── AvatarAnimator.ts         # Single entry point
-```
-
----
-
-## Single Controller Design
-
-### `useAvatarAnimator` Hook
-
-```text
-interface AvatarAnimatorConfig {
-  clone: THREE.Group | null;
-  instanceId: string;
-  
-  // Optional features (default: false)
-  enableBreathing?: boolean;
-  enableBlinking?: boolean;
-  enableLookAt?: boolean;
-  
-  // State
-  basePose?: PoseType;
-  mood?: MoodType;
-  lookAtTarget?: THREE.Vector3 | null;
-  
-  // Emotes
-  emoteToPlay?: EmoteType | null;
-  onEmoteComplete?: () => void;
+```typescript
+// If error occurred, show fallback mesh
+if (hasError) {
+  return <RPMAvatarFallback isError />;
 }
 ```
 
-### Frame Update Order
+### 2. Improve `RPMAvatarFallback` Positioning
 
-```text
-Each frame (if enabled):
-1. Calculate breathing offset → add to spine
-2. Calculate weight shift offset → add to hips
-3. Calculate look-at rotation → set head
-4. If emote playing → blend emote with above
-5. Update blink morph targets
+The fallback mesh needs to match the avatar's expected position and scale:
 
-Single apply step - no conflicts
+- Use the same `effectivePosition` and `scale` as the main avatar
+- Ensure the capsule/sphere geometry is at the correct height
+- Keep the wireframe style to distinguish it as a placeholder
+
+### 3. Update `RPMAvatarInner` Error Callback
+
+Pass the `onError` callback properly so network failures bubble up:
+
+```typescript
+const { scene } = useGLTF(optimizedUrl);
+// useGLTF throws on failure, caught by boundary
 ```
 
----
+## Technical Details
 
-## Safety Guarantees
-
-### Isolation
+### Modified Error Flow
 
 ```text
-Each avatar instance owns:
-- Its own bone references (from its clone)
-- Its own animation state object
-- Its own phase offsets
-
-No shared refs, no shared state
+New Flow (Fixed):
+┌─────────────────────────────────────────────────────────┐
+│ Suspense fallback={<AvatarPlaceholder />}               │
+│   └── RPMAvatar                                         │
+│         ├── hasError=false → RPMAvatarInner             │
+│         └── hasError=true  → <RPMAvatarFallback />      │
+│                                                         │
+│ Result: Wireframe capsule always visible on error       │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Math Safety
+### Fallback Visual
 
-```text
-Before any bone.rotation.set():
-- isFinite() check on all values
-- Clamp to safe range (e.g., ±π for most bones)
-- Skip frame if any value is NaN
-```
+The fallback will show:
+- Gray wireframe capsule body (loading state)
+- Red wireframe capsule body (error state)
+- Sphere for head indicator
+- Positioned correctly at character position
 
-### Graceful Degradation
+## Files to Modify
 
-```text
-If any error occurs:
-- Log warning (don't throw)
-- Skip animation for that frame
-- Avatar remains in last valid pose
-```
+| File | Change |
+|------|--------|
+| `src/components/avatar-3d/RPMAvatar.tsx` | Return `<RPMAvatarFallback />` instead of `null` when error occurs |
 
----
+## Expected Outcome
 
-## Implementation Phases
-
-| Phase | Feature | Risk Level | Priority |
-|-------|---------|------------|----------|
-| 1 | Static poses only | Very Low | First |
-| 2 | Breathing (sine) | Low | Second |
-| 3 | Blinking (morphs) | Low | Third |
-| 4 | Weight shift | Low | Fourth |
-| 5 | Simple look-at | Medium | Fifth |
-| 6 | Emotes | Medium | Sixth |
-
----
-
-## Summary
-
-The new system prioritizes:
-1. **Simplicity** - No complex physics, just math
-2. **Isolation** - Each avatar is completely independent
-3. **Safety** - All calculations validated
-4. **Modularity** - Enable features incrementally
-5. **Debuggability** - Easy to disable any layer
-
+- When avatars fail to load, users see a clear wireframe placeholder
+- The placeholder is positioned at the character's spot with correct scale
+- Selection rings and name labels still work correctly
+- No "invisible" characters showing underlying scene geometry
