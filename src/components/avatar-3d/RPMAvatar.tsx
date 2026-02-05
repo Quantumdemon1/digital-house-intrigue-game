@@ -57,6 +57,8 @@ interface RPMAvatarProps {
   animationQuality?: 'low' | 'medium' | 'high';
   /** Live bone overrides from pose editor */
   liveBoneOverrides?: Record<string, { x: number; y: number; z: number }> | null;
+  /** Character ID for per-character pose customization */
+  characterId?: string;
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
@@ -124,24 +126,26 @@ const RPMAvatarInner: React.FC<{
   gestureToPlay?: GestureType | null;
   onGestureComplete?: () => void;
   liveBoneOverrides?: Record<string, { x: number; y: number; z: number }> | null;
+  characterId?: string;
   onLoaded?: () => void;
-}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, gestureToPlay, onGestureComplete, liveBoneOverrides, onLoaded }) => {
+}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, gestureToPlay, onGestureComplete, liveBoneOverrides, characterId, onLoaded }) => {
   const group = useRef<THREE.Group>(null);
   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
   const { scene } = useGLTF(optimizedUrl);
   
-  // Clone scene and apply static pose ONCE
+  // Clone scene and apply static pose ONCE (with character ID for per-character overrides)
   const clone = useMemo(() => {
     const cloned = SkeletonUtils.clone(scene) as THREE.Group;
     cloned.userData.instanceId = instanceId.current;
+    cloned.userData.characterId = characterId;
     
     if (applyIdlePose) {
-      applyStaticPose(cloned, staticPose);
+      applyStaticPose(cloned, staticPose, characterId);
     }
     
     return cloned;
-  }, [scene, applyIdlePose, staticPose]);
+  }, [scene, applyIdlePose, staticPose, characterId]);
   
   // Get animation features based on quality
   const animFeatures = useMemo(() => 
@@ -189,6 +193,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   gestureToPlay,
   onGestureComplete,
   liveBoneOverrides,
+  characterId,
   onLoaded,
   onError,
 }) => {
@@ -248,6 +253,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
         gestureToPlay={gestureToPlay}
         onGestureComplete={onGestureComplete}
         liveBoneOverrides={liveBoneOverrides}
+        characterId={characterId}
         onLoaded={onLoaded}
       />
     </AvatarRenderBoundary>
