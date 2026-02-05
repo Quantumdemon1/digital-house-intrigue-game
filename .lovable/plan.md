@@ -1,182 +1,137 @@
 
-# Fix Mobile Avatar Customizer Scrolling Issue
+# Fix Avatar Glitching & Add CSS-Based Visual Effects
 
 ## Problem Summary
 
-On mobile, users cannot scroll up to view the full avatar in the customizer dialog. The screenshot shows only the avatar's legs/pants are visible, and touch gestures are captured by the 3D controls instead of allowing page scroll.
+1. **Avatars stuck in T-pose**: The 3D avatars are displaying with arms extended horizontally (T-pose) instead of the intended "relaxed" pose with arms down at their sides.
 
-## Root Causes
+2. **Missing visual effects**: Bloom and vignette post-processing effects were removed due to a `@react-three/postprocessing` version incompatibility, leaving the scene looking flat.
 
-### 1. Touch Event Interception
-The `OrbitControls` component in the 3D canvas captures touch events for rotation, which prevents the parent dialog from receiving scroll events on mobile.
+---
 
-### 2. Drag Motion on Avatar Container
-The `motion.div` wrapper has `drag="x"` which also captures touch interactions.
+## Root Cause Analysis
 
-### 3. Content Layout Not Mobile-Optimized
-The `AvatarCustomizer` stacks vertically on mobile with:
-- 3D preview (224px height on mobile)
-- Zoom controls
-- Rotation buttons
-- "Open Full Editor" button
-- Profile photo section
-- RPM Creator panel (450px fixed height iframe)
-- Continue button
+### T-Pose Issue
 
-Total content exceeds the viewport, but touch events are blocked.
+The T-pose problem is caused by multiple potential issues working together:
+
+1. **Missing `three-stdlib` explicit dependency**: The `SkeletonUtils` import comes from `three-stdlib`, which is only a transitive dependency of `@react-three/drei`. Without it as a direct dependency, Vite might be bundling duplicate instances.
+
+2. **Animation controller initialization race condition**: The `useAnimationController` hook depends on the scene being ready, but the `initialized` flag may not be setting correctly when bones are found.
+
+3. **Vite cache not cleared**: After updating `vite.config.ts`, the old cached bundles may still contain the duplicate library instances.
+
+### Missing Visual Effects
+
+The bloom and vignette effects were provided by `@react-three/postprocessing`, which caused runtime crashes due to version conflicts with the Three.js rendering pipeline.
+
+---
 
 ## Solution
 
-### Part 1: Disable 3D Rotation on Mobile for Customizer
+### Part 1: Fix Avatar T-Pose
 
-The `OrbitControls` in `AvatarLoader` should be disabled on mobile when in the customizer context, allowing touch events to pass through for scrolling.
+#### A. Add explicit `three-stdlib` dependency
 
-**File: `src/components/avatar-3d/AvatarLoader.tsx`**
-- Add `enableRotation` prop (default `true`)
-- Pass `false` from customizer on mobile
-- Disable `OrbitControls` touch when scrolling should take priority
+Add `three-stdlib` as a direct dependency to ensure proper deduplication.
 
-### Part 2: Mobile-Optimized Layout for AvatarCustomizer
+#### B. Update Vite configuration
 
-Restructure the customizer layout for mobile to:
-1. Make the avatar preview smaller on mobile (160px instead of 224px)
-2. Reduce the RPM iframe height on mobile (350px instead of 450px)
-3. Remove the `drag` functionality on mobile for the avatar container
-4. Add proper scrollable container with `touch-action: pan-y` CSS
+Ensure `three-stdlib` is properly included in both `dedupe` and `optimizeDeps.include`, and add a force flag to rebuild the optimization cache.
 
-**File: `src/components/avatar-3d/AvatarCustomizer.tsx`**
-- Detect mobile with media query hook
-- Reduce avatar preview dimensions on mobile
-- Remove drag-to-rotate on mobile (use buttons only)
-- Add CSS to ensure touch scrolling works
-
-### Part 3: Reduce RPM Panel Height on Mobile
-
-**File: `src/components/avatar-3d/RPMAvatarCreatorPanel.tsx`**
-- Use responsive height class: `h-[350px] lg:h-[450px]`
-
-### Part 4: Add Touch-Friendly CSS
-
-**File: `src/index.css`**
-- Add `touch-action: pan-y` to customizer wrapper on mobile
-- Ensure scroll containers work properly with touch
-
-## Technical Changes
-
-### File 1: `src/components/avatar-3d/AvatarLoader.tsx`
-
-Add a new prop to control OrbitControls behavior:
-
-```typescript
-interface AvatarLoaderProps {
-  // ... existing props
-  /** Allow orbit rotation controls (disable on mobile customizer for scrolling) */
-  enableOrbitControls?: boolean;
-}
-
-// In RPMAvatarCanvas:
-<OrbitControls 
-  enabled={enableOrbitControls !== false}  // Disable when prop is false
-  enableZoom={false} 
-  enablePan={false}
-  // ...
-/>
+```text
+vite.config.ts changes:
+┌────────────────────────────────────────────────────────────┐
+│ optimizeDeps: {                                            │
+│   include: [...existing, "three-stdlib"],                  │
+│   force: true  // Force rebuild of deps cache              │
+│ }                                                          │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### File 2: `src/components/avatar-3d/AvatarCustomizer.tsx`
+#### C. Fix animation initialization
 
-Add mobile detection and layout adjustments:
+Add a safety check and force initial pose application even before the animation loop starts. This ensures avatars are positioned correctly immediately after loading.
 
-```typescript
-// Add mobile detection
-const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-// Smaller avatar on mobile
-<motion.div 
-  className={cn(
-    "relative rounded-2xl overflow-hidden",
-    isMobile ? "w-40 h-40" : "w-56 h-56 lg:w-72 lg:h-72",
-    // Remove cursor-grab on mobile
-    !isMobile && (isDragging ? "cursor-grabbing" : "cursor-grab")
-  )}
-  // Disable drag on mobile
-  drag={isMobile ? false : "x"}
-  // ...
->
-  {hasValidAvatar ? (
-    <AvatarLoader
-      // ...
-      enableOrbitControls={!isMobile}  // Disable rotation on mobile
-    />
-  ) : /* ... */}
-</motion.div>
-
-// Hide rotation buttons on mobile (use zoom only)
-{!isMobile && (
-  <div className="flex items-center gap-3 mt-2">
-    {/* rotation buttons */}
-  </div>
-)}
+```text
+AnimationController.ts changes:
+┌────────────────────────────────────────────────────────────┐
+│ // Apply initial pose immediately when bones are found    │
+│ useEffect(() => {                                          │
+│   if (scene && boneCache.size > 0) {                       │
+│     const initialBones = POSE_CONFIGS[basePose];           │
+│     applyBoneMap(boneCache, initialBones, 1);              │
+│   }                                                        │
+│ }, [scene, basePose]);                                     │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### File 3: `src/components/avatar-3d/RPMAvatarCreatorPanel.tsx`
+### Part 2: Add CSS-Based Visual Effects
 
-Use responsive height:
+Since `@react-three/postprocessing` is incompatible, we'll implement bloom and vignette using CSS effects that layer on top of the Canvas.
 
-```typescript
-<div 
-  ref={creatorContainerRef}
-  className="relative w-full h-[350px] lg:h-[450px] rounded-xl overflow-hidden border border-border bg-muted/30"
->
+#### A. Create a reusable CSS effects overlay component
+
+```text
+New file: src/components/avatar-3d/SceneEffectsOverlay.tsx
+┌────────────────────────────────────────────────────────────┐
+│ <div className="scene-effects-overlay">                    │
+│   <div className="vignette-effect" />                      │
+│   <div className="bloom-glow" />                           │
+│ </div>                                                     │
+│                                                            │
+│ CSS (pointer-events: none to allow interaction):           │
+│ - Vignette: radial-gradient transparent → black at edges   │
+│ - Bloom: subtle brightness/contrast filter                 │
+│ - Backdrop blur for soft glow effect on highlights         │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### File 4: `src/components/game-setup/AvatarPreview.tsx`
+#### B. Apply effects overlay to CircularHouseScene and HouseScene
 
-Update DialogContent for mobile:
+Wrap the Canvas with the new overlay component:
 
-```typescript
-<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto overscroll-contain">
+```text
+CircularHouseScene.tsx / HouseScene.tsx:
+┌────────────────────────────────────────────────────────────┐
+│ <div className="relative w-full h-full">                   │
+│   <Canvas ... />                                           │
+│   <SceneEffectsOverlay enableBloom={!isMobile} />          │
+│ </div>                                                     │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### File 5: `src/index.css`
+---
 
-Add touch-friendly scrolling:
+## Technical Details
 
-```css
-/* Mobile customizer scrolling fix */
-@media (max-width: 768px) {
-  .sims-cas-background {
-    touch-action: pan-y;
-  }
-}
-```
+### File Changes
 
-## Visual Comparison
+| File | Change |
+|------|--------|
+| `package.json` | Add `three-stdlib` as direct dependency |
+| `vite.config.ts` | Add `force: true` to optimizeDeps |
+| `src/components/avatar-3d/animation/AnimationController.ts` | Apply initial pose immediately on bone discovery |
+| `src/components/avatar-3d/SceneEffectsOverlay.tsx` | New component for CSS bloom/vignette |
+| `src/components/avatar-3d/CircularHouseScene.tsx` | Add SceneEffectsOverlay |
+| `src/components/avatar-3d/HouseScene.tsx` | Add SceneEffectsOverlay |
 
-| Element | Before (Mobile) | After (Mobile) |
-|---------|-----------------|----------------|
-| Avatar preview | 224x224px | 160x160px |
-| RPM iframe | 450px height | 350px height |
-| Drag-to-rotate | Active (blocks scroll) | Disabled |
-| OrbitControls | Active (blocks scroll) | Disabled |
-| Total content height | ~900px+ | ~650px |
-| Touch scrolling | Blocked | Working |
+### CSS Effects Specification
 
-## Files to Modify
+**Vignette Effect:**
+- Uses `radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%)`
+- Positioned absolutely over the canvas
+- `pointer-events: none` to allow interactions through
 
-| File | Changes |
-|------|---------|
-| `src/components/avatar-3d/AvatarLoader.tsx` | Add `enableOrbitControls` prop |
-| `src/components/avatar-3d/AvatarCustomizer.tsx` | Mobile layout, disable drag/orbit on mobile |
-| `src/components/avatar-3d/RPMAvatarCreatorPanel.tsx` | Responsive iframe height |
-| `src/components/game-setup/AvatarPreview.tsx` | Add `overscroll-contain` class |
-| `src/index.css` | Add `touch-action: pan-y` for mobile |
+**Bloom Simulation:**
+- Uses CSS `filter: brightness(1.05) contrast(1.02)`
+- Optional subtle `backdrop-filter: blur(0.5px)` for glow on bright areas
+- Disabled on mobile for performance
 
-## Expected Result
+### Expected Result
 
-After these changes:
-- Users can scroll up/down freely in the avatar customizer on mobile
-- The avatar preview will be smaller but still visible
-- Rotation will use the button controls instead of drag on mobile
-- The RPM creator iframe will be more appropriately sized for mobile
-- Overall content height will fit better in the viewport
+After implementation:
+1. **Avatars will display in relaxed pose** with arms naturally at their sides, not T-pose
+2. **Subtle vignette** darkening around edges gives cinematic feel
+3. **Soft bloom glow** enhances lighting without the runtime errors
+4. **Mobile-friendly** - effects are disabled or reduced on mobile devices
