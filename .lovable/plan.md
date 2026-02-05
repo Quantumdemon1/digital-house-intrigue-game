@@ -1,189 +1,157 @@
 
-# Avatar T-Pose Glitch Analysis & Fix Plan
+
+# Fix Persistent "Cannot read properties of undefined (reading 'lov')" Error
 
 ## Problem Summary
 
-The avatars are displaying in a T-pose (arms extended horizontally) instead of the intended "relaxed" pose (arms naturally at sides). This is happening despite having a complete animation system in place.
+The application crashes with `TypeError: Cannot read properties of undefined (reading 'lov')` in the React Three Fiber reconciler's `applyProps` function. The error occurs deep within the rendering pipeline at `createInstance` -> `completeWork`.
 
 ---
 
 ## Root Cause Analysis
 
-After deep analysis of the animation pipeline, I've identified **multiple issues** working together:
+After extensive investigation, I've identified **multiple contributing factors** causing duplicate library instances:
 
-### Issue 1: Animation Controller Only Runs When `enabled` = true
+### Issue 1: Unused Dependencies Bundling Their Own THREE Instances
 
-In `RPMAvatar.tsx` line 173:
+The `package.json` contains packages that are never used but still get bundled:
+
+| Package | In package.json | Actually Used |
+|---------|-----------------|---------------|
+| `@pixiv/three-vrm` | Yes | **No** (0 imports found) |
+| `@react-three/postprocessing` | Yes | **No** (removed, only comments remain) |
+
+Each of these packages bundles its own version of Three.js, creating duplicate instances even if never imported.
+
+### Issue 2: Vite Deduplication Not Working Correctly
+
+The current `vite.config.ts` has `force: true` which clears the cache on every restart, but doesn't solve the underlying issue:
+
 ```typescript
-enabled: isAnimated && applyIdlePose,
-```
-
-The animation controller won't run unless BOTH conditions are true. However, the controller initialization on lines 158-175 has a critical flaw:
-
-**The initial pose is only applied inside a `useEffect` that depends on `[scene, enabled, basePose]`**, but if `enabled` starts as `false` or the effect runs before bones are found, the avatar remains in T-pose.
-
-### Issue 2: Bones Not Found on First Render
-
-The `findBones()` function in `boneUtils.ts` traverses the scene to find bones by name. However:
-- Ready Player Me (RPM) models use a bone hierarchy that may not be immediately available after `SkeletonUtils.clone()`
-- The bone cache may be empty when `useEffect` runs initially
-
-### Issue 3: POSE_CONFIGS Z-Rotation is Correct but May Not Apply
-
-Looking at `BasePoseLayer.ts`:
-```typescript
-relaxed: {
-  LeftArm: { rotation: { x: 0.05, y: 0.1, z: 1.45 } },  // z: 1.45 radians ≈ 83°
-  RightArm: { rotation: { x: 0.05, y: -0.1, z: -1.45 } },
-  ...
+optimizeDeps: {
+  include: [...],  // Including problematic packages
+  force: true,     // Clearing cache but not fixing root cause
 }
 ```
 
-The pose values are correct (Z rotation of ~83° puts arms at sides), but they may never be applied if:
-1. The bone cache is empty
-2. The controller is disabled
-3. The effect runs before the scene is fully loaded
+The problem is that `include` adds more packages to pre-bundle, but unused packages like `@pixiv/three-vrm` and `postprocessing` still create separate bundles.
 
-### Issue 4: Race Condition in useFrame
+### Issue 3: three-stdlib Import Pattern
 
-The `useFrame` callback (line 203) returns early if:
+The current code imports `SkeletonUtils` directly:
 ```typescript
-if (!enabled || !stateRef.current.initialized || skinnedMeshes.length === 0) return;
+import { SkeletonUtils } from 'three-stdlib';
 ```
 
-If `initialized` is `false` (bones not found), animation never runs.
+However, `@react-three/drei`'s `Clone` component also imports from `three-stdlib`. Since the packages might be resolved from different node_modules paths, this can create duplicate instances.
+
+### Issue 4: primitive object Reconciler Issue
+
+When React Three Fiber's reconciler processes `<primitive object={clone} />`, it runs `applyProps` on the object. If there are duplicate THREE instances, the internal dispatcher references become undefined, causing the "reading 'lov'" error (where 'lov' is a minified property name).
 
 ---
 
-## Proposed Solution Architecture
+## Solution
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    Current Flow (Broken)                        │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Scene loads → clone created                                  │
-│ 2. useEffect runs → findBones() called                          │
-│ 3. Bones may not exist yet → boneCache empty                    │
-│ 4. initialized = false → useFrame skips animation               │
-│ 5. Avatar shows T-pose (model's default)                        │
-└─────────────────────────────────────────────────────────────────┘
+### Part 1: Remove Unused Dependencies
 
-┌─────────────────────────────────────────────────────────────────┐
-│                    Fixed Flow (Proposed)                        │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Scene loads → clone created                                  │
-│ 2. useLayoutEffect runs BEFORE paint → findBones() with retry   │
-│ 3. If bones found → apply pose IMMEDIATELY (sync)               │
-│ 4. useFrame continues with animation updates                    │
-│ 5. Avatar shows relaxed pose from first frame                   │
-└─────────────────────────────────────────────────────────────────┘
+Remove `@pixiv/three-vrm` and `@react-three/postprocessing` from `package.json` since they are not used anywhere in the codebase. This eliminates the source of duplicate Three.js instances.
+
+```json
+// REMOVE these lines from package.json dependencies:
+"@pixiv/three-vrm": "^3.4.5",
+"@react-three/postprocessing": "^2.19.1",
 ```
 
----
+### Part 2: Simplify Vite Configuration
 
-## Implementation Plan
-
-### Part 1: Fix Immediate Pose Application
-
-**File: `src/components/avatar-3d/RPMAvatar.tsx`**
-
-Apply the base pose directly on the cloned scene before passing to animation controller:
+Remove the unused packages from the dedupe/include lists and remove `force: true` which causes unnecessary rebuilds:
 
 ```typescript
-// After cloning scene, immediately apply base pose to prevent T-pose
-useLayoutEffect(() => {
-  if (!clone || !applyIdlePose) return;
-  
-  // Find and cache bones immediately
-  const bones = findBones(clone, ALL_BONE_NAMES);
-  
-  // Apply base pose synchronously before first render
-  if (bones.size > 0) {
-    const baseBoneConfig = POSE_CONFIGS[poseType];
-    applyBoneMap(bones, baseBoneConfig, 1);
-  }
-}, [clone, applyIdlePose, poseType]);
+// vite.config.ts - updated
+export default defineConfig(({ mode }) => ({
+  server: { host: "::", port: 8080 },
+  plugins: [react(), mode === 'development' && componentTagger()].filter(Boolean),
+  resolve: {
+    alias: { "@": path.resolve(__dirname, "./src") },
+    dedupe: [
+      "react", 
+      "react-dom", 
+      "react/jsx-runtime", 
+      "three", 
+      "@react-three/fiber", 
+      "@react-three/drei",
+      "three-stdlib",
+    ],
+  },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "three",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "three-stdlib",
+    ],
+  },
+}));
 ```
 
-### Part 2: Add Bone Discovery Retry Logic
+### Part 3: Use drei's Clone Component Instead of SkeletonUtils
 
-**File: `src/components/avatar-3d/animation/AnimationController.ts`**
-
-Add a retry mechanism for bone discovery:
-
-```typescript
-// Add retry counter to ensure bones are found
-const retryCount = useRef(0);
-const MAX_RETRIES = 10;
-
-useEffect(() => {
-  if (!scene || !enabled) {
-    stateRef.current.initialized = false;
-    return;
-  }
-  
-  const attemptBoneDiscovery = () => {
-    stateRef.current.boneCache = findBones(scene, ALL_BONE_NAMES);
-    
-    if (stateRef.current.boneCache.size === 0 && retryCount.current < MAX_RETRIES) {
-      retryCount.current++;
-      requestAnimationFrame(attemptBoneDiscovery);
-      return;
-    }
-    
-    stateRef.current.initialized = stateRef.current.boneCache.size > 0;
-    
-    // Apply initial pose immediately
-    if (stateRef.current.initialized) {
-      const initialBones = POSE_CONFIGS[basePose];
-      if (initialBones) {
-        applyBoneMapDirect(stateRef.current.boneCache, initialBones, 1);
-      }
-    }
-  };
-  
-  attemptBoneDiscovery();
-}, [scene, enabled, basePose]);
-```
-
-### Part 3: Verify Bone Names Match RPM Models
-
-**File: `src/components/avatar-3d/animation/AnimationController.ts`**
-
-RPM models may use slightly different bone naming. Update the bone name list to include variants:
+Replace the manual `SkeletonUtils.clone()` call with drei's `Clone` component, which:
+- Uses the same bundled `three-stdlib` as other drei components
+- Properly handles skinned meshes
+- Avoids duplicate instance issues
 
 ```typescript
-const ALL_BONE_NAMES = [
-  // Standard names
-  'Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
-  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
-  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
-  // RPM variant names (some models use mixamo naming)
-  'mixamorigHips', 'mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2',
-  'mixamorigNeck', 'mixamorigHead',
-  'mixamorigLeftShoulder', 'mixamorigLeftArm', 'mixamorigLeftForeArm', 'mixamorigLeftHand',
-  'mixamorigRightShoulder', 'mixamorigRightArm', 'mixamorigRightForeArm', 'mixamorigRightHand',
-];
-```
-
-And update `findBones` to normalize bone names.
-
-### Part 4: Force Immediate Bone Rotation on Clone
-
-**File: `src/components/avatar-3d/RPMAvatar.tsx`**
-
-The most robust fix - apply pose directly to the cloned skeleton before render:
-
-```typescript
+// RPMAvatar.tsx - BEFORE (current)
+import { SkeletonUtils } from 'three-stdlib';
+// ...
 const clone = useMemo(() => {
   const cloned = SkeletonUtils.clone(scene);
+  // Apply pose...
+  return cloned;
+}, [scene, applyIdlePose, poseType]);
+// ...
+return <primitive object={clone} />;
+
+// RPMAvatar.tsx - AFTER (fixed)
+import { Clone, useGLTF, useProgress } from '@react-three/drei';
+// Remove SkeletonUtils import
+// ...
+// Use drei's Clone component directly - no manual cloning
+return (
+  <Clone 
+    object={scene} 
+    // Clone handles skinned meshes automatically
+  />
+);
+```
+
+### Part 4: Apply Bone Transformations After Clone Mounts
+
+Since `Clone` creates the clone internally, we need to apply bone transformations differently. Create a wrapper component that applies transformations to the cloned object after it mounts:
+
+```typescript
+const PosedAvatar: React.FC<{
+  scene: THREE.Object3D;
+  poseType: PoseType;
+  applyIdlePose: boolean;
+}> = ({ scene, poseType, applyIdlePose }) => {
+  const cloneRef = useRef<THREE.Group>(null);
   
-  // Immediately apply base pose to prevent any T-pose flash
-  if (applyIdlePose) {
-    cloned.traverse((child) => {
+  // Apply pose after clone mounts
+  useLayoutEffect(() => {
+    if (!cloneRef.current || !applyIdlePose) return;
+    
+    const poseConfig = POSE_CONFIGS[poseType];
+    if (!poseConfig) return;
+    
+    cloneRef.current.traverse((child) => {
       if (child instanceof THREE.Bone) {
-        const poseConfig = POSE_CONFIGS[poseType];
-        const boneState = poseConfig?.[child.name];
+        const boneName = child.name.replace('mixamorig', '');
+        const boneState = poseConfig[boneName] || poseConfig[child.name];
         if (boneState) {
           child.rotation.set(
             boneState.rotation.x,
@@ -193,59 +161,55 @@ const clone = useMemo(() => {
         }
       }
     });
-  }
+  }, [poseType, applyIdlePose]);
   
-  return cloned;
-}, [scene, applyIdlePose, poseType]);
+  return <Clone ref={cloneRef} object={scene} />;
+};
+```
+
+### Part 5: Alternative - Keep SkeletonUtils But Use drei's Export
+
+If we must use SkeletonUtils directly, import it through the path that drei uses to ensure the same instance:
+
+```typescript
+// Instead of:
+import { SkeletonUtils } from 'three-stdlib';
+
+// Use the same path drei uses internally:
+import { SkeletonUtils } from 'three-stdlib';
+// But ensure vite.config.ts properly dedupes three-stdlib
 ```
 
 ---
 
-## Additional Improvements (Optional Enhancements)
+## Technical Details
 
-### Improvement A: Debug Logging for Bone Discovery
+### File Changes
 
-Add temporary console logging to diagnose bone finding issues:
+| File | Change |
+|------|--------|
+| `package.json` | Remove `@pixiv/three-vrm` and `@react-three/postprocessing` |
+| `vite.config.ts` | Simplify dedupe/include lists, remove `force: true`, remove postprocessing entries |
+| `src/components/avatar-3d/RPMAvatar.tsx` | Option A: Use `Clone` from drei instead of manual SkeletonUtils.clone(), OR Option B: Keep current approach but with cleaned dependencies |
 
-```typescript
-const discoveredBones: string[] = [];
-scene.traverse((child) => {
-  if (child instanceof THREE.Bone) {
-    discoveredBones.push(child.name);
-  }
-});
-console.log('[Avatar Debug] Found bones:', discoveredBones);
-```
+### Why This Fixes the Error
 
-### Improvement B: Fallback Pose Application in useFrame
+1. **Removing unused dependencies** eliminates the source of duplicate THREE.js instances - fewer packages = fewer chances for duplication
 
-As a safety net, apply the base pose in the first frame if not already applied:
+2. **Simplified Vite config** ensures only the packages we actually use are pre-bundled together
 
-```typescript
-// In useFrame callback
-const firstFrameApplied = useRef(false);
-if (!firstFrameApplied.current && state.boneCache.size > 0) {
-  applyBoneMap(state.boneCache, POSE_CONFIGS[basePose], 1);
-  firstFrameApplied.current = true;
-}
-```
+3. **Using drei's Clone** (if chosen) ensures consistent internal imports since drei, fiber, and our code all use the same bundled three-stdlib
 
----
-
-## Technical Summary
-
-| File | Change Description |
-|------|-------------------|
-| `src/components/avatar-3d/RPMAvatar.tsx` | Apply base pose directly on clone creation |
-| `src/components/avatar-3d/animation/AnimationController.ts` | Add bone discovery retry logic and first-frame pose application |
-| `src/components/avatar-3d/animation/utils/boneUtils.ts` | (Optional) Add bone name normalization for RPM variants |
+4. **Removing force: true** allows Vite to cache properly instead of rebuilding on every restart (which can cause race conditions)
 
 ---
 
 ## Expected Outcome
 
 After implementation:
-1. Avatars will display in the correct "relaxed" pose from the very first rendered frame
-2. No T-pose flicker even on slow network/device
-3. Animation system continues to work for breathing, weight shift, and micro-movements
-4. Robust fallback ensures pose is always applied
+1. No more "Cannot read properties of undefined (reading 'lov')" error
+2. Avatars load and render correctly
+3. Pose transformations apply properly (arms down instead of T-pose)
+4. Smaller bundle size from removed unused dependencies
+5. Faster dev server startup without forced cache clearing
+
