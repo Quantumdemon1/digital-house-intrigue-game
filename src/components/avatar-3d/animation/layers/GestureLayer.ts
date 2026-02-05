@@ -275,6 +275,63 @@
        { time: 1.0, bones: { Head: { x: 0, y: 0, z: 0 }, Neck: { x: 0, y: 0, z: 0 } } },
      ],
    },
+  walk: {
+    duration: 0.8, // One step cycle - short for natural loop
+    interruptible: true,
+    blendOutDuration: 0.25,
+    keyframes: [
+      // Start pose - left arm back, right arm forward
+      { time: 0, bones: { 
+        LeftArm: { x: 0.15, y: -0.1, z: 1.4 },   // Left arm back
+        RightArm: { x: 0.15, y: 0.1, z: -1.1 },  // Right arm forward
+        LeftForeArm: { x: 0, y: 0, z: 0.2 },
+        RightForeArm: { x: 0, y: 0, z: -0.4 },
+        Spine: { x: -0.03, y: 0.02, z: 0 },
+        Spine1: { x: -0.02, y: 0.01, z: 0 },
+        Head: { x: 0, y: 0, z: 0 },
+      }},
+      // Mid-stride - arms swinging through center
+      { time: 0.25, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.25 },
+        RightArm: { x: 0.1, y: 0, z: -1.25 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 },
+        RightForeArm: { x: 0, y: 0, z: -0.3 },
+        Spine: { x: -0.02, y: 0, z: 0 },
+        Spine1: { x: -0.01, y: 0, z: 0 },
+        Head: { x: 0, y: 0, z: 0 },
+      }},
+      // Opposite stride - left arm forward, right arm back
+      { time: 0.5, bones: { 
+        LeftArm: { x: 0.15, y: 0.1, z: 1.1 },    // Left arm forward
+        RightArm: { x: 0.15, y: -0.1, z: -1.4 }, // Right arm back
+        LeftForeArm: { x: 0, y: 0, z: 0.4 },
+        RightForeArm: { x: 0, y: 0, z: -0.2 },
+        Spine: { x: -0.03, y: -0.02, z: 0 },
+        Spine1: { x: -0.02, y: -0.01, z: 0 },
+        Head: { x: 0, y: 0, z: 0 },
+      }},
+      // Returning to start
+      { time: 0.75, bones: { 
+        LeftArm: { x: 0.1, y: 0, z: 1.25 },
+        RightArm: { x: 0.1, y: 0, z: -1.25 },
+        LeftForeArm: { x: 0, y: 0, z: 0.3 },
+        RightForeArm: { x: 0, y: 0, z: -0.3 },
+        Spine: { x: -0.02, y: 0, z: 0 },
+        Spine1: { x: -0.01, y: 0, z: 0 },
+        Head: { x: 0, y: 0, z: 0 },
+      }},
+      // Back to start (seamless loop)
+      { time: 1.0, bones: { 
+        LeftArm: { x: 0.15, y: -0.1, z: 1.4 },
+        RightArm: { x: 0.15, y: 0.1, z: -1.1 },
+        LeftForeArm: { x: 0, y: 0, z: 0.2 },
+        RightForeArm: { x: 0, y: 0, z: -0.4 },
+        Spine: { x: -0.03, y: 0.02, z: 0 },
+        Spine1: { x: -0.02, y: 0.01, z: 0 },
+        Head: { x: 0, y: 0, z: 0 },
+      }},
+    ],
+  },
  };
  
  export interface GestureState {

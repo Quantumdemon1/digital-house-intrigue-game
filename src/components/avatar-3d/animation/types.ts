@@ -79,7 +79,9 @@
   // Added gestures (Phase 1)
   | 'facepalm' | 'crossArms' | 'handOnHip' | 'nervousFidget' | 'emphasize'
    // Conversational
-  | 'listenNod' | 'dismiss' | 'welcome';
+  | 'listenNod' | 'dismiss' | 'welcome'
+  // Movement
+  | 'walk';
  
  // ============ Expression Types ============
  
