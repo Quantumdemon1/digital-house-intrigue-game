@@ -107,7 +107,7 @@ function mapToStaticPose(poseType?: PoseType): StaticPoseType {
     case 'thinking': return 'neutral';
     case 'casual-lean': return 'relaxed';
     case 'relaxed':
-    default: return 'relaxed';
+    default: return 'neutral';
   }
 }
 

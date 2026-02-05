@@ -367,7 +367,7 @@ const InteriorWalls: React.FC = () => {
   );
 };
 
- // Map archetype to pose types - all use relaxed pose for consistency
+ // Map archetype to pose types - all use neutral pose for consistency
  const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
    strategist: ['relaxed'],
    competitor: ['relaxed'],
@@ -980,7 +980,7 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    
    // Admin pose editor state
    const [showPoseEditor, setShowPoseEditor] = useState(false);
-   const [editorPoseType, setEditorPoseType] = useState<StaticPoseType>('relaxed');
+   const [editorPoseType, setEditorPoseType] = useState<StaticPoseType>('neutral');
    const [liveBoneOverrides, setLiveBoneOverrides] = useState<Record<string, BoneRotation> | null>(null);
    
    // Handler for pose editor bone adjustments
