@@ -1,243 +1,168 @@
 
 
-# Plan: Enhance Big Brother House Scene with Furniture, Camera Animation & Idle Characters
+# Plan: Fix T-Pose - Create Natural Standing Idle Pose for House Scene Characters
 
-## Overview
+## Problem
 
-This plan adds three major enhancements to the House Scene:
-1. **New Furniture** - TV entertainment center, kitchen area, and diary room door
-2. **Camera Fly-To Animation** - Smooth camera transition when selecting a character
-3. **Idle Character Animations** - Subtle breathing/sway for lifelike avatars
+Ready Player Me avatars in the House Scene display in their default T-pose (arms straight out) rather than a natural standing pose. This looks unnatural and breaks immersion.
 
----
+## Root Cause
 
-## 1. New Furniture Components
+RPM GLB avatars are exported in a T-pose bind pose by default. Without loading external animation files (FBX/GLB), the skeleton remains in this default state. The current code only animates:
+- Morph targets (facial expressions, blinking)
+- The outer group rotation (head movement)
+- Scale breathing effects on the wrapper group
 
-### Components to Add (`HouseFurniture.tsx`)
+None of these affect the actual skeleton bones that control arm/body position.
 
-| Component | Description | Position |
-|-----------|-------------|----------|
-| `TVStand` | Large flat-screen TV on entertainment unit | Back of room (z = -9) |
-| `KitchenArea` | Counter with cabinets, bar stools | Side area (x = 9) |
-| `DiaryRoomDoor` | Iconic red door with "DIARY ROOM" sign | Opposite side (x = -9) |
-| `BarStool` | Reusable stool for kitchen | Near kitchen counter |
-| `WallPanel` | Curved background wall segments | Around perimeter |
+## Solution
 
-### Visual Design
+Programmatically manipulate the avatar skeleton bones to create a natural "idle standing" pose, then add subtle per-frame bone animations for lifelike movement. This avoids needing external animation files.
 
-```text
-               ┌─────────────────────────┐
-               │          TV             │
-               │     ▭▭▭▭▭▭▭▭▭▭▭         │
-               └─────────────────────────┘
-                          ↑
-    ┌─────┐                              ┌─────────┐
-    │DIARY│     ○  ○  ○                  │ KITCHEN │
-    │ROOM │        ○     ○               │  ▭▭▭▭   │
-    │ 🚪  │   ○          ○    ◯ ◯ ◯      │ ◯ ◯ ◯   │
-    └─────┘      ○  ○  ○                 └─────────┘
-              Characters in Circle
-```
+### RPM Skeleton Bone Names (Standard)
 
-### Implementation Details
+Based on Ready Player Me's armature:
+- `Hips` - Root bone
+- `Spine`, `Spine1`, `Spine2` - Torso
+- `Neck`, `Head` - Head area
+- `LeftShoulder`, `RightShoulder` - Shoulders
+- `LeftArm`, `RightArm` - Upper arms
+- `LeftForeArm`, `RightForeArm` - Lower arms
+- `LeftHand`, `RightHand` - Hands
 
-**TVStand Component:**
-- Box geometry for entertainment unit base
-- Plane geometry for screen with emissive glow effect
-- BB logo/eye displayed on screen
-- Subtle screen flicker animation
+### Natural Standing Pose Values
 
-**KitchenArea Component:**
-- L-shaped counter using box geometries
-- Upper cabinets with metallic handles
-- 3 bar stools arranged in front
-- Overhead pendant lights
+To move arms down from T-pose to a relaxed position:
 
-**DiaryRoomDoor Component:**
-- Tall box geometry painted red
-- "DIARY ROOM" text using HTML overlay or 3D text
-- Glowing doorframe accent
-- Animated "on-air" light indicator
+| Bone | Rotation (radians) | Effect |
+|------|-------------------|--------|
+| `LeftArm` | Z: +1.2, X: +0.1 | Arm down at side, slight forward |
+| `RightArm` | Z: -1.2, X: +0.1 | Arm down at side, slight forward |
+| `LeftForeArm` | Z: +0.3 | Slight elbow bend |
+| `RightForeArm` | Z: -0.3 | Slight elbow bend |
+| `Spine` | X: -0.02 | Very slight chest-out posture |
 
 ---
 
-## 2. Camera Fly-To Animation
+## Implementation
 
-### Current Behavior
-- Camera uses OrbitControls with static position
-- CameraController exists but doesn't animate smoothly
+### 1. Create New Hook: `useIdlePose.ts`
 
-### Enhanced Behavior
-When a character is selected:
-1. Calculate target camera position (behind and above character, looking at them)
-2. Smoothly interpolate camera position over ~1 second
-3. Adjust OrbitControls target to focus on selected character
-4. When deselected, smoothly return to overview position
+Create a new hook that:
+1. Finds skeleton bones in the cloned scene
+2. Applies a natural standing pose on mount
+3. Adds subtle per-frame bone micro-movements (arm sway, weight shift)
 
-### Technical Approach
-
-**New `useCameraFlyTo` Hook:**
 ```typescript
-const useCameraFlyTo = (
-  targetPosition: THREE.Vector3 | null,
-  targetLookAt: THREE.Vector3 | null,
-  duration: number = 1
-) => {
-  const { camera } = useThree();
-  const startPos = useRef(new THREE.Vector3());
-  const startTarget = useRef(new THREE.Vector3());
-  const progress = useRef(0);
-  const isAnimating = useRef(false);
-  
-  useFrame((_, delta) => {
-    if (!isAnimating.current || !targetPosition) return;
-    
-    progress.current = Math.min(progress.current + delta / duration, 1);
-    const t = easeInOutCubic(progress.current);
-    
-    camera.position.lerpVectors(startPos.current, targetPosition, t);
-    // Update orbit controls target similarly
-  });
+// Key bone adjustments for natural pose
+const IDLE_POSE = {
+  LeftArm: { x: 0.1, y: 0, z: 1.2 },       // Arm down
+  RightArm: { x: 0.1, y: 0, z: -1.2 },     // Arm down  
+  LeftForeArm: { x: 0, y: 0, z: 0.3 },     // Slight bend
+  RightForeArm: { x: 0, y: 0, z: -0.3 },   // Slight bend
+  Spine: { x: -0.02, y: 0, z: 0 },         // Slight posture
 };
+
+// Per-frame subtle animations
+useFrame(({ clock }) => {
+  const time = clock.elapsedTime + phase;
+  
+  // Subtle arm sway
+  leftArmBone.rotation.z = 1.2 + Math.sin(time * 0.5) * 0.03;
+  rightArmBone.rotation.z = -1.2 + Math.sin(time * 0.5 + 0.5) * 0.03;
+  
+  // Weight shift in spine
+  spineBone.rotation.z = Math.sin(time * 0.3) * 0.01;
+});
 ```
 
-**Camera Target Calculation:**
-```typescript
-const getCharacterCameraTarget = (charPosition: [number, number, number]) => {
-  // Position camera 3 units behind, 2 units above, looking at character
-  const offset = new THREE.Vector3(
-    charPosition[0] * 0.3,  // Move towards center
-    2,                       // Elevate camera
-    charPosition[2] * 0.3 + 4  // Behind character
-  );
-  return offset;
-};
-```
+### 2. Update `RPMAvatar.tsx`
 
----
+Add a new prop `applyIdlePose` (default: false) and integrate the pose hook:
 
-## 3. Idle Character Animations
+- When `applyIdlePose={true}`, find skeleton bones after scene clone
+- Apply initial pose rotations
+- Run per-frame subtle bone animations
+- Stagger animations by passing an optional `phaseOffset` prop
 
-### Current State
-- RPMAvatar has subtle head movement and blink animation
-- HouseScene CharacterSpot only animates Y position on hover/select
+### 3. Update `HouseScene.tsx`
 
-### Enhanced Idle Animations
-
-Apply the existing `useIdleAnimation` hook to characters in the scene:
-
-**CharacterSpot Updates:**
-1. Wrap RPMAvatar in an animated group
-2. Apply breathing animation (subtle scale oscillation)
-3. Apply weight-shift sway (rotation.z oscillation)
-4. Stagger animation phases per character to avoid synchronized movement
-
-**Animation Parameters (per character):**
-```typescript
-{
-  breathingSpeed: 1.2 + (index * 0.1),  // Staggered
-  breathingIntensity: 0.006,
-  swaySpeed: 0.4 + (index * 0.05),      // Staggered
-  swayIntensity: 0.01
-}
-```
-
-### Implementation in CharacterSpot
+Pass `applyIdlePose={true}` to RPMAvatar instances in CharacterSpot:
 
 ```typescript
-const CharacterSpot: React.FC<...> = ({ ..., index }) => {
-  const idleGroupRef = useRef<THREE.Group>(null);
-  
-  // Staggered idle animation
-  useFrame(({ clock }) => {
-    if (!idleGroupRef.current) return;
-    const time = clock.elapsedTime;
-    const phase = index * 0.5; // Offset per character
-    
-    // Breathing
-    const breath = Math.sin(time * 1.5 + phase) * 0.005;
-    idleGroupRef.current.scale.set(1 + breath, 1, 1 + breath * 0.5);
-    
-    // Weight shift
-    idleGroupRef.current.rotation.z = Math.sin(time * 0.5 + phase) * 0.015;
-  });
-  
-  return (
-    <group ref={idleGroupRef}>
-      <RPMAvatar ... />
-    </group>
-  );
-};
+<RPMAvatar
+  modelSrc={modelUrl}
+  context="game"
+  scale={1}
+  position={[0, 0, 0]}
+  applyIdlePose={true}
+  phaseOffset={index * 0.7}  // Stagger animations
+/>
 ```
 
 ---
 
 ## Files to Modify
 
-### 1. `src/components/avatar-3d/HouseFurniture.tsx`
+### 1. Create `src/components/avatar-3d/hooks/useIdlePose.ts`
 
-Add new components:
-- `TVStand` - TV with entertainment center
-- `KitchenArea` - Counter, cabinets, bar stools
-- `DiaryRoomDoor` - Iconic red door with sign
-- `BarStool` - Reusable bar stool component
-- `WallPanel` - Curved wall segment for backdrop
+New hook that:
+- Accepts a cloned THREE scene
+- Traverses to find bones by name using `scene.getObjectByName()`
+- Applies initial rotation values for natural pose
+- Runs subtle per-frame bone animations with phase offset
 
-### 2. `src/components/avatar-3d/HouseScene.tsx`
+### 2. Modify `src/components/avatar-3d/RPMAvatar.tsx`
 
-Updates:
-- Add new furniture to SceneContent
-- Create `useCameraFlyTo` hook for smooth transitions
-- Modify CharacterSpot to include idle animations with phase offset
-- Pass character index to CharacterSpot for staggered animations
-- Update CameraController to handle fly-to logic
-- Add refs to OrbitControls for programmatic target updates
+- Add `applyIdlePose?: boolean` and `phaseOffset?: number` props
+- Import and call `useIdlePose` hook when enabled
+- Pass the cloned scene to the hook for bone manipulation
+- Keep existing morph target animations (blink, expressions)
 
-### 3. `src/components/avatar-3d/index.ts`
+### 3. Modify `src/components/avatar-3d/HouseScene.tsx`
 
-Export new furniture components:
-```typescript
-export { 
-  HouseFloor, Couch, CoffeeTable, Plant, LightFixture,
-  TVStand, KitchenArea, DiaryRoomDoor, BarStool, WallPanel 
-} from './HouseFurniture';
-```
+- Update RPMAvatar usage in CharacterSpot to include:
+  - `applyIdlePose={true}`
+  - `phaseOffset={index * 0.7}` for staggered animations
 
 ---
 
 ## Technical Details
 
-### Camera Animation Math
+### Finding Bones
 
-**Easing Function:**
 ```typescript
-const easeInOutCubic = (t: number): number => {
-  return t < 0.5 
-    ? 4 * t * t * t 
-    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const findBone = (scene: THREE.Object3D, name: string): THREE.Bone | null => {
+  let bone: THREE.Bone | null = null;
+  scene.traverse((child) => {
+    if (child instanceof THREE.Bone && child.name === name) {
+      bone = child;
+    }
+  });
+  return bone;
 };
 ```
 
-**OrbitControls Integration:**
-- Store ref to OrbitControls
-- Temporarily disable user input during animation
-- Update `controls.target` alongside camera position
-- Re-enable input after animation completes
+### Applying Pose with Euler Rotations
 
-### Performance Considerations
+```typescript
+const applyPoseRotation = (bone: THREE.Bone, rot: {x: number, y: number, z: number}) => {
+  bone.rotation.set(rot.x, rot.y, rot.z);
+};
+```
 
-1. **Furniture LOD**: Keep furniture simple (low poly primitives)
-2. **Animation Throttling**: Idle animations use minimal calculations
-3. **Camera Transitions**: Only animate when selection changes
-4. **Staggered Updates**: Distribute animation phases to reduce frame spikes
+### Animation Phase Offset
+
+Each character gets a unique phase offset (e.g., `index * 0.7`) so their micro-movements aren't synchronized, creating natural variation.
 
 ---
 
 ## Expected Result
 
 After implementation:
-- The scene includes a TV area, kitchen counter with stools, and the iconic Diary Room door
-- Characters subtly breathe and sway, creating a lifelike idle state
-- Clicking a character smoothly flies the camera to focus on them
-- Clicking away returns to the overview perspective
+- All 12 characters in the House Scene will have arms naturally at their sides
+- Subtle breathing and arm micro-sway will make them appear alive
+- Each character will have slightly different animation timing (staggered)
+- Existing facial expressions and blinking continue to work
+- No external animation files required
 
