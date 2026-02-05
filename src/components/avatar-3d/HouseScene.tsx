@@ -27,6 +27,8 @@ import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
  import { useTouchGestures } from './hooks/useTouchGestures';
  import { FloorSpotMarkers, getFloorSpotById, FLOOR_SPOTS } from './FloorSpotMarker';
  import { TouchFeedbackManager } from './TouchFeedback';
+ import { PlayerMovementController } from './PlayerMovementController';
+ import { useAvatarMovement } from './hooks/useAvatarMovement';
 
 // Easing function for smooth camera transitions
 const easeInOutCubic = (t: number): number => {
@@ -86,6 +88,17 @@ const getCharacterPositions = (count: number) => {
     };
   });
 };
+
+ // Get default position for player character
+ const getDefaultPlayerPosition = (
+   characters: CharacterTemplate[], 
+   playerId: string
+ ): [number, number, number] => {
+   const playerIndex = characters.findIndex(c => c.id === playerId);
+   if (playerIndex === -1) return [0, 0, 0];
+   const posData = LIVING_ROOM_POSITIONS[playerIndex % LIVING_ROOM_POSITIONS.length];
+   return posData.position;
+ };
 
 /**
  * Expanded rectangular floor with room zones
@@ -400,16 +413,28 @@ const CharacterSpot: React.FC<{
    playerGesture?: GestureType | null;
    onGestureComplete?: () => void;
    relationshipToSelected?: number;
+  overridePosition?: [number, number, number] | null;
+  overrideRotationY?: number | null;
+  movementGesture?: GestureType | null;
   onSelect: () => void;
   onHover: (hovered: boolean) => void;
  }> = ({ 
    template, position, rotation, isSelected, isHovered, index, 
    selectedPosition, selectedId, isPlayer, playerGesture, onGestureComplete,
-   relationshipToSelected, onSelect, onHover 
+   relationshipToSelected, overridePosition, overrideRotationY, movementGesture,
+   onSelect, onHover 
  }) => {
   const groupRef = useRef<THREE.Group>(null);
   const idleGroupRef = useRef<THREE.Group>(null);
   const modelUrl = template.avatar3DConfig?.modelUrl;
+  
+  // Use override position for player movement, otherwise static position
+  const effectivePosition = overridePosition ?? position;
+  const effectiveRotationY = overrideRotationY ?? rotation[1];
+  const effectiveRotation: [number, number, number] = [rotation[0], effectiveRotationY, rotation[2]];
+  
+  // Combine movement gesture with player gesture (movement takes priority)
+  const activeGesture = movementGesture ?? playerGesture;
    
    // Get pose type based on archetype
    const poseType = getPoseForCharacter(template.archetype, index);
@@ -425,7 +450,7 @@ const CharacterSpot: React.FC<{
      }
      // Default: no specific target (look forward)
      return null;
-   }, [isSelected, selectedId, selectedPosition]);
+   }, [isSelected, selectedId, selectedPosition, effectivePosition]);
   
  // Subtle elevation animation only - idle animations handled by AnimationController
  useFrame(() => {
@@ -440,10 +465,10 @@ const CharacterSpot: React.FC<{
  });
   
   return (
-    <group position={position}>
+    <group position={effectivePosition}>
       <group 
         ref={groupRef}
-        rotation={rotation}
+        rotation={effectiveRotation}
         onClick={(e) => {
           e.stopPropagation();
           onSelect();
@@ -485,11 +510,11 @@ const CharacterSpot: React.FC<{
                 phaseOffset={index * 0.7}
                 poseType={poseType}
                 lookAtTarget={lookAtTarget}
-                worldPosition={position}
-                worldRotationY={rotation[1]}
+                worldPosition={effectivePosition}
+                worldRotationY={effectiveRotationY}
                 isPlayer={isPlayer}
                 enableGestures={isPlayer}
-                gestureToPlay={isPlayer ? playerGesture : null}
+                gestureToPlay={isPlayer ? activeGesture : null}
                 onGestureComplete={isPlayer ? onGestureComplete : undefined}
                 relationshipToSelected={relationshipToSelected ?? 0}
                 selectedIsNominee={false}
@@ -677,6 +702,17 @@ const SceneContent: React.FC<HouseSceneProps & {
    onSpotSelect: (spotId: string, position: [number, number, number]) => void;
    ripples: Array<{ id: string; position: [number, number, number]; color?: string }>;
    onRippleComplete: (id: string) => void;
+   playerMovementState: {
+     isMoving: boolean;
+     startPosition: [number, number, number];
+     targetPosition: [number, number, number];
+     currentPosition: [number, number, number];
+     startRotationY: number;
+     currentRotationY: number;
+   } | null;
+   movementGesture: GestureType | null;
+   onPositionUpdate: (position: [number, number, number], rotationY: number) => void;
+   onMoveComplete: () => void;
 }> = ({
   characters,
   selectedId,
@@ -697,6 +733,10 @@ const SceneContent: React.FC<HouseSceneProps & {
    onSpotSelect,
    ripples,
    onRippleComplete,
+   playerMovementState,
+   movementGesture,
+   onPositionUpdate,
+   onMoveComplete,
 }) => {
    // Calculate positions based on alliances/relationships or fallback to simple distribution
    const positionMap = useMemo(() => {
@@ -822,7 +862,18 @@ const SceneContent: React.FC<HouseSceneProps & {
       {/* Characters in circle */}
       <Suspense fallback={<SceneLoader />}>
          {characters.map((char, i) => {
+           const isPlayerChar = char.id === playerId;
            const charPos = getPosition(char.id, i);
+           
+           // For player character, use movement override position if moving
+           const playerOverridePosition = isPlayerChar && playerMovementState?.isMoving
+             ? playerMovementState.currentPosition
+             : null;
+           const playerOverrideRotationY = isPlayerChar && playerMovementState?.isMoving
+             ? playerMovementState.currentRotationY
+             : null;
+           const playerMovementGesture = isPlayerChar ? movementGesture : null;
+           
            return (
              <CharacterSpot
                key={char.id}
@@ -834,16 +885,32 @@ const SceneContent: React.FC<HouseSceneProps & {
                index={i}
                selectedPosition={selectedPosition || null}
                selectedId={selectedId}
-               isPlayer={char.id === playerId}
-               playerGesture={char.id === playerId ? playerGesture : null}
-               onGestureComplete={char.id === playerId ? onGestureComplete : undefined}
+               isPlayer={isPlayerChar}
+               playerGesture={isPlayerChar ? playerGesture : null}
+               onGestureComplete={isPlayerChar ? onGestureComplete : undefined}
                relationshipToSelected={selectedId ? relationships[selectedId] : 0}
+               overridePosition={playerOverridePosition}
+               overrideRotationY={playerOverrideRotationY}
+               movementGesture={playerMovementGesture}
                onSelect={() => onSelect(char.id)}
                onHover={(hovered) => onHover(hovered ? char.id : null)}
              />
            );
          })}
       </Suspense>
+      
+      {/* Player movement controller for smooth position interpolation */}
+      {playerMovementState?.isMoving && (
+        <PlayerMovementController
+          startPosition={playerMovementState.startPosition}
+          targetPosition={playerMovementState.targetPosition}
+          startRotationY={playerMovementState.startRotationY}
+          isMoving={playerMovementState.isMoving}
+          onPositionUpdate={onPositionUpdate}
+          onMoveComplete={onMoveComplete}
+          speed={2.5}
+        />
+      )}
       
       {/* Camera fly-to animation */}
       <CameraController 
@@ -888,6 +955,17 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    const [playerSpotId, setPlayerSpotId] = useState<string | null>(null);
    const [ripples, setRipples] = useState<Array<{ id: string; position: [number, number, number]; color?: string }>>([]);
    
+   // Player movement animation state
+   const [playerMovementState, setPlayerMovementState] = useState<{
+     isMoving: boolean;
+     startPosition: [number, number, number];
+     targetPosition: [number, number, number];
+     currentPosition: [number, number, number];
+     startRotationY: number;
+     currentRotationY: number;
+   } | null>(null);
+   const [movementGesture, setMovementGesture] = useState<GestureType | null>(null);
+   
    const isMobile = useIsMobile();
    
    // Event-based lighting
@@ -907,16 +985,46 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    }, []);
    
    // Handle floor spot selection for player movement
-   const handleSpotSelect = useCallback((spotId: string, position: [number, number, number]) => {
+   const handleSpotSelect = useCallback((spotId: string, targetPosition: [number, number, number]) => {
+     // Get current player position
+     const currentPos = playerMovementState?.currentPosition ?? 
+       (playerId ? getDefaultPlayerPosition(characters, playerId) : [0, 0, 0] as [number, number, number]);
+     
+     // Start movement animation
+     setPlayerMovementState({
+       isMoving: true,
+       startPosition: currentPos,
+       targetPosition,
+       currentPosition: currentPos,
+       startRotationY: playerMovementState?.currentRotationY ?? 0,
+       currentRotationY: playerMovementState?.currentRotationY ?? 0,
+     });
+     setMovementGesture('walk');
+     
      setPlayerSpotId(spotId);
      setMoveMode(false);
      
      // Add a ripple effect at the destination
      const rippleId = `move-${Date.now()}`;
-     setRipples(prev => [...prev, { id: rippleId, position, color: '#22c55e' }]);
-     
-     // Notify parent of player movement
-     // In a real implementation, this would trigger avatar animation
+     setRipples(prev => [...prev, { id: rippleId, position: targetPosition, color: '#22c55e' }]);
+   }, [playerMovementState, playerId, characters]);
+   
+   // Handle position update during movement
+   const handlePositionUpdate = useCallback((position: [number, number, number], rotationY: number) => {
+     setPlayerMovementState(prev => prev ? {
+       ...prev,
+       currentPosition: position,
+       currentRotationY: rotationY,
+     } : null);
+   }, []);
+   
+   // Handle movement completion
+   const handleMoveComplete = useCallback(() => {
+     setPlayerMovementState(prev => prev ? {
+       ...prev,
+       isMoving: false,
+     } : null);
+     setMovementGesture(null);
    }, []);
    
    // Handle ripple completion
@@ -979,6 +1087,10 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
            onSpotSelect={handleSpotSelect}
            ripples={ripples}
            onRippleComplete={handleRippleComplete}
+           playerMovementState={playerMovementState}
+           movementGesture={movementGesture}
+           onPositionUpdate={handlePositionUpdate}
+           onMoveComplete={handleMoveComplete}
           />
            
            {/* Post-processing effects - disabled on mobile for performance */}
