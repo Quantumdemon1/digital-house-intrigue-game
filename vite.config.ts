@@ -26,7 +26,9 @@ export default defineConfig(({ mode }) => ({
       "three", 
       "@react-three/fiber", 
       "@react-three/drei",
-      "three-stdlib"
+      "three-stdlib",
+      "@react-three/postprocessing",
+      "postprocessing"
     ],
   },
   optimizeDeps: {
@@ -37,7 +39,9 @@ export default defineConfig(({ mode }) => ({
       "three",
       "@react-three/fiber",
       "@react-three/drei",
-      "three-stdlib"
+      "three-stdlib",
+      "@react-three/postprocessing",
+      "postprocessing"
     ],
   },
 }));
