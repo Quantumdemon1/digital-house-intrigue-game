@@ -1,11 +1,11 @@
 /**
  * @file poses/applyPose.ts
  * @description Apply static poses to avatar clones - one-time application
- * Now with admin override support AND per-character overrides
+ * Now with admin override support
  */
 
 import * as THREE from 'three';
-import { getEffectivePoseForCharacter, type StaticPoseType } from './PoseLibrary';
+import { getEffectivePose, type StaticPoseType } from './PoseLibrary';
 import type { BoneRotation } from '../types';
 
 /**
@@ -49,18 +49,14 @@ function findBone(root: THREE.Object3D, boneName: string): THREE.Bone | null {
 /**
  * Apply a static pose to a cloned avatar
  * This is called ONCE during clone creation, not in animation loop
- * Now uses admin overrides if available (with per-character fallback)
- * @param clone - The cloned avatar group
- * @param poseType - The pose type to apply
- * @param characterId - Optional character ID for per-character overrides
+ * Now uses admin overrides if available
  */
 export function applyStaticPose(
   clone: THREE.Group,
-  poseType: StaticPoseType = 'neutral',
-  characterId?: string
+  poseType: StaticPoseType = 'neutral'
 ): void {
-  // Use effective pose which includes any admin overrides (per-character or global)
-  const pose = getEffectivePoseForCharacter(poseType, characterId);
+  // Use effective pose which includes any admin overrides
+  const pose = getEffectivePose(poseType);
   
   if (!pose) {
     console.warn(`[applyStaticPose] Unknown pose type: ${poseType}`);

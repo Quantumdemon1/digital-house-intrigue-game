@@ -1,7 +1,7 @@
 /**
  * @file poses/PoseLibrary.ts
  * @description Static pose definitions for avatars - applied once, no animation loop
- * Now with admin override support for manual pose adjustments AND per-character overrides
+ * Now with admin override support for manual pose adjustments
  */
 
 import type { BoneRotation } from '../types';
@@ -16,24 +16,12 @@ export interface PoseDefinition {
 
 /**
  * Admin pose overrides stored in localStorage
- * Format: { 
- *   [poseName]: { [boneName]: BoneRotation },           // Global override
- *   [poseName:characterId]: { [boneName]: BoneRotation } // Per-character override
- * }
+ * Format: { [poseName]: { [boneName]: BoneRotation } }
  */
 const POSE_OVERRIDES_KEY = 'avatar_pose_overrides';
 
 /**
- * Generate storage key for a pose override
- * @param poseName - The pose type name
- * @param characterId - Optional character ID for per-character overrides
- */
-function getPoseKey(poseName: string, characterId?: string): string {
-  return characterId ? `${poseName}:${characterId}` : poseName;
-}
-
-/**
- * Get all admin pose overrides from localStorage
+ * Get admin pose overrides from localStorage
  */
 export function getPoseOverrides(): Record<string, Record<string, BoneRotation>> {
   try {
@@ -56,52 +44,21 @@ export function savePoseOverrides(overrides: Record<string, Record<string, BoneR
 }
 
 /**
- * Save a single pose override (global or per-character)
- * @param poseName - The pose type name
- * @param bones - The bone rotations to save
- * @param characterId - Optional character ID for per-character override
+ * Save a single pose override
  */
-export function saveSinglePoseOverride(
-  poseName: string, 
-  bones: Record<string, BoneRotation>,
-  characterId?: string
-): void {
+export function saveSinglePoseOverride(poseName: string, bones: Record<string, BoneRotation>): void {
   const overrides = getPoseOverrides();
-  const key = getPoseKey(poseName, characterId);
-  overrides[key] = bones;
+  overrides[poseName] = bones;
   savePoseOverrides(overrides);
 }
 
 /**
  * Clear a pose override (revert to default)
- * @param poseName - The pose type name
- * @param characterId - Optional character ID for per-character override
  */
-export function clearPoseOverride(poseName: string, characterId?: string): void {
+export function clearPoseOverride(poseName: string): void {
   const overrides = getPoseOverrides();
-  const key = getPoseKey(poseName, characterId);
-  delete overrides[key];
+  delete overrides[poseName];
   savePoseOverrides(overrides);
-}
-
-/**
- * Check if a character-specific override exists
- */
-export function hasCharacterPoseOverride(poseName: string, characterId: string): boolean {
-  const overrides = getPoseOverrides();
-  const key = getPoseKey(poseName, characterId);
-  return !!overrides[key];
-}
-
-/**
- * Get list of all character IDs that have overrides for a specific pose
- */
-export function getCharacterOverrideIds(poseName: string): string[] {
-  const overrides = getPoseOverrides();
-  const prefix = `${poseName}:`;
-  return Object.keys(overrides)
-    .filter(key => key.startsWith(prefix))
-    .map(key => key.slice(prefix.length));
 }
 
 /**
@@ -214,54 +171,23 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
 };
 
 /**
- * Get effective pose with admin overrides applied (global only - legacy)
+ * Get effective pose with admin overrides applied
  */
 export function getEffectivePose(poseType: StaticPoseType): PoseDefinition {
-  return getEffectivePoseForCharacter(poseType);
-}
-
-/**
- * Get effective pose with per-character overrides applied
- * Fallback chain: character-specific -> global -> base pose
- * @param poseType - The pose type
- * @param characterId - Optional character ID for per-character override lookup
- */
-export function getEffectivePoseForCharacter(
-  poseType: StaticPoseType,
-  characterId?: string
-): PoseDefinition {
   const basePose = STATIC_POSES[poseType];
   const overrides = getPoseOverrides();
+  const poseOverride = overrides[poseType];
   
-  // 1. Try character-specific override first
-  if (characterId) {
-    const charKey = getPoseKey(poseType, characterId);
-    const charOverride = overrides[charKey];
-    if (charOverride) {
-      return {
-        ...basePose,
-        bones: {
-          ...basePose.bones,
-          ...charOverride,
-        },
-      };
-    }
-  }
+  if (!poseOverride) return basePose;
   
-  // 2. Try global override
-  const globalOverride = overrides[poseType];
-  if (globalOverride) {
-    return {
-      ...basePose,
-      bones: {
-        ...basePose.bones,
-        ...globalOverride,
-      },
-    };
-  }
-  
-  // 3. Return base pose
-  return basePose;
+  // Merge base pose with overrides
+  return {
+    ...basePose,
+    bones: {
+      ...basePose.bones,
+      ...poseOverride,
+    },
+  };
 }
 
 /**

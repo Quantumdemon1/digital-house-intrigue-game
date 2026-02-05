@@ -1,10 +1,9 @@
 /**
  * @file admin/PoseEditor.tsx
  * @description Admin UI for manually adjusting avatar poses with real-time preview
- * Now supports per-character pose customization
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings2, 
@@ -16,9 +15,7 @@ import {
   Trash2,
   Copy,
   Info,
-  ClipboardPaste,
-  Users,
-  User
+  ClipboardPaste
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -53,8 +50,6 @@ import {
   getPoseOverrides,
   saveSinglePoseOverride,
   clearPoseOverride,
-  hasCharacterPoseOverride,
-  getEffectivePoseForCharacter,
 } from '../animation/poses/PoseLibrary';
 import type { BoneRotation } from '../animation/types';
 
@@ -67,12 +62,6 @@ const boneRotationSchema = z.object({
 
 const poseDataSchema = z.record(z.string(), boneRotationSchema);
 
-/** Character info for the selector */
-export interface CharacterOption {
-  id: string;
-  name: string;
-}
-
 interface PoseEditorProps {
   isVisible: boolean;
   onClose: () => void;
@@ -80,12 +69,6 @@ interface PoseEditorProps {
   onPoseChange: (pose: StaticPoseType) => void;
   /** Callback to apply live preview of bone adjustments */
   onBoneAdjust?: (bones: Record<string, BoneRotation>) => void;
-  /** List of available characters for per-character editing */
-  characters?: CharacterOption[];
-  /** Currently selected character ID (null = global) */
-  selectedCharacterId?: string | null;
-  /** Callback when character selection changes */
-  onCharacterChange?: (characterId: string | null) => void;
 }
 
 const ROTATION_LIMITS = {
@@ -107,53 +90,38 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
   currentPose,
   onPoseChange,
   onBoneAdjust,
-  characters = [],
-  selectedCharacterId = null,
-  onCharacterChange,
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['Left Arm', 'Right Arm']));
   const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Current bone adjustments state
   const [boneAdjustments, setBoneAdjustments] = useState<Record<string, BoneRotation>>(() => {
-    const pose = getEffectivePoseForCharacter(currentPose, selectedCharacterId ?? undefined);
-    return pose.bones;
+    const basePose = STATIC_POSES[currentPose];
+    const overrides = getPoseOverrides()[currentPose];
+    return overrides || basePose.bones;
   });
-  
-  // Reload bone adjustments when pose or character changes
-  useEffect(() => {
-    const pose = getEffectivePoseForCharacter(currentPose, selectedCharacterId ?? undefined);
-    setBoneAdjustments(pose.bones);
-    onBoneAdjust?.(pose.bones);
-  }, [currentPose, selectedCharacterId]);
   
   // Check if we have unsaved changes
   const hasChanges = useMemo(() => {
-    const pose = getEffectivePoseForCharacter(currentPose, selectedCharacterId ?? undefined);
-    return JSON.stringify(boneAdjustments) !== JSON.stringify(pose.bones);
-  }, [boneAdjustments, currentPose, selectedCharacterId]);
+    const basePose = STATIC_POSES[currentPose];
+    return JSON.stringify(boneAdjustments) !== JSON.stringify(basePose.bones);
+  }, [boneAdjustments, currentPose]);
   
-  // Check if we have saved overrides (for current character or global)
+  // Check if we have saved overrides
   const hasOverrides = useMemo(() => {
     const overrides = getPoseOverrides();
-    if (selectedCharacterId) {
-      // Check for character-specific override
-      return !!overrides[`${currentPose}:${selectedCharacterId}`];
-    }
-    // Check for global override
     return !!overrides[currentPose];
-  }, [currentPose, selectedCharacterId]);
+  }, [currentPose]);
   
   // Handle pose type change
   const handlePoseChange = useCallback((pose: StaticPoseType) => {
     onPoseChange(pose);
-  }, [onPoseChange]);
-  
-  // Handle character selection change
-  const handleCharacterChange = useCallback((value: string) => {
-    const charId = value === 'global' ? null : value;
-    onCharacterChange?.(charId);
-  }, [onCharacterChange]);
+    const basePose = STATIC_POSES[pose];
+    const overrides = getPoseOverrides()[pose];
+    const newBones = overrides ? { ...overrides } : { ...basePose.bones };
+    setBoneAdjustments(() => newBones);
+    onBoneAdjust?.(newBones); // Notify animator to update avatar
+  }, [onPoseChange, onBoneAdjust]);
   
   // Handle bone rotation change
   const handleBoneRotation = useCallback((
@@ -178,37 +146,29 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
     });
   }, [onBoneAdjust]);
   
-  // Reset to base pose (or parent level)
+  // Reset to base pose
   const handleReset = useCallback(() => {
-    // Get the effective pose (will cascade through fallback chain)
-    const pose = getEffectivePoseForCharacter(currentPose, selectedCharacterId ?? undefined);
-    const newBones = { ...pose.bones };
+    const basePose = STATIC_POSES[currentPose];
+    const newBones = { ...basePose.bones };
     setBoneAdjustments(() => newBones);
     onBoneAdjust?.(newBones);
     toast.info('Reset to default pose');
-  }, [currentPose, selectedCharacterId, onBoneAdjust]);
+  }, [currentPose, onBoneAdjust]);
   
   // Save overrides
   const handleSave = useCallback(() => {
-    saveSinglePoseOverride(currentPose, boneAdjustments, selectedCharacterId ?? undefined);
-    const targetName = selectedCharacterId 
-      ? characters.find(c => c.id === selectedCharacterId)?.name || selectedCharacterId
-      : 'All Characters';
-    toast.success(`Saved pose override for "${currentPose}" (${targetName})`);
-  }, [currentPose, boneAdjustments, selectedCharacterId, characters]);
+    saveSinglePoseOverride(currentPose, boneAdjustments);
+    toast.success(`Saved pose override for "${currentPose}"`);
+  }, [currentPose, boneAdjustments]);
   
   // Clear saved overrides
   const handleClearOverride = useCallback(() => {
-    clearPoseOverride(currentPose, selectedCharacterId ?? undefined);
-    // Reload from parent level
-    const pose = getEffectivePoseForCharacter(currentPose, selectedCharacterId ?? undefined);
-    setBoneAdjustments(pose.bones);
-    onBoneAdjust?.(pose.bones);
-    const targetName = selectedCharacterId 
-      ? characters.find(c => c.id === selectedCharacterId)?.name || selectedCharacterId
-      : 'All Characters';
-    toast.info(`Cleared override for "${currentPose}" (${targetName})`);
-  }, [currentPose, selectedCharacterId, characters, onBoneAdjust]);
+    clearPoseOverride(currentPose);
+    const basePose = STATIC_POSES[currentPose];
+    setBoneAdjustments(basePose.bones);
+    onBoneAdjust?.(basePose.bones);
+    toast.info(`Cleared saved override for "${currentPose}"`);
+  }, [currentPose, onBoneAdjust]);
   
   // Copy current values to clipboard
   const handleCopyValues = useCallback(() => {
@@ -271,13 +231,6 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
   
   const formatRadian = (value: number) => `${(value * 180 / Math.PI).toFixed(1)}°`;
   
-  // Get display name for current editing target
-  const editingTargetName = useMemo(() => {
-    if (!selectedCharacterId) return 'All Characters (Global)';
-    const char = characters.find(c => c.id === selectedCharacterId);
-    return char?.name || selectedCharacterId;
-  }, [selectedCharacterId, characters]);
-  
   if (!isVisible) return null;
   
   return (
@@ -300,7 +253,7 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
                   <p className="text-xs">
-                    Adjust bone rotations in real-time. Changes are saved to localStorage and persist across sessions. Select a character for individual customization.
+                    Adjust bone rotations in real-time. Changes are saved to localStorage and persist across sessions.
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -315,43 +268,6 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
             <X className="w-4 h-4" />
           </Button>
         </div>
-        
-        {/* Character Selector */}
-        {characters.length > 0 && (
-          <div className="p-3 border-b border-border bg-accent/20">
-            <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5">
-              {selectedCharacterId ? <User className="w-3 h-3" /> : <Users className="w-3 h-3" />}
-              Editing Target
-            </label>
-            <Select 
-              value={selectedCharacterId ?? 'global'} 
-              onValueChange={handleCharacterChange}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="global" className="text-sm">
-                  <span className="flex items-center gap-2">
-                    <Users className="w-3 h-3" />
-                    All Characters (Global)
-                  </span>
-                </SelectItem>
-                {characters.map((char) => (
-                  <SelectItem key={char.id} value={char.id} className="text-sm">
-                    <span className="flex items-center gap-2">
-                      <User className="w-3 h-3" />
-                      {char.name}
-                      {hasCharacterPoseOverride(currentPose, char.id) && (
-                        <span className="text-[10px] text-amber-500">●</span>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
         
         {/* Pose Selector */}
         <div className="p-3 border-b border-border">
@@ -547,9 +463,8 @@ export const PoseEditor: React.FC<PoseEditorProps> = ({
           <span>
             {hasChanges ? '• Unsaved changes' : '✓ Up to date'}
           </span>
-          <span className="flex items-center gap-1">
-            {hasOverrides && <span className="text-amber-500">📌</span>}
-            {editingTargetName}
+          <span>
+            {hasOverrides && '📌 Has override'}
           </span>
         </div>
       </motion.div>

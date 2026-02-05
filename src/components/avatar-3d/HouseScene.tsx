@@ -536,7 +536,6 @@ const CharacterSpot: React.FC<{
                 selectedIsHoH={false}
                 hasSelection={!!selectedId}
                 liveBoneOverrides={isPlayer ? liveBoneOverrides : null}
-                characterId={template.id}
               />
             </Suspense>
           ) : (
@@ -983,13 +982,6 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    const [showPoseEditor, setShowPoseEditor] = useState(false);
    const [editorPoseType, setEditorPoseType] = useState<StaticPoseType>('neutral');
    const [liveBoneOverrides, setLiveBoneOverrides] = useState<Record<string, BoneRotation> | null>(null);
-   const [editorCharacterId, setEditorCharacterId] = useState<string | null>(null);
-   
-   // Convert characters to options for the pose editor
-   const characterOptions = useMemo(() => 
-     characters.map(c => ({ id: c.id, name: c.name })),
-     [characters]
-   );
    
    // Handler for pose editor bone adjustments
    const handleBoneAdjust = useCallback((bones: Record<string, BoneRotation>) => {
@@ -1259,9 +1251,6 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
         currentPose={editorPoseType}
         onPoseChange={setEditorPoseType}
         onBoneAdjust={handleBoneAdjust}
-        characters={characterOptions}
-        selectedCharacterId={editorCharacterId}
-        onCharacterChange={setEditorCharacterId}
       />
     </div>
   );
