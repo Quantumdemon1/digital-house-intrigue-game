@@ -53,7 +53,7 @@ function findBone(root: THREE.Object3D, boneName: string): THREE.Bone | null {
  */
 export function applyStaticPose(
   clone: THREE.Group,
-  poseType: StaticPoseType = 'relaxed'
+  poseType: StaticPoseType = 'neutral'
 ): void {
   // Use effective pose which includes any admin overrides
   const pose = getEffectivePose(poseType);
