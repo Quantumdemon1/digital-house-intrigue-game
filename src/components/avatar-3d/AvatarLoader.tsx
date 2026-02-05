@@ -39,6 +39,8 @@ interface AvatarLoaderProps {
   zoom?: number;
   /** Enable orbit rotation controls (disable on mobile customizer for scrolling) */
   enableOrbitControls?: boolean;
+  /** Character name for gender-specific pose defaults */
+  characterName?: string;
 }
 
 /**
@@ -218,7 +220,8 @@ const RPMAvatarCanvas: React.FC<{
   onError?: () => void;
   zoom?: number;
   enableOrbitControls?: boolean;
-}> = ({ avatarUrl, mood, scale, context, sizeConfig, size, className, onLoaded, onError, zoom = 1.0, enableOrbitControls = true }) => {
+  characterName?: string;
+}> = ({ avatarUrl, mood, scale, context, sizeConfig, size, className, onLoaded, onError, zoom = 1.0, enableOrbitControls = true, characterName }) => {
   const [rpmLoadError, setRpmLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -290,6 +293,7 @@ const RPMAvatarCanvas: React.FC<{
               context={context}
               onLoaded={handleLoaded}
               onError={handleError}
+              characterName={characterName}
             />
           </Suspense>
           
@@ -354,7 +358,8 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
   className,
   loadTimeout = 8000,
   zoom = 1.0,
-  enableOrbitControls = true
+  enableOrbitControls = true,
+  characterName
 }) => {
   const sizeConfig = SIZE_CONFIG[size];
   const modelSource = avatarConfig?.modelSource;
@@ -417,6 +422,7 @@ export const AvatarLoader: React.FC<AvatarLoaderProps> = ({
           onError={() => setTimedOut(true)}
           zoom={zoom}
           enableOrbitControls={enableOrbitControls}
+          characterName={characterName}
         />
       </Suspense>
     );
