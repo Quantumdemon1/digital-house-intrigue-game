@@ -116,6 +116,11 @@ const isMobileDevice = (): boolean => {
    'Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
    'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
    'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+    // Mixamo bone naming variants (used by some RPM models)
+    'mixamorigHips', 'mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2', 
+    'mixamorigNeck', 'mixamorigHead',
+    'mixamorigLeftShoulder', 'mixamorigLeftArm', 'mixamorigLeftForeArm', 'mixamorigLeftHand',
+    'mixamorigRightShoulder', 'mixamorigRightArm', 'mixamorigRightForeArm', 'mixamorigRightHand',
  ];
  
  // ============ Main Hook ============
@@ -153,25 +158,43 @@ const isMobileDevice = (): boolean => {
    
    // Track last gesture to detect changes
    const lastGestureRef = useRef<GestureType | null>(null);
+    
+    // Track retry attempts for bone discovery
+    const retryCountRef = useRef(0);
+    const MAX_BONE_RETRIES = 10;
    
    // Initialize bones when scene changes
    useEffect(() => {
      if (!scene || !enabled) {
        stateRef.current.initialized = false;
+        retryCountRef.current = 0;
        return;
      }
      
-     stateRef.current.boneCache = findBones(scene, ALL_BONE_NAMES);
-     stateRef.current.initialized = stateRef.current.boneCache.size > 0;
-     stateRef.current.poseTransition = createPoseTransition(basePose);
-      
-      // CRITICAL: Apply initial pose immediately to prevent T-pose flash
-      if (stateRef.current.initialized && stateRef.current.boneCache.size > 0) {
-        const initialBones = POSE_CONFIGS[basePose];
-        if (initialBones) {
-          applyBoneMapDirect(stateRef.current.boneCache, initialBones, 1);
+      // Bone discovery with retry mechanism
+      const attemptBoneDiscovery = () => {
+        stateRef.current.boneCache = findBones(scene, ALL_BONE_NAMES);
+        
+        if (stateRef.current.boneCache.size === 0 && retryCountRef.current < MAX_BONE_RETRIES) {
+          retryCountRef.current++;
+          requestAnimationFrame(attemptBoneDiscovery);
+          return;
         }
-      }
+        
+        stateRef.current.initialized = stateRef.current.boneCache.size > 0;
+        stateRef.current.poseTransition = createPoseTransition(basePose);
+        
+        // CRITICAL: Apply initial pose immediately to prevent T-pose flash
+        if (stateRef.current.initialized) {
+          const initialBones = POSE_CONFIGS[basePose];
+          if (initialBones) {
+            // Apply pose with normalized bone names for mixamo compatibility
+            applyBoneMapWithNormalization(stateRef.current.boneCache, initialBones, 1);
+          }
+        }
+      };
+      
+      attemptBoneDiscovery();
    }, [scene, enabled, basePose]);
    
    // Handle gesture trigger
@@ -400,3 +423,30 @@ const isMobileDevice = (): boolean => {
  };
  
  export default useAnimationController;
+
+/**
+ * Apply bone map with normalization for mixamo bone naming
+ */
+const applyBoneMapWithNormalization = (
+  boneCache: Map<string, THREE.Bone>,
+  boneMap: BoneMap,
+  blend: number
+): void => {
+  // First try direct application
+  applyBoneMapDirect(boneCache, boneMap, blend);
+  
+  // Then try with mixamo prefix for any bones that might use that naming
+  Object.entries(boneMap).forEach(([boneName, state]) => {
+    const mixamoName = `mixamorig${boneName}`;
+    const bone = boneCache.get(mixamoName);
+    if (bone) {
+      if (blend >= 1) {
+        bone.rotation.set(state.rotation.x, state.rotation.y, state.rotation.z);
+      } else {
+        bone.rotation.x = THREE.MathUtils.lerp(bone.rotation.x, state.rotation.x, blend);
+        bone.rotation.y = THREE.MathUtils.lerp(bone.rotation.y, state.rotation.y, blend);
+        bone.rotation.z = THREE.MathUtils.lerp(bone.rotation.z, state.rotation.z, blend);
+      }
+    }
+  });
+};

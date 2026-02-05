@@ -53,11 +53,27 @@ const clampAndValidate = (value: number, min: number, max: number): number => {
    boneNames: string[]
  ): Map<string, THREE.Bone> => {
    const boneMap = new Map<string, THREE.Bone>();
+  
+  // Build a set for fast lookup, including normalized names
+  const nameSet = new Set(boneNames);
+  
    scene.traverse((child) => {
-     if (child instanceof THREE.Bone && boneNames.includes(child.name)) {
-       boneMap.set(child.name, child);
+    if (child instanceof THREE.Bone) {
+      // Check direct name match
+      if (nameSet.has(child.name)) {
+        boneMap.set(child.name, child);
+      }
+      
+      // Also check normalized name (strip mixamorig prefix)
+      const normalizedName = child.name.replace(/^mixamorig/, '');
+      if (normalizedName !== child.name && nameSet.has(normalizedName)) {
+        // Store under both names for compatibility
+        boneMap.set(normalizedName, child);
+        boneMap.set(child.name, child);
+      }
      }
    });
+  
    return boneMap;
  };
  
