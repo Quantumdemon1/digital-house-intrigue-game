@@ -3,11 +3,10 @@
  * @description Ready Player Me avatar component using unified animation system
  */
 
-import React, { Suspense, useRef, useEffect, useMemo, useLayoutEffect, Component, ReactNode } from 'react';
+import React, { Suspense, useRef, useEffect, useMemo, useLayoutEffect, Component, ReactNode, forwardRef, useImperativeHandle } from 'react';
 import { useFrame, useGraph } from '@react-three/fiber';
-import { useGLTF, useProgress } from '@react-three/drei';
+import { useGLTF, useProgress, Clone } from '@react-three/drei';
 import * as THREE from 'three';
-import { SkeletonUtils } from 'three-stdlib';
 import { MoodType } from '@/models/houseguest';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
 import {
@@ -23,6 +22,58 @@ export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
 
 // Re-export types for backwards compatibility
 export type { PoseType, GestureType };
+
+/** Helper component that applies pose to cloned avatar */
+interface PosedCloneProps {
+  scene: THREE.Object3D;
+  poseType: PoseType;
+  applyIdlePose: boolean;
+  onCloneReady?: (clone: THREE.Group) => void;
+}
+
+const PosedClone = forwardRef<THREE.Group, PosedCloneProps>(({ 
+  scene, 
+  poseType, 
+  applyIdlePose,
+  onCloneReady 
+}, ref) => {
+  const internalRef = useRef<THREE.Group>(null);
+  
+  // Expose the internal ref
+  useImperativeHandle(ref, () => internalRef.current!, []);
+  
+  // Apply pose immediately after clone mounts (before paint)
+  useLayoutEffect(() => {
+    if (!internalRef.current || !applyIdlePose) return;
+    
+    const poseConfig = POSE_CONFIGS[poseType];
+    if (!poseConfig) return;
+    
+    internalRef.current.traverse((child) => {
+      if (child instanceof THREE.Bone) {
+        // Handle both standard and mixamo bone naming
+        const boneName = child.name.replace('mixamorig', '');
+        const boneState = poseConfig[boneName] || poseConfig[child.name];
+        if (boneState) {
+          child.rotation.set(
+            boneState.rotation.x,
+            boneState.rotation.y,
+            boneState.rotation.z
+          );
+        }
+      }
+    });
+    
+    // Notify parent that clone is ready with pose applied
+    if (onCloneReady) {
+      onCloneReady(internalRef.current);
+    }
+  }, [poseType, applyIdlePose, onCloneReady]);
+  
+  return <Clone ref={internalRef} object={scene} />;
+});
+
+PosedClone.displayName = 'PosedClone';
 
 interface RPMAvatarProps {
   modelSrc: string;
@@ -92,6 +143,8 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   onError
 }) => {
   const group = useRef<THREE.Group>(null);
+  const cloneRef = useRef<THREE.Group>(null);
+  const [cloneReady, setCloneReady] = React.useState(false);
   
   // Context-aware default positions (head-centered for portraits, full-body for customizer)
   const getDefaultPosition = (ctx: AvatarContext): [number, number, number] => {
@@ -134,46 +187,17 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   
   const { scene } = useGLTF(optimizedUrl);
   
-  // Clone the scene to prevent issues with multiple instances
-  const clone = useMemo(() => {
-    const cloned = SkeletonUtils.clone(scene);
-    
-    // CRITICAL: Apply base pose immediately during clone to prevent T-pose flash
-    // This runs synchronously before the first render
-    if (applyIdlePose) {
-      const poseConfig = POSE_CONFIGS[poseType];
-      if (poseConfig) {
-        cloned.traverse((child) => {
-          if (child instanceof THREE.Bone) {
-            // Check both standard and mixamo bone naming
-            const boneName = child.name.replace('mixamorig', '');
-            const boneState = poseConfig[boneName] || poseConfig[child.name];
-            if (boneState) {
-              child.rotation.set(
-                boneState.rotation.x,
-                boneState.rotation.y,
-                boneState.rotation.z
-              );
-            }
-          }
-        });
-      }
-    }
-    
-    return cloned;
-  }, [scene, applyIdlePose, poseType]);
-  const { nodes } = useGraph(clone);
-  
   // Get all skinned meshes for morph target manipulation
   const skinnedMeshes = useMemo(() => {
+    if (!cloneRef.current) return [];
     const meshes: THREE.SkinnedMesh[] = [];
-    clone.traverse((child) => {
+    cloneRef.current.traverse((child) => {
       if (child instanceof THREE.SkinnedMesh && child.morphTargetInfluences) {
         meshes.push(child);
       }
     });
     return meshes;
-  }, [clone]);
+  }, [cloneReady]);
    
    // Build relationship context for animation controller
    const relationshipContext: RelationshipContext = useMemo(() => ({
@@ -186,7 +210,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
    
    // Unified animation controller - replaces all individual hooks
    useAnimationController({
-     scene: applyIdlePose ? clone : null,
+     scene: applyIdlePose && cloneRef.current ? cloneRef.current : null,
      skinnedMeshes,
      basePose: poseType,
      phaseOffset,
@@ -197,21 +221,31 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
      gestureToPlay: enableGestures && isPlayer ? gestureToPlay : null,
      onGestureComplete,
      quality: animationQuality,
-     enabled: isAnimated && applyIdlePose,
+     enabled: isAnimated && applyIdlePose && cloneReady,
    });
 
    // Note: Mood-based expressions are now handled by the ReactiveLayer
    // based on relationship context. The mood prop is preserved for 
    // backwards compatibility but integrated into the unified system.
    
-  // Call onLoaded when model is ready
-  useEffect(() => {
+  // Handle clone ready callback
+  const handleCloneReady = React.useCallback((clone: THREE.Group) => {
+    cloneRef.current = clone;
+    setCloneReady(true);
     if (onLoaded) onLoaded();
   }, [onLoaded]);
+  
+  // Call onLoaded when model is ready
+  // (now handled by handleCloneReady)
 
   return (
     <group ref={group} position={effectivePosition} scale={scale}>
-      <primitive object={clone} />
+      <PosedClone 
+        scene={scene}
+        poseType={poseType}
+        applyIdlePose={applyIdlePose}
+        onCloneReady={handleCloneReady}
+      />
     </group>
   );
 };
