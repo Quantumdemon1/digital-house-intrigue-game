@@ -12,10 +12,8 @@ import { CharacterTemplate } from '@/data/character-templates';
  import { PoseType } from './hooks/usePoseVariety';
  import { GestureType } from './hooks/useGestureAnimation';
  import { Archetype } from '@/data/character-templates';
-import { 
-  HouseFloor, Couch, CoffeeTable, Plant, LightFixture,
-  TVStand, KitchenArea, DiaryRoomDoor, WallPanel 
-} from './HouseFurniture';
+import { LivingRoom, HOHSuite, Bedroom, BathroomArea, KitchenExpanded, NominationLounge, GameRoom, DiaryRoomInterior, Hallway } from './HouseRooms';
+import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
 
 // Easing function for smooth camera transitions
 const easeInOutCubic = (t: number): number => {
@@ -33,20 +31,300 @@ interface HouseSceneProps {
   relationships?: Record<string, number>;
 }
 
-// Calculate circular positions for characters
-const getCharacterPositions = (count: number, radius: number = 5) => {
+// Living room conversation cluster positions for natural groupings
+const LIVING_ROOM_POSITIONS = [
+  // Main sofa group (living room center)
+  { position: [-3, 0, 1] as [number, number, number], rotation: [0, Math.PI / 4, 0] as [number, number, number] },
+  { position: [-1, 0, 2] as [number, number, number], rotation: [0, Math.PI / 6, 0] as [number, number, number] },
+  { position: [1, 0, 2] as [number, number, number], rotation: [0, -Math.PI / 6, 0] as [number, number, number] },
+  { position: [3, 0, 1] as [number, number, number], rotation: [0, -Math.PI / 4, 0] as [number, number, number] },
+  // Kitchen area
+  { position: [10, 0, 0] as [number, number, number], rotation: [0, -Math.PI / 2, 0] as [number, number, number] },
+  { position: [10, 0, 2] as [number, number, number], rotation: [0, -Math.PI / 3, 0] as [number, number, number] },
+  // Near nomination lounge
+  { position: [-2, 0, 8] as [number, number, number], rotation: [0, Math.PI, 0] as [number, number, number] },
+  { position: [0, 0, 9] as [number, number, number], rotation: [0, Math.PI, 0] as [number, number, number] },
+  { position: [2, 0, 8] as [number, number, number], rotation: [0, Math.PI, 0] as [number, number, number] },
+  // Standing by memory wall
+  { position: [-6, 0, -2] as [number, number, number], rotation: [0, Math.PI / 2, 0] as [number, number, number] },
+  { position: [-6, 0, 0] as [number, number, number], rotation: [0, Math.PI / 2, 0] as [number, number, number] },
+  { position: [-6, 0, 2] as [number, number, number], rotation: [0, Math.PI / 2, 0] as [number, number, number] },
+];
+
+// Get positions for characters based on count
+const getCharacterPositions = (count: number) => {
+  // Use living room positions, cycling if we have more characters
   return Array.from({ length: count }, (_, i) => {
-    const angle = (i / count) * Math.PI * 2 - Math.PI / 2; // Start from front
+    const posData = LIVING_ROOM_POSITIONS[i % LIVING_ROOM_POSITIONS.length];
     return {
-      position: [
-        Math.cos(angle) * radius,
-        0,
-        Math.sin(angle) * radius
-      ] as [number, number, number],
-      rotation: [0, -angle + Math.PI, 0] as [number, number, number], // Face center
-      angle
+      position: posData.position,
+      rotation: posData.rotation,
+      angle: posData.rotation[1]
     };
   });
+};
+
+/**
+ * Expanded rectangular floor with room zones
+ */
+const ExpandedHouseFloor: React.FC = () => {
+  return (
+    <group>
+      {/* Main floor - dark polished concrete */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, -0.05, 0]}>
+        <planeGeometry args={[35, 30]} />
+        <meshStandardMaterial 
+          color="#0f172a"
+          roughness={0.4}
+          metalness={0.3}
+        />
+      </mesh>
+      
+      {/* Living room area highlight */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
+        <planeGeometry args={[14, 12]} />
+        <meshStandardMaterial 
+          color="#1a1a2e"
+          roughness={0.5}
+          metalness={0.2}
+        />
+      </mesh>
+      
+      {/* Center BB logo */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
+        <ringGeometry args={[1.8, 2.2, 64]} />
+        <meshStandardMaterial 
+          color="#fbbf24"
+          roughness={0.4}
+          metalness={0.6}
+          emissive="#fbbf24"
+          emissiveIntensity={0.15}
+        />
+      </mesh>
+      
+      {/* Eye center */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        <ringGeometry args={[0.6, 1, 32]} />
+        <meshStandardMaterial 
+          color="#3b82f6"
+          emissive="#3b82f6"
+          emissiveIntensity={0.4}
+          roughness={0.3}
+          metalness={0.5}
+        />
+      </mesh>
+      
+      {/* Outer decorative border */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
+        <ringGeometry args={[3.5, 3.7, 64]} />
+        <meshStandardMaterial 
+          color="#fbbf24"
+          roughness={0.4}
+          metalness={0.6}
+          emissive="#fbbf24"
+          emissiveIntensity={0.08}
+        />
+      </mesh>
+      
+      {/* Kitchen floor - marble effect */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[12, -0.04, 0]}>
+        <planeGeometry args={[8, 8]} />
+        <meshStandardMaterial 
+          color="#e2e8f0"
+          roughness={0.15}
+          metalness={0.1}
+        />
+      </mesh>
+      
+      {/* HOH Suite floor - carpet */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[10, -0.04, -10]}>
+        <planeGeometry args={[8, 8]} />
+        <meshStandardMaterial 
+          color="#4a1a4a"
+          roughness={0.98}
+          metalness={0}
+        />
+      </mesh>
+      
+      {/* Bedroom floors - dark wood */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-10, -0.04, -10]}>
+        <planeGeometry args={[8, 6]} />
+        <meshStandardMaterial 
+          color="#2a1810"
+          roughness={0.8}
+          metalness={0.1}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, -10]}>
+        <planeGeometry args={[8, 6]} />
+        <meshStandardMaterial 
+          color="#2a1810"
+          roughness={0.8}
+          metalness={0.1}
+        />
+      </mesh>
+      
+      {/* Bathroom floor - geometric tiles */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-12, -0.04, 3]}>
+        <planeGeometry args={[6, 5]} />
+        <meshStandardMaterial 
+          color="#94a3b8"
+          roughness={0.3}
+          metalness={0.2}
+        />
+      </mesh>
+      
+      {/* Nomination area floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 10]}>
+        <planeGeometry args={[10, 6]} />
+        <meshStandardMaterial 
+          color="#1e1e2e"
+          roughness={0.5}
+          metalness={0.3}
+        />
+      </mesh>
+      
+      {/* Game room floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[12, -0.04, 8]}>
+        <planeGeometry args={[6, 6]} />
+        <meshStandardMaterial 
+          color="#1a1a2e"
+          roughness={0.6}
+          metalness={0.2}
+        />
+      </mesh>
+    </group>
+  );
+};
+
+/**
+ * Exterior walls surrounding the house
+ */
+const HouseWalls: React.FC = () => {
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: '#0a0f1a',
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  
+  return (
+    <group>
+      {/* Back wall */}
+      <mesh position={[0, 2, -14]} castShadow receiveShadow>
+        <boxGeometry args={[36, 4, 0.3]} />
+        <primitive object={wallMaterial} attach="material" />
+      </mesh>
+      
+      {/* Front wall sections */}
+      <mesh position={[-14, 2, 14]} castShadow receiveShadow>
+        <boxGeometry args={[8, 4, 0.3]} />
+        <primitive object={wallMaterial} attach="material" />
+      </mesh>
+      <mesh position={[14, 2, 14]} castShadow receiveShadow>
+        <boxGeometry args={[8, 4, 0.3]} />
+        <primitive object={wallMaterial} attach="material" />
+      </mesh>
+      
+      {/* Left wall */}
+      <mesh position={[-17, 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.3, 4, 28]} />
+        <primitive object={wallMaterial} attach="material" />
+      </mesh>
+      
+      {/* Right wall */}
+      <mesh position={[17, 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.3, 4, 28]} />
+        <primitive object={wallMaterial} attach="material" />
+      </mesh>
+      
+      {/* Decorative wall stripes */}
+      {[-17, 17].map((x, i) => (
+        <mesh key={i} position={[x + (i === 0 ? 0.2 : -0.2), 1.5, 0]}>
+          <boxGeometry args={[0.02, 0.1, 27]} />
+          <meshStandardMaterial 
+            color="#fbbf24"
+            emissive="#fbbf24"
+            emissiveIntensity={0.3}
+          />
+        </mesh>
+      ))}
+      
+      {/* Back wall accent stripe */}
+      <mesh position={[0, 1.5, -13.85]}>
+        <boxGeometry args={[35, 0.1, 0.02]} />
+        <meshStandardMaterial 
+          color="#fbbf24"
+          emissive="#fbbf24"
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+      
+      {/* BB Eye logos on walls */}
+      <mesh position={[0, 3, -13.8]}>
+        <ringGeometry args={[0.4, 0.6, 32]} />
+        <meshStandardMaterial 
+          color="#3b82f6"
+          emissive="#3b82f6"
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+    </group>
+  );
+};
+
+/**
+ * Interior wall partitions
+ */
+const InteriorWalls: React.FC = () => {
+  return (
+    <group>
+      {/* Bedroom divider wall */}
+      <mesh position={[-5, 1.5, -10]} castShadow>
+        <boxGeometry args={[0.15, 3, 6]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+      
+      {/* Bedroom to HOH divider */}
+      <mesh position={[5, 1.5, -10]} castShadow>
+        <boxGeometry args={[0.15, 3, 6]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+      
+      {/* Hallway back wall */}
+      <mesh position={[0, 1.5, -6]} castShadow>
+        <boxGeometry args={[30, 3, 0.15]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+      
+      {/* Bathroom wall */}
+      <mesh position={[-9, 1.5, 3]} castShadow>
+        <boxGeometry args={[0.15, 3, 5]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+      
+      {/* Kitchen divider (partial) */}
+      <mesh position={[8, 1.5, -2]} castShadow>
+        <boxGeometry args={[0.15, 3, 4]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+      
+      {/* Game room divider */}
+      <mesh position={[9, 1.5, 5]} castShadow>
+        <boxGeometry args={[0.15, 3, 2]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+      
+      {/* Nomination area partial wall */}
+      <mesh position={[-5, 1.5, 8]} castShadow>
+        <boxGeometry args={[4, 3, 0.15]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+      <mesh position={[5, 1.5, 8]} castShadow>
+        <boxGeometry args={[4, 3, 0.15]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+      </mesh>
+    </group>
+  );
 };
 
  // Map archetype to pose types for variety
@@ -384,7 +662,7 @@ const SceneContent: React.FC<HouseSceneProps & {
   hoveredId,
   onHover
 }) => {
-  const positions = getCharacterPositions(characters.length, 5);
+  const positions = getCharacterPositions(characters.length);
   const selectedPosition = selectedId 
     ? positions[characters.findIndex(c => c.id === selectedId)]?.position 
     : null;
@@ -411,42 +689,60 @@ const SceneContent: React.FC<HouseSceneProps & {
       <pointLight position={[0, 8, 0]} intensity={0.5} color="#fbbf24" />
       
       {/* Floor */}
-      <HouseFloor />
+      <ExpandedHouseFloor />
+      
+      {/* Exterior walls */}
+      <HouseWalls />
+      
+      {/* Interior partitions */}
+      <InteriorWalls />
       
       {/* Contact shadows for depth */}
       <ContactShadows
         position={[0, 0, 0]}
         opacity={0.5}
-        scale={20}
+        scale={40}
         blur={2}
-        far={10}
+        far={15}
       />
       
-      {/* New furniture: TV area at back */}
-      <TVStand position={[0, 0, -9]} />
+      {/* === ROOM SECTIONS === */}
       
-      {/* New furniture: Kitchen area on right side */}
-      <KitchenArea position={[9, 0, 0]} />
+      {/* Living Room - Center */}
+      <LivingRoom position={[0, 0, 0]} />
       
-      {/* New furniture: Diary Room door on left side */}
-      <DiaryRoomDoor position={[-9.5, 0, 0]} />
+      {/* HOH Suite - Top Right */}
+      <HOHSuite position={[10, 0, -10]} />
       
-      {/* Wall panels for backdrop */}
-      <WallPanel position={[-9, 2, -6]} rotation={[0, Math.PI / 4, 0]} width={3} />
-      <WallPanel position={[9, 2, -6]} rotation={[0, -Math.PI / 4, 0]} width={3} />
-      <WallPanel position={[-6, 2, 8]} rotation={[0, Math.PI, 0]} width={4} />
-      <WallPanel position={[6, 2, 8]} rotation={[0, Math.PI, 0]} width={4} />
+      {/* Bedrooms - Top Left and Center */}
+      <Bedroom position={[-10, 0, -10]} variant="regular" />
+      <Bedroom position={[0, 0, -10]} variant="havenot" />
       
-      {/* Existing furniture arrangement */}
-      <Couch position={[-7, 0, 3]} rotation={[0, Math.PI / 2, 0]} />
-      <Couch position={[0, 0, 7]} rotation={[0, Math.PI, 0]} />
-      <CoffeeTable position={[0, 0, 0]} />
-      <Plant position={[-8.5, 0, 6]} scale={1.2} />
-      <Plant position={[8.5, 0, 6]} scale={1} />
-      <Plant position={[-8.5, 0, -3]} scale={0.8} />
-      <LightFixture position={[0, 5, 0]} />
-      <LightFixture position={[-5, 4.5, -5]} />
-      <LightFixture position={[5, 4.5, -5]} />
+      {/* Kitchen - Right Side */}
+      <KitchenExpanded position={[12, 0, 0]} />
+      
+      {/* Bathroom - Left Side */}
+      <BathroomArea position={[-12, 0, 3]} />
+      
+      {/* Nomination/Lounge - Front Center */}
+      <NominationLounge position={[0, 0, 11]} />
+      
+      {/* Game Room - Front Right */}
+      <GameRoom position={[12, 0, 9]} />
+      
+      {/* Diary Room Interior - Left Side */}
+      <DiaryRoomInterior position={[-14, 0, -3]} />
+      
+      {/* Hallway connecting rooms */}
+      <Hallway position={[0, 0, -6]} length={28} />
+      
+      {/* === GLASS PARTITIONS === */}
+      
+      {/* Living room to nomination glass */}
+      <GlassWall position={[0, 1.5, 5.5]} width={8} height={3} />
+      
+      {/* Kitchen glass partition */}
+      <GlassWall position={[8, 1.5, 2]} rotation={[0, Math.PI / 2, 0]} width={4} height={3} />
       
       {/* Characters in circle */}
       <Suspense fallback={<SceneLoader />}>
@@ -474,7 +770,7 @@ const SceneContent: React.FC<HouseSceneProps & {
       {/* Camera fly-to animation */}
       <CameraController 
         focusPosition={selectedPosition || null} 
-        defaultPosition={[0, 10, 15]}
+        defaultPosition={[0, 18, 25]}
         controlsRef={controlsRef}
       />
       
@@ -482,8 +778,8 @@ const SceneContent: React.FC<HouseSceneProps & {
       <OrbitControls
         ref={controlsRef}
         enablePan={false}
-        minDistance={4}
-        maxDistance={25}
+        minDistance={5}
+        maxDistance={40}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
         target={[0, 0.5, 0]}
@@ -509,10 +805,10 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
     <div className="w-full h-full relative">
       <Canvas
         camera={{ 
-          position: [0, 10, 15], 
+          position: [0, 18, 25], 
           fov: 45,
           near: 0.1,
-          far: 100
+          far: 150
         }}
         shadows
         gl={{ antialias: true, alpha: false }}
