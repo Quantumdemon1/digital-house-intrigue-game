@@ -19,6 +19,25 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
     // Prevent duplicate React/Three.js instances that cause "Cannot read properties of undefined" errors
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "three", "@react-three/fiber", "@react-three/drei"],
+    dedupe: [
+      "react", 
+      "react-dom", 
+      "react/jsx-runtime", 
+      "three", 
+      "@react-three/fiber", 
+      "@react-three/drei",
+      "three-stdlib"
+    ],
+  },
+  optimizeDeps: {
+    // Force these packages to be pre-bundled together to avoid duplicate instances
+    include: [
+      "react",
+      "react-dom",
+      "three",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "three-stdlib"
+    ],
   },
 }));
