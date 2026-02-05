@@ -57,6 +57,8 @@ interface RPMAvatarProps {
   animationQuality?: 'low' | 'medium' | 'high';
   /** Live bone overrides from pose editor */
   liveBoneOverrides?: Record<string, { x: number; y: number; z: number }> | null;
+  /** Character name for gender-specific pose defaults */
+  characterName?: string;
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
@@ -124,8 +126,9 @@ const RPMAvatarInner: React.FC<{
   gestureToPlay?: GestureType | null;
   onGestureComplete?: () => void;
   liveBoneOverrides?: Record<string, { x: number; y: number; z: number }> | null;
+  characterName?: string;
   onLoaded?: () => void;
-}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, gestureToPlay, onGestureComplete, liveBoneOverrides, onLoaded }) => {
+}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, gestureToPlay, onGestureComplete, liveBoneOverrides, characterName, onLoaded }) => {
   const group = useRef<THREE.Group>(null);
   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
@@ -137,11 +140,11 @@ const RPMAvatarInner: React.FC<{
     cloned.userData.instanceId = instanceId.current;
     
     if (applyIdlePose) {
-      applyStaticPose(cloned, staticPose);
+      applyStaticPose(cloned, staticPose, characterName);
     }
     
     return cloned;
-  }, [scene, applyIdlePose, staticPose]);
+  }, [scene, applyIdlePose, staticPose, characterName]);
   
   // Get animation features based on quality
   const animFeatures = useMemo(() => 
@@ -189,6 +192,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   gestureToPlay,
   onGestureComplete,
   liveBoneOverrides,
+  characterName,
   onLoaded,
   onError,
 }) => {
@@ -248,6 +252,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
         gestureToPlay={gestureToPlay}
         onGestureComplete={onGestureComplete}
         liveBoneOverrides={liveBoneOverrides}
+        characterName={characterName}
         onLoaded={onLoaded}
       />
     </AvatarRenderBoundary>

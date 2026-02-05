@@ -536,6 +536,7 @@ const CharacterSpot: React.FC<{
                 selectedIsHoH={false}
                 hasSelection={!!selectedId}
                 liveBoneOverrides={isPlayer ? liveBoneOverrides : null}
+                characterName={template.name}
               />
             </Suspense>
           ) : (

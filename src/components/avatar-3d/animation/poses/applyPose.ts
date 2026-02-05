@@ -53,10 +53,11 @@ function findBone(root: THREE.Object3D, boneName: string): THREE.Bone | null {
  */
 export function applyStaticPose(
   clone: THREE.Group,
-  poseType: StaticPoseType = 'neutral'
+  poseType: StaticPoseType = 'neutral',
+  characterName?: string
 ): void {
-  // Use effective pose which includes any admin overrides
-  const pose = getEffectivePose(poseType);
+  // Use effective pose which includes female defaults and admin overrides
+  const pose = getEffectivePose(poseType, characterName);
   
   if (!pose) {
     console.warn(`[applyStaticPose] Unknown pose type: ${poseType}`);
