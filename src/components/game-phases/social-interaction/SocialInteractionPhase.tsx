@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Users, Clock } from 'lucide-react';
+ import { Users, Clock, Home } from 'lucide-react';
 import { GameCard, GameCardHeader, GameCardTitle, GameCardDescription, GameCardContent } from '@/components/ui/game-card';
 import { Badge } from '@/components/ui/badge';
 import LocationDisplay from './LocationDisplay';
@@ -16,6 +16,8 @@ import { InteractionTracker } from '@/systems/ai/interaction-tracker';
 import { generateNPCProposalsForPlayer } from '@/systems/ai/npc-deal-proposals';
 import { NPCProposal } from '@/models/deal';
 import { config } from '@/config';
+ import HouseViewPanel from './HouseViewPanel';
+ import HouseViewToggle from './HouseViewToggle';
 
 const SocialInteractionPhase: React.FC = () => {
   const { game, logger, dispatch } = useGame();
@@ -26,6 +28,13 @@ const SocialInteractionPhase: React.FC = () => {
   const hasRunNPCActions = useRef(false);
   const hasGeneratedProposals = useRef(false);
   
+   // House View state with localStorage persistence
+   const [showHouseView, setShowHouseView] = useState(() => {
+     const saved = localStorage.getItem('bb-show-house-view');
+     return saved !== null ? saved === 'true' : true; // Default to showing
+   });
+   const [selectedFromHouse, setSelectedFromHouse] = useState<string | null>(null);
+   
   // NPC Proposals state
   const [currentProposal, setCurrentProposal] = useState<NPCProposal | null>(null);
   const [proposalQueue, setProposalQueue] = useState<NPCProposal[]>([]);
@@ -39,6 +48,20 @@ const SocialInteractionPhase: React.FC = () => {
     isOpen: false
   });
 
+   // Toggle House View with persistence
+   const handleToggleHouseView = useCallback(() => {
+     setShowHouseView(prev => {
+       const newValue = !prev;
+       localStorage.setItem('bb-show-house-view', String(newValue));
+       return newValue;
+     });
+   }, []);
+   
+   // Handle character selection from House View
+   const handleHouseSelect = useCallback((id: string) => {
+     setSelectedFromHouse(prev => prev === id ? null : id);
+   }, []);
+ 
   // Initialize interaction tracker
   useEffect(() => {
     if (!interactionTrackerRef.current && logger) {
@@ -156,6 +179,9 @@ const SocialInteractionPhase: React.FC = () => {
 
   const currentState = game.currentState;
   const availableActions = currentState.getAvailableActions();
+   
+   // Get player for HouseViewPanel
+   const player = game.houseguests.find(h => h.isPlayer);
 
   const handleActionClick = (actionId: string, params?: any) => {
     if (actionId === 'strategic_discussion') {
@@ -198,7 +224,26 @@ const SocialInteractionPhase: React.FC = () => {
   };
 
   return (
-    <GameCard variant="primary" className="w-full max-w-4xl mx-auto animate-fade-in">
+     <div className="w-full max-w-7xl mx-auto animate-fade-in">
+     <div className={`flex flex-col ${showHouseView ? 'lg:flex-row' : ''} gap-4`}>
+       {/* House View Panel */}
+       {showHouseView && (
+         <div className="lg:w-1/2 xl:w-3/5 h-[400px] lg:h-[600px]">
+           <HouseViewPanel
+             houseguests={game.getActiveHouseguests()}
+             selectedId={selectedFromHouse}
+             onSelect={handleHouseSelect}
+             hohId={game.hohWinner}
+             nomineeIds={game.nominees}
+             povHolderId={game.povWinner}
+             playerId={player?.id}
+           />
+         </div>
+       )}
+       
+       {/* Social Controls Panel */}
+       <div className={showHouseView ? 'lg:w-1/2 xl:w-2/5' : 'w-full max-w-4xl mx-auto'}>
+     <GameCard variant="primary" className="w-full">
       <GameCardHeader variant="primary" icon={Users}>
         <div className="flex items-center justify-between w-full">
           <div>
@@ -207,10 +252,16 @@ const SocialInteractionPhase: React.FC = () => {
               Week {game.week} - Interact with other houseguests
             </GameCardDescription>
           </div>
-          <Badge variant="outline" className="bg-white/10 text-white border-white/30">
+           <div className="flex items-center gap-2">
+             <HouseViewToggle
+               showHouseView={showHouseView}
+               onToggle={handleToggleHouseView}
+             />
+             <Badge variant="outline" className="bg-white/10 text-white border-white/30">
             <Clock className="h-3 w-3 mr-1" />
             {currentState.interactionsRemaining} Actions
           </Badge>
+           </div>
         </div>
       </GameCardHeader>
       
@@ -261,6 +312,9 @@ const SocialInteractionPhase: React.FC = () => {
         onClose={handleCloseProposal}
       />
     </GameCard>
+       </div>
+     </div>
+     </div>
   );
 };
 
