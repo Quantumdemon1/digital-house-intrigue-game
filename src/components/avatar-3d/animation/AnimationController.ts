@@ -61,6 +61,12 @@
    updateSecondaryMotion,
  } from './physics/SecondaryMotionSystem';
  
+// Mobile detection for physics disable
+const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 768px)').matches;
+};
+
  // ============ Configuration ============
  
  export interface AnimationControllerConfig {
@@ -268,7 +274,9 @@
      
        // ============ Secondary Motion Layer (Physics) ============
        let physicsFilteredBones = finalBones;
-       if (qualityConfig.enablePhysics) {
+      // Disable physics on mobile for stability
+      const enablePhysics = qualityConfig.enablePhysics && !isMobileDevice();
+      if (enablePhysics) {
          const physicsResult = updateSecondaryMotion(
            state.secondaryMotion,
            finalBones,

@@ -13,6 +13,12 @@
    getSpring3DPosition,
  } from '../utils/springPhysics';
  
+// Mobile detection for disabling physics
+const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 768px)').matches;
+};
+
  // ============ Configuration ============
  
  /**
@@ -78,11 +84,17 @@
    TRACKED_BONES.forEach(boneName => {
      const bone = currentBones[boneName];
      if (bone) {
-       springs[boneName] = createSpring3D({
-         x: bone.rotation.x,
-         y: bone.rotation.y,
-         z: bone.rotation.z,
-       });
+      // Initialize with BOTH position and target set to current value
+      // This prevents violent snap/oscillation when starting
+      const initialPos = {
+        x: bone.rotation.x,
+        y: bone.rotation.y,
+        z: bone.rotation.z,
+      };
+      let spring = createSpring3D(initialPos);
+      // Also set the target to the same value to prevent initial oscillation
+      spring = setSpring3DTarget(spring, initialPos);
+      springs[boneName] = spring;
      } else {
        // Default to zero rotation if bone not found
        springs[boneName] = createSpring3D({ x: 0, y: 0, z: 0 });
@@ -110,8 +122,8 @@
    deltaTime: number,
    enabled: boolean
  ): { bones: BoneMap; state: SecondaryMotionState } => {
-   // If disabled, pass through unchanged
-   if (!enabled) {
+  // If disabled or on mobile, pass through unchanged
+  if (!enabled || isMobileDevice()) {
      return { bones: targetBones, state };
    }
    
@@ -121,8 +133,9 @@
      currentState = initializeSecondaryMotion(currentState, targetBones);
    }
    
-   // Cap deltaTime to avoid instability
-   const dt = Math.min(deltaTime, 0.05) * 60; // Normalize to 60fps
+  // Normalize deltaTime to 60fps baseline but clamp to stable range
+  // This prevents exponential oscillation on low FPS
+  const dt = Math.min(Math.max(deltaTime * 60, 0.1), 1.5);
    
    const resultBones: BoneMap = { ...targetBones };
    const newSprings: Record<string, Spring3DState> = { ...currentState.springs };

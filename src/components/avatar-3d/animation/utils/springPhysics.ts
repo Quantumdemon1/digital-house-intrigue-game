@@ -38,6 +38,9 @@
  ): SpringState => {
    const { stiffness, damping, mass } = config;
    
+  // Clamp deltaTime to prevent instability on low FPS
+  const dt = Math.min(Math.max(deltaTime, 0.1), 1.5);
+  
    // Spring force: F = -k * (x - target)
    // Damping force: F = -c * v
    const displacement = state.position - state.target;
@@ -48,12 +51,29 @@
    const acceleration = (springForce + dampingForce) / mass;
    
    // Semi-implicit Euler: update velocity first, then position
-   const newVelocity = state.velocity + acceleration * deltaTime;
-   const newPosition = state.position + newVelocity * deltaTime;
+  const rawVelocity = state.velocity + acceleration * dt;
+  const rawPosition = state.position + rawVelocity * dt;
+  
+  // CLAMP: Prevent runaway velocity (max radians per normalized frame)
+  const maxVelocity = 5.0;
+  const clampedVelocity = Math.max(-maxVelocity, Math.min(maxVelocity, rawVelocity));
+  
+  // CLAMP: Prevent extreme positions (full rotation limit)
+  const maxPosition = Math.PI * 2;
+  const clampedPosition = Math.max(-maxPosition, Math.min(maxPosition, rawPosition));
+  
+  // NaN safety check - reset to target if unstable
+  if (!isFinite(clampedPosition) || !isFinite(clampedVelocity)) {
+    return {
+      position: state.target,
+      velocity: 0,
+      target: state.target,
+    };
+  }
    
    return {
-     position: newPosition,
-     velocity: newVelocity,
+    position: clampedPosition,
+    velocity: clampedVelocity,
      target: state.target,
    };
  };

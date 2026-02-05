@@ -6,6 +6,32 @@
  import * as THREE from 'three';
  import { BoneRotation, BoneMap, BoneState } from '../types';
  
+// Per-bone rotation limits to prevent physically impossible poses
+const BONE_LIMITS: Record<string, { min: number; max: number }> = {
+  Head: { min: -0.8, max: 0.8 },
+  Neck: { min: -0.5, max: 0.5 },
+  Spine: { min: -0.3, max: 0.3 },
+  Spine1: { min: -0.3, max: 0.3 },
+  Spine2: { min: -0.3, max: 0.3 },
+  LeftShoulder: { min: -0.5, max: 0.5 },
+  RightShoulder: { min: -0.5, max: 0.5 },
+  LeftArm: { min: -2.0, max: 2.0 },
+  RightArm: { min: -2.0, max: 2.0 },
+  LeftForeArm: { min: -2.5, max: 2.5 },
+  RightForeArm: { min: -2.5, max: 2.5 },
+  LeftHand: { min: -1.0, max: 1.0 },
+  RightHand: { min: -1.0, max: 1.0 },
+  Hips: { min: -0.3, max: 0.3 },
+};
+
+/**
+ * Helper to clamp and handle NaN/Infinity
+ */
+const clampAndValidate = (value: number, min: number, max: number): number => {
+  if (!isFinite(value)) return 0;
+  return Math.max(min, Math.min(max, value));
+};
+
  /**
   * Find a bone by name in the scene hierarchy
   */
@@ -84,12 +110,20 @@
      const bone = boneCache.get(boneName);
      if (!bone) return;
      
+    // Get limits for this bone (default to wide range if not specified)
+    const limits = BONE_LIMITS[boneName] || { min: -Math.PI, max: Math.PI };
+    
+    // Clamp rotations to safe ranges with NaN safety
+    const safeX = clampAndValidate(state.rotation.x, limits.min, limits.max);
+    const safeY = clampAndValidate(state.rotation.y, limits.min, limits.max);
+    const safeZ = clampAndValidate(state.rotation.z, limits.min, limits.max);
+    
      if (blend >= 1) {
-       bone.rotation.set(state.rotation.x, state.rotation.y, state.rotation.z);
+      bone.rotation.set(safeX, safeY, safeZ);
      } else {
-       bone.rotation.x = THREE.MathUtils.lerp(bone.rotation.x, state.rotation.x, blend);
-       bone.rotation.y = THREE.MathUtils.lerp(bone.rotation.y, state.rotation.y, blend);
-       bone.rotation.z = THREE.MathUtils.lerp(bone.rotation.z, state.rotation.z, blend);
+      bone.rotation.x = THREE.MathUtils.lerp(bone.rotation.x, safeX, blend);
+      bone.rotation.y = THREE.MathUtils.lerp(bone.rotation.y, safeY, blend);
+      bone.rotation.z = THREE.MathUtils.lerp(bone.rotation.z, safeZ, blend);
      }
    });
  };

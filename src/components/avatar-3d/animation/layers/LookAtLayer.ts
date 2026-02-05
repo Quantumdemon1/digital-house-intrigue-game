@@ -158,8 +158,11 @@
    newState.headSpring = setSpring3DTarget(newState.headSpring, { x: targetPitch * 0.7, y: targetYaw * 0.7, z: 0 });
    newState.neckSpring = setSpring3DTarget(newState.neckSpring, { x: targetPitch * 0.3, y: targetYaw * 0.3, z: 0 });
    
-   newState.headSpring = updateSpring3D(newState.headSpring, HEAD_SPRING, deltaTime * 60);
-   newState.neckSpring = updateSpring3D(newState.neckSpring, NECK_SPRING, deltaTime * 60);
+    // Normalize deltaTime to 60fps baseline but clamp to stable range
+    const dt = Math.min(Math.max(deltaTime * 60, 0.1), 1.5);
+    
+    newState.headSpring = updateSpring3D(newState.headSpring, HEAD_SPRING, dt);
+    newState.neckSpring = updateSpring3D(newState.neckSpring, NECK_SPRING, dt);
    
    const headRot = getSpring3DPosition(newState.headSpring);
    const neckRot = getSpring3DPosition(newState.neckSpring);
