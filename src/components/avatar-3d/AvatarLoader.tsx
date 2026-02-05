@@ -50,22 +50,22 @@ const SIZE_CONFIG: Record<AvatarSize, {
   sm: { 
     width: 'w-12', height: 'h-12', scale: 0.8, 
     context: 'thumbnail',
-    camera: { y: 1.1, z: 1.2, fov: 25, lookAtY: 1.5 }  // Face framing
+    camera: { y: 1.05, z: 1.2, fov: 25, lookAtY: 1.05 }  // Face level
   },
   md: { 
     width: 'w-20', height: 'h-20', scale: 1, 
     context: 'profile',
-    camera: { y: 1.1, z: 1.4, fov: 28, lookAtY: 1.5 }  // Face framing
+    camera: { y: 1.0, z: 1.4, fov: 28, lookAtY: 1.0 }  // Face level
   },
   lg: { 
     width: 'w-32', height: 'h-32', scale: 1.2, 
     context: 'profile',
-    camera: { y: 1.1, z: 1.5, fov: 30, lookAtY: 1.5 }  // Face framing
+    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
   },
   xl: { 
     width: 'w-48', height: 'h-48', scale: 1.5, 
     context: 'profile',
-    camera: { y: 1.1, z: 1.5, fov: 30, lookAtY: 1.5 }  // Face framing
+    camera: { y: 1.0, z: 1.5, fov: 30, lookAtY: 1.0 }  // Face level
   },
   full: { 
     width: 'w-full', height: 'h-full', scale: 1, 
