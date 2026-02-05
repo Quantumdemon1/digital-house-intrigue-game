@@ -42,14 +42,14 @@
    });
  };
  
- // Map archetype to pose types
- const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
-   strategist: ['crossed-arms', 'thinking'],
-   competitor: ['hands-on-hips', 'crossed-arms'],
-   socialite: ['relaxed', 'casual-lean'],
-   wildcard: ['hands-on-hips', 'relaxed'],
-   underdog: ['relaxed', 'thinking'],
- };
+// Map archetype to pose types - all use relaxed pose for consistency
+const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
+  strategist: ['relaxed'],
+  competitor: ['relaxed'],
+  socialite: ['relaxed'],
+  wildcard: ['relaxed'],
+  underdog: ['relaxed'],
+};
  
  const getPoseForCharacter = (archetype: Archetype, index: number): PoseType => {
    const poses = ARCHETYPE_POSES[archetype];

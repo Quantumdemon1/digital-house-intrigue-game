@@ -336,13 +336,13 @@ const InteriorWalls: React.FC = () => {
   );
 };
 
- // Map archetype to pose types for variety
+ // Map archetype to pose types - all use relaxed pose for consistency
  const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
-   strategist: ['crossed-arms', 'thinking'],
-   competitor: ['hands-on-hips', 'crossed-arms'],
-   socialite: ['relaxed', 'casual-lean'],
-   wildcard: ['hands-on-hips', 'relaxed'],
-   underdog: ['relaxed', 'thinking'],
+   strategist: ['relaxed'],
+   competitor: ['relaxed'],
+   socialite: ['relaxed'],
+   wildcard: ['relaxed'],
+   underdog: ['relaxed'],
  };
  
  // Get pose for a character based on their archetype and index
