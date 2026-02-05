@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
@@ -16,6 +16,21 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
+  // Global handler for unhandled promise rejections (e.g., failed GLB loads)
+  useEffect(() => {
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      // Check if it's a GLB/model loading error
+      if (event.reason?.message?.includes('Could not load') || 
+          event.reason?.message?.includes('Failed to fetch')) {
+        console.warn('Suppressed model loading error:', event.reason?.message);
+        event.preventDefault(); // Prevent crash
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => window.removeEventListener('unhandledrejection', handleRejection);
+  }, []);
+
   return (
     <div className="app min-h-screen bg-background">
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
