@@ -420,13 +420,14 @@ const CharacterSpot: React.FC<{
   overridePosition?: [number, number, number] | null;
   overrideRotationY?: number | null;
   movementGesture?: GestureType | null;
+  liveBoneOverrides?: Record<string, BoneRotation> | null;
   onSelect: () => void;
   onHover: (hovered: boolean) => void;
- }> = ({ 
+ }> = ({
    template, position, rotation, isSelected, isHovered, index, 
    selectedPosition, selectedId, isPlayer, playerGesture, onGestureComplete,
    relationshipToSelected, overridePosition, overrideRotationY, movementGesture,
-   onSelect, onHover 
+   liveBoneOverrides, onSelect, onHover 
  }) => {
   const groupRef = useRef<THREE.Group>(null);
   const idleGroupRef = useRef<THREE.Group>(null);
@@ -534,6 +535,7 @@ const CharacterSpot: React.FC<{
                 selectedIsNominee={false}
                 selectedIsHoH={false}
                 hasSelection={!!selectedId}
+                liveBoneOverrides={isPlayer ? liveBoneOverrides : null}
               />
             </Suspense>
           ) : (
@@ -727,6 +729,7 @@ const SceneContent: React.FC<HouseSceneProps & {
    movementGesture: GestureType | null;
    onPositionUpdate: (position: [number, number, number], rotationY: number) => void;
    onMoveComplete: () => void;
+   liveBoneOverrides?: Record<string, BoneRotation> | null;
 }> = ({
   characters,
   selectedId,
@@ -751,6 +754,7 @@ const SceneContent: React.FC<HouseSceneProps & {
    movementGesture,
    onPositionUpdate,
    onMoveComplete,
+   liveBoneOverrides,
 }) => {
    // Calculate positions based on alliances/relationships or fallback to simple distribution
    const positionMap = useMemo(() => {
@@ -906,6 +910,7 @@ const SceneContent: React.FC<HouseSceneProps & {
                overridePosition={playerOverridePosition}
                overrideRotationY={playerOverrideRotationY}
                movementGesture={playerMovementGesture}
+               liveBoneOverrides={isPlayerChar ? liveBoneOverrides : null}
                onSelect={() => onSelect(char.id)}
                onHover={(hovered) => onHover(hovered ? char.id : null)}
              />
@@ -976,6 +981,12 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    // Admin pose editor state
    const [showPoseEditor, setShowPoseEditor] = useState(false);
    const [editorPoseType, setEditorPoseType] = useState<StaticPoseType>('relaxed');
+   const [liveBoneOverrides, setLiveBoneOverrides] = useState<Record<string, BoneRotation> | null>(null);
+   
+   // Handler for pose editor bone adjustments
+   const handleBoneAdjust = useCallback((bones: Record<string, BoneRotation>) => {
+     setLiveBoneOverrides(bones);
+   }, []);
    
    // Player movement animation state
    const [playerMovementState, setPlayerMovementState] = useState<{
@@ -1137,6 +1148,7 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
            movementGesture={movementGesture}
            onPositionUpdate={handlePositionUpdate}
            onMoveComplete={handleMoveComplete}
+           liveBoneOverrides={liveBoneOverrides}
           />
            
             {/* Post-processing disabled due to @react-three/postprocessing version incompatibility */}
@@ -1238,6 +1250,7 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
         onClose={() => setShowPoseEditor(false)}
         currentPose={editorPoseType}
         onPoseChange={setEditorPoseType}
+        onBoneAdjust={handleBoneAdjust}
       />
     </div>
   );

@@ -55,6 +55,8 @@ interface RPMAvatarProps {
   hasSelection?: boolean;
   /** Animation quality level */
   animationQuality?: 'low' | 'medium' | 'high';
+  /** Live bone overrides from pose editor */
+  liveBoneOverrides?: Record<string, { x: number; y: number; z: number }> | null;
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
@@ -121,8 +123,9 @@ const RPMAvatarInner: React.FC<{
   animationQuality: 'low' | 'medium' | 'high';
   gestureToPlay?: GestureType | null;
   onGestureComplete?: () => void;
+  liveBoneOverrides?: Record<string, { x: number; y: number; z: number }> | null;
   onLoaded?: () => void;
-}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, gestureToPlay, onGestureComplete, onLoaded }) => {
+}> = ({ optimizedUrl, effectivePosition, scale, applyIdlePose, staticPose, animationQuality, gestureToPlay, onGestureComplete, liveBoneOverrides, onLoaded }) => {
   const group = useRef<THREE.Group>(null);
   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
@@ -155,6 +158,7 @@ const RPMAvatarInner: React.FC<{
     enableBlinking: animFeatures.enableBlinking,
     gestureToPlay,
     onGestureComplete,
+    liveBoneOverrides,
   });
   
   // Notify when clone is ready
@@ -184,6 +188,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   animationQuality = 'high',
   gestureToPlay,
   onGestureComplete,
+  liveBoneOverrides,
   onLoaded,
   onError,
 }) => {
@@ -242,6 +247,7 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
         animationQuality={animationQuality}
         gestureToPlay={gestureToPlay}
         onGestureComplete={onGestureComplete}
+        liveBoneOverrides={liveBoneOverrides}
         onLoaded={onLoaded}
       />
     </AvatarRenderBoundary>
