@@ -1,6 +1,6 @@
 /**
  * @file avatar-3d/RPMAvatar.tsx
- * @description Ready Player Me avatar component - STRIPPED FOR TROUBLESHOOTING
+ * @description Ready Player Me avatar component with new modular animation system
  */
 
 import React, { Suspense, useRef, useMemo, useEffect, Component, ReactNode } from 'react';
@@ -11,6 +11,8 @@ import * as THREE from 'three';
 import { MoodType } from '@/models/houseguest';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
 import { PoseType, GestureType } from './animation';
+import { applyStaticPose, type StaticPoseType } from './animation/poses';
+import { useAvatarAnimator, getAnimationFeatures } from './animation/AvatarAnimator';
 
 export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
 
@@ -25,49 +27,66 @@ interface RPMAvatarProps {
   position?: [number, number, number];
   /** UI context for quality optimization */
   context?: AvatarContext;
-  /** Apply natural idle standing pose - DISABLED FOR TROUBLESHOOTING */
+  /** Apply natural idle standing pose */
   applyIdlePose?: boolean;
-  /** Phase offset - DISABLED FOR TROUBLESHOOTING */
+  /** Phase offset for animation variation */
   phaseOffset?: number;
-  /** Pose type - DISABLED FOR TROUBLESHOOTING */
+  /** Pose type for static pose */
   poseType?: PoseType;
-  /** Target position for head look-at - DISABLED FOR TROUBLESHOOTING */
+  /** Target position for head look-at (Phase 5 - not yet implemented) */
   lookAtTarget?: THREE.Vector3 | null;
-  /** Character's world position - DISABLED FOR TROUBLESHOOTING */
+  /** Character's world position */
   worldPosition?: [number, number, number];
-  /** Character's Y rotation - DISABLED FOR TROUBLESHOOTING */
+  /** Character's Y rotation */
   worldRotationY?: number;
-  /** Whether this is the player's avatar - DISABLED FOR TROUBLESHOOTING */
+  /** Whether this is the player's avatar */
   isPlayer?: boolean;
-  /** Enable gesture animations - DISABLED FOR TROUBLESHOOTING */
+  /** Enable gesture animations (Phase 6 - not yet implemented) */
   enableGestures?: boolean;
-  /** Gesture to play - DISABLED FOR TROUBLESHOOTING */
+  /** Gesture to play (Phase 6 - not yet implemented) */
   gestureToPlay?: GestureType | null;
-  /** Callback when gesture completes - DISABLED FOR TROUBLESHOOTING */
+  /** Callback when gesture completes */
   onGestureComplete?: () => void;
-  /** Relationship score - DISABLED FOR TROUBLESHOOTING */
+  /** Relationship score */
   relationshipToSelected?: number;
-  /** Whether the selected character is a nominee - DISABLED FOR TROUBLESHOOTING */
+  /** Whether the selected character is a nominee */
   selectedIsNominee?: boolean;
-  /** Whether the selected character is HoH - DISABLED FOR TROUBLESHOOTING */
+  /** Whether the selected character is HoH */
   selectedIsHoH?: boolean;
-  /** Whether someone is currently selected - DISABLED FOR TROUBLESHOOTING */
+  /** Whether someone is currently selected */
   hasSelection?: boolean;
+  /** Animation quality level */
+  animationQuality?: 'low' | 'medium' | 'high';
   onLoaded?: () => void;
   onError?: (error: Error) => void;
 }
 
 /**
- * RPMAvatar - STRIPPED FOR TROUBLESHOOTING
- * Renders avatar in T-pose with NO animations, NO bone manipulation
+ * Map legacy PoseType to new StaticPoseType
+ */
+function mapToStaticPose(poseType?: PoseType): StaticPoseType {
+  switch (poseType) {
+    case 'crossed-arms': return 'defensive';
+    case 'hands-on-hips': return 'confident';
+    case 'thinking': return 'neutral';
+    case 'casual-lean': return 'relaxed';
+    case 'relaxed':
+    default: return 'relaxed';
+  }
+}
+
+/**
+ * RPMAvatar - Ready Player Me avatar with modular animation system
  */
 export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   modelSrc,
-  // All animation-related props are ignored for troubleshooting
   mood = 'Neutral',
   scale = 1,
   position,
   context = 'game',
+  applyIdlePose = true,
+  poseType,
+  animationQuality = 'high',
   onLoaded,
   onError,
 }) => {
@@ -76,20 +95,20 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   // Generate a unique instance ID for this component
   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
-  // Context-aware default positions (head-centered for portraits, full-body for customizer)
+  // Context-aware default positions
   const getDefaultPosition = (ctx: AvatarContext): [number, number, number] => {
     switch (ctx) {
-      case 'customizer': return [0, -1.5, 0];   // Full body view
-      case 'profile': return [0, -0.55, 0];     // Head portrait
-      case 'thumbnail': return [0, -0.5, 0];    // Tight head shot
+      case 'customizer': return [0, -1.5, 0];
+      case 'profile': return [0, -0.55, 0];
+      case 'thumbnail': return [0, -0.5, 0];
       case 'game': 
-      default: return [0, -0.7, 0];             // Upper body
+      default: return [0, -0.7, 0];
     }
   };
   
   const effectivePosition = position ?? getDefaultPosition(context);
   
-  // Map context to quality preset - 'customizer' -> 'profile', keep others
+  // Map context to quality preset
   const getQualityContext = (ctx: AvatarContext): 'thumbnail' | 'game' | 'profile' => {
     if (ctx === 'customizer') return 'profile';
     return ctx;
@@ -104,27 +123,43 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   
   const { scene } = useGLTF(optimizedUrl);
   
-  // SIMPLIFIED: Clone scene with NO pose application - T-pose only
+  // Determine static pose to apply
+  const staticPose = useMemo(() => mapToStaticPose(poseType), [poseType]);
+  
+  // Clone scene and apply static pose ONCE
   const clone = useMemo(() => {
     const cloned = SkeletonUtils.clone(scene) as THREE.Group;
     
     // Mark with unique instance ID
     cloned.userData.instanceId = instanceId.current;
     
-    // NO pose application - render in default T-pose for troubleshooting
+    // Apply static pose if enabled
+    if (applyIdlePose) {
+      applyStaticPose(cloned, staticPose);
+    }
+    
     return cloned;
-  }, [scene]);
+  }, [scene, applyIdlePose, staticPose]);
+  
+  // Get animation features based on quality
+  const animFeatures = useMemo(() => 
+    getAnimationFeatures(animationQuality),
+    [animationQuality]
+  );
+  
+  // Use the unified animation hook - all animation happens here
+  useAvatarAnimator({
+    clone,
+    instanceId: instanceId.current,
+    enableBreathing: animFeatures.enableBreathing,
+    enableWeightShift: animFeatures.enableWeightShift,
+    enableBlinking: animFeatures.enableBlinking,
+  });
   
   // Notify when clone is ready
   useEffect(() => {
     if (clone && onLoaded) onLoaded();
   }, [clone, onLoaded]);
-  
-  // ALL ANIMATION LOGIC REMOVED FOR TROUBLESHOOTING
-  // - No useAnimationController
-  // - No bone manipulation
-  // - No morph targets
-  // - No skinned mesh traversal
 
   return (
     <group ref={group} position={effectivePosition} scale={scale}>
