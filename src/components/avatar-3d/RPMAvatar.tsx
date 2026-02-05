@@ -218,9 +218,13 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
     onError?.(error);
   };
 
-  // If error occurred, return null - parent shows fallback
+  // If error occurred, show fallback mesh at correct position
   if (hasError) {
-    return null;
+    return (
+      <group position={effectivePosition} scale={scale}>
+        <RPMAvatarFallback isError />
+      </group>
+    );
   }
 
   return (
