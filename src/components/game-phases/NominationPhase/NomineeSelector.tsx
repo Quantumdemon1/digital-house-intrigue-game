@@ -84,7 +84,7 @@ const NomineeSelector: React.FC<NomineeSelectorProps> = ({
             <div className="flex items-center w-full gap-3">
               <StatusAvatar
                 name={houseguest.name}
-                imageUrl={houseguest.imageUrl}
+                avatarUrl={houseguest.avatarUrl}
                 status={selected ? 'nominee' : 'none'}
                 size="sm"
                 showBadge={false}

@@ -147,7 +147,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
                 name={nominees[0].name} 
                 status="nominee" 
                 size="lg"
-                imageUrl={nominees[0].imageUrl}
+                avatarUrl={nominees[0].avatarUrl}
               />
               <span className="font-semibold text-sm md:text-base text-center max-w-[80px] truncate">
                 {nominees[0].name.split(' ')[0]}
@@ -176,7 +176,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
                 name={nominees[1].name} 
                 status="nominee" 
                 size="lg"
-                imageUrl={nominees[1].imageUrl}
+                avatarUrl={nominees[1].avatarUrl}
               />
               <span className="font-semibold text-sm md:text-base text-center max-w-[80px] truncate">
                 {nominees[1].name.split(' ')[0]}
@@ -235,7 +235,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
                   name={savedHouseguest.name} 
                   status="safe" 
                   size="lg"
-                  imageUrl={savedHouseguest.imageUrl}
+                  avatarUrl={savedHouseguest.avatarUrl}
                 />
                 <div className="text-center">
                   <p className="font-semibold">{savedHouseguest.name.split(' ')[0]}</p>
@@ -255,7 +255,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
                   name={evictedHouseguest.name} 
                   status="evicted" 
                   size="xl"
-                  imageUrl={evictedHouseguest.imageUrl}
+                  avatarUrl={evictedHouseguest.avatarUrl}
                 />
                 <div className="text-center">
                   <p className="font-bold text-lg">{evictedHouseguest.name}</p>
@@ -346,7 +346,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
             status="evicted" 
             size="xl"
             className="mx-auto"
-            imageUrl={evictedHouseguest.imageUrl}
+            avatarUrl={evictedHouseguest.avatarUrl}
           />
           
           <p className="text-muted-foreground">
@@ -400,7 +400,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
             status="evicted" 
             size="xl"
             className="mx-auto"
-            imageUrl={evictedHouseguest.imageUrl}
+            avatarUrl={evictedHouseguest.avatarUrl}
           />
           
           <div className="space-y-4">
@@ -437,7 +437,7 @@ const EvictionResults: React.FC<EvictionResultsProps> = ({
           status="evicted" 
           size="xl"
           className="mx-auto"
-          imageUrl={evictedHouseguest.imageUrl}
+          avatarUrl={evictedHouseguest.avatarUrl}
         />
         
         <div className="space-y-2">
