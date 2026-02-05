@@ -4,8 +4,9 @@
  */
 
 import React, { Suspense, useRef, useEffect, useMemo, useLayoutEffect, Component, ReactNode, forwardRef, useImperativeHandle } from 'react';
-import { useFrame, useGraph } from '@react-three/fiber';
-import { useGLTF, useProgress, Clone } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import { useGLTF, useProgress } from '@react-three/drei';
+import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import { MoodType } from '@/models/houseguest';
 import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
@@ -23,57 +24,26 @@ export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
 // Re-export types for backwards compatibility
 export type { PoseType, GestureType };
 
-/** Helper component that applies pose to cloned avatar */
-interface PosedCloneProps {
-  scene: THREE.Object3D;
-  poseType: PoseType;
-  applyIdlePose: boolean;
-  onCloneReady?: (clone: THREE.Group) => void;
-}
-
-const PosedClone = forwardRef<THREE.Group, PosedCloneProps>(({ 
-  scene, 
-  poseType, 
-  applyIdlePose,
-  onCloneReady 
-}, ref) => {
-  const internalRef = useRef<THREE.Group>(null);
+/** Helper function to apply pose to cloned avatar bones */
+const applyPoseToBones = (object: THREE.Object3D, poseType: PoseType) => {
+  const poseConfig = POSE_CONFIGS[poseType];
+  if (!poseConfig) return;
   
-  // Expose the internal ref
-  useImperativeHandle(ref, () => internalRef.current!, []);
-  
-  // Apply pose immediately after clone mounts (before paint)
-  useLayoutEffect(() => {
-    if (!internalRef.current || !applyIdlePose) return;
-    
-    const poseConfig = POSE_CONFIGS[poseType];
-    if (!poseConfig) return;
-    
-    internalRef.current.traverse((child) => {
-      if (child instanceof THREE.Bone) {
-        // Handle both standard and mixamo bone naming
-        const boneName = child.name.replace('mixamorig', '');
-        const boneState = poseConfig[boneName] || poseConfig[child.name];
-        if (boneState) {
-          child.rotation.set(
-            boneState.rotation.x,
-            boneState.rotation.y,
-            boneState.rotation.z
-          );
-        }
+  object.traverse((child) => {
+    if (child instanceof THREE.Bone) {
+      // Handle both standard and mixamo bone naming
+      const boneName = child.name.replace('mixamorig', '');
+      const boneState = poseConfig[boneName] || poseConfig[child.name];
+      if (boneState) {
+        child.rotation.set(
+          boneState.rotation.x,
+          boneState.rotation.y,
+          boneState.rotation.z
+        );
       }
-    });
-    
-    // Notify parent that clone is ready with pose applied
-    if (onCloneReady) {
-      onCloneReady(internalRef.current);
     }
-  }, [poseType, applyIdlePose, onCloneReady]);
-  
-  return <Clone ref={internalRef} object={scene} />;
-});
-
-PosedClone.displayName = 'PosedClone';
+  });
+};
 
 interface RPMAvatarProps {
   modelSrc: string;
@@ -187,17 +157,34 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   
   const { scene } = useGLTF(optimizedUrl);
   
-  // Get all skinned meshes for morph target manipulation
+  // Clone the scene with pose applied
+  const clone = useMemo(() => {
+    const cloned = SkeletonUtils.clone(scene) as THREE.Group;
+    if (applyIdlePose) {
+      applyPoseToBones(cloned, poseType);
+    }
+    return cloned;
+  }, [scene, applyIdlePose, poseType]);
+  
+  // Track clone ready state
+  useLayoutEffect(() => {
+    if (clone) {
+      cloneRef.current = clone;
+      setCloneReady(true);
+      if (onLoaded) onLoaded();
+    }
+  }, [clone, onLoaded]);
+  
+  // Get all skinned meshes for morph target manipulation (after clone is ready)
   const skinnedMeshes = useMemo(() => {
-    if (!cloneRef.current) return [];
     const meshes: THREE.SkinnedMesh[] = [];
-    cloneRef.current.traverse((child) => {
+    clone.traverse((child) => {
       if (child instanceof THREE.SkinnedMesh && child.morphTargetInfluences) {
         meshes.push(child);
       }
     });
     return meshes;
-  }, [cloneReady]);
+  }, [clone]);
    
    // Build relationship context for animation controller
    const relationshipContext: RelationshipContext = useMemo(() => ({
@@ -227,25 +214,10 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
    // Note: Mood-based expressions are now handled by the ReactiveLayer
    // based on relationship context. The mood prop is preserved for 
    // backwards compatibility but integrated into the unified system.
-   
-  // Handle clone ready callback
-  const handleCloneReady = React.useCallback((clone: THREE.Group) => {
-    cloneRef.current = clone;
-    setCloneReady(true);
-    if (onLoaded) onLoaded();
-  }, [onLoaded]);
-  
-  // Call onLoaded when model is ready
-  // (now handled by handleCloneReady)
 
   return (
     <group ref={group} position={effectivePosition} scale={scale}>
-      <PosedClone 
-        scene={scene}
-        poseType={poseType}
-        applyIdlePose={applyIdlePose}
-        onCloneReady={handleCloneReady}
-      />
+      <primitive object={clone} />
     </group>
   );
 };
