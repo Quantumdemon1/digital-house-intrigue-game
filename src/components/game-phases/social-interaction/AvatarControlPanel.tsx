@@ -14,7 +14,7 @@
  } from '@/components/ui/dropdown-menu';
  import { cn } from '@/lib/utils';
  import { Hand, ThumbsUp, Users, ChevronDown, Loader2 } from 'lucide-react';
- import { GestureType } from '@/components/avatar-3d/hooks/useGestureAnimation';
+ import { GestureType } from '@/components/avatar-3d/animation';
  
  // Gesture button configuration
  interface GestureButton {
@@ -61,9 +61,7 @@
    className,
  }) => {
    // Track cooldowns for each gesture
-   const [cooldowns, setCooldowns] = useState<Record<GestureType, number>>({
-     wave: 0, nod: 0, shrug: 0, clap: 0, point: 0, thumbsUp: 0
-   });
+   const [cooldowns, setCooldowns] = useState<Partial<Record<GestureType, number>>>({});
    
    // Countdown cooldowns
    useEffect(() => {

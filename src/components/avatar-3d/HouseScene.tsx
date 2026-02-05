@@ -9,9 +9,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { CharacterTemplate } from '@/data/character-templates';
- import { RPMAvatar, preloadRPMAvatar } from './RPMAvatar';
- import { PoseType } from './hooks/usePoseVariety';
- import { GestureType } from './hooks/useGestureAnimation';
+ import { RPMAvatar, preloadRPMAvatar, PoseType, GestureType } from './RPMAvatar';
  import { Archetype } from '@/data/character-templates';
 import { LivingRoom, HOHSuite, Bedroom, BathroomArea, KitchenExpanded, NominationLounge, GameRoom, DiaryRoomInterior, Hallway } from './HouseRooms';
 import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
@@ -494,8 +492,6 @@ const CharacterSpot: React.FC<{
                 enableGestures={isPlayer}
                 gestureToPlay={isPlayer ? playerGesture : null}
                 onGestureComplete={isPlayer ? onGestureComplete : undefined}
-                enableEyeTracking={true}
-                enableReactiveExpressions={true}
                 relationshipToSelected={relationshipToSelected ?? 0}
                 selectedIsNominee={false}
                 selectedIsHoH={false}
