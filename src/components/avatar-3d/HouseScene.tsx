@@ -18,6 +18,12 @@ import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
  import DynamicRoomLighting from './DynamicRoomLighting';
  import { RoomNavigator, ROOM_CAMERA_POSITIONS } from './RoomNavigator';
  import { useEventLighting } from './hooks/useEventLighting';
+ import { 
+   Alliance, 
+   CharacterPosition, 
+   calculateConversationGroups, 
+   getCharacterPosition 
+ } from './utils/conversationGrouping';
 
 // Easing function for smooth camera transitions
 const easeInOutCubic = (t: number): number => {
@@ -37,6 +43,10 @@ interface HouseSceneProps {
    gamePhase?: string;
    /** Show room navigation UI */
    showRoomNav?: boolean;
+   /** Alliance data for conversation grouping */
+   alliances?: Alliance[];
+   /** Full relationship map for grouping (characterId -> characterId -> score) */
+   relationshipMap?: Map<string, Map<string, { score: number }>>;
 }
 
 // Living room conversation cluster positions for natural groupings
@@ -685,10 +695,26 @@ const SceneContent: React.FC<HouseSceneProps & {
    onHover,
    roomTarget,
    lightingState,
+   alliances = [],
+   relationshipMap,
 }) => {
-  const positions = getCharacterPositions(characters.length);
+   // Calculate positions based on alliances/relationships or fallback to simple distribution
+   const positionMap = useMemo(() => {
+     const characterIds = characters.map(c => c.id);
+     return calculateConversationGroups(
+       characterIds,
+       alliances,
+       relationshipMap || new Map()
+     );
+   }, [characters, alliances, relationshipMap]);
+   
+   // Get position for a specific character
+   const getPosition = useCallback((characterId: string, index: number) => {
+     return getCharacterPosition(positionMap, characterId, index);
+   }, [positionMap]);
+   
   const selectedPosition = selectedId 
-    ? positions[characters.findIndex(c => c.id === selectedId)]?.position 
+     ? getPosition(selectedId, characters.findIndex(c => c.id === selectedId))?.position 
     : null;
   
   // Ref for OrbitControls to allow programmatic updates
@@ -781,25 +807,28 @@ const SceneContent: React.FC<HouseSceneProps & {
       
       {/* Characters in circle */}
       <Suspense fallback={<SceneLoader />}>
-        {characters.map((char, i) => (
-          <CharacterSpot
-            key={char.id}
-            template={char}
-            position={positions[i].position}
-            rotation={positions[i].rotation}
-            isSelected={selectedId === char.id}
-            isHovered={hoveredId === char.id}
-            index={i}
-            selectedPosition={selectedPosition || null}
-            selectedId={selectedId}
-            isPlayer={char.id === playerId}
-            playerGesture={char.id === playerId ? playerGesture : null}
-            onGestureComplete={char.id === playerId ? onGestureComplete : undefined}
-            relationshipToSelected={selectedId ? relationships[selectedId] : 0}
-            onSelect={() => onSelect(char.id)}
-            onHover={(hovered) => onHover(hovered ? char.id : null)}
-          />
-        ))}
+         {characters.map((char, i) => {
+           const charPos = getPosition(char.id, i);
+           return (
+             <CharacterSpot
+               key={char.id}
+               template={char}
+               position={charPos.position}
+               rotation={charPos.rotation}
+               isSelected={selectedId === char.id}
+               isHovered={hoveredId === char.id}
+               index={i}
+               selectedPosition={selectedPosition || null}
+               selectedId={selectedId}
+               isPlayer={char.id === playerId}
+               playerGesture={char.id === playerId ? playerGesture : null}
+               onGestureComplete={char.id === playerId ? onGestureComplete : undefined}
+               relationshipToSelected={selectedId ? relationships[selectedId] : 0}
+               onSelect={() => onSelect(char.id)}
+               onHover={(hovered) => onHover(hovered ? char.id : null)}
+             />
+           );
+         })}
       </Suspense>
       
       {/* Camera fly-to animation */}
@@ -836,6 +865,8 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
   relationships,
    gamePhase,
    showRoomNav = true,
+   alliances,
+   relationshipMap,
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
    const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
@@ -875,6 +906,8 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
             onHover={setHoveredId}
            roomTarget={roomTarget}
            lightingState={lightingState}
+           alliances={alliances}
+           relationshipMap={relationshipMap}
           />
            
            {/* Post-processing effects */}

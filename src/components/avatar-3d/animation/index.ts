@@ -91,3 +91,14 @@
    getSpring3DPosition,
    type Spring3DState,
  } from './utils/springPhysics';
+ 
+ // Physics layer
+ export {
+   SECONDARY_MOTION_CONFIGS,
+   createSecondaryMotionState,
+   initializeSecondaryMotion,
+   updateSecondaryMotion,
+   resetSecondaryMotion,
+   applyImpulse,
+   type SecondaryMotionState,
+ } from './physics/SecondaryMotionSystem';
