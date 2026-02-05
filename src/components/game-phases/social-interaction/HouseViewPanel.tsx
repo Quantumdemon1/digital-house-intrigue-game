@@ -7,7 +7,7 @@
  import { Houseguest } from '@/models/houseguest';
  import { characterTemplates, CharacterTemplate, Archetype } from '@/data/character-templates';
  import { Loader2 } from 'lucide-react';
- import { GestureType } from '@/components/avatar-3d/hooks/useGestureAnimation';
+ import { GestureType } from '@/components/avatar-3d/animation';
  import AvatarControlPanel from './AvatarControlPanel';
  
  // Lazy load HouseScene for better performance

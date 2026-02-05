@@ -1,87 +1,27 @@
-/**
- * @file avatar-3d/RPMAvatar.tsx
- * @description Ready Player Me avatar component wrapper for React Three Fiber
- */
+ /**
+  * @file avatar-3d/RPMAvatar.tsx
+  * @description Ready Player Me avatar component using unified animation system
+  */
+ 
+ import React, { Suspense, useRef, useEffect, useMemo } from 'react';
+ import { useFrame, useGraph } from '@react-three/fiber';
+ import { useGLTF, useProgress } from '@react-three/drei';
+ import * as THREE from 'three';
+ import { SkeletonUtils } from 'three-stdlib';
+ import { MoodType } from '@/models/houseguest';
+ import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
+ import {
+   useAnimationController,
+   PoseType,
+   GestureType,
+   QualityLevel,
+   RelationshipContext,
+ } from './animation';
 
-import React, { Suspense, useRef, useEffect, useMemo } from 'react';
-import { useFrame, useGraph } from '@react-three/fiber';
-import { useGLTF, useProgress } from '@react-three/drei';
-import * as THREE from 'three';
-import { SkeletonUtils } from 'three-stdlib';
-import { MoodType } from '@/models/houseguest';
-import { getOptimizedUrl } from '@/utils/rpm-avatar-optimizer';
- import { usePoseVariety, type PoseType } from './hooks/usePoseVariety';
- import { useLookAt } from './hooks/useLookAt';
- import { useGestureAnimation, type GestureType } from './hooks/useGestureAnimation';
- import { useReactiveExpressions } from './hooks/useReactiveExpressions';
- import { useEyeTracking } from './hooks/useEyeTracking';
-
-// ARKit blendshape names for expressions (52 blendshapes available)
-const EXPRESSION_MORPHS: Record<string, Record<string, number>> = {
-  happy: {
-    'mouthSmileLeft': 0.8,
-    'mouthSmileRight': 0.8,
-    'eyeSquintLeft': 0.4,
-    'eyeSquintRight': 0.4,
-    'cheekSquintLeft': 0.3,
-    'cheekSquintRight': 0.3,
-  },
-  content: {
-    'mouthSmileLeft': 0.4,
-    'mouthSmileRight': 0.4,
-    'eyeSquintLeft': 0.15,
-    'eyeSquintRight': 0.15,
-  },
-  sad: {
-    'mouthFrownLeft': 0.6,
-    'mouthFrownRight': 0.6,
-    'browDownLeft': 0.5,
-    'browDownRight': 0.5,
-    'browInnerUp': 0.4,
-    'mouthPucker': 0.2,
-  },
-  angry: {
-    'browDownLeft': 0.8,
-    'browDownRight': 0.8,
-    'mouthFrownLeft': 0.5,
-    'mouthFrownRight': 0.5,
-    'jawForward': 0.3,
-    'noseSneerLeft': 0.3,
-    'noseSneerRight': 0.3,
-  },
-  surprised: {
-    'eyeWideLeft': 0.9,
-    'eyeWideRight': 0.9,
-    'browOuterUpLeft': 0.7,
-    'browOuterUpRight': 0.7,
-    'browInnerUp': 0.6,
-    'jawOpen': 0.4,
-  },
-  worried: {
-    'browInnerUp': 0.6,
-    'browDownLeft': 0.2,
-    'browDownRight': 0.2,
-    'mouthFrownLeft': 0.3,
-    'mouthFrownRight': 0.3,
-    'eyeSquintLeft': 0.1,
-    'eyeSquintRight': 0.1,
-  },
-  neutral: {},
-};
-
-// Map game mood to RPM expression
-const moodToExpression = (mood: MoodType): string => {
-  switch (mood) {
-    case 'Happy': return 'happy';
-    case 'Content': return 'content';
-    case 'Upset': return 'sad';
-    case 'Angry': return 'angry';
-    case 'Neutral':
-    default: return 'neutral';
-  }
-};
-
-export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
+ export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
+ 
+ // Re-export types for backwards compatibility
+ export type { PoseType, GestureType };
 
 interface RPMAvatarProps {
   modelSrc: string;
@@ -111,10 +51,6 @@ interface RPMAvatarProps {
    gestureToPlay?: GestureType | null;
    /** Callback when gesture completes */
    onGestureComplete?: () => void;
-   /** Enable independent eye tracking */
-   enableEyeTracking?: boolean;
-   /** Enable reactive expressions */
-   enableReactiveExpressions?: boolean;
    /** Relationship score with selected character (-100 to 100) */
    relationshipToSelected?: number;
    /** Whether the selected character is a nominee */
@@ -147,8 +83,6 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
    enableGestures = false,
    gestureToPlay = null,
    onGestureComplete,
-   enableEyeTracking = true,
-   enableReactiveExpressions = true,
    relationshipToSelected = 0,
    selectedIsNominee = false,
    selectedIsHoH = false,
@@ -178,7 +112,19 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   };
   
   const qualityContext = getQualityContext(context);
-  const isAnimated = qualityContext !== 'thumbnail';
+   
+   // Map context to animation quality level
+   const getAnimationQuality = (ctx: 'thumbnail' | 'game' | 'profile'): QualityLevel => {
+     switch (ctx) {
+       case 'thumbnail': return 'low';
+       case 'profile': return 'medium';
+       case 'game': 
+       default: return 'high';
+     }
+   };
+   
+   const animationQuality = getAnimationQuality(qualityContext);
+   const isAnimated = qualityContext !== 'thumbnail';
   
   const optimizedUrl = useMemo(() => 
     getOptimizedUrl(modelSrc, qualityContext),
@@ -201,111 +147,36 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
     });
     return meshes;
   }, [clone]);
- 
-   // Apply varied pose to skeleton bones based on pose type
-   usePoseVariety(clone, poseType, applyIdlePose, phaseOffset);
    
-   // Apply look-at behavior for head tracking
-   useLookAt(clone, {
-     targetPosition: lookAtTarget,
-     characterPosition: worldPosition,
-     characterRotationY: worldRotationY,
-     enabled: applyIdlePose && lookAtTarget !== null,
-   });
-   
-   // Gesture animation (player only)
-   const { playGesture, isPlaying: gestureIsPlaying } = useGestureAnimation(clone, {
-     enabled: enableGestures && isPlayer,
-     onComplete: onGestureComplete,
-   });
-   
-   // Trigger gesture when prop changes
-   useEffect(() => {
-     if (gestureToPlay && enableGestures && isPlayer) {
-       playGesture(gestureToPlay);
-     }
-   }, [gestureToPlay, enableGestures, isPlayer, playGesture]);
-   
-   // Eye tracking (independent of head look-at)
-   useEyeTracking(skinnedMeshes, {
-     targetPosition: lookAtTarget,
-     characterPosition: worldPosition,
-     characterRotationY: worldRotationY,
-     enabled: enableEyeTracking && lookAtTarget !== null,
-     enableMicroSaccades: true,
-   });
-   
-   // Reactive expressions based on social context
-   useReactiveExpressions(skinnedMeshes, {
-     relationshipScore: relationshipToSelected,
-     selectedIsNominee,
-     selectedIsHoH,
-     isSelf: false, // Will be set by parent based on selection
+   // Build relationship context for animation controller
+   const relationshipContext: RelationshipContext = useMemo(() => ({
+     score: relationshipToSelected,
+     isNominee: selectedIsNominee,
+     isHoH: selectedIsHoH,
+     isSelf: false, // Set by parent based on selection
      hasSelection,
-     enabled: enableReactiveExpressions && !gestureIsPlaying,
+   }), [relationshipToSelected, selectedIsNominee, selectedIsHoH, hasSelection]);
+   
+   // Unified animation controller - replaces all individual hooks
+   useAnimationController({
+     scene: applyIdlePose ? clone : null,
+     skinnedMeshes,
+     basePose: poseType,
+     phaseOffset,
+     lookAtTarget: applyIdlePose ? lookAtTarget : null,
+     characterPosition: worldPosition,
+     characterRotationY: worldRotationY,
+     relationshipContext,
+     gestureToPlay: enableGestures && isPlayer ? gestureToPlay : null,
+     onGestureComplete,
+     quality: animationQuality,
+     enabled: isAnimated && applyIdlePose,
    });
 
-  // Apply expression based on mood
-  useEffect(() => {
-    const expression = moodToExpression(mood);
-    const morphValues = EXPRESSION_MORPHS[expression];
-    
-    skinnedMeshes.forEach((mesh) => {
-      if (!mesh.morphTargetDictionary || !mesh.morphTargetInfluences) return;
-      
-      // Reset all morph targets
-      mesh.morphTargetInfluences.fill(0);
-      
-      // Apply expression morphs
-      Object.entries(morphValues).forEach(([morphName, value]) => {
-        const index = mesh.morphTargetDictionary![morphName];
-        if (index !== undefined) {
-          mesh.morphTargetInfluences![index] = value;
-        }
-      });
-    });
-  }, [mood, skinnedMeshes]);
-
-  // Idle blink animation - only run for non-thumbnail contexts
-  useFrame(({ clock }) => {
-    if (!isAnimated) return; // Skip animations for thumbnails
-    
-    const time = clock.getElapsedTime();
-    
-    // Blink every ~4 seconds
-    const blinkCycle = time % 4;
-    let blinkValue = 0;
-    
-    if (blinkCycle > 3.8 && blinkCycle < 4.0) {
-      // Quick blink
-      const blinkProgress = (blinkCycle - 3.8) / 0.2;
-      blinkValue = blinkProgress < 0.5 
-        ? blinkProgress * 2 
-        : (1 - blinkProgress) * 2;
-    }
-    
-    // Apply blink to all meshes
-    skinnedMeshes.forEach((mesh) => {
-      if (!mesh.morphTargetDictionary || !mesh.morphTargetInfluences) return;
-      
-      const leftBlinkIndex = mesh.morphTargetDictionary['eyeBlinkLeft'];
-      const rightBlinkIndex = mesh.morphTargetDictionary['eyeBlinkRight'];
-      
-      if (leftBlinkIndex !== undefined) {
-        mesh.morphTargetInfluences[leftBlinkIndex] = blinkValue;
-      }
-      if (rightBlinkIndex !== undefined) {
-        mesh.morphTargetInfluences[rightBlinkIndex] = blinkValue;
-      }
-    });
-    
-    // Subtle head movement (skip for thumbnails)
-    if (group.current && isAnimated) {
-      group.current.rotation.y = Math.sin(time * 0.5) * 0.05;
-      group.current.rotation.x = Math.sin(time * 0.3) * 0.02;
-    }
-  });
-
+   // Note: Mood-based expressions are now handled by the ReactiveLayer
+   // based on relationship context. The mood prop is preserved for 
+   // backwards compatibility but integrated into the unified system.
+   
   // Call onLoaded when model is ready
   useEffect(() => {
     if (onLoaded) onLoaded();

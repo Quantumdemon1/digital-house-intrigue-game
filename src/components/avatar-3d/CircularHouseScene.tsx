@@ -8,8 +8,7 @@
  import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
  import * as THREE from 'three';
  import { CharacterTemplate, Archetype } from '@/data/character-templates';
- import { RPMAvatar } from './RPMAvatar';
- import { PoseType } from './hooks/usePoseVariety';
+ import { RPMAvatar, PoseType } from './RPMAvatar';
  import { HouseFloor, Couch, CoffeeTable, Plant, LightFixture, TVStand, KitchenArea, DiaryRoomDoor } from './HouseFurniture';
  
  // Easing function for smooth camera transitions
