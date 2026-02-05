@@ -43,5 +43,7 @@ export default defineConfig(({ mode }) => ({
       "@react-three/postprocessing",
       "postprocessing"
     ],
+    // Force rebuild of optimized deps cache to clear any corrupted instances
+    force: true,
   },
 }));

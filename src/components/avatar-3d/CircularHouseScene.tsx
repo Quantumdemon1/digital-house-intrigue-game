@@ -12,6 +12,7 @@
  import { HouseFloor, Couch, CoffeeTable, Plant, LightFixture, TVStand, KitchenArea, DiaryRoomDoor } from './HouseFurniture';
  import { useIsMobile } from '@/hooks/use-mobile';
  import { useTouchGestures } from './hooks/useTouchGestures';
+import { SceneEffectsOverlay } from './SceneEffectsOverlay';
  
  // Easing function for smooth camera transitions
  const easeInOutCubic = (t: number): number => {
@@ -415,9 +416,16 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
            />
          </Suspense>
          
-          {/* Post-processing disabled due to @react-three/postprocessing version incompatibility */}
        </Canvas>
        
+        {/* CSS-based visual effects overlay */}
+        <SceneEffectsOverlay 
+          enableBloom={!isMobile} 
+          enableVignette={true}
+          bloomIntensity={0.35}
+          vignetteIntensity={0.4}
+        />
+        
        {/* Scene title overlay */}
        <div className="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none">
          <div className="px-6 py-2 rounded-full bg-black/60 backdrop-blur-md border border-amber-500/30">
