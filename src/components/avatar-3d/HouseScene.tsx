@@ -8,6 +8,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows, Html, useProgress } from '@react-three/drei';
  import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
+ import { useIsMobile } from '@/hooks/use-mobile';
 import { CharacterTemplate } from '@/data/character-templates';
  import { RPMAvatar, preloadRPMAvatar, PoseType, GestureType } from './RPMAvatar';
  import { Archetype } from '@/data/character-templates';
@@ -23,6 +24,9 @@ import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
    calculateConversationGroups, 
    getCharacterPosition 
  } from './utils/conversationGrouping';
+ import { useTouchGestures } from './hooks/useTouchGestures';
+ import { FloorSpotMarkers, getFloorSpotById, FLOOR_SPOTS } from './FloorSpotMarker';
+ import { TouchFeedbackManager } from './TouchFeedback';
 
 // Easing function for smooth camera transitions
 const easeInOutCubic = (t: number): number => {
@@ -46,6 +50,8 @@ interface HouseSceneProps {
    alliances?: Alliance[];
    /** Full relationship map for grouping (characterId -> characterId -> score) */
    relationshipMap?: Map<string, Map<string, { score: number }>>;
+   /** Callback when player avatar moves to new position */
+   onPlayerMove?: (newPosition: [number, number, number]) => void;
 }
 
 // Living room conversation cluster positions for natural groupings
@@ -665,6 +671,12 @@ const SceneContent: React.FC<HouseSceneProps & {
   onHover: (id: string | null) => void;
    roomTarget: { camera: [number, number, number]; target: [number, number, number] } | null;
    lightingState: ReturnType<typeof useEventLighting>;
+   moveMode: boolean;
+   playerSpotId: string | null;
+   occupiedSpots: string[];
+   onSpotSelect: (spotId: string, position: [number, number, number]) => void;
+   ripples: Array<{ id: string; position: [number, number, number]; color?: string }>;
+   onRippleComplete: (id: string) => void;
 }> = ({
   characters,
   selectedId,
@@ -679,6 +691,12 @@ const SceneContent: React.FC<HouseSceneProps & {
    lightingState,
    alliances = [],
    relationshipMap,
+   moveMode,
+   playerSpotId,
+   occupiedSpots,
+   onSpotSelect,
+   ripples,
+   onRippleComplete,
 }) => {
    // Calculate positions based on alliances/relationships or fallback to simple distribution
    const positionMap = useMemo(() => {
@@ -787,6 +805,20 @@ const SceneContent: React.FC<HouseSceneProps & {
       {/* Kitchen glass partition */}
       <GlassWall position={[8, 1.5, 2]} rotation={[0, Math.PI / 2, 0]} width={4} height={3} />
       
+       {/* Floor spot markers for tap-to-move */}
+       <FloorSpotMarkers
+         active={moveMode}
+         occupiedSpots={occupiedSpots}
+         currentPlayerSpot={playerSpotId || undefined}
+         onSpotSelect={onSpotSelect}
+       />
+       
+       {/* Touch feedback ripples */}
+       <TouchFeedbackManager
+         ripples={ripples}
+         onRippleComplete={onRippleComplete}
+       />
+       
       {/* Characters in circle */}
       <Suspense fallback={<SceneLoader />}>
          {characters.map((char, i) => {
@@ -852,6 +884,11 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
    const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+   const [moveMode, setMoveMode] = useState(false);
+   const [playerSpotId, setPlayerSpotId] = useState<string | null>(null);
+   const [ripples, setRipples] = useState<Array<{ id: string; position: [number, number, number]; color?: string }>>([]);
+   
+   const isMobile = useIsMobile();
    
    // Event-based lighting
    const lightingState = useEventLighting(gamePhase);
@@ -861,9 +898,55 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
      if (!selectedRoom || !ROOM_CAMERA_POSITIONS[selectedRoom]) return null;
      return ROOM_CAMERA_POSITIONS[selectedRoom];
    }, [selectedRoom]);
+   
+   // Calculate occupied spots based on character positions
+   const occupiedSpots = useMemo(() => {
+     // For now, return empty - in a real implementation, this would
+     // map character positions to nearest floor spots
+     return [];
+   }, []);
+   
+   // Handle floor spot selection for player movement
+   const handleSpotSelect = useCallback((spotId: string, position: [number, number, number]) => {
+     setPlayerSpotId(spotId);
+     setMoveMode(false);
+     
+     // Add a ripple effect at the destination
+     const rippleId = `move-${Date.now()}`;
+     setRipples(prev => [...prev, { id: rippleId, position, color: '#22c55e' }]);
+     
+     // Notify parent of player movement
+     // In a real implementation, this would trigger avatar animation
+   }, []);
+   
+   // Handle ripple completion
+   const handleRippleComplete = useCallback((id: string) => {
+     setRipples(prev => prev.filter(r => r.id !== id));
+   }, []);
+   
+   // Touch gesture callbacks
+   const touchCallbacks = useMemo(() => ({
+     onLongPress: (pos: { x: number; y: number }) => {
+       // Activate move mode on long press
+       setMoveMode(true);
+     },
+     onLongPressEnd: () => {
+       // Keep move mode active until a spot is selected
+     },
+     onDoubleTap: () => {
+       // Deselect on double-tap
+       if (selectedId) {
+         onSelect(selectedId); // Toggle selection
+       }
+       // Exit move mode
+       setMoveMode(false);
+     },
+   }), [selectedId, onSelect]);
+   
+   const { handlers: touchHandlers } = useTouchGestures(touchCallbacks, isMobile);
   
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" {...touchHandlers}>
       <Canvas
         camera={{ 
           position: [0, 18, 25], 
@@ -890,6 +973,12 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
            lightingState={lightingState}
            alliances={alliances}
            relationshipMap={relationshipMap}
+           moveMode={moveMode}
+           playerSpotId={playerSpotId}
+           occupiedSpots={occupiedSpots}
+           onSpotSelect={handleSpotSelect}
+           ripples={ripples}
+           onRippleComplete={handleRippleComplete}
           />
            
            {/* Post-processing effects */}
@@ -941,11 +1030,27 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
       </div>
       
       {/* Hint overlay */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none">
+      {/* Mobile hint */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none sm:hidden">
+        <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-xs">
+          Drag to rotate • Pinch to zoom • Tap to select • Hold to move
+        </div>
+      </div>
+      {/* Desktop hint */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none hidden sm:block">
         <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-sm">
           Drag to rotate • Scroll to zoom • Click to select
         </div>
       </div>
+      
+      {/* Move mode indicator */}
+      {moveMode && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 pointer-events-none animate-pulse">
+          <div className="px-4 py-2 rounded-full bg-green-500/80 backdrop-blur-sm text-white text-sm font-medium">
+            Tap a spot to move your avatar
+          </div>
+        </div>
+      )}
     </div>
   );
 };
