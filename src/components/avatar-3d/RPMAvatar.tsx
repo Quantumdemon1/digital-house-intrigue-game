@@ -3,7 +3,7 @@
  * @description Ready Player Me avatar component using unified animation system
  */
 
-import React, { Suspense, useRef, useEffect, useMemo, Component, ReactNode } from 'react';
+import React, { Suspense, useRef, useEffect, useMemo, useLayoutEffect, Component, ReactNode } from 'react';
 import { useFrame, useGraph } from '@react-three/fiber';
 import { useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
@@ -17,6 +17,7 @@ import {
   QualityLevel,
   RelationshipContext,
 } from './animation';
+import { POSE_CONFIGS } from './animation/layers/BasePoseLayer';
 
 export type AvatarContext = 'thumbnail' | 'game' | 'profile' | 'customizer';
 
@@ -134,7 +135,33 @@ export const RPMAvatar: React.FC<RPMAvatarProps> = ({
   const { scene } = useGLTF(optimizedUrl);
   
   // Clone the scene to prevent issues with multiple instances
-  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const clone = useMemo(() => {
+    const cloned = SkeletonUtils.clone(scene);
+    
+    // CRITICAL: Apply base pose immediately during clone to prevent T-pose flash
+    // This runs synchronously before the first render
+    if (applyIdlePose) {
+      const poseConfig = POSE_CONFIGS[poseType];
+      if (poseConfig) {
+        cloned.traverse((child) => {
+          if (child instanceof THREE.Bone) {
+            // Check both standard and mixamo bone naming
+            const boneName = child.name.replace('mixamorig', '');
+            const boneState = poseConfig[boneName] || poseConfig[child.name];
+            if (boneState) {
+              child.rotation.set(
+                boneState.rotation.x,
+                boneState.rotation.y,
+                boneState.rotation.z
+              );
+            }
+          }
+        });
+      }
+    }
+    
+    return cloned;
+  }, [scene, applyIdlePose, poseType]);
   const { nodes } = useGraph(clone);
   
   // Get all skinned meshes for morph target manipulation
