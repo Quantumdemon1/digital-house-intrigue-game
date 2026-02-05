@@ -250,30 +250,58 @@ class AvatarErrorBoundary extends Component<AvatarErrorBoundaryProps, AvatarErro
 /**
  * Simple loading fallback mesh
  */
-const RPMAvatarFallback: React.FC<{ isError?: boolean }> = ({ isError = false }) => {
+ const RPMAvatarFallback: React.FC<{ 
+   isError?: boolean;
+   characterName?: string;
+   onRetry?: () => void;
+ }> = ({ isError = false, characterName, onRetry }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
   useFrame(({ clock }) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y = isError ? 0 : clock.getElapsedTime();
+       meshRef.current.rotation.y = isError ? 0 : clock.getElapsedTime() * 0.5;
     }
   });
   
   return (
-    <mesh ref={meshRef} position={[0, 0, 0]}>
-      <capsuleGeometry args={[0.3, 0.6, 4, 16]} />
-      <meshStandardMaterial color={isError ? "#994444" : "#666"} wireframe />
-    </mesh>
+     <group>
+       <mesh ref={meshRef} position={[0, 0.8, 0]}>
+         <capsuleGeometry args={[0.25, 0.5, 4, 16]} />
+         <meshStandardMaterial 
+           color={isError ? "#ef4444" : "#6b7280"} 
+           wireframe 
+           transparent
+           opacity={0.6}
+         />
+       </mesh>
+       {/* Head indicator */}
+       <mesh position={[0, 1.5, 0]}>
+         <sphereGeometry args={[0.2, 16, 16]} />
+         <meshStandardMaterial 
+           color={isError ? "#ef4444" : "#9ca3af"} 
+           wireframe
+           transparent
+           opacity={0.6}
+         />
+       </mesh>
+       {/* Shimmer effect for loading state */}
+       {!isError && (
+         <mesh position={[0, 1, 0]}>
+           <ringGeometry args={[0.35, 0.4, 32]} />
+           <meshBasicMaterial color="#3b82f6" transparent opacity={0.3} side={THREE.DoubleSide} />
+         </mesh>
+       )}
+     </group>
   );
 };
 
 /**
  * RPMAvatarWithSuspense - Wrapped version with loading fallback and error handling
  */
-export const RPMAvatarWithSuspense: React.FC<RPMAvatarProps> = (props) => {
+ export const RPMAvatarWithSuspense: React.FC<RPMAvatarProps & { characterName?: string }> = (props) => {
   return (
     <AvatarErrorBoundary onError={props.onError}>
-      <Suspense fallback={<RPMAvatarFallback />}>
+       <Suspense fallback={<RPMAvatarFallback characterName={props.characterName} />}>
         <RPMAvatar {...props} />
       </Suspense>
     </AvatarErrorBoundary>
