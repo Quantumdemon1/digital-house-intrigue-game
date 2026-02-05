@@ -22,25 +22,6 @@ export interface PoseDefinition {
  * }
  */
 const POSE_OVERRIDES_KEY = 'avatar_pose_overrides';
-const POSE_DATA_VERSION_KEY = 'avatar_pose_data_version';
-const CURRENT_POSE_DATA_VERSION = 2; // v2 = T-pose-relative absolute rotations
-
-/**
- * One-time migration: clear old additive overrides when version changes
- */
-function migrateIfNeeded(): void {
-  try {
-    const storedVersion = localStorage.getItem(POSE_DATA_VERSION_KEY);
-    if (storedVersion !== String(CURRENT_POSE_DATA_VERSION)) {
-      localStorage.removeItem(POSE_OVERRIDES_KEY);
-      localStorage.setItem(POSE_DATA_VERSION_KEY, String(CURRENT_POSE_DATA_VERSION));
-      console.log('[PoseLibrary] Migrated pose data to v' + CURRENT_POSE_DATA_VERSION + ', cleared old overrides');
-    }
-  } catch { /* ignore */ }
-}
-
-// Run migration on module load
-migrateIfNeeded();
 
 /**
  * Generate storage key for a pose override
@@ -124,68 +105,68 @@ export function getCharacterOverrideIds(poseName: string): string[] {
 }
 
 /**
- * Static pose library - T-pose-relative ABSOLUTE rotations in radians
- * Convention: T-pose = all zeros. Values are total rotation from zero.
- * Source: TalkingHead, KalidoKit, Animaze, CMU MoCap verified data
+ * Static pose library - bone rotations in radians
+ * REFINED: Better arm angles to prevent body collision/clipping
  */
 export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
   neutral: {
     name: 'neutral',
-    description: 'Relaxed idle standing (T-pose-relative)',
+    description: 'Arms slightly forward, relaxed stance',
     bones: {
-      Spine:         { x: -0.05,  y: 0,      z: 0 },
-      Spine1:        { x: -0.03,  y: 0,      z: 0 },
-      Spine2:        { x: 0.04,   y: 0,      z: 0 },
-      Neck:          { x: 0.05,   y: 0,      z: 0 },
-      Head:          { x: 0.05,   y: 0,      z: 0 },
-      LeftShoulder:  { x: 0,      y: 0,      z: 0.03 },
-      LeftArm:       { x: 0.08,   y: 0,      z: 1.22 },
-      LeftForeArm:   { x: 0,      y: 0,      z: 0.18 },
-      LeftHand:      { x: 0,      y: -0.15,  z: 0.05 },
-      RightShoulder: { x: 0,      y: 0,      z: -0.03 },
-      RightArm:      { x: 0.08,   y: 0,      z: -1.22 },
-      RightForeArm:  { x: 0,      y: 0,      z: -0.18 },
-      RightHand:     { x: 0,      y: 0.15,   z: -0.05 },
+      Spine: { x: 0.02, y: 0, z: 0 },
+      Spine1: { x: 0.01, y: 0, z: 0 },
+      Spine2: { x: 0.01, y: 0, z: 0 },
+      Neck: { x: 0, y: 0, z: 0 },
+      Head: { x: 0, y: 0, z: 0 },
+      LeftShoulder: { x: 0.61, y: 0.18, z: -0.02 },
+      LeftArm: { x: 0.12, y: 0.05, z: 0.27 },
+      LeftForeArm: { x: 0.15, y: 0.02, z: 0.05 },
+      LeftHand: { x: 0, y: 0, z: 0.08 },
+      RightShoulder: { x: 0.61, y: 0.15, z: -0.05 },
+      RightArm: { x: 0.12, y: 0.21, z: -0.35 },
+      RightForeArm: { x: 0.12, y: -0.33, z: 0.44 },
+      RightHand: { x: -0.28, y: 0, z: -0.08 },
     },
   },
 
   relaxed: {
     name: 'relaxed',
-    description: 'Relaxed idle standing (same as neutral)',
+    description: 'Arms at sides, natural stance - REFINED for no clipping',
     bones: {
-      Spine:         { x: -0.05,  y: 0,      z: 0 },
-      Spine1:        { x: -0.03,  y: 0,      z: 0 },
-      Spine2:        { x: 0.04,   y: 0,      z: 0 },
-      Neck:          { x: 0.05,   y: 0,      z: 0 },
-      Head:          { x: 0.05,   y: 0,      z: 0 },
-      LeftShoulder:  { x: 0,      y: 0,      z: 0.03 },
-      LeftArm:       { x: 0.08,   y: 0,      z: 1.22 },
-      LeftForeArm:   { x: 0,      y: 0,      z: 0.18 },
-      LeftHand:      { x: 0,      y: -0.15,  z: 0.05 },
-      RightShoulder: { x: 0,      y: 0,      z: -0.03 },
-      RightArm:      { x: 0.08,   y: 0,      z: -1.22 },
-      RightForeArm:  { x: 0,      y: 0,      z: -0.18 },
-      RightHand:     { x: 0,      y: 0.15,   z: -0.05 },
+      Spine: { x: 0.02, y: 0, z: 0 },
+      Spine1: { x: 0.01, y: 0, z: 0 },
+      Spine2: { x: 0.01, y: 0, z: 0 },
+      Neck: { x: 0, y: 0, z: 0 },
+      Head: { x: 0, y: 0, z: 0 },
+      LeftShoulder: { x: 0.61, y: 0.18, z: -0.02 },
+      LeftArm: { x: 0.12, y: 0.05, z: 0.27 },
+      LeftForeArm: { x: 0.15, y: 0.02, z: 0.05 },
+      LeftHand: { x: 0, y: 0, z: 0.08 },
+      RightShoulder: { x: 0.61, y: 0.15, z: -0.05 },
+      RightArm: { x: 0.12, y: 0.21, z: -0.35 },
+      RightForeArm: { x: 0.12, y: -0.33, z: 0.44 },
+      RightHand: { x: -0.28, y: 0, z: -0.08 },
     },
   },
 
   confident: {
     name: 'confident',
-    description: 'Confident power pose, hands on hips, chest forward',
+    description: 'Chest out, hands on hips pose',
     bones: {
-      Spine:         { x: -0.06,  y: 0,      z: 0 },
-      Spine1:        { x: 0,      y: 0,      z: 0 },
-      Spine2:        { x: 0.12,   y: 0,      z: 0 },
-      Neck:          { x: 0,      y: 0,      z: 0 },
-      Head:          { x: -0.05,  y: 0,      z: 0 },
-      LeftShoulder:  { x: 0,      y: 0,      z: 0 },
-      LeftArm:       { x: 0,      y: 0.35,   z: 0.85 },
-      LeftForeArm:   { x: 0,      y: 0,      z: 1.50 },
-      LeftHand:      { x: 0,      y: -0.30,  z: 0 },
-      RightShoulder: { x: 0,      y: 0,      z: 0 },
-      RightArm:      { x: 0,      y: -0.35,  z: -0.85 },
-      RightForeArm:  { x: 0,      y: 0,      z: -1.50 },
-      RightHand:     { x: 0,      y: 0.30,   z: 0 },
+      Spine: { x: -0.05, y: 0, z: 0 },
+      Spine1: { x: -0.03, y: 0, z: 0 },
+      Spine2: { x: -0.02, y: 0, z: 0 },
+      Neck: { x: 0.02, y: 0, z: 0 },
+      Head: { x: 0.03, y: 0, z: 0 },
+      // Refined hands-on-hips with proper elbow angles
+      LeftShoulder: { x: 0.05, y: 0.15, z: 0.15 },
+      LeftArm: { x: 0.35, y: 0.45, z: 0.75 },
+      LeftForeArm: { x: 0.7, y: 0.25, z: 0.1 },
+      LeftHand: { x: 0.1, y: 0.1, z: 0.15 },
+      RightShoulder: { x: 0.05, y: -0.15, z: -0.15 },
+      RightArm: { x: 0.35, y: -0.45, z: -0.75 },
+      RightForeArm: { x: 0.7, y: -0.25, z: -0.1 },
+      RightHand: { x: 0.1, y: -0.1, z: -0.15 },
     },
   },
 
@@ -193,39 +174,41 @@ export const STATIC_POSES: Record<StaticPoseType, PoseDefinition> = {
     name: 'defensive',
     description: 'Arms crossed, guarded stance',
     bones: {
-      Spine:         { x: -0.06,  y: 0,      z: 0 },
-      Spine1:        { x: 0,      y: 0,      z: 0 },
-      Spine2:        { x: 0.06,   y: 0,      z: 0 },
-      Neck:          { x: 0.04,   y: 0,      z: 0 },
-      Head:          { x: 0.04,   y: 0,      z: 0 },
-      LeftShoulder:  { x: 0,      y: 0,      z: 0.10 },
-      LeftArm:       { x: 0.60,   y: 0.80,   z: 1.10 },
-      LeftForeArm:   { x: 0,      y: 0,      z: 1.40 },
-      LeftHand:      { x: 0,      y: -0.20,  z: 0.10 },
-      RightShoulder: { x: 0,      y: 0,      z: -0.10 },
-      RightArm:      { x: 0.60,   y: -0.80,  z: -1.10 },
-      RightForeArm:  { x: 0,      y: 0,      z: -1.40 },
-      RightHand:     { x: 0,      y: 0.20,   z: -0.10 },
+      Spine: { x: 0.05, y: 0, z: 0 },
+      Spine1: { x: 0.03, y: 0, z: 0 },
+      Spine2: { x: 0.02, y: 0, z: 0 },
+      Neck: { x: 0.03, y: 0, z: 0 },
+      Head: { x: -0.02, y: 0, z: 0 },
+      // Refined crossed arms - proper layering
+      LeftShoulder: { x: 0.12, y: 0.22, z: 0.18 },
+      LeftArm: { x: 0.55, y: 0.75, z: 0.5 },
+      LeftForeArm: { x: 1.1, y: 0.45, z: -0.25 },
+      LeftHand: { x: 0.15, y: 0.1, z: 0.1 },
+      RightShoulder: { x: 0.12, y: -0.22, z: -0.18 },
+      RightArm: { x: 0.55, y: -0.75, z: -0.5 },
+      RightForeArm: { x: 1.1, y: -0.45, z: 0.25 },
+      RightHand: { x: 0.15, y: -0.1, z: -0.1 },
     },
   },
 
   open: {
     name: 'open',
-    description: 'Waving right hand, welcoming gesture',
+    description: 'Palms up, welcoming gesture',
     bones: {
-      Spine:         { x: -0.05,  y: 0,      z: 0 },
-      Spine1:        { x: -0.03,  y: 0,      z: 0 },
-      Spine2:        { x: 0.04,   y: 0,      z: 0 },
-      Neck:          { x: 0.05,   y: 0,      z: 0 },
-      Head:          { x: 0,      y: 0.10,   z: 0 },
-      LeftShoulder:  { x: 0,      y: 0,      z: 0.03 },
-      LeftArm:       { x: 0.08,   y: 0,      z: 1.22 },
-      LeftForeArm:   { x: 0,      y: 0,      z: 0.18 },
-      LeftHand:      { x: 0,      y: 0,      z: 0 },
-      RightShoulder: { x: 0,      y: 0,      z: -0.08 },
-      RightArm:      { x: -0.30,  y: -0.50,  z: -0.40 },
-      RightForeArm:  { x: 0,      y: 0,      z: -2.00 },
-      RightHand:     { x: 0,      y: 0.20,   z: 0 },
+      Spine: { x: -0.02, y: 0, z: 0 },
+      Spine1: { x: -0.01, y: 0, z: 0 },
+      Spine2: { x: 0, y: 0, z: 0 },
+      Neck: { x: 0, y: 0, z: 0 },
+      Head: { x: 0.02, y: 0, z: 0 },
+      // Open welcoming pose with arms spread
+      LeftShoulder: { x: 0.02, y: 0.08, z: 0.12 },
+      LeftArm: { x: 0.18, y: 0.32, z: 0.55 },
+      LeftForeArm: { x: 0.28, y: 0.45, z: 0.08 },
+      LeftHand: { x: 0.05, y: 0.1, z: -0.4 },
+      RightShoulder: { x: 0.02, y: -0.08, z: -0.12 },
+      RightArm: { x: 0.18, y: -0.32, z: -0.55 },
+      RightForeArm: { x: 0.28, y: -0.45, z: -0.08 },
+      RightHand: { x: 0.05, y: -0.1, z: 0.4 },
     },
   },
 };

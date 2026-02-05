@@ -77,8 +77,10 @@ export function applyStaticPose(
       const y = clampRotation(rotation.y);
       const z = clampRotation(rotation.z);
       
-      // Apply absolute rotation (T-pose-relative convention)
-      bone.rotation.set(x, y, z);
+      // Apply rotation additively to preserve model's base pose
+      bone.rotation.x += x;
+      bone.rotation.y += y;
+      bone.rotation.z += z;
     }
   }
 }
