@@ -1,111 +1,275 @@
 
 
-# Strip Avatars to Basic State for Troubleshooting
+# New Avatar Animation System Design
 
-## Goal
+## Lessons Learned from the Glitch
 
-Remove all animation logic from the avatars to isolate the root cause of the glitching issue. This will help determine if the problem is:
-- In the cloning/rendering pipeline
-- In the animation system
-- In how multiple avatars share resources
+The previous system failed because:
+1. **Bone cache contamination** - Multiple avatars shared bone references
+2. **Race conditions** - Animation controllers initialized before clones were ready
+3. **Complex layer blending** - Too many systems fighting for bone control
+4. **Unsafe math** - Spring physics could produce NaN or extreme values
 
 ---
 
-## Changes to `src/components/avatar-3d/RPMAvatar.tsx`
+## New Architecture: Simplified & Isolated
 
-### What We'll Disable
+### Core Principles
 
-| Feature | Current State | After Change |
-|---------|---------------|--------------|
-| `useAnimationController` hook | Active | **Disabled** (not called) |
-| `applyPoseToBones()` in useMemo | Active | **Disabled** |
-| `instanceId` tracking | Active | Keep (harmless) |
-| Skinned mesh traversal | Active | Keep (harmless) |
-| Relationship context | Active | **Disabled** |
+1. **Zero shared state** - Each avatar owns its animation data completely
+2. **Single source of truth** - One system applies bones per frame, no blending conflicts
+3. **Fail-safe math** - All calculations clamped and validated
+4. **Progressive enhancement** - Start simple, add complexity only if stable
 
-### Simplified Component
+---
 
-The component will become a simple "load GLB, clone it, render it":
+## Phase 1: Static Poses (Foundation)
+
+### Pose Library
+
+| Pose Name | Description | Use Case |
+|-----------|-------------|----------|
+| `neutral` | Arms slightly forward, relaxed | Default fallback |
+| `relaxed` | Arms at sides, natural stance | Idle standing |
+| `confident` | Chest out, hands on hips | HoH, competition winner |
+| `defensive` | Arms crossed | Nominated, threatened |
+| `open` | Palms up, welcoming | Friendly interaction |
+
+### Implementation
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ RPMAvatar (Stripped Down)                                   │
-├─────────────────────────────────────────────────────────────┤
-│ 1. useGLTF(optimizedUrl)  → Load cached scene               │
-│ 2. SkeletonUtils.clone()  → Create unique copy              │
-│ 3. <primitive object={clone} /> → Render as-is              │
-│                                                             │
-│ NO pose application                                         │
-│ NO animation controller                                     │
-│ NO bone manipulation                                        │
-│ NO morph targets                                            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Expected Avatar Appearance
-
-- Avatars will display in **T-pose** (default GLB pose)
-- No idle breathing/swaying
-- No look-at behavior
-- No reactive expressions
-- No gestures
-
----
-
-## Technical Implementation
-
-### Changes to `RPMAvatar.tsx`
-
-1. **Remove animation controller call** - Comment out or remove the `useAnimationController` hook entirely
-
-2. **Remove pose application in clone** - Remove the `applyIdlePose` logic from `useMemo`
-
-3. **Remove unused imports** - Clean up imports for animation types
-
-4. **Simplify clone logic**:
-```typescript
-const clone = useMemo(() => {
-  const cloned = SkeletonUtils.clone(scene) as THREE.Group;
-  cloned.userData.instanceId = instanceId.current;
-  // NO pose application - render in default T-pose
-  return cloned;
-}, [scene]);
-```
-
-5. **Remove skinned mesh traversal** - Not needed without animations
-
-6. **Keep the basic render**:
-```typescript
-return (
-  <group ref={group} position={effectivePosition} scale={scale}>
-    <primitive object={clone} />
-  </group>
-);
+Apply pose ONCE during clone creation:
+┌─────────────────────────────────────────┐
+│ useMemo(() => {                         │
+│   const clone = SkeletonUtils.clone()   │
+│   applyStaticPose(clone, poseType)      │
+│   return clone                          │
+│ })                                      │
+└─────────────────────────────────────────┘
+No useFrame, no animation loop
 ```
 
 ---
 
-## Diagnostic Outcome
+## Phase 2: Breathing Animation (Micro-motion)
 
-### If Avatars Still Glitch
-- Problem is in the **cloning/primitive rendering** pipeline
-- May indicate Three.js version conflicts or `useGLTF` caching issues
-- Next step: Test with single avatar only
+### Simple Sine-Based Breathing
 
-### If Avatars Are Stable (in T-pose)
-- Problem is in the **animation system**
-- Re-enable animations one layer at a time to find the culprit:
-  1. Base pose only (no useFrame)
-  2. Add idle breathing
-  3. Add look-at
-  4. Add reactive expressions
-  5. Add secondary motion
+Instead of complex spring physics, use a simple deterministic sine wave:
+
+```text
+Breathing only affects:
+- Spine: subtle forward/back tilt (±0.02 radians)
+- Chest: subtle expansion (±0.01 radians)
+
+Formula:
+breathOffset = sin(time * breathRate + phaseOffset) * amplitude
+
+Each avatar gets unique phaseOffset from their ID
+```
+
+### Safety Features
+
+- Amplitude hard-capped at 0.05 radians
+- Delta time clamped between 0.001 and 0.1
+- NaN check before applying any rotation
 
 ---
 
-## Files to Modify
+## Phase 3: Weight Shift (Idle Variation)
 
-| File | Change |
-|------|--------|
-| `src/components/avatar-3d/RPMAvatar.tsx` | Strip to minimal: remove animation controller, pose application, and related logic |
+### Subtle Hip Sway
+
+```text
+Weight shift (slower than breathing):
+- Hips: side-to-side tilt (±0.03 radians)
+- Opposite shoulder compensation
+
+Frequency: ~0.2 Hz (one cycle every 5 seconds)
+```
+
+---
+
+## Phase 4: Blink System (Expression)
+
+### Morph Target Animation
+
+```text
+Blink pattern:
+- Random interval: 2-6 seconds
+- Duration: 150ms
+- Curve: Quick close (30%), hold (20%), slow open (50%)
+
+Morphs affected:
+- eyeBlinkLeft
+- eyeBlinkRight
+```
+
+---
+
+## Phase 5: Head Look-At (Optional)
+
+### Simplified Look-At
+
+```text
+Instead of complex eye-lead behavior:
+- Head rotates toward target (clamped ±45°)
+- Smooth interpolation (lerp factor: 0.05)
+- No neck/spine chain - head only
+```
+
+---
+
+## Phase 6: Emotes (Triggered Animations)
+
+### Emote Library
+
+| Emote | Trigger | Duration | Bones Affected |
+|-------|---------|----------|----------------|
+| `wave` | Greeting | 2s | Right arm |
+| `nod` | Agreement | 1s | Head |
+| `shrug` | Confusion | 1.5s | Shoulders, arms |
+| `celebrate` | Victory | 3s | Both arms |
+| `facepalm` | Frustration | 2s | Right arm, head |
+| `point` | Accusation | 1.5s | Right arm |
+| `clap` | Applause | 2s | Both arms |
+| `thumbsUp` | Approval | 1s | Right arm |
+
+### Emote Implementation
+
+```text
+Emotes are keyframe-based, NOT physics-based:
+┌────────────────────────────────────────────────────┐
+│ Keyframe approach:                                 │
+│ - Define start/peak/end poses                      │
+│ - Interpolate between keyframes                    │
+│ - Blend with base pose using weight (0-1)          │
+│ - Return to base pose when complete                │
+└────────────────────────────────────────────────────┘
+```
+
+---
+
+## New File Structure
+
+```text
+src/components/avatar-3d/animation/
+├── poses/
+│   ├── PoseLibrary.ts        # Static pose definitions
+│   └── applyPose.ts          # One-time pose application
+├── micro/
+│   ├── BreathingSystem.ts    # Sine-based breathing
+│   └── WeightShift.ts        # Idle weight shift
+├── expressions/
+│   ├── BlinkSystem.ts        # Morph-based blinking
+│   └── MoodExpressions.ts    # Smile, frown, etc.
+├── emotes/
+│   ├── EmoteLibrary.ts       # Keyframe definitions
+│   ├── EmotePlayer.ts        # Plays emote sequences
+│   └── emotes/
+│       ├── wave.ts
+│       ├── nod.ts
+│       ├── shrug.ts
+│       └── ...
+├── lookAt/
+│   └── SimpleLookAt.ts       # Head-only look-at
+└── AvatarAnimator.ts         # Single entry point
+```
+
+---
+
+## Single Controller Design
+
+### `useAvatarAnimator` Hook
+
+```text
+interface AvatarAnimatorConfig {
+  clone: THREE.Group | null;
+  instanceId: string;
+  
+  // Optional features (default: false)
+  enableBreathing?: boolean;
+  enableBlinking?: boolean;
+  enableLookAt?: boolean;
+  
+  // State
+  basePose?: PoseType;
+  mood?: MoodType;
+  lookAtTarget?: THREE.Vector3 | null;
+  
+  // Emotes
+  emoteToPlay?: EmoteType | null;
+  onEmoteComplete?: () => void;
+}
+```
+
+### Frame Update Order
+
+```text
+Each frame (if enabled):
+1. Calculate breathing offset → add to spine
+2. Calculate weight shift offset → add to hips
+3. Calculate look-at rotation → set head
+4. If emote playing → blend emote with above
+5. Update blink morph targets
+
+Single apply step - no conflicts
+```
+
+---
+
+## Safety Guarantees
+
+### Isolation
+
+```text
+Each avatar instance owns:
+- Its own bone references (from its clone)
+- Its own animation state object
+- Its own phase offsets
+
+No shared refs, no shared state
+```
+
+### Math Safety
+
+```text
+Before any bone.rotation.set():
+- isFinite() check on all values
+- Clamp to safe range (e.g., ±π for most bones)
+- Skip frame if any value is NaN
+```
+
+### Graceful Degradation
+
+```text
+If any error occurs:
+- Log warning (don't throw)
+- Skip animation for that frame
+- Avatar remains in last valid pose
+```
+
+---
+
+## Implementation Phases
+
+| Phase | Feature | Risk Level | Priority |
+|-------|---------|------------|----------|
+| 1 | Static poses only | Very Low | First |
+| 2 | Breathing (sine) | Low | Second |
+| 3 | Blinking (morphs) | Low | Third |
+| 4 | Weight shift | Low | Fourth |
+| 5 | Simple look-at | Medium | Fifth |
+| 6 | Emotes | Medium | Sixth |
+
+---
+
+## Summary
+
+The new system prioritizes:
+1. **Simplicity** - No complex physics, just math
+2. **Isolation** - Each avatar is completely independent
+3. **Safety** - All calculations validated
+4. **Modularity** - Enable features incrementally
+5. **Debuggability** - Easy to disable any layer
 
