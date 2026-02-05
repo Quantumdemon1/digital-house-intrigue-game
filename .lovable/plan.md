@@ -1,213 +1,182 @@
 
-# Fix Social Network Graph Mobile Layout
+# Fix Mobile Avatar Customizer Scrolling Issue
 
 ## Problem Summary
 
-Looking at your screenshot, the social network graph has these issues on mobile:
-
-1. **Avatar nodes are overlapping** - Morgan, Blake, RI, Sam, Quinn, and Juan are all clustered in the center
-2. **Names are overlapping** - Text labels are colliding with each other  
-3. **The circular layout doesn't spread properly** - Not enough space between houseguests
-
----
+On mobile, users cannot scroll up to view the full avatar in the customizer dialog. The screenshot shows only the avatar's legs/pants are visible, and touch gestures are captured by the 3D controls instead of allowing page scroll.
 
 ## Root Causes
 
-### 1. Layout Radius Too Small for Mobile
-The current calculation creates a radius that's too tight for mobile screens:
-```typescript
-const maxRadius = Math.min(usableWidth * 0.38, usableHeight * 0.38);
-```
-On a 350px wide mobile screen with 90px padding on each side, this gives only ~65px radius - way too small.
+### 1. Touch Event Interception
+The `OrbitControls` component in the 3D canvas captures touch events for rotation, which prevents the parent dialog from receiving scroll events on mobile.
 
-### 2. Arc Spread Doesn't Account for Node Sizes
-The arc calculation doesn't consider that on mobile, even with smaller nodes, there needs to be minimum spacing between them.
+### 2. Drag Motion on Avatar Container
+The `motion.div` wrapper has `drag="x"` which also captures touch interactions.
 
-### 3. Node Sizes Not Reduced for Mobile
-The `SIZE_MAP` uses 56px "medium" nodes which take up too much space on mobile - they should be smaller.
+### 3. Content Layout Not Mobile-Optimized
+The `AvatarCustomizer` stacks vertically on mobile with:
+- 3D preview (224px height on mobile)
+- Zoom controls
+- Rotation buttons
+- "Open Full Editor" button
+- Profile photo section
+- RPM Creator panel (450px fixed height iframe)
+- Continue button
 
----
+Total content exceeds the viewport, but touch events are blocked.
 
 ## Solution
 
-### Part 1: Mobile-Optimized Layout Algorithm
+### Part 1: Disable 3D Rotation on Mobile for Customizer
 
-Update `graph-layout.ts` to:
-- Use a larger percentage of available space on mobile
-- Reduce padding since nodes will be smaller
-- Ensure minimum angular spacing between nodes
-- Use a full circular layout instead of arc when many houseguests
+The `OrbitControls` in `AvatarLoader` should be disabled on mobile when in the customizer context, allowing touch events to pass through for scrolling.
 
-### Part 2: Smaller Nodes on Mobile
+**File: `src/components/avatar-3d/AvatarLoader.tsx`**
+- Add `enableRotation` prop (default `true`)
+- Pass `false` from customizer on mobile
+- Disable `OrbitControls` touch when scrolling should take priority
 
-Update `NetworkNode.tsx` and `SocialNetworkGraph.tsx` to:
-- Pass `isMobile` prop to nodes
-- Use smaller node sizes on mobile (40px instead of 56px)
-- Reduce font sizes for labels
+### Part 2: Mobile-Optimized Layout for AvatarCustomizer
 
-### Part 3: Responsive Graph Container
+Restructure the customizer layout for mobile to:
+1. Make the avatar preview smaller on mobile (160px instead of 224px)
+2. Reduce the RPM iframe height on mobile (350px instead of 450px)
+3. Remove the `drag` functionality on mobile for the avatar container
+4. Add proper scrollable container with `touch-action: pan-y` CSS
 
-Update `SocialNetworkGraph.tsx` to:
-- Ensure proper minimum height for mobile
-- Use correct container measurement
+**File: `src/components/avatar-3d/AvatarCustomizer.tsx`**
+- Detect mobile with media query hook
+- Reduce avatar preview dimensions on mobile
+- Remove drag-to-rotate on mobile (use buttons only)
+- Add CSS to ensure touch scrolling works
 
----
+### Part 3: Reduce RPM Panel Height on Mobile
+
+**File: `src/components/avatar-3d/RPMAvatarCreatorPanel.tsx`**
+- Use responsive height class: `h-[350px] lg:h-[450px]`
+
+### Part 4: Add Touch-Friendly CSS
+
+**File: `src/index.css`**
+- Add `touch-action: pan-y` to customizer wrapper on mobile
+- Ensure scroll containers work properly with touch
 
 ## Technical Changes
 
-### File 1: `src/components/social-network/utils/graph-layout.ts`
+### File 1: `src/components/avatar-3d/AvatarLoader.tsx`
+
+Add a new prop to control OrbitControls behavior:
 
 ```typescript
-export function calculateCircularLayout(
-  houseguests: Houseguest[],
-  playerId: string,
-  containerSize: { width: number; height: number },
-  isMobile: boolean = false  // NEW parameter
-): Map<string, Position> {
-  const positions = new Map<string, Position>();
-  const { width, height } = containerSize;
-  
-  // Smaller padding on mobile for smaller nodes
-  const padding = isMobile ? 60 : 90;
-  const nodeSize = isMobile ? 40 : 56;
-  
-  const usableWidth = width - padding * 2;
-  const usableHeight = height - padding * 2;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  
-  const player = houseguests.find(h => h.id === playerId);
-  const others = houseguests.filter(h => h.id !== playerId);
-  
-  // Player position - ensure within bounds
-  if (player) {
-    positions.set(player.id, {
-      x: padding + (isMobile ? 40 : 60),
-      y: centerY
-    });
-  }
-  
-  // Mobile: use larger percentage of available space
-  const radiusMultiplier = isMobile ? 0.42 : 0.38;
-  const maxRadius = Math.min(usableWidth * radiusMultiplier, usableHeight * radiusMultiplier);
-  
-  // Ensure minimum spacing between nodes based on node size
-  const minNodeSpacing = nodeSize * 1.4; // 40% gap between nodes
-  const circumferenceNeeded = others.length * minNodeSpacing;
-  const radiusForSpacing = circumferenceNeeded / (Math.PI * 1.5); // For ~270° arc
-  
-  const radius = Math.max(
-    Math.min(maxRadius, radiusForSpacing),
-    isMobile ? 100 : 120
-  );
-  
-  // Arc center shifted right to balance with player on left
-  const arcCenterX = centerX + (isMobile ? radius * 0.15 : radius * 0.2);
-  
-  // Use wider arc on mobile to prevent clustering
-  const totalAngle = isMobile 
-    ? Math.min(Math.PI * 1.6, Math.PI * 0.9 + others.length * 0.12)
-    : Math.min(Math.PI * 1.4, Math.PI * 0.8 + others.length * 0.08);
-  
-  const angleStart = -totalAngle / 2;
-  const angleStep = others.length > 1 ? totalAngle / (others.length - 1) : 0;
-  
-  others.forEach((houseguest, index) => {
-    const angle = angleStart + angleStep * index;
-    let x = arcCenterX + radius * Math.cos(angle);
-    let y = centerY + radius * Math.sin(angle);
-    
-    // Clamp with reduced padding for mobile
-    x = Math.max(padding, Math.min(width - padding, x));
-    y = Math.max(padding, Math.min(height - padding, y));
-    
-    positions.set(houseguest.id, { x, y });
-  });
-  
-  return positions;
-}
-```
-
-### File 2: `src/components/social-network/NetworkNode.tsx`
-
-Add mobile-specific sizes:
-
-```typescript
-interface NetworkNodeProps {
-  // ...existing props
-  isMobile?: boolean;  // NEW
+interface AvatarLoaderProps {
+  // ... existing props
+  /** Allow orbit rotation controls (disable on mobile customizer for scrolling) */
+  enableOrbitControls?: boolean;
 }
 
-const SIZE_MAP = {
-  small: { node: 32, ring: 36, fontSize: 9, iconSize: 10 },    // Smaller for mobile
-  medium: { node: 56, ring: 62, fontSize: 12, iconSize: 14 },
-  large: { node: 72, ring: 80, fontSize: 14, iconSize: 16 }
-};
-
-// Mobile-specific size map
-const MOBILE_SIZE_MAP = {
-  small: { node: 28, ring: 32, fontSize: 8, iconSize: 9 },
-  medium: { node: 40, ring: 44, fontSize: 10, iconSize: 12 },  // Reduced from 56 to 40
-  large: { node: 52, ring: 58, fontSize: 11, iconSize: 14 }    // Reduced from 72 to 52
-};
-```
-
-And use the correct map based on `isMobile` prop.
-
-### File 3: `src/components/social-network/SocialNetworkGraph.tsx`
-
-Pass mobile info to layout function and nodes:
-
-```typescript
-// In positions calculation
-const positions = useMemo(() => 
-  calculateCircularLayout(activeHouseguests, playerId, containerSize, isMobile),
-  [activeHouseguests, playerId, containerSize, isMobile]
-);
-
-// When rendering NetworkNode
-<NetworkNode
-  key={houseguest.id}
-  houseguest={houseguest}
-  position={position}
-  isPlayer={isPlayer}
-  isSelected={selectedId === houseguest.id}
-  perception={perception}
-  size={isPlayer ? 'large' : 'medium'}
-  isMobile={isMobile}  // NEW
-  onClick={() => handleNodeClick(houseguest)}
+// In RPMAvatarCanvas:
+<OrbitControls 
+  enabled={enableOrbitControls !== false}  // Disable when prop is false
+  enableZoom={false} 
+  enablePan={false}
+  // ...
 />
 ```
 
----
+### File 2: `src/components/avatar-3d/AvatarCustomizer.tsx`
+
+Add mobile detection and layout adjustments:
+
+```typescript
+// Add mobile detection
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+// Smaller avatar on mobile
+<motion.div 
+  className={cn(
+    "relative rounded-2xl overflow-hidden",
+    isMobile ? "w-40 h-40" : "w-56 h-56 lg:w-72 lg:h-72",
+    // Remove cursor-grab on mobile
+    !isMobile && (isDragging ? "cursor-grabbing" : "cursor-grab")
+  )}
+  // Disable drag on mobile
+  drag={isMobile ? false : "x"}
+  // ...
+>
+  {hasValidAvatar ? (
+    <AvatarLoader
+      // ...
+      enableOrbitControls={!isMobile}  // Disable rotation on mobile
+    />
+  ) : /* ... */}
+</motion.div>
+
+// Hide rotation buttons on mobile (use zoom only)
+{!isMobile && (
+  <div className="flex items-center gap-3 mt-2">
+    {/* rotation buttons */}
+  </div>
+)}
+```
+
+### File 3: `src/components/avatar-3d/RPMAvatarCreatorPanel.tsx`
+
+Use responsive height:
+
+```typescript
+<div 
+  ref={creatorContainerRef}
+  className="relative w-full h-[350px] lg:h-[450px] rounded-xl overflow-hidden border border-border bg-muted/30"
+>
+```
+
+### File 4: `src/components/game-setup/AvatarPreview.tsx`
+
+Update DialogContent for mobile:
+
+```typescript
+<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto overscroll-contain">
+```
+
+### File 5: `src/index.css`
+
+Add touch-friendly scrolling:
+
+```css
+/* Mobile customizer scrolling fix */
+@media (max-width: 768px) {
+  .sims-cas-background {
+    touch-action: pan-y;
+  }
+}
+```
 
 ## Visual Comparison
 
-| Metric | Before (Mobile) | After (Mobile) |
-|--------|-----------------|----------------|
-| Node size | 56px | 40px |
-| Player node | 72px | 52px |
-| Layout radius | ~65px | ~100px+ |
-| Arc spread | ~1.0π | ~1.6π |
-| Min spacing | None | 56px (1.4× node) |
-
----
+| Element | Before (Mobile) | After (Mobile) |
+|---------|-----------------|----------------|
+| Avatar preview | 224x224px | 160x160px |
+| RPM iframe | 450px height | 350px height |
+| Drag-to-rotate | Active (blocks scroll) | Disabled |
+| OrbitControls | Active (blocks scroll) | Disabled |
+| Total content height | ~900px+ | ~650px |
+| Touch scrolling | Blocked | Working |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/social-network/utils/graph-layout.ts` | Add `isMobile` param, calculate larger radius, wider arc |
-| `src/components/social-network/NetworkNode.tsx` | Add `isMobile` prop, use smaller size map for mobile |
-| `src/components/social-network/SocialNetworkGraph.tsx` | Pass `isMobile` to layout function and nodes |
-
----
+| `src/components/avatar-3d/AvatarLoader.tsx` | Add `enableOrbitControls` prop |
+| `src/components/avatar-3d/AvatarCustomizer.tsx` | Mobile layout, disable drag/orbit on mobile |
+| `src/components/avatar-3d/RPMAvatarCreatorPanel.tsx` | Responsive iframe height |
+| `src/components/game-setup/AvatarPreview.tsx` | Add `overscroll-contain` class |
+| `src/index.css` | Add `touch-action: pan-y` for mobile |
 
 ## Expected Result
 
-After these changes, on mobile:
-- Nodes will be smaller (40px vs 56px) giving more room
-- The layout will spread nodes in a wider arc around the graph
-- Names will have enough spacing to not overlap
-- Player (Morgan with "YOU" label) will be clearly visible on the left
-- Other houseguests will be distributed evenly around the right side
+After these changes:
+- Users can scroll up/down freely in the avatar customizer on mobile
+- The avatar preview will be smaller but still visible
+- Rotation will use the button controls instead of drag on mobile
+- The RPM creator iframe will be more appropriately sized for mobile
+- Overall content height will fit better in the viewport
