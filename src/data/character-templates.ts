@@ -3,7 +3,7 @@ import { Avatar3DConfig } from '@/models/avatar-config';
 
 // Import generated avatars (2D fallback)
 import alexChenAvatar from '@/assets/avatars/alex-chen.jpg';
-import morganLeeAvatar from '@/assets/avatars/morgan-lee.jpg';
+import emmaBrownAvatar from '@/assets/avatars/emma-brown.png';
 import jordanTaylorAvatar from '@/assets/avatars/jordan-taylor.jpg';
 import caseyWilsonAvatar from '@/assets/avatars/casey-wilson.jpg';
 import rileyJohnsonAvatar from '@/assets/avatars/riley-johnson.jpg';
@@ -64,7 +64,7 @@ export const archetypeInfo: Record<Archetype, { label: string; color: string; de
 // To enable 3D avatars: Create avatars at demo.readyplayer.me, copy the .glb URL here
 const NPC_RPM_AVATARS: Record<string, string | undefined> = {
   'alex-chen': 'https://models.readyplayer.me/6983cec8fcad0d2f33f8d828.glb',
-  'morgan-lee': 'https://models.readyplayer.me/6983d669fcad0d2f33f923fd.glb',
+  'emma-brown': 'https://models.readyplayer.me/6983d669fcad0d2f33f923fd.glb',
   'jordan-taylor': 'https://models.readyplayer.me/6983cdc66eb4878bb838a8e1.glb',
   'casey-wilson': 'https://models.readyplayer.me/6983d039ea77ff02ffa7d0d5.glb',
   'riley-johnson': 'https://models.readyplayer.me/6983d0c547a75ab0c803f7c0.glb',
@@ -124,20 +124,20 @@ export const characterTemplates: CharacterTemplate[] = [
     })
   },
   {
-    id: 'morgan-lee',
-    name: 'Morgan Lee',
-    age: 26,
-    occupation: 'Personal Trainer',
-    hometown: 'Miami, FL',
-    bio: 'Physical powerhouse who dominates competitions. Forms genuine alliances based on loyalty.',
-    imageUrl: morganLeeAvatar,
-    traits: ['Competitive', 'Loyal'],
-    archetype: 'competitor',
-    tagline: 'The Athlete',
-    avatar3DConfig: createNPCAvatarConfig('morgan-lee', morganLeeAvatar, {
-      bodyType: 'athletic',
-      height: 'tall',
-      skinTone: '#C4956A',
+    id: 'emma-brown',
+    name: 'Emma Brown',
+    age: 29,
+    occupation: 'Scientist',
+    hometown: 'Newark, NJ',
+    bio: 'Brilliant mind with a flair for the dramatic. Uses her analytical skills to outthink the competition while keeping everyone guessing.',
+    imageUrl: emmaBrownAvatar,
+    traits: ['Analytical', 'Strategic'],
+    archetype: 'strategist',
+    tagline: 'The Scientist',
+    avatar3DConfig: createNPCAvatarConfig('emma-brown', emmaBrownAvatar, {
+      bodyType: 'slim',
+      height: 'average',
+      skinTone: '#E8C4A0',
     })
   },
   {
