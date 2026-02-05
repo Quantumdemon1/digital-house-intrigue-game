@@ -9,3 +9,4 @@
  export { useGestureAnimation, type GestureType, type UseGestureAnimationReturn } from './useGestureAnimation';
  export { useReactiveExpressions, type ReactiveExpressionType, type ReactiveExpressionsConfig } from './useReactiveExpressions';
  export { useEyeTracking, type EyeTrackingConfig } from './useEyeTracking';
+ export { useEventLighting, usePulsingIntensity, interpolateColor, type LightingEvent, type EventLightingState, type LightingColors } from './useEventLighting';

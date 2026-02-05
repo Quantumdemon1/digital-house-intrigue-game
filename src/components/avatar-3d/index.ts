@@ -35,6 +35,16 @@ export {
   TVStand, BarStool, KitchenArea, DiaryRoomDoor, WallPanel 
 } from './HouseFurniture';
 export { CharacterCarousel } from './CharacterCarousel';
+ 
+ // Backyard and outdoor components
+ export { Backyard, SwimmingPool, HotTub, PoolLounge, CompetitionPlatform, CompetitionPodium, HostStage, OutdoorSeating, BBQGrill, BackyardFloor, SlidingGlassDoor } from './BackyardArea';
+ 
+ // Dynamic lighting system
+ export { default as DynamicRoomLighting } from './DynamicRoomLighting';
+ 
+ // Room navigation
+ export { RoomNavigator, RoomNavigatorCompact, ROOM_CAMERA_POSITIONS } from './RoomNavigator';
+ export type { RoomCameraPosition } from './RoomNavigator';
 
 // Hooks
 export { useAvatarPreloader, useAvatarUrlPreloader, preloadRPMModel, preloadRPMModels, extractRPMUrls } from './hooks/useAvatarPreloader';
