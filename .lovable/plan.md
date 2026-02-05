@@ -1,77 +1,91 @@
 
-# Plan: Raise Camera Y Position for Avatar Thumbnails in Grid Selection
+# Plan: Fix Avatar Thumbnail Camera to Look at Face
 
 ## Problem
 
-The camera in the character selection grid is pointed too low, showing the avatars' knees/lower body instead of their faces.
+The camera in the character selection grid is positioned at Y=1.1, but it's still pointing at the avatars' feet/knees because Three.js cameras look at the origin (0, 0, 0) by default. The camera position was raised, but without explicitly telling it where to look, it still aims down at the ground level.
 
-## Current State
+## Root Cause
 
-In `src/components/avatar-3d/AvatarLoader.tsx`, the `SIZE_CONFIG` defines camera positions for each avatar size:
+In `src/components/avatar-3d/AvatarLoader.tsx`, the `CameraController` component sets the camera position but never calls `camera.lookAt()` to direct it at the avatar's face:
 
 ```typescript
-const SIZE_CONFIG = {
-  sm: { camera: { y: 0.55, z: 1.2, fov: 25 } },
-  md: { camera: { y: 0.55, z: 1.4, fov: 28 } },
-  lg: { camera: { y: 0.55, z: 1.5, fov: 30 } },
-  xl: { camera: { y: 0.55, z: 1.5, fov: 30 } },
-  full: { camera: { y: 0, z: 2.5, fov: 35 } }
-};
+// Current code - only sets position, camera looks at origin (0,0,0)
+camera.position.set(0, zoomedY, zoomedZ);
+camera.updateProjectionMatrix();
 ```
-
-The `CharacterFrame` component maps frame sizes to avatar sizes:
-- `sm` frame uses `md` avatar size
-- `md` frame uses `lg` avatar size  
-- `lg` frame uses `xl` avatar size
 
 ## Solution
 
-Double the camera Y position (from `0.55` to `1.1`) for the thumbnail/profile contexts (`sm`, `md`, `lg`, `xl`) to frame the avatars' faces instead of their knees.
+Update the `CameraController` to also call `camera.lookAt()` pointing at the face height (Y ~1.5-1.6 for Ready Player Me avatars).
 
-## File Changes
+## File Change
 
 ### `src/components/avatar-3d/AvatarLoader.tsx`
 
-Update the `SIZE_CONFIG` camera Y values:
-
-| Size | Current Y | New Y |
-|------|-----------|-------|
-| sm | 0.55 | 1.1 |
-| md | 0.55 | 1.1 |
-| lg | 0.55 | 1.1 |
-| xl | 0.55 | 1.1 |
-| full | 0 | 0 (unchanged - full body view) |
+**Update the `CameraController` component** to add a lookAt call:
 
 ```typescript
-const SIZE_CONFIG = {
-  sm: { 
-    width: 'w-12', height: 'h-12', scale: 0.8, 
-    context: 'thumbnail',
-    camera: { y: 1.1, z: 1.2, fov: 25 }  // Doubled Y for face framing
-  },
-  md: { 
-    width: 'w-20', height: 'h-20', scale: 1, 
-    context: 'profile',
-    camera: { y: 1.1, z: 1.4, fov: 28 }  // Doubled Y for face framing
-  },
-  lg: { 
-    width: 'w-32', height: 'h-32', scale: 1.2, 
-    context: 'profile',
-    camera: { y: 1.1, z: 1.5, fov: 30 }  // Doubled Y for face framing
-  },
-  xl: { 
-    width: 'w-48', height: 'h-48', scale: 1.5, 
-    context: 'profile',
-    camera: { y: 1.1, z: 1.5, fov: 30 }  // Doubled Y for face framing
-  },
-  full: { 
-    width: 'w-full', height: 'h-full', scale: 1, 
-    context: 'customizer',
-    camera: { y: 0, z: 2.5, fov: 35 }    // Full body - unchanged
-  },
+const CameraController: React.FC<{ 
+  baseY: number; 
+  baseZ: number; 
+  zoom: number;
+  lookAtY?: number;  // NEW: Target Y position to look at
+}> = ({ baseY, baseZ, zoom, lookAtY = 1.5 }) => {
+  const { camera } = useThree();
+  
+  useEffect(() => {
+    const zoomedZ = baseZ / zoom;
+    const zoomedY = baseY * (zoom > 1 ? 1 + (zoom - 1) * 0.3 : 1);
+    
+    camera.position.set(0, zoomedY, zoomedZ);
+    camera.lookAt(0, lookAtY, 0);  // NEW: Look at face height
+    camera.updateProjectionMatrix();
+  }, [camera, baseY, baseZ, zoom, lookAtY]);
+  
+  return null;
 };
 ```
 
+**Update the `SIZE_CONFIG`** to include a `lookAtY` value for each context:
+
+| Size | Camera Y | Look At Y | Purpose |
+|------|----------|-----------|---------|
+| sm | 1.1 | 1.5 | Face center |
+| md | 1.1 | 1.5 | Face center |
+| lg | 1.1 | 1.5 | Face center |
+| xl | 1.1 | 1.5 | Face center |
+| full | 0 | 0.8 | Body center (customizer) |
+
+**Update `RPMAvatarCanvas`** to pass the lookAtY to CameraController:
+
+```typescript
+<CameraController 
+  baseY={sizeConfig.camera.y} 
+  baseZ={sizeConfig.camera.z} 
+  zoom={zoom}
+  lookAtY={sizeConfig.camera.lookAtY}  // NEW
+/>
+```
+
+## Technical Details
+
+### Avatar Model Proportions (RPM Half-Body)
+
+Ready Player Me half-body avatars have approximate heights:
+- Feet: Y = 0
+- Waist: Y = 1.0
+- Chest: Y = 1.3
+- Neck: Y = 1.5
+- Face center: Y = 1.6
+- Top of head: Y = 1.8
+
+### Camera Geometry
+
+For a camera at position (0, 1.1, 1.4) looking at (0, 1.5, 0):
+- The camera looks slightly upward at the face
+- This frames the head/shoulders nicely in the circular thumbnail
+
 ## Expected Result
 
-After this change, all avatar thumbnails in the character selection grid will show the houseguests' faces/upper body instead of their knees.
+After this fix, all avatar thumbnails in the character selection grid will properly frame the houseguests' faces instead of showing their knees/lower body.
