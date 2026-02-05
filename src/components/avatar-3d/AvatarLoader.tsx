@@ -45,32 +45,32 @@ const SIZE_CONFIG: Record<AvatarSize, {
   height: string; 
   scale: number; 
   context: AvatarContext;
-  camera: { y: number; z: number; fov: number }
+  camera: { y: number; z: number; fov: number; lookAtY: number }
 }> = {
   sm: { 
     width: 'w-12', height: 'h-12', scale: 0.8, 
     context: 'thumbnail',
-    camera: { y: 1.1, z: 1.2, fov: 25 }  // Doubled Y for face framing
+    camera: { y: 1.1, z: 1.2, fov: 25, lookAtY: 1.5 }  // Face framing
   },
   md: { 
     width: 'w-20', height: 'h-20', scale: 1, 
     context: 'profile',
-    camera: { y: 1.1, z: 1.4, fov: 28 }  // Doubled Y for face framing
+    camera: { y: 1.1, z: 1.4, fov: 28, lookAtY: 1.5 }  // Face framing
   },
   lg: { 
     width: 'w-32', height: 'h-32', scale: 1.2, 
     context: 'profile',
-    camera: { y: 1.1, z: 1.5, fov: 30 }  // Doubled Y for face framing
+    camera: { y: 1.1, z: 1.5, fov: 30, lookAtY: 1.5 }  // Face framing
   },
   xl: { 
     width: 'w-48', height: 'h-48', scale: 1.5, 
     context: 'profile',
-    camera: { y: 1.1, z: 1.5, fov: 30 }  // Doubled Y for face framing
+    camera: { y: 1.1, z: 1.5, fov: 30, lookAtY: 1.5 }  // Face framing
   },
   full: { 
     width: 'w-full', height: 'h-full', scale: 1, 
     context: 'customizer',
-    camera: { y: 0, z: 2.5, fov: 35 }     // Full body
+    camera: { y: 0, z: 2.5, fov: 35, lookAtY: 0.8 }   // Body center
   },
 };
 
@@ -112,8 +112,9 @@ const useLoadingProgress = () => {
 const CameraController: React.FC<{ 
   baseY: number; 
   baseZ: number; 
-  zoom: number 
-}> = ({ baseY, baseZ, zoom }) => {
+  zoom: number;
+  lookAtY: number;
+}> = ({ baseY, baseZ, zoom, lookAtY }) => {
   const { camera } = useThree();
   
   useEffect(() => {
@@ -121,8 +122,9 @@ const CameraController: React.FC<{
     const zoomedY = baseY * (zoom > 1 ? 1 + (zoom - 1) * 0.3 : 1);
     
     camera.position.set(0, zoomedY, zoomedZ);
+    camera.lookAt(0, lookAtY, 0);
     camera.updateProjectionMatrix();
-  }, [camera, baseY, baseZ, zoom]);
+  }, [camera, baseY, baseZ, zoom, lookAtY]);
   
   return null;
 };
@@ -138,7 +140,7 @@ const RPMAvatarCanvas: React.FC<{
   sizeConfig: { 
     width: string; 
     height: string;
-    camera: { y: number; z: number; fov: number }
+    camera: { y: number; z: number; fov: number; lookAtY: number }
   };
   className?: string;
   onLoaded?: () => void;
@@ -186,7 +188,8 @@ const RPMAvatarCanvas: React.FC<{
         <CameraController 
           baseY={sizeConfig.camera.y} 
           baseZ={sizeConfig.camera.z} 
-          zoom={zoom} 
+          zoom={zoom}
+          lookAtY={sizeConfig.camera.lookAtY}
         />
         <ambientLight intensity={0.6} />
         <directionalLight position={[2, 3, 4]} intensity={0.8} />
