@@ -9,6 +9,7 @@
  import { Loader2 } from 'lucide-react';
  import { GestureType } from '@/components/avatar-3d/animation';
  import AvatarControlPanel from './AvatarControlPanel';
+ import { Alliance } from '@/components/avatar-3d/utils/conversationGrouping';
  
  // Lazy load HouseScene for better performance
  const HouseScene = lazy(() => import('@/components/avatar-3d/HouseScene').then(m => ({ default: m.HouseScene })));
@@ -23,6 +24,12 @@
    playerId?: string;
    /** Callback when player triggers a quick socialize action */
    onQuickSocialize?: (targetId: string) => void;
+   /** Active alliances for conversation grouping */
+   alliances?: Alliance[];
+   /** Full relationship map (characterId -> characterId -> score) */
+   relationshipMap?: Map<string, Map<string, { score: number }>>;
+   /** Current game phase for event lighting */
+   gamePhase?: string;
  }
  
  // Generate status-based tagline for houseguest
@@ -102,6 +109,9 @@
    povHolderId,
    playerId,
    onQuickSocialize,
+   alliances = [],
+   relationshipMap,
+   gamePhase,
  }) => {
    // Gesture state for player avatar
    const [playerGesture, setPlayerGesture] = useState<GestureType | null>(null);
@@ -120,9 +130,17 @@
    const relationships = useMemo(() => {
      const map: Record<string, number> = {};
     // Relationship data would be populated from game state
-    // Currently using empty map as placeholder - reactive expressions will show neutral/curiosity
+    // If relationshipMap is provided, extract scores for selected character
+    if (selectedId && relationshipMap) {
+      const selectedRelations = relationshipMap.get(selectedId);
+      if (selectedRelations) {
+        selectedRelations.forEach((rel, otherId) => {
+          map[otherId] = rel.score;
+        });
+      }
+    }
      return map;
-  }, []);
+  }, [selectedId, relationshipMap]);
    
    // Gesture handlers
    const handleGesture = useCallback((gesture: GestureType) => {
@@ -163,6 +181,9 @@
            playerGesture={playerGesture}
            onGestureComplete={handleGestureComplete}
            relationships={relationships}
+            alliances={alliances}
+            relationshipMap={relationshipMap}
+            gamePhase={gamePhase}
          />
        </Suspense>
        

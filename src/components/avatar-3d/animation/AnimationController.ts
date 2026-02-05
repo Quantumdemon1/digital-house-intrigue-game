@@ -55,6 +55,11 @@
    updateBlink,
    getBlinkMorphs,
  } from './expressions/BlinkController';
+ import {
+   SecondaryMotionState,
+   createSecondaryMotionState,
+   updateSecondaryMotion,
+ } from './physics/SecondaryMotionSystem';
  
  // ============ Configuration ============
  
@@ -92,6 +97,7 @@
    gesture: GestureState;
    reactive: ReactiveState;
    blink: BlinkState;
+   secondaryMotion: SecondaryMotionState;
    lastTime: number;
    boneCache: Map<string, THREE.Bone>;
    initialized: boolean;
@@ -131,6 +137,7 @@
      gesture: createGestureState(),
      reactive: createReactiveState(),
      blink: createBlinkState(0),
+     secondaryMotion: createSecondaryMotionState(),
      lastTime: 0,
      boneCache: new Map(),
      initialized: false,
@@ -259,8 +266,21 @@
        finalBones = overrideBones(finalBones, gestureBones, gestureWeight);
      }
      
-     // ============ Apply Bones ============
-     applyBoneMap(state.boneCache, finalBones, 1);
+       // ============ Secondary Motion Layer (Physics) ============
+       let physicsFilteredBones = finalBones;
+       if (qualityConfig.enablePhysics) {
+         const physicsResult = updateSecondaryMotion(
+           state.secondaryMotion,
+           finalBones,
+           deltaTime,
+           true
+         );
+         physicsFilteredBones = physicsResult.bones;
+         state.secondaryMotion = physicsResult.state;
+       }
+       
+       // ============ Apply Bones ============
+       applyBoneMap(state.boneCache, physicsFilteredBones, 1);
      
      // ============ Apply Morph Targets ============
      // Blink
