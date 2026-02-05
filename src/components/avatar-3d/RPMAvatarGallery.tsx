@@ -6,9 +6,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Trash2, Check, User, Clock } from 'lucide-react';
+import { Trash2, Check, User } from 'lucide-react';
 import { SavedRPMAvatar } from '@/hooks/useRPMAvatarStorage';
-import { formatDistanceToNow } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RPMAvatarGalleryProps {
   avatars: SavedRPMAvatar[];
@@ -28,6 +28,8 @@ export const RPMAvatarGallery: React.FC<RPMAvatarGalleryProps> = ({
   onDelete,
   className,
 }) => {
+  const isMobile = useIsMobile();
+
   if (avatars.length === 0) {
     return (
       <div className={cn(
@@ -53,7 +55,7 @@ export const RPMAvatarGallery: React.FC<RPMAvatarGalleryProps> = ({
   };
 
   return (
-    <div className={cn("grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3", className)}>
+    <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3", className)}>
       <AnimatePresence mode="popLayout">
         {avatars.map((avatar) => (
           <motion.div
@@ -65,10 +67,14 @@ export const RPMAvatarGallery: React.FC<RPMAvatarGalleryProps> = ({
             className="relative group"
           >
             <motion.button
-              onClick={() => onSelect(avatar)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(avatar);
+              }}
               className={cn(
                 "w-full aspect-square rounded-xl overflow-hidden border-2 transition-all",
                 "bg-muted/50 flex items-center justify-center",
+                "min-h-[80px] min-w-[80px]",
                 isSelected(avatar)
                   ? "border-primary ring-2 ring-primary/30"
                   : "border-border hover:border-primary/50"
@@ -98,29 +104,19 @@ export const RPMAvatarGallery: React.FC<RPMAvatarGalleryProps> = ({
 
             {/* Delete button */}
             {onDelete && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                whileHover={{ opacity: 1 }}
-                className="absolute -top-1 -right-1 w-6 h-6 bg-destructive rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+              <button
+                className={cn(
+                  "absolute -top-1 -right-1 w-6 h-6 bg-destructive rounded-full flex items-center justify-center shadow-lg z-10",
+                  isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity"
+                )}
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(avatar.id);
                 }}
               >
                 <Trash2 className="w-3 h-3 text-destructive-foreground" />
-              </motion.button>
+              </button>
             )}
-
-            {/* Name/timestamp tooltip */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl">
-              <p className="text-[10px] text-white truncate">
-                {avatar.name || 'Avatar'}
-              </p>
-              <p className="text-[9px] text-white/70 flex items-center gap-1">
-                <Clock className="w-2 h-2" />
-                {formatDistanceToNow(new Date(avatar.createdAt), { addSuffix: true })}
-              </p>
-            </div>
           </motion.div>
         ))}
       </AnimatePresence>
