@@ -1,39 +1,36 @@
 
+# Add DeLorean Time Machine to the Backyard
 
-# Update Default Houseguests to Match Game Mode Characters
+## Overview
+Add a 3D DeLorean model (inspired by Back to the Future) to the backyard area of the house, built entirely with Three.js primitives (box geometries, cylinders, etc.) since we can't load external car models.
 
-## Problem
-The `defaultHouseguests.ts` file contains outdated character data with placeholder images (`/placeholder.svg`), shorter bios, and is missing Maya Hassan (the 12th character). The richer "game mode" versions in `character-templates.ts` have proper avatar images, detailed bios, and 3D avatar configurations.
+## What Gets Built
 
-## What Changes
+A stylized DeLorean component featuring:
+- Stainless steel body (metallic silver material) with the iconic angular shape
+- Gullwing doors (slightly open)
+- Flux capacitor glow effect (blue emissive light from the rear)
+- Glowing tire tracks / time-travel ground effect (optional subtle blue glow beneath)
+- Wheels with dark rims
+- Positioned in the backyard near the BBQ grill area, angled as if it just arrived
 
-### 1. Update `src/components/game-setup/defaultHouseguests.ts`
-- Replace all 11 character entries with data from `character-templates.ts` (matching names, ages, occupations, hometowns, bios, traits)
-- Import and use the actual avatar images instead of `/placeholder.svg`
-- Add the missing 12th character: **Maya Hassan**
-- Keep the `personalityTraits` export unchanged (it is used by `GameSetup.tsx`)
+## Placement
+The DeLorean will be placed at approximately `[10, 0, -6]` in the backyard's local coordinate space -- to the right side near the BBQ grill, facing slightly inward. This keeps it visible but not blocking the pool or competition areas.
 
-### Characters Updated
-| Character | Key Changes |
-|-----------|-------------|
-| Alex Chen | Image: actual avatar, Bio: enriched |
-| Morgan Lee | Image: actual avatar, Bio: enriched |
-| Jordan Taylor | Image: actual avatar, Bio: enriched |
-| Casey Wilson | Image: actual avatar, Bio: enriched |
-| Riley Johnson | Image: actual avatar, Bio: enriched |
-| Jamie Roberts | Image: actual avatar, Bio: enriched |
-| Quinn Martinez | Image: actual avatar, Bio: enriched |
-| Avery Thompson | Image: actual avatar, Bio: enriched |
-| Taylor Kim | Image: actual avatar, Bio: enriched |
-| Sam Williams | Image: actual avatar, Bio: enriched |
-| Blake Peterson | Image: actual avatar, Bio: enriched |
-| **Maya Hassan** | **NEW** - Added as 12th character |
+## Technical Details
 
-### Note on Poses
-The base poses are already handled by the pose resolution system (`femalePoseDefaults.ts`, `malePoseDefaults.ts`, `characterPoseDefaults.ts`). No pose data needs to be duplicated into `defaultHouseguests.ts` -- the existing resolution chain automatically applies the correct gender/character-specific poses when avatars are rendered.
+### New Component
+**`src/components/avatar-3d/DeLorean.tsx`** -- A self-contained Three.js primitive-based DeLorean model:
+- Car body: Several `boxGeometry` meshes with `meshStandardMaterial` (metallic: 1, roughness: 0.2, color: #C0C0C0)
+- Windshield: Transparent blue-tinted material
+- Wheels: `cylinderGeometry` with dark rubber material
+- Flux capacitor glow: `pointLight` with blue color emanating from rear
+- Ground glow: Flat plane beneath with emissive blue material for the "just time-traveled" effect
+- Animated subtle hover/float effect using `useFrame`
 
-## Files Modified
-| File | Action |
+### Modified Files
+| File | Change |
 |------|--------|
-| `src/components/game-setup/defaultHouseguests.ts` | Update all entries + add Maya Hassan |
-
+| `src/components/avatar-3d/DeLorean.tsx` | **New** -- DeLorean 3D component |
+| `src/components/avatar-3d/BackyardArea.tsx` | Import and place `DeLorean` in the Backyard composite |
+| `src/components/avatar-3d/index.ts` | Export the new component |
