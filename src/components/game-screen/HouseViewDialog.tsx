@@ -4,6 +4,8 @@
  import { X } from 'lucide-react';
  import { Button } from '@/components/ui/button';
  import { useGame } from '@/contexts/GameContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
  import { HouseScene, CharacterCarousel } from '@/components/avatar-3d';
  import { characterTemplates, CharacterTemplate } from '@/data/character-templates';
  import { Houseguest } from '@/models/houseguest';
@@ -25,6 +27,7 @@
    const { gameState } = useGame();
    const [selectedId, setSelectedId] = React.useState<string | null>(null);
    const [showRoomNav, setShowRoomNav] = useState(true);
+  const isMobile = useIsMobile();
    
    // Convert active houseguests to CharacterTemplate format
    const activeCharacters = useMemo(() => {
@@ -76,18 +79,29 @@
      <AnimatePresence>
        {open && (
          <motion.div
-           className="fixed inset-0 z-50 bg-background"
+            className={cn(
+              "fixed inset-0 z-50 bg-background",
+              // Safe area insets for notched devices
+              "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+              "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
+            )}
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
            exit={{ opacity: 0 }}
          >
            {/* Close button */}
-           <div className="absolute top-4 right-4 z-50">
+            <div className={cn(
+              "absolute z-50",
+              isMobile ? "top-2 right-2" : "top-4 right-4"
+            )}>
              <Button
                variant="outline"
-               size="icon"
+                size={isMobile ? "default" : "icon"}
                onClick={() => onOpenChange(false)}
-               className="bg-black/50 backdrop-blur-sm border-white/20 hover:bg-white/10"
+                className={cn(
+                  "bg-black/50 backdrop-blur-sm border-white/20 hover:bg-white/10",
+                  isMobile && "h-12 w-12"
+                )}
              >
                <X className="h-5 w-5" />
              </Button>

@@ -91,11 +91,11 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
    onHover: (hovered: boolean) => void;
  }> = ({ template, position, rotation, isSelected, isHovered, index, onSelect, onHover }) => {
    const groupRef = useRef<THREE.Group>(null);
-   const idleGroupRef = useRef<THREE.Group>(null);
    const modelUrl = template.avatar3DConfig?.modelUrl;
    const poseType = getPoseForCharacter(template.archetype, index);
    
-   useFrame(({ clock }) => {
+   // Simplified animation - remove duplicate idle animation (handled by AnimationController)
+   useFrame(() => {
      if (groupRef.current) {
        const targetY = isSelected ? 0.1 : isHovered ? 0.05 : 0;
        groupRef.current.position.y = THREE.MathUtils.lerp(
@@ -103,15 +103,6 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
          targetY,
          0.1
        );
-     }
-     
-     if (idleGroupRef.current) {
-       const time = clock.getElapsedTime();
-       const phase = index * 0.5;
-       const breath = Math.sin(time * 1.5 + phase) * 0.008;
-       idleGroupRef.current.scale.set(1 + breath, 1, 1 + breath * 0.5);
-       const sway = Math.sin(time * 0.5 + phase) * 0.012;
-       idleGroupRef.current.rotation.z = sway;
      }
    });
    
@@ -146,7 +137,7 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
          
          <SelectionRing active={isSelected} />
          
-         <group ref={idleGroupRef}>
+         <group>
            {modelUrl ? (
              <Suspense fallback={<AvatarPlaceholder />}>
                <RPMAvatar
@@ -423,17 +414,19 @@ const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
              hoveredId={hoveredId}
              onHover={setHoveredId}
            />
-         
-         {/* Post-processing effects */}
-         <EffectComposer>
-           <Bloom
-             intensity={0.35}
-             luminanceThreshold={0.75}
-             luminanceSmoothing={0.9}
-             mipmapBlur
-           />
-         </EffectComposer>
          </Suspense>
+         
+         {/* Post-processing effects - disabled on mobile for performance */}
+         {!isMobile && (
+           <EffectComposer>
+             <Bloom
+               intensity={0.35}
+               luminanceThreshold={0.75}
+               luminanceSmoothing={0.9}
+               mipmapBlur
+             />
+           </EffectComposer>
+         )}
        </Canvas>
        
        {/* Scene title overlay */}

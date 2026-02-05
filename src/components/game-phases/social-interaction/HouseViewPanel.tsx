@@ -171,7 +171,7 @@
    }, [characters]);
    
    return (
-     <div className="w-full h-full min-h-[350px] rounded-lg overflow-hidden border border-border/50 bg-card relative">
+    <div className="w-full h-full min-h-[250px] sm:min-h-[350px] rounded-lg overflow-hidden border border-border/50 bg-card relative">
        <Suspense fallback={<HouseSceneLoader />}>
          <HouseScene
            characters={characters}
@@ -189,7 +189,7 @@
        
        {/* Player avatar control panel */}
        {playerId && (
-         <div className="absolute bottom-16 left-4 z-10">
+        <div className="absolute bottom-12 sm:bottom-16 left-2 sm:left-4 z-10">
            <AvatarControlPanel
              isVisible={playerSelected}
              onGesture={handleGesture}

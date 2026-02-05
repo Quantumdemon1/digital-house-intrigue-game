@@ -109,7 +109,7 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({
    tabIndex={0}
  >
       {/* Navigation hint */}
-      <div className="flex justify-center gap-8 py-2 text-xs text-white/50 border-b border-white/10">
+      <div className="hidden sm:flex justify-center gap-8 py-2 text-xs text-white/50 border-b border-white/10">
         <span className="flex items-center gap-1">
           <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/70">←</kbd>
           <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/70">→</kbd>
@@ -121,12 +121,17 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({
         </span>
       </div>
       
+      {/* Mobile swipe hint */}
+      <div className="flex sm:hidden justify-center py-1.5 text-xs text-white/40 border-b border-white/10">
+        Swipe to browse • Tap to select
+      </div>
+      
       {/* Carousel container */}
       <div className="relative py-4 px-4">
         {/* Left scroll button */}
         <button
           onClick={scrollLeft}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/60 hover:bg-amber-500/20 border border-white/20 hover:border-amber-500/50 transition-all"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/60 hover:bg-amber-500/20 border border-white/20 hover:border-amber-500/50 transition-all hidden sm:flex items-center justify-center"
           aria-label="Scroll left"
         >
           <ChevronLeft className="w-5 h-5 text-white" />
@@ -163,7 +168,8 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({
      >
        {/* Portrait frame with status ring */}
        <div className={cn(
-         'relative w-16 h-16 rounded-full overflow-hidden',
+         'relative rounded-full overflow-hidden',
+         'w-12 h-12 sm:w-16 sm:h-16',
          'ring-2 transition-all duration-200',
          isSelected 
            ? 'ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_20px_rgba(251,191,36,0.5)]' 
@@ -256,7 +262,7 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({
         {/* Right scroll button */}
         <button
           onClick={scrollRight}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/60 hover:bg-amber-500/20 border border-white/20 hover:border-amber-500/50 transition-all"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/60 hover:bg-amber-500/20 border border-white/20 hover:border-amber-500/50 transition-all hidden sm:flex items-center justify-center"
           aria-label="Scroll right"
         >
           <ChevronRight className="w-5 h-5 text-white" />
