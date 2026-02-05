@@ -1,39 +1,39 @@
 
 
-# Add Male Template Pose Defaults
+# Update Default Houseguests to Match Game Mode Characters
 
-## Overview
-Create a male equivalent of `femalePoseDefaults.ts` that applies the provided pose coordinates to all male character templates (Sam, Blake, Jordan, Avery, Alex, Riley). Then update the pose resolution chain to check for male template defaults.
+## Problem
+The `defaultHouseguests.ts` file contains outdated character data with placeholder images (`/placeholder.svg`), shorter bios, and is missing Maya Hassan (the 12th character). The richer "game mode" versions in `character-templates.ts` have proper avatar images, detailed bios, and 3D avatar configurations.
 
-## Changes
+## What Changes
 
-### 1. Create `malePoseDefaults.ts`
-New file at `src/components/avatar-3d/animation/poses/malePoseDefaults.ts` following the same pattern as `femalePoseDefaults.ts`:
-- Define `MALE_CHARACTER_NAMES` array: `['sam', 'blake', 'jordan', 'avery', 'alex', 'riley']`
-- Add `isMaleCharacter()` helper function
-- Define `MALE_POSE_BONES` with all 6 pose types (neutral, relaxed, confident, defensive, open, wave) using the provided coordinates
+### 1. Update `src/components/game-setup/defaultHouseguests.ts`
+- Replace all 11 character entries with data from `character-templates.ts` (matching names, ages, occupations, hometowns, bios, traits)
+- Import and use the actual avatar images instead of `/placeholder.svg`
+- Add the missing 12th character: **Maya Hassan**
+- Keep the `personalityTraits` export unchanged (it is used by `GameSetup.tsx`)
 
-### 2. Update `PoseLibrary.ts`
-Add a new step in the resolution chain between character-specific defaults and the base pose:
-- Import `isMaleCharacter` and `MALE_POSE_BONES`
-- Add step 5: check male template defaults (mirrors the existing female template check)
+### Characters Updated
+| Character | Key Changes |
+|-----------|-------------|
+| Alex Chen | Image: actual avatar, Bio: enriched |
+| Morgan Lee | Image: actual avatar, Bio: enriched |
+| Jordan Taylor | Image: actual avatar, Bio: enriched |
+| Casey Wilson | Image: actual avatar, Bio: enriched |
+| Riley Johnson | Image: actual avatar, Bio: enriched |
+| Jamie Roberts | Image: actual avatar, Bio: enriched |
+| Quinn Martinez | Image: actual avatar, Bio: enriched |
+| Avery Thompson | Image: actual avatar, Bio: enriched |
+| Taylor Kim | Image: actual avatar, Bio: enriched |
+| Sam Williams | Image: actual avatar, Bio: enriched |
+| Blake Peterson | Image: actual avatar, Bio: enriched |
+| **Maya Hassan** | **NEW** - Added as 12th character |
 
-Updated resolution chain:
-1. Character-specific localStorage override
-2. Global localStorage override
-3. Character-specific code defaults (characterPoseDefaults.ts)
-4. Female template defaults
-5. **Male template defaults** (new)
-6. Base static pose definition
+### Note on Poses
+The base poses are already handled by the pose resolution system (`femalePoseDefaults.ts`, `malePoseDefaults.ts`, `characterPoseDefaults.ts`). No pose data needs to be duplicated into `defaultHouseguests.ts` -- the existing resolution chain automatically applies the correct gender/character-specific poses when avatars are rendered.
 
-### 3. Update `poses/index.ts`
-Export the new male pose helpers: `isMaleCharacter`, `MALE_POSE_BONES`, `MALE_CHARACTER_NAMES`
-
-## Technical Details
-
+## Files Modified
 | File | Action |
 |------|--------|
-| `src/components/avatar-3d/animation/poses/malePoseDefaults.ts` | Create (new file) |
-| `src/components/avatar-3d/animation/poses/PoseLibrary.ts` | Add male template check in `getEffectivePose` |
-| `src/components/avatar-3d/animation/poses/index.ts` | Export new male pose symbols |
+| `src/components/game-setup/defaultHouseguests.ts` | Update all entries + add Maya Hassan |
 
