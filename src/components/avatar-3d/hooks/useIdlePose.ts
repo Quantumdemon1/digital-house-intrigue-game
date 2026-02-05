@@ -10,12 +10,12 @@
  // Natural standing pose bone rotations (radians)
  // These values move the arms from T-pose to a relaxed position at the sides
  const IDLE_POSE: Record<string, { x: number; y: number; z: number }> = {
-   LeftArm: { x: 0.1, y: 0, z: 1.2 },       // Arm down at side, slight forward tilt
-   RightArm: { x: 0.1, y: 0, z: -1.2 },     // Arm down at side, slight forward tilt
-   LeftForeArm: { x: 0, y: 0, z: 0.3 },     // Slight elbow bend inward
-   RightForeArm: { x: 0, y: 0, z: -0.3 },   // Slight elbow bend inward
-   LeftHand: { x: 0, y: 0, z: 0.1 },        // Slight wrist curl
-   RightHand: { x: 0, y: 0, z: -0.1 },      // Slight wrist curl
+   LeftArm: { x: 0.05, y: 0.1, z: 1.45 },   // Arm hanging relaxed at side
+   RightArm: { x: 0.05, y: -0.1, z: -1.45 }, // Arm hanging relaxed at side
+   LeftForeArm: { x: 0, y: 0, z: 0.08 },    // Very slight natural elbow bend
+   RightForeArm: { x: 0, y: 0, z: -0.08 },  // Very slight natural elbow bend
+   LeftHand: { x: 0, y: 0, z: 0.05 },       // Relaxed wrist
+   RightHand: { x: 0, y: 0, z: -0.05 },     // Relaxed wrist
    Spine: { x: -0.02, y: 0, z: 0 },         // Very slight chest-out posture
    Spine1: { x: -0.01, y: 0, z: 0 },        // Continue slight posture
  };
@@ -106,22 +106,22 @@
      
      // Subtle arm sway - very gentle movement
      if (bones.leftArm) {
-       bones.leftArm.rotation.z = 1.2 + Math.sin(time * 0.5) * 0.02;
-       bones.leftArm.rotation.x = 0.1 + Math.sin(time * 0.3) * 0.01;
+       bones.leftArm.rotation.z = 1.45 + Math.sin(time * 0.5) * 0.015;
+       bones.leftArm.rotation.x = 0.05 + Math.sin(time * 0.3) * 0.008;
      }
      
      if (bones.rightArm) {
-       bones.rightArm.rotation.z = -1.2 + Math.sin(time * 0.5 + 0.5) * 0.02;
-       bones.rightArm.rotation.x = 0.1 + Math.sin(time * 0.3 + 0.5) * 0.01;
+       bones.rightArm.rotation.z = -1.45 + Math.sin(time * 0.5 + 0.5) * 0.015;
+       bones.rightArm.rotation.x = 0.05 + Math.sin(time * 0.3 + 0.5) * 0.008;
      }
      
      // Subtle forearm movement
      if (bones.leftForeArm) {
-       bones.leftForeArm.rotation.z = 0.3 + Math.sin(time * 0.4) * 0.015;
+       bones.leftForeArm.rotation.z = 0.08 + Math.sin(time * 0.4) * 0.01;
      }
      
      if (bones.rightForeArm) {
-       bones.rightForeArm.rotation.z = -0.3 + Math.sin(time * 0.4 + 0.3) * 0.015;
+       bones.rightForeArm.rotation.z = -0.08 + Math.sin(time * 0.4 + 0.3) * 0.01;
      }
      
      // Very subtle spine weight shift
