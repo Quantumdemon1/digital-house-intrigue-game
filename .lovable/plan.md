@@ -1,75 +1,61 @@
 
-# Plan: Make All Houseguests Adopt Relaxed Pose in House View
+# Plan: Point Avatar Hands Toward the Ground in House View
 
 ## Problem
 
-Currently, characters in the House View are assigned different poses based on their archetype:
-- **Strategist**: `crossed-arms`, `thinking`
-- **Competitor**: `hands-on-hips`, `crossed-arms`  
-- **Socialite**: `relaxed`, `casual-lean`
-- **Wildcard**: `hands-on-hips`, `relaxed`
-- **Underdog**: `relaxed`, `thinking`
+In the current house view, avatar hands are pointing outward instead of down toward the ground. This is because the hand bone rotations only have minimal Z-rotation values, which leaves the palms and fingers following the direction of the forearms.
 
-The user wants all characters to adopt the same relaxed pose as Alex Chen (visible in the reference image with arms naturally at sides).
+## Root Cause
+
+Current hand configuration in the `relaxed` pose:
+```typescript
+LeftHand: { x: 0, y: 0, z: 0.05 },    // Hands pointing outward
+RightHand: { x: 0, y: 0, z: -0.05 }, // Hands pointing outward
+```
+
+The X-rotation is 0, meaning the hands maintain the same orientation as the forearms. To point hands downward (fingertips toward the ground), we need to add negative X-rotation to bend the wrists.
 
 ## Solution
 
-Modify the `ARCHETYPE_POSES` mapping in both house scene files to use only the `relaxed` pose for all archetypes. This ensures every character stands with their arms naturally at their sides, creating a consistent look across the House View.
+Update hand bone rotations in both `usePoseVariety.ts` (for house scenes) and `useIdlePose.ts` (for avatar previews) to include X-rotation that points hands toward the ground.
 
-## Files to Modify
+## File Changes
 
-### 1. `src/components/avatar-3d/CircularHouseScene.tsx`
+### 1. `src/components/avatar-3d/hooks/usePoseVariety.ts`
 
-Update the `ARCHETYPE_POSES` constant to only include `relaxed` for all archetypes:
+Update hand rotations in the `relaxed` and `casual-lean` poses:
 
-```typescript
-// Map archetype to pose types - all use relaxed pose
-const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
-  strategist: ['relaxed'],
-  competitor: ['relaxed'],
-  socialite: ['relaxed'],
-  wildcard: ['relaxed'],
-  underdog: ['relaxed'],
-};
-```
+| Bone | Current Rotation | New Rotation |
+|------|------------------|--------------|
+| LeftHand | `{ x: 0, y: 0, z: 0.05 }` | `{ x: -0.3, y: 0, z: 0.05 }` |
+| RightHand | `{ x: 0, y: 0, z: -0.05 }` | `{ x: -0.3, y: 0, z: -0.05 }` |
 
-### 2. `src/components/avatar-3d/HouseScene.tsx`
+The `-0.3` radians (~17 degrees) X-rotation tilts the hands so fingertips point toward the ground naturally.
 
-Apply the same change:
+### 2. `src/components/avatar-3d/hooks/useIdlePose.ts`
+
+Apply the same hand rotation update for consistency:
 
 ```typescript
-// Map archetype to pose types - all use relaxed pose for consistency
-const ARCHETYPE_POSES: Record<Archetype, PoseType[]> = {
-  strategist: ['relaxed'],
-  competitor: ['relaxed'],
-  socialite: ['relaxed'],
-  wildcard: ['relaxed'],
-  underdog: ['relaxed'],
-};
+LeftHand: { x: -0.3, y: 0, z: 0.05 },   // Hands pointing down
+RightHand: { x: -0.3, y: 0, z: -0.05 }, // Hands pointing down
 ```
 
 ## Technical Details
 
-The `relaxed` pose configuration (already defined in `usePoseVariety.ts`) positions arms naturally at sides:
+### RPM Avatar Hand Bone Orientation
 
-```typescript
-relaxed: {
-  LeftArm: { x: 0.05, y: 0.1, z: 1.45 },      // Arms at sides
-  RightArm: { x: 0.05, y: -0.1, z: -1.45 },   // Arms at sides
-  LeftForeArm: { x: 0, y: 0, z: 0.08 },       // Slight elbow bend
-  RightForeArm: { x: 0, y: 0, z: -0.08 },
-  LeftHand: { x: 0, y: 0, z: 0.05 },          // Relaxed wrist
-  RightHand: { x: 0, y: 0, z: -0.05 },
-  Spine: { x: -0.02, y: 0, z: 0 },
-  Spine1: { x: -0.01, y: 0, z: 0 },
-}
-```
+In Ready Player Me avatars:
+- Hand bones are children of forearm bones
+- X-rotation rotates the hand around the wrist axis (flexion/extension)
+- Negative X-rotation bends the wrist so fingertips point more toward the ground
+- A value of `-0.3` radians provides a natural, relaxed hand position without looking forced
 
-This matches the pose shown by Alex Chen in the reference image.
+### Visual Result
+
+Before: Hands parallel to forearms, fingertips pointing outward from body
+After: Hands tilted at wrist, fingertips pointing toward the floor
 
 ## Expected Result
 
-After this change:
-- All houseguests in both the character selection House View (setup) and the in-game House View will stand with their arms relaxed at their sides
-- Characters will maintain subtle idle animations (breathing, weight shift) for natural movement
-- The pose will match Alex Chen's stance shown in the reference image
+After this change, all avatars in the house view will have their hands naturally pointing toward the ground, creating a more realistic and relaxed standing pose.
