@@ -31,8 +31,10 @@ import { GlassWall, LEDCoveLighting } from './HouseFurnitureExpanded';
  import { useAvatarMovement } from './hooks/useAvatarMovement';
 import { SceneEffectsOverlay } from './SceneEffectsOverlay';
 import { PlayerEmoteMenu } from './PlayerEmoteMenu';
-
-// Easing function for smooth camera transitions
+import { PoseEditor } from './admin/PoseEditor';
+import { Settings2 } from 'lucide-react';
+import type { StaticPoseType } from './animation/poses/PoseLibrary';
+import type { BoneRotation } from './animation/types';
 const easeInOutCubic = (t: number): number => {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 };
@@ -971,6 +973,10 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
    const [playerEmoteGesture, setPlayerEmoteGesture] = useState<GestureType | null>(null);
    const [isGesturePlaying, setIsGesturePlaying] = useState(false);
    
+   // Admin pose editor state
+   const [showPoseEditor, setShowPoseEditor] = useState(false);
+   const [editorPoseType, setEditorPoseType] = useState<StaticPoseType>('relaxed');
+   
    // Player movement animation state
    const [playerMovementState, setPlayerMovementState] = useState<{
      isMoving: boolean;
@@ -1216,6 +1222,23 @@ export const HouseScene: React.FC<HouseSceneProps> = ({
           </div>
         </div>
       )}
+      
+      {/* Admin Pose Editor Toggle */}
+      <button
+        onClick={() => setShowPoseEditor(prev => !prev)}
+        className="absolute top-4 right-4 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-muted transition-colors z-40"
+        title="Open Pose Editor (Admin)"
+      >
+        <Settings2 className="w-5 h-5 text-muted-foreground" />
+      </button>
+      
+      {/* Pose Editor Panel */}
+      <PoseEditor
+        isVisible={showPoseEditor}
+        onClose={() => setShowPoseEditor(false)}
+        currentPose={editorPoseType}
+        onPoseChange={setEditorPoseType}
+      />
     </div>
   );
 };
