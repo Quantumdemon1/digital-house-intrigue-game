@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Shuffle, Users, Sparkles, Home, LayoutGrid } from 'lucide-react';
 import { staggerContainer, cardVariants } from '@/lib/motion-variants';
-import { HouseScene, CharacterCarousel } from '@/components/avatar-3d';
+ import { CircularHouseScene, CharacterCarousel } from '@/components/avatar-3d';
 
 interface AvatarSelectorProps {
   onSelect: (template: CharacterTemplate) => void;
@@ -107,7 +107,7 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
         {/* 3D House Scene */}
         <div className="flex-1">
-          <HouseScene
+           <CircularHouseScene
             characters={characterTemplates}
             selectedId={selectedTemplate?.id || null}
             onSelect={handleHouseSelect}

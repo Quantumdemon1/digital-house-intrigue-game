@@ -8,11 +8,13 @@ import GameHeader from './GameHeader';
 import GameStatusIndicator from './GameStatusIndicator';
 import SpectatorBanner from './SpectatorBanner';
 import { SocialNetworkDialog } from '@/components/social-network';
+ import HouseViewDialog from './HouseViewDialog';
 import { useMilestoneToast } from '@/hooks/useMilestoneToast';
 
 const GameScreen: React.FC = () => {
   const { gameState } = useGame();
   const [showSocialNetwork, setShowSocialNetwork] = useState(false);
+   const [showHouseView, setShowHouseView] = useState(false);
   
   // Watch for relationship milestones and show celebration toasts
   useMilestoneToast();
@@ -47,6 +49,7 @@ const GameScreen: React.FC = () => {
         {/* Header */}
         <GameHeader 
           onShowSocialNetwork={canShowSocial ? () => setShowSocialNetwork(true) : undefined}
+           onShowHouseView={canShowSocial ? () => setShowHouseView(true) : undefined}
         />
         
         {/* Status Indicator */}
@@ -85,6 +88,12 @@ const GameScreen: React.FC = () => {
         open={showSocialNetwork}
         onOpenChange={setShowSocialNetwork}
       />
+       
+       {/* House View Dialog */}
+       <HouseViewDialog
+         open={showHouseView}
+         onOpenChange={setShowHouseView}
+       />
     </div>
   );
 };

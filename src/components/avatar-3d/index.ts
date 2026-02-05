@@ -29,6 +29,7 @@ export { AvatarProfilePicture } from './AvatarProfilePicture';
 
 // House Scene components (3D environment)
 export { HouseScene } from './HouseScene';
+ export { CircularHouseScene } from './CircularHouseScene';
 export { 
   HouseFloor, Couch, CoffeeTable, Plant, LightFixture,
   TVStand, BarStool, KitchenArea, DiaryRoomDoor, WallPanel 

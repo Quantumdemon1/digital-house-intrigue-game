@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import ProfileButton from '../auth/ProfileButton';
 import { SettingsDialog } from '@/components/settings';
 import { PhaseIndicator, WeekIndicator } from '@/components/ui/phase-indicator';
-import { Network } from 'lucide-react';
+ import { Network, Home } from 'lucide-react';
 interface GameHeaderProps {
   onShowSocialNetwork?: () => void;
+   onShowHouseView?: () => void;
 }
 
-const GameHeader: React.FC<GameHeaderProps> = ({ onShowSocialNetwork }) => {
+ const GameHeader: React.FC<GameHeaderProps> = ({ onShowSocialNetwork, onShowHouseView }) => {
   const { gameState } = useGame();
   
   return (
@@ -47,6 +48,17 @@ const GameHeader: React.FC<GameHeaderProps> = ({ onShowSocialNetwork }) => {
           
           {/* Right side: Social, Settings and Profile */}
           <div className="flex items-center gap-1 sm:gap-2">
+             {onShowHouseView && (
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 onClick={onShowHouseView}
+                 className="flex items-center gap-1.5"
+               >
+                 <Home className="h-4 w-4" />
+                 <span className="hidden sm:inline">House</span>
+               </Button>
+             )}
             {onShowSocialNetwork && (
               <Button
                 variant="ghost"
